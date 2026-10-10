@@ -2,7 +2,7 @@
 <resources>
     <!-- Night remap for the shared overlay. Palettes that define their own text
          accents (Black, the M3 dark schemes) apply after this and win. -->
-    <style name="ThemeOverlay.SagerNet.Common" parent="Base.ThemeOverlay.SagerNet.Common">
+    <style name="ThemeOverlay.NekoBox.Common" parent="Base.ThemeOverlay.NekoBox.Common">
         <!-- The bright A200 accent reads on the dark surface (5:1 or better on every
              palette); the 500 primary and the day text tone do not. -->
         <item name="primaryOrTextPrimary">?colorAccent</item>

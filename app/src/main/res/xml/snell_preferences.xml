@@ -27,7 +27,7 @@
             app:key="psk"
             app:title="@string/snell_psk" />
 
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="4"
             app:entries="@array/snell_versions_entry"
             app:entryValues="@array/snell_versions_value"
@@ -36,7 +36,7 @@
             app:title="@string/snell_version"
             app:useSimpleSummaryProvider="true" />
 
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue=""
             app:entries="@array/snell_network_entry"
             app:entryValues="@array/snell_network_value"
@@ -45,7 +45,7 @@
             app:title="@string/snell_network"
             app:useSimpleSummaryProvider="true" />
 
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue=""
             app:entries="@array/snell_obfs_modes_entry"
             app:entryValues="@array/snell_obfs_modes_value"

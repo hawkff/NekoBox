@@ -6,7 +6,7 @@
         app:title="@string/group_name"
         app:useSimpleSummaryProvider="true" />
 
-    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+    <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
         app:defaultValue="0"
         app:entries="@array/group_types"
         app:entryValues="@array/int_array_2"
@@ -15,7 +15,7 @@
         app:title="@string/group_type"
         app:useSimpleSummaryProvider="true" />
 
-    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+    <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
         app:defaultValue="0"
         app:entries="@array/group_orders"
         app:entryValues="@array/int_array_3"
@@ -36,13 +36,13 @@
         app:summary="@string/auto_select_sum"
         app:title="@string/auto_select" />
 
-    <io.nekohasekai.sagernet.widget.OutboundPreference
+    <xyz.nekobyte.nekobox.widget.OutboundPreference
         app:icon="@drawable/ic_hardware_router"
         app:key="groupFrontProxy"
         app:title="@string/front_proxy"
         app:useSimpleSummaryProvider="true" />
 
-    <io.nekohasekai.sagernet.widget.OutboundPreference
+    <xyz.nekobyte.nekobox.widget.OutboundPreference
         app:icon="@drawable/baseline_public_24"
         app:key="groupLandingProxy"
         app:title="@string/landing_proxy"
@@ -52,7 +52,7 @@
         app:key="groupSubscription"
         app:title="@string/subscription_settings">
 
-        <io.nekohasekai.sagernet.widget.LinkOrContentPreference
+        <xyz.nekobyte.nekobox.widget.LinkOrContentPreference
             app:icon="@drawable/ic_baseline_link_24"
             app:key="subscriptionLink"
             app:title="@string/group_subscription_link"
@@ -75,7 +75,7 @@
             app:key="subscriptionBackupLinks"
             app:title="@string/subscription_backup_links" />
 
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/subscription_formats"
             app:entryValues="@array/int_array_4"
@@ -107,7 +107,7 @@
             app:summary="@string/deduplication_sum"
             app:title="@string/deduplication" />
 
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/filter_modes"
             app:entryValues="@array/int_array_3"
@@ -139,7 +139,7 @@
             app:key="subscriptionUpdateWhenConnectedOnly"
             app:summary="@string/update_when_connected_only_sum"
             app:title="@string/update_when_connected_only" />
-        <io.nekohasekai.sagernet.widget.UserAgentPreference
+        <xyz.nekobyte.nekobox.widget.UserAgentPreference
             app:icon="@drawable/ic_baseline_grid_3x3_24"
             app:key="subscriptionUserAgent"
             app:title="@string/subscription_user_agent"

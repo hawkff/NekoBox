@@ -2,10 +2,10 @@
     <!--
       Theme structure
       ===============
-      Theme.SagerNet and Theme.SagerNet.Dialog are structural only: window flags and the
+      Theme.NekoBox and Theme.NekoBox.Dialog are structural only: window flags and the
       API-dependent system-bar colors (values-v26). Every widget style, Material 3 role
-      derivation and semantic default lives once in ThemeOverlay.SagerNet.Common; each
-      color scheme is a ThemeOverlay.SagerNet.Palette.* written once. Theme.apply()
+      derivation and semantic default lives once in ThemeOverlay.NekoBox.Common; each
+      color scheme is a ThemeOverlay.NekoBox.Palette.* written once. Theme.apply()
       layers base + Common + palette at runtime for app and dialog windows alike, so a
       palette can no longer be defined in one copy and left unresolved in another.
 
@@ -13,16 +13,16 @@
       android:background on the app bar, which does not follow attr-to-attr indirection.
     -->
 
-    <style name="Base.Theme.SagerNet" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.NekoBox" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="android:navigationBarColor">?colorPrimaryDark</item>
     </style>
 
-    <style name="Theme.SagerNet" parent="Base.Theme.SagerNet" />
+    <style name="Theme.NekoBox" parent="Base.Theme.NekoBox" />
 
-    <style name="Theme.SagerNet.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+    <style name="Theme.NekoBox.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
@@ -31,23 +31,23 @@
         <item name="windowFixedHeightMajor" type="dimen">95%</item>
     </style>
 
-    <style name="Base.ThemeOverlay.SagerNet.Common" parent="">
+    <style name="Base.ThemeOverlay.NekoBox.Common" parent="">
         <!-- Widget styles -->
         <item name="actionBarStyle">@style/Widget.Material3.ActionBar.Solid</item>
         <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
         <item name="actionModeCloseDrawable">@drawable/ic_navigation_close</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar</item>
-        <item name="floatingActionButtonStyle">@style/Widget.SagerNet.FloatingActionButton</item>
-        <item name="chipStyle">@style/Widget.SagerNet.Chip.Choice</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar</item>
+        <item name="floatingActionButtonStyle">@style/Widget.NekoBox.FloatingActionButton</item>
+        <item name="chipStyle">@style/Widget.NekoBox.Chip.Choice</item>
         <item name="itemShapeAppearance">@style/ShapeAppearance.Material3.MediumComponent</item>
-        <item name="alertDialogTheme">@style/ThemeOverlay.SagerNet.AlertDialog</item>
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.SagerNet.MaterialAlertDialog</item>
-        <item name="materialCardViewStyle">@style/Widget.SagerNet.CardView</item>
-        <item name="textInputStyle">@style/Widget.SagerNet.TextInputLayout</item>
-        <item name="popupMenuStyle">@style/Widget.SagerNet.PopupMenu</item>
-        <item name="actionOverflowMenuStyle">@style/Widget.SagerNet.PopupMenu.Overflow</item>
-        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.SagerNet.BottomSheetDialog</item>
-        <item name="materialButtonStyle">@style/Widget.SagerNet.Button</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.NekoBox.AlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.NekoBox.MaterialAlertDialog</item>
+        <item name="materialCardViewStyle">@style/Widget.NekoBox.CardView</item>
+        <item name="textInputStyle">@style/Widget.NekoBox.TextInputLayout</item>
+        <item name="popupMenuStyle">@style/Widget.NekoBox.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/Widget.NekoBox.PopupMenu.Overflow</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.NekoBox.BottomSheetDialog</item>
+        <item name="materialButtonStyle">@style/Widget.NekoBox.Button</item>
         <item name="colorButtonNormal">?colorAccent</item>
 
         <!-- Chrome on the primary-colored app bar (white text); light primaries and the
@@ -114,25 +114,25 @@
     </style>
 
     <!-- Day variant is empty; values-night adds the night role remaps. -->
-    <style name="ThemeOverlay.SagerNet.Common" parent="Base.ThemeOverlay.SagerNet.Common" />
+    <style name="ThemeOverlay.NekoBox.Common" parent="Base.ThemeOverlay.NekoBox.Common" />
 
     <!-- Applied after the palette on dialog windows: the dark schemes paint the app
          canvas through android:windowBackground, which must not replace the floating
          dialog frame. -->
-    <style name="ThemeOverlay.SagerNet.DialogWindow" parent="">
+    <style name="ThemeOverlay.NekoBox.DialogWindow" parent="">
         <item name="android:windowBackground">@drawable/bg_dialog</item>
     </style>
 
     <!-- Toolbar overlay for light primaries: dark title, icons and menu text regardless
          of night mode, matching their black colorOnPrimary. -->
-    <style name="ThemeOverlay.SagerNet.ActionBar.OnLightPrimary" parent="ThemeOverlay.AppCompat.Light">
+    <style name="ThemeOverlay.NekoBox.ActionBar.OnLightPrimary" parent="ThemeOverlay.AppCompat.Light">
         <item name="colorControlNormal">?android:attr/textColorPrimary</item>
     </style>
 
     <!-- Hues too light for white chrome (white on the 500 shade is under 3:1). -->
-    <style name="ThemeOverlay.SagerNet.Palette.LightPrimary" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.LightPrimary" parent="">
         <item name="colorOnPrimary">@color/black</item>
-        <item name="actionBarTheme">@style/ThemeOverlay.SagerNet.ActionBar.OnLightPrimary</item>
+        <item name="actionBarTheme">@style/ThemeOverlay.NekoBox.ActionBar.OnLightPrimary</item>
         <item name="tabTextColor">#99000000</item>
         <item name="tabSelectedTextColor">@color/black</item>
         <item name="tabIndicatorColor">@color/black</item>
@@ -140,49 +140,49 @@
     </style>
     <!-- Legacy single-hue palettes (Material 2014 swatches). colorPrimaryText is the
          hue's darkest text-safe tone on the light surface where the 700 shade is not. -->
-    <style name="ThemeOverlay.SagerNet.Palette.Red" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Red" parent="">
         <item name="colorPrimary">@color/material_red_500</item>
         <item name="appBarBackgroundColor">@color/material_red_500</item>
         <item name="colorPrimaryDark">@color/material_red_700</item>
         <item name="colorAccent">@color/material_red_accent_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_red</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Pink" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Pink" parent="">
         <item name="colorPrimary">@color/material_pink_500</item>
         <item name="appBarBackgroundColor">@color/material_pink_500</item>
         <item name="colorPrimaryDark">@color/material_pink_700</item>
         <item name="colorAccent">@color/material_pink_accent_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_pink</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Pink_SSR" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Pink_SSR" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/color_pink_ssr</item>
         <item name="appBarBackgroundColor">@color/color_pink_ssr</item>
         <item name="colorPrimaryDark">@color/color_pink_ssr_dark</item>
         <item name="colorAccent">@color/material_pink_accent_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_pink_ssr</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Purple" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Purple" parent="">
         <item name="colorPrimary">@color/material_purple_500</item>
         <item name="appBarBackgroundColor">@color/material_purple_500</item>
         <item name="colorPrimaryDark">@color/material_purple_700</item>
         <item name="colorAccent">@color/material_purple_accent_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_purple</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.DeepPurple" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.DeepPurple" parent="">
         <item name="colorPrimary">@color/material_deep_purple_500</item>
         <item name="appBarBackgroundColor">@color/material_deep_purple_500</item>
         <item name="colorPrimaryDark">@color/material_deep_purple_700</item>
         <item name="colorAccent">@color/material_deep_purple_accent_100</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_deep_purple</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Indigo" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Indigo" parent="">
         <item name="colorPrimary">@color/material_indigo_500</item>
         <item name="appBarBackgroundColor">@color/material_indigo_500</item>
         <item name="colorPrimaryDark">@color/material_indigo_700</item>
         <item name="colorAccent">@color/material_indigo_accent_100</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_indigo</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Blue" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Blue" parent="">
         <item name="colorPrimary">@color/material_blue_500</item>
         <item name="appBarBackgroundColor">@color/material_blue_500</item>
         <item name="colorPrimaryDark">@color/material_blue_700</item>
@@ -190,7 +190,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_blue</item>
         <item name="colorPrimaryText">@color/material_blue_800</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.LightBlue" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.LightBlue" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_light_blue_500</item>
         <item name="appBarBackgroundColor">@color/material_light_blue_500</item>
         <item name="colorPrimaryDark">@color/material_light_blue_700</item>
@@ -198,7 +198,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_light_blue</item>
         <item name="colorPrimaryText">@color/material_light_blue_900</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Cyan" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Cyan" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_cyan_500</item>
         <item name="appBarBackgroundColor">@color/material_cyan_500</item>
         <item name="colorPrimaryDark">@color/material_cyan_700</item>
@@ -206,14 +206,14 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_cyan</item>
         <item name="colorPrimaryText">@color/material_cyan_900</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Teal" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Teal" parent="">
         <item name="colorPrimary">@color/material_teal_500</item>
         <item name="appBarBackgroundColor">@color/material_teal_500</item>
         <item name="colorPrimaryDark">@color/material_teal_700</item>
         <item name="colorAccent">@color/material_teal_accent_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_teal</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Green" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Green" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_green_500</item>
         <item name="appBarBackgroundColor">@color/material_green_500</item>
         <item name="colorPrimaryDark">@color/material_green_700</item>
@@ -221,7 +221,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_green</item>
         <item name="colorPrimaryText">@color/material_green_800</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.LightGreen" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.LightGreen" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_light_green_500</item>
         <item name="appBarBackgroundColor">@color/material_light_green_500</item>
         <item name="colorPrimaryDark">@color/material_light_green_700</item>
@@ -229,7 +229,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_light_green</item>
         <item name="colorPrimaryText">@color/material_light_green_900</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Lime" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Lime" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_lime_500</item>
         <item name="appBarBackgroundColor">@color/material_lime_500</item>
         <item name="colorPrimaryDark">@color/material_lime_700</item>
@@ -237,7 +237,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_lime</item>
         <item name="colorPrimaryText">@color/text_tone_lime</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Yellow" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Yellow" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_yellow_500</item>
         <item name="appBarBackgroundColor">@color/material_yellow_500</item>
         <item name="colorPrimaryDark">@color/material_yellow_700</item>
@@ -245,7 +245,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_yellow</item>
         <item name="colorPrimaryText">@color/text_tone_yellow</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Amber" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Amber" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_amber_500</item>
         <item name="appBarBackgroundColor">@color/material_amber_500</item>
         <item name="colorPrimaryDark">@color/material_amber_700</item>
@@ -253,7 +253,7 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_amber</item>
         <item name="colorPrimaryText">@color/text_tone_amber</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Orange" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.Orange" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/material_orange_500</item>
         <item name="appBarBackgroundColor">@color/material_orange_500</item>
         <item name="colorPrimaryDark">@color/material_orange_700</item>
@@ -261,35 +261,35 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_orange</item>
         <item name="colorPrimaryText">@color/text_tone_orange</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.DeepOrange" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.DeepOrange" parent="">
         <item name="colorPrimary">@color/material_deep_orange_500</item>
         <item name="appBarBackgroundColor">@color/material_deep_orange_500</item>
         <item name="colorPrimaryDark">@color/material_deep_orange_900</item>
         <item name="colorAccent">@color/material_deep_orange_accent_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_deep_orange</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Brown" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Brown" parent="">
         <item name="colorPrimary">@color/material_brown_500</item>
         <item name="appBarBackgroundColor">@color/material_brown_500</item>
         <item name="colorPrimaryDark">@color/material_brown_700</item>
         <item name="colorAccent">@color/material_brown_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_brown</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Grey" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Grey" parent="">
         <item name="colorPrimary">@color/material_grey_600</item>
         <item name="appBarBackgroundColor">@color/material_grey_600</item>
         <item name="colorPrimaryDark">@color/material_grey_700</item>
         <item name="colorAccent">@color/material_grey_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_grey</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.BlueGrey" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.BlueGrey" parent="">
         <item name="colorPrimary">@color/material_blue_grey_500</item>
         <item name="appBarBackgroundColor">@color/material_blue_grey_500</item>
         <item name="colorPrimaryDark">@color/material_blue_grey_700</item>
         <item name="colorAccent">@color/material_blue_grey_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_blue_grey</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.VerdantMint" parent="ThemeOverlay.SagerNet.Palette.LightPrimary">
+    <style name="ThemeOverlay.NekoBox.Palette.VerdantMint" parent="ThemeOverlay.NekoBox.Palette.LightPrimary">
         <item name="colorPrimary">@color/color_verdant_mint</item>
         <item name="appBarBackgroundColor">@color/color_verdant_mint</item>
         <item name="colorPrimaryDark">@color/color_verdant_mint_dark</item>
@@ -297,9 +297,9 @@
         <item name="cardElevatedSurfaceColor">@color/card_elevated_verdant_mint</item>
     </style>
     <!-- Wallpaper colors below API 31: pink until the dynamic overlay applies (values-v31). -->
-    <style name="ThemeOverlay.SagerNet.Palette.Dynamic" parent="ThemeOverlay.SagerNet.Palette.Pink" />
+    <style name="ThemeOverlay.NekoBox.Palette.Dynamic" parent="ThemeOverlay.NekoBox.Palette.Pink" />
     <!-- Black: neutral chrome; accents fall back to the text colors. -->
-    <style name="ThemeOverlay.SagerNet.Palette.Black" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Black" parent="">
         <item name="colorPrimary">@color/color_ng_black_primary</item>
         <item name="appBarBackgroundColor">@color/color_ng_black_primary</item>
         <item name="colorPrimaryDark">@color/color_ng_black_primary</item>
@@ -324,7 +324,7 @@
          forces night mode). Chrome sits on the surface, primaries are reserved for
          actions and status. -->
     <!-- Dark High Contrast (OLED): true black canvas, GitHub-style green/blue/red. -->
-    <style name="ThemeOverlay.SagerNet.Palette.DarkHighContrast" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.DarkHighContrast" parent="">
         <item name="colorPrimary">@color/dhc_primary</item>
         <item name="appBarBackgroundColor">@color/dhc_background</item>
         <item name="colorPrimaryDark">@color/dhc_primary_dark</item>
@@ -336,7 +336,7 @@
         <item name="android:colorBackground">@color/dhc_background</item>
         <item name="colorOnBackground">@color/dhc_on_surface</item>
         <item name="android:windowBackground">@color/dhc_background</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar.Surface</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar.Surface</item>
         <item name="android:statusBarColor">@color/dhc_background</item>
         <item name="android:navigationBarColor">@color/dhc_background</item>
         <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
@@ -377,7 +377,7 @@
         <item name="android:textColorHint">@color/dhc_outline</item>
     </style>
     <!-- Dracula (official palette). Also serves the legacy Dracula id. -->
-    <style name="ThemeOverlay.SagerNet.Palette.DraculaM3" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.DraculaM3" parent="">
         <item name="colorPrimary">@color/draculam3_primary</item>
         <item name="appBarBackgroundColor">@color/draculam3_background</item>
         <item name="colorPrimaryDark">@color/draculam3_primary_dark</item>
@@ -389,7 +389,7 @@
         <item name="android:colorBackground">@color/draculam3_background</item>
         <item name="colorOnBackground">@color/draculam3_on_surface</item>
         <item name="android:windowBackground">@color/draculam3_background</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar.Surface</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar.Surface</item>
         <item name="android:statusBarColor">@color/draculam3_background</item>
         <item name="android:navigationBarColor">@color/draculam3_background</item>
         <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
@@ -429,7 +429,7 @@
         <item name="android:textColorTertiary">@color/draculam3_on_surface_variant</item>
         <item name="android:textColorHint">@color/draculam3_outline</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Nord" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Nord" parent="">
         <item name="colorPrimary">@color/nord_primary</item>
         <item name="appBarBackgroundColor">@color/nord_background</item>
         <item name="colorPrimaryDark">@color/nord_primary_dark</item>
@@ -441,7 +441,7 @@
         <item name="android:colorBackground">@color/nord_background</item>
         <item name="colorOnBackground">@color/nord_on_surface</item>
         <item name="android:windowBackground">@color/nord_background</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar.Surface</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar.Surface</item>
         <item name="android:statusBarColor">@color/nord_background</item>
         <item name="android:navigationBarColor">@color/nord_background</item>
         <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
@@ -481,7 +481,7 @@
         <item name="android:textColorTertiary">@color/nord_on_surface_variant</item>
         <item name="android:textColorHint">@color/nord_outline</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Monokai" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Monokai" parent="">
         <item name="colorPrimary">@color/monokai_primary</item>
         <item name="appBarBackgroundColor">@color/monokai_background</item>
         <item name="colorPrimaryDark">@color/monokai_primary_dark</item>
@@ -493,7 +493,7 @@
         <item name="android:colorBackground">@color/monokai_background</item>
         <item name="colorOnBackground">@color/monokai_on_surface</item>
         <item name="android:windowBackground">@color/monokai_background</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar.Surface</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar.Surface</item>
         <item name="android:statusBarColor">@color/monokai_background</item>
         <item name="android:navigationBarColor">@color/monokai_background</item>
         <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
@@ -533,7 +533,7 @@
         <item name="android:textColorTertiary">@color/monokai_on_surface_variant</item>
         <item name="android:textColorHint">@color/monokai_outline</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.Palette.Ayu" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Ayu" parent="">
         <item name="colorPrimary">@color/ayu_primary</item>
         <item name="appBarBackgroundColor">@color/ayu_background</item>
         <item name="colorPrimaryDark">@color/ayu_primary_dark</item>
@@ -545,7 +545,7 @@
         <item name="android:colorBackground">@color/ayu_background</item>
         <item name="colorOnBackground">@color/ayu_on_surface</item>
         <item name="android:windowBackground">@color/ayu_background</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar.Surface</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar.Surface</item>
         <item name="android:statusBarColor">@color/ayu_background</item>
         <item name="android:navigationBarColor">@color/ayu_background</item>
         <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
@@ -586,7 +586,7 @@
         <item name="android:textColorHint">@color/ayu_outline</item>
     </style>
     <!-- Catppuccin Mocha. -->
-    <style name="ThemeOverlay.SagerNet.Palette.Catppuccin" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Catppuccin" parent="">
         <item name="colorPrimary">@color/catppuccin_primary</item>
         <item name="appBarBackgroundColor">@color/catppuccin_background</item>
         <item name="colorPrimaryDark">@color/catppuccin_primary_dark</item>
@@ -598,7 +598,7 @@
         <item name="android:colorBackground">@color/catppuccin_background</item>
         <item name="colorOnBackground">@color/catppuccin_on_surface</item>
         <item name="android:windowBackground">@color/catppuccin_background</item>
-        <item name="bottomAppBarStyle">@style/Widget.SagerNet.BottomAppBar.Surface</item>
+        <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar.Surface</item>
         <item name="android:statusBarColor">@color/catppuccin_background</item>
         <item name="android:navigationBarColor">@color/catppuccin_background</item>
         <item name="actionBarTheme">@style/ThemeOverlay.Material3.Dark.ActionBar</item>
@@ -643,31 +643,31 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="ThemeOverlay.SagerNet.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+    <style name="ThemeOverlay.NekoBox.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <!-- Palettes set the surface and its text colors but not the M3 container roles, so a
              dark palette in day mode put its light text on the library's light container. -->
         <item name="colorSurfaceContainerHigh">?attr/colorSurface</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.SagerNet.Dialog</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Dialog</item>
         <item name="buttonBarPositiveButtonStyle">
-            @style/Widget.SagerNet.Button.TextButton.Dialog
+            @style/Widget.NekoBox.Button.TextButton.Dialog
         </item>
         <item name="buttonBarNegativeButtonStyle">
-            @style/Widget.SagerNet.Button.TextButton.Dialog
+            @style/Widget.NekoBox.Button.TextButton.Dialog
         </item>
         <item name="buttonBarNeutralButtonStyle">
-            @style/Widget.SagerNet.Button.TextButton.Dialog.Flush
+            @style/Widget.NekoBox.Button.TextButton.Dialog.Flush
         </item>
     </style>
 
-    <style name="Widget.SagerNet.Button.TextButton.Dialog" parent="Widget.Material3.Button.TextButton.Dialog">
+    <style name="Widget.NekoBox.Button.TextButton.Dialog" parent="Widget.Material3.Button.TextButton.Dialog">
         <item name="android:textColor">?primaryOrTextPrimary</item>
     </style>
 
-    <style name="Widget.SagerNet.Button.TextButton.Dialog.Flush" parent="Widget.Material3.Button.TextButton.Dialog.Flush">
+    <style name="Widget.NekoBox.Button.TextButton.Dialog.Flush" parent="Widget.Material3.Button.TextButton.Dialog.Flush">
         <item name="android:textColor">?primaryOrTextPrimary</item>
     </style>
 
-    <style name="Widget.SagerNet.Chip.Choice" parent="Widget.Material3.Chip.Suggestion">
+    <style name="Widget.NekoBox.Chip.Choice" parent="Widget.Material3.Chip.Suggestion">
         <item name="textStartPadding">30dp</item>
         <item name="textEndPadding">30dp</item>
         <item name="chipBackgroundColor">@color/chip_background</item>
@@ -676,7 +676,7 @@
         <item name="rippleColor">@color/chip_ripple_color</item>
     </style>
 
-    <style name="Widget.SagerNet.BottomAppBar" parent="Widget.Material3.BottomAppBar">
+    <style name="Widget.NekoBox.BottomAppBar" parent="Widget.Material3.BottomAppBar">
         <item name="backgroundTint">?attr/colorPrimary</item>
         <item name="fabAlignmentMode">center</item>
         <item name="fabAlignmentModeEndMargin">@null</item>
@@ -687,11 +687,11 @@
 
     <!-- Bottom bar on the surface (not the primary) for themes whose app bar is the
          canvas: the green/blue/red status text reads against it. -->
-    <style name="Widget.SagerNet.BottomAppBar.Surface" parent="Widget.SagerNet.BottomAppBar">
+    <style name="Widget.NekoBox.BottomAppBar.Surface" parent="Widget.NekoBox.BottomAppBar">
         <item name="backgroundTint">?attr/colorSurface</item>
     </style>
 
-    <style name="Widget.SagerNet.FloatingActionButton" parent="Widget.Material3.FloatingActionButton.Primary">
+    <style name="Widget.NekoBox.FloatingActionButton" parent="Widget.Material3.FloatingActionButton.Primary">
         <item name="backgroundTint">?attr/fabColorBackground</item>
         <item name="tint">?attr/colorOnPrimary</item>
     </style>
@@ -699,7 +699,7 @@
     <!-- Use the Material 3 *Outlined* card as the base so M3's surface-tint elevation
          overlay is not applied; the app sets its own card background/stroke colors and an
          olive tint was bleeding through Filled cards on the custom (non-M3-role) themes. -->
-    <style name="Widget.SagerNet.CardView" parent="Widget.Material3.CardView.Outlined">
+    <style name="Widget.NekoBox.CardView" parent="Widget.Material3.CardView.Outlined">
         <item name="cardElevation">0dp</item>
         <item name="cardCornerRadius">@dimen/card_corner_radius</item>
         <item name="strokeColor">@color/card_stroke</item>
@@ -708,73 +708,73 @@
     </style>
 
     <!-- ElevatedCard: shadow + tonal surface, no stroke. -->
-    <style name="Widget.SagerNet.CardView.Elevated">
+    <style name="Widget.NekoBox.CardView.Elevated">
         <item name="cardElevation">@dimen/card_elevation</item>
         <item name="strokeWidth">0dp</item>
         <item name="cardBackgroundColor">?attr/cardElevatedSurfaceColor</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.SagerNet.Dialog" parent="">
+    <style name="ShapeAppearanceOverlay.NekoBox.Dialog" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/dialog_corner_radius</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.SagerNet.Input" parent="">
+    <style name="ShapeAppearanceOverlay.NekoBox.Input" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/input_corner_radius</item>
     </style>
-    <style name="Widget.SagerNet.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.SagerNet.Input</item>
+    <style name="Widget.NekoBox.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Input</item>
     </style>
 
     <!-- DayNight-aware popup overlay for the MaterialToolbar overflow menu. The
          toolbar itself uses a Dark ActionBar overlay (icons/title on the colored
          primary bar); the overflow dropdown should follow day/night surfaces
          instead, the M3 replacement for the old ThemeOverlay.AppCompat.DayNight. -->
-    <style name="ThemeOverlay.SagerNet.Toolbar.Popup" parent="ThemeOverlay.Material3" />
+    <style name="ThemeOverlay.NekoBox.Toolbar.Popup" parent="ThemeOverlay.Material3" />
 
     <style name="PopupMenuAnimation">
         <item name="android:windowEnterAnimation">@anim/popup_enter</item>
         <item name="android:windowExitAnimation">@anim/popup_exit</item>
     </style>
 
-    <style name="Widget.SagerNet.PopupMenu" parent="Widget.Material3.PopupMenu">
+    <style name="Widget.NekoBox.PopupMenu" parent="Widget.Material3.PopupMenu">
         <item name="android:popupBackground">@drawable/bg_popup_menu</item>
         <item name="android:popupAnimationStyle">@style/PopupMenuAnimation</item>
     </style>
-    <style name="Widget.SagerNet.PopupMenu.Overflow" parent="Widget.Material3.PopupMenu.Overflow">
+    <style name="Widget.NekoBox.PopupMenu.Overflow" parent="Widget.Material3.PopupMenu.Overflow">
         <item name="android:popupBackground">@drawable/bg_popup_menu</item>
         <item name="android:popupAnimationStyle">@style/PopupMenuAnimation</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.SagerNet.BottomSheet" parent="">
+    <style name="ShapeAppearanceOverlay.NekoBox.BottomSheet" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSizeTopLeft">@dimen/dialog_corner_radius</item>
         <item name="cornerSizeTopRight">@dimen/dialog_corner_radius</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
-    <style name="Widget.SagerNet.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.SagerNet.BottomSheet</item>
+    <style name="Widget.NekoBox.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.BottomSheet</item>
     </style>
-    <style name="ThemeOverlay.SagerNet.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
-        <item name="bottomSheetStyle">@style/Widget.SagerNet.BottomSheet</item>
+    <style name="ThemeOverlay.NekoBox.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.NekoBox.BottomSheet</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.SagerNet.Button" parent="">
+    <style name="ShapeAppearanceOverlay.NekoBox.Button" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/button_corner_radius</item>
     </style>
-    <style name="Widget.SagerNet.Button" parent="Widget.Material3.Button">
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.SagerNet.Button</item>
+    <style name="Widget.NekoBox.Button" parent="Widget.Material3.Button">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Button</item>
     </style>
 
-    <style name="ShapeAppearance.SagerNet.NavItem" parent="ShapeAppearance.Material3.SmallComponent">
+    <style name="ShapeAppearance.NekoBox.NavItem" parent="ShapeAppearance.Material3.SmallComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/nav_item_corner_radius</item>
     </style>
 
-    <style name="ThemeOverlay.SagerNet.AlertDialog" parent="ThemeOverlay.SagerNet.MaterialAlertDialog">
+    <style name="ThemeOverlay.NekoBox.AlertDialog" parent="ThemeOverlay.NekoBox.MaterialAlertDialog">
         <item name="android:windowBackground">@drawable/bg_dialog</item>
     </style>
 

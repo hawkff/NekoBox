@@ -410,7 +410,7 @@
 <string name="share">Поделиться</string>
 <string name="share_qr_nfc">QR-код</string>
 <string name="share_subscription">Поделиться подпиской</string>
-<string name="show_bottom_bar">Показать нижнюю панель, как в SagerNet</string>
+<string name="show_bottom_bar">Показать нижнюю панель</string>
 <string name="show_direct_speed">Показать прямую скорость</string>
 <string name="show_direct_speed_sum">Также в уведомлении показывать скорость трафика без прокси</string>
 <string name="show_group_in_notification">Показывать название группы в уведомлении</string>
@@ -573,7 +573,6 @@
     <string name="pinned_certchain_sha256">SHA256 закреплённого сертификата</string>
     <string name="please_update">Ваше приложение слишком старое (%s). И перестанет работать %s. Пожалуйста, обновите!</string>
     <string name="please_update_force">Ваше приложение слишком старое (%s). И перестало работать %s. Пожалуйста, обновите!</string>
-    <string name="exe_prefer_provider">Предпочитаемый поставщик плагина</string>
     <string name="save">Сохранить</string>
     <string name="resolve_server">Разрешать адрес сервера согласно политике IPv6</string>
     <string name="ech_settings">Настройки ECH</string>

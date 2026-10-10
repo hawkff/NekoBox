@@ -1,0 +1,288 @@
+package xyz.nekobyte.nekobox.database
+
+import android.database.sqlite.SQLiteCantOpenDatabaseException
+import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.aidl.TrafficData
+import xyz.nekobyte.nekobox.fmt.AbstractBean
+import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
+import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.app
+import xyz.nekobyte.nekobox.ktx.applyDefaultValues
+import java.io.IOException
+import java.sql.SQLException
+import java.util.*
+
+object ProfileManager {
+
+    interface Listener {
+        suspend fun onAdd(profile: ProxyEntity)
+        suspend fun onUpdated(data: TrafficData)
+        suspend fun onUpdated(data: List<TrafficData>) {
+            data.forEach { onUpdated(it) }
+        }
+        suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean)
+        suspend fun onRemoved(groupId: Long, profileId: Long)
+    }
+
+    interface RuleListener {
+        suspend fun onAdd(rule: RuleEntity)
+        suspend fun onUpdated(rule: RuleEntity)
+        suspend fun onRemoved(ruleId: Long)
+        suspend fun onCleared()
+    }
+
+    private val listeners = ArrayList<Listener>()
+    private val ruleListeners = ArrayList<RuleListener>()
+
+    suspend fun iterator(what: suspend Listener.() -> Unit) {
+        synchronized(listeners) {
+            listeners.toList()
+        }.forEach { listener ->
+            what(listener)
+        }
+    }
+
+    suspend fun ruleIterator(what: suspend RuleListener.() -> Unit) {
+        val ruleListeners = synchronized(ruleListeners) {
+            ruleListeners.toList()
+        }
+        for (listener in ruleListeners) {
+            what(listener)
+        }
+    }
+
+    fun addListener(listener: Listener) {
+        synchronized(listeners) {
+            listeners.add(listener)
+        }
+    }
+
+    fun removeListener(listener: Listener) {
+        synchronized(listeners) {
+            listeners.remove(listener)
+        }
+    }
+
+    fun addListener(listener: RuleListener) {
+        synchronized(ruleListeners) {
+            ruleListeners.add(listener)
+        }
+    }
+
+    fun removeListener(listener: RuleListener) {
+        synchronized(ruleListeners) {
+            ruleListeners.remove(listener)
+        }
+    }
+
+    suspend fun createProfile(groupId: Long, bean: AbstractBean): ProxyEntity {
+        bean.applyDefaultValues()
+
+        val profile = ProxyEntity(groupId = groupId).apply {
+            id = 0
+            putBean(bean)
+            userOrder = ProfileDatabase.proxyDao.nextOrder(groupId) ?: 1
+        }
+        profile.id = ProfileDatabase.proxyDao.addProxy(profile)
+        iterator { onAdd(profile) }
+        return profile
+    }
+
+    suspend fun createProfiles(groupId: Long, beans: List<AbstractBean>) {
+        if (beans.isEmpty()) return
+        ProfileDatabase.instance.runInTransaction {
+            val firstOrder = ProfileDatabase.proxyDao.nextOrder(groupId) ?: 1L
+            ProfileDatabase.proxyDao.insert(
+                beans.mapIndexed { index, bean ->
+                    ProxyEntity(groupId = groupId, userOrder = firstOrder + index)
+                        .putBean(bean.applyDefaultValues())
+                },
+            )
+        }
+        GroupManager.postReload(groupId)
+    }
+
+    suspend fun updateProfile(profile: ProxyEntity) {
+        ProfileDatabase.proxyDao.updateProxy(profile)
+        iterator { onUpdated(profile, false) }
+    }
+
+    suspend fun updateProfile(profiles: List<ProxyEntity>) {
+        ProfileDatabase.proxyDao.updateProxy(profiles)
+        profiles.forEach {
+            iterator { onUpdated(it, false) }
+        }
+    }
+
+    /**
+     * Batch-persist profiles WITHOUT firing per-profile onUpdated listener rounds.
+     * For callers that follow up with GroupManager.postReload(groupId), which
+     * re-renders the whole group anyway (e.g. connection-test finalization).
+     */
+    suspend fun updateProfileQuietly(profiles: List<ProxyEntity>) {
+        if (profiles.isEmpty()) return
+        ProfileDatabase.proxyDao.updateProxy(profiles)
+    }
+
+    suspend fun updateTraffic(profileId: Long, rx: Long, tx: Long) {
+        ProfileDatabase.proxyDao.updateTraffic(profileId, rx, tx)
+    }
+
+    // Add a per-session DELTA (never absolute) into the profile's lifetime columns (schema v12).
+    suspend fun addLifetimeTraffic(profileId: Long, rxDelta: Long, txDelta: Long) {
+        ProfileDatabase.proxyDao.addLifetimeTraffic(profileId, rxDelta, txDelta)
+    }
+
+    suspend fun deleteProfiles(profiles: List<ProxyEntity>) {
+        if (profiles.isEmpty()) return
+        val ids = profiles.map { it.id }
+        var deleted = 0
+        ProfileDatabase.instance.runInTransaction {
+            ids.chunked(500).forEach { deleted += ProfileDatabase.proxyDao.deleteByIds(it) }
+        }
+        if (deleted > 0 && DataStore.selectedProxy in ids) {
+            DataStore.selectedProxy = 0L
+        }
+        pruneTailscaleState()
+    }
+
+    suspend fun deleteProfile(groupId: Long, profileId: Long) {
+        if (ProfileDatabase.proxyDao.deleteById(profileId) == 0) return
+        if (DataStore.selectedProxy == profileId) {
+            DataStore.selectedProxy = 0L
+        }
+        iterator { onRemoved(groupId, profileId) }
+        if (ProfileDatabase.proxyDao.countByGroup(groupId) > 1) {
+            GroupManager.rearrange(groupId)
+        }
+        pruneTailscaleState()
+    }
+
+    fun getProfile(profileId: Long): ProxyEntity? {
+        if (profileId == 0L) return null
+        return try {
+            ProfileDatabase.proxyDao.getById(profileId)
+        } catch (ex: SQLiteCantOpenDatabaseException) {
+            throw IOException(ex)
+        } catch (ex: SQLException) {
+            Logs.w(ex)
+            null
+        }
+    }
+
+    fun getProfiles(profileIds: List<Long>): List<ProxyEntity> {
+        if (profileIds.isEmpty()) return listOf()
+        return try {
+            ProfileDatabase.proxyDao.getEntities(profileIds)
+        } catch (ex: SQLiteCantOpenDatabaseException) {
+            throw IOException(ex)
+        } catch (ex: SQLException) {
+            Logs.w(ex)
+            listOf()
+        }
+    }
+
+    // postUpdate: post to listeners, don't change the DB
+
+    suspend fun postUpdate(profileId: Long, noTraffic: Boolean = false) {
+        postUpdate(getProfile(profileId) ?: return, noTraffic)
+    }
+
+    suspend fun postUpdate(profile: ProxyEntity, noTraffic: Boolean = false) {
+        iterator { onUpdated(profile, noTraffic) }
+    }
+
+    suspend fun postUpdate(data: TrafficData) {
+        iterator { onUpdated(data) }
+    }
+
+    suspend fun postUpdate(data: List<TrafficData>) {
+        iterator { onUpdated(data) }
+    }
+
+    suspend fun createRule(rule: RuleEntity, post: Boolean = true): RuleEntity {
+        rule.userOrder = ProfileDatabase.rulesDao.nextOrder() ?: 1
+        rule.id = ProfileDatabase.rulesDao.createRule(rule)
+        if (post) {
+            ruleIterator { onAdd(rule) }
+        }
+        return rule
+    }
+
+    suspend fun updateRule(rule: RuleEntity) {
+        ProfileDatabase.rulesDao.updateRule(rule)
+        ruleIterator { onUpdated(rule) }
+    }
+
+    suspend fun deleteRule(ruleId: Long) {
+        ProfileDatabase.rulesDao.deleteById(ruleId)
+        ruleIterator { onRemoved(ruleId) }
+    }
+
+    suspend fun deleteRules(rules: List<RuleEntity>) {
+        ProfileDatabase.rulesDao.deleteRules(rules)
+        ruleIterator {
+            rules.forEach {
+                onRemoved(it.id)
+            }
+        }
+    }
+
+    suspend fun getRules(): List<RuleEntity> {
+        var rules = ProfileDatabase.rulesDao.allRules()
+        if (rules.isEmpty() && !DataStore.rulesFirstCreate) {
+            DataStore.rulesFirstCreate = true
+            createRule(
+                RuleEntity(
+                    name = app.getString(R.string.route_opt_block_quic),
+                    port = "443",
+                    network = "udp",
+                    outbound = -2,
+                ),
+            )
+            createRule(
+                RuleEntity(
+                    name = app.getString(R.string.route_opt_block_ads),
+                    domains = "geosite:category-ads-all",
+                    outbound = -2,
+                ),
+            )
+            val bypassCountries = mutableListOf("cn")
+            if (Locale.getDefault().country != Locale.CHINA.country) {
+                // non-Chinese users
+                bypassCountries += "ir"
+                bypassCountries += "ru"
+            }
+            for (country in bypassCountries) {
+                val displayCountry = Locale("", country).displayCountry
+                if (country == "cn") {
+                    createRule(
+                        RuleEntity(
+                            name = app.getString(R.string.route_play_store, displayCountry),
+                            domains = "domain:googleapis.cn\ndomain:xn--ngstr-lra8j.com\ndomain:xn--ngstr-cn-8za9o.com",
+                        ),
+                        false,
+                    )
+                }
+                createRule(
+                    RuleEntity(
+                        name = app.getString(R.string.route_bypass_domain, displayCountry),
+                        domains = "geosite:$country",
+                        outbound = -1,
+                    ),
+                    false,
+                )
+                createRule(
+                    RuleEntity(
+                        name = app.getString(R.string.route_bypass_ip, displayCountry),
+                        ip = "geoip:$country",
+                        outbound = -1,
+                    ),
+                    false,
+                )
+            }
+            rules = ProfileDatabase.rulesDao.allRules()
+        }
+        return rules
+    }
+}

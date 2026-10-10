@@ -452,14 +452,13 @@
     <string name="please_update_force">お使いのアプリは古すぎます (%s)。%s に動作を停止しました。更新してください！</string>
     <string name="connection_test_delete_unavailable">利用不可をクリア</string>
     <string name="move">移動</string>
-    <string name="exe_prefer_provider">プラグインの優先プロバイダー</string>
     <string name="create_shortcut">ショートカットを作成</string>
     <string name="app_tls_version">サブスクリプションの最小 TLS バージョン</string>
     <string name="hop_interval">ポートホッピング間隔 (秒)</string>
     <string name="domain_strategy_for_remote">リモートのドメイン戦略</string>
     <string name="domain_strategy_for_direct">ダイレクトのドメイン戦略</string>
     <string name="domain_strategy_for_server">サーバーアドレスのドメイン戦略</string>
-    <string name="show_bottom_bar">SagerNet のようなボトムバーを表示</string>
+    <string name="show_bottom_bar">ボトムバーを表示</string>
     <string name="utls_fingerprint">uTLS フィンガープリント</string>
     <string name="custom_outbound_json">カスタムアウトバウンド JSON</string>
     <string name="custom_config_json">カスタム設定 JSON</string>

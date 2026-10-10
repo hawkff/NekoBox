@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_contract_required">Install a plugin built for this version of NekoBox. Plugins using the previous interface are not supported.</string>
+</resources>

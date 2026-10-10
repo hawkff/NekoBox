@@ -9,7 +9,7 @@
         errorLine1="        this >= GB -> String.format(&quot;%.2f GiB&quot;, size / GB)"
         errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/moe/matsuri/nb4a/utils/KotlinUtil.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/utils/KotlinUtil.kt"
             line="53"
             column="23"/>
     </issue>
@@ -20,7 +20,7 @@
         errorLine1="        this >= MB -> String.format(&quot;%.2f MiB&quot;, size / MB)"
         errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/moe/matsuri/nb4a/utils/KotlinUtil.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/utils/KotlinUtil.kt"
             line="54"
             column="23"/>
     </issue>
@@ -31,7 +31,7 @@
         errorLine1="        this >= KB -> String.format(&quot;%.2f KiB&quot;, size / KB)"
         errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/moe/matsuri/nb4a/utils/KotlinUtil.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/utils/KotlinUtil.kt"
             line="55"
             column="23"/>
     </issue>
@@ -53,18 +53,18 @@
         errorLine1="        Thread.setDefaultUncaughtExceptionHandler(CrashHandler)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/nekohasekai/sagernet/SagerNet.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/NekoBox.kt"
             line="57"
             column="9"/>
     </issue>
 
     <issue
         id="UnspecifiedRegisterReceiverFlag"
-        message="`data.receiver` is missing `RECEIVER_EXPORTED` or `RECEIVER_NOT_EXPORTED` flag for unprotected broadcasts registered for io.nekohasekai.sagernet.RELOAD, io.nekohasekai.sagernet.CLOSE, moe.nb4a.RESET_UPSTREAM_CONNECTIONS"
+        message="`data.receiver` is missing `RECEIVER_EXPORTED` or `RECEIVER_NOT_EXPORTED` flag for unprotected broadcasts registered for xyz.nekobyte.nekobox.RELOAD, xyz.nekobyte.nekobox.CLOSE, xyz.nekobyte.nekobox.RESET_UPSTREAM_CONNECTIONS"
         errorLine1="                    registerReceiver("
         errorLine2="                    ^">
         <location
-            file="src/main/java/io/nekohasekai/sagernet/bg/BaseService.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/bg/BaseService.kt"
             line="352"
             column="21"/>
     </issue>
@@ -405,7 +405,7 @@
         errorLine1="            launchUrl(this@launchCustomTab, Uri.parse(link))"
         errorLine2="                                            ~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/nekohasekai/sagernet/ktx/Browsers.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/ktx/Browsers.kt"
             line="26"
             column="45"/>
     </issue>
@@ -416,7 +416,7 @@
         errorLine1="                                val subscriptionLink = Uri.parse(e.link).getQueryParameter(&quot;url&quot;) ?: e.link"
         errorLine2="                                                       ~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/nekohasekai/sagernet/ui/ConfigurationFragment.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/ui/ConfigurationFragment.kt"
             line="413"
             column="56"/>
     </issue>
@@ -427,7 +427,7 @@
         errorLine1="                    if (Uri.parse(link.toString()).scheme == &quot;content&quot;) {"
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/io/nekohasekai/sagernet/widget/LinkOrContentPreference.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/widget/LinkOrContentPreference.kt"
             line="42"
             column="25"/>
     </issue>
@@ -438,7 +438,7 @@
         errorLine1="        if (widgetFrame.childCount == 0) {"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/moe/matsuri/nb4a/ui/ThemePickerPreference.kt"
+            file="src/main/java/xyz/nekobyte/nekobox/ui/ThemePickerPreference.kt"
             line="61"
             column="13"/>
     </issue>

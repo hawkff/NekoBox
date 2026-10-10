@@ -1,6 +1,6 @@
 [
   {
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "fresh": {
       "type": null,
       "link": null,
@@ -102,7 +102,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.amneziawg.AmneziaWGBean",
+    "class": "xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean",
     "fresh": {
       "localAddress": null,
       "privateKey": null,
@@ -221,7 +221,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "fresh": {
       "username": null,
       "password": null,
@@ -361,7 +361,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "fresh": {
       "protocolVersion": null,
       "serverPorts": null,
@@ -450,7 +450,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.internal.ChainBean",
+    "class": "xyz.nekobyte.nekobox.fmt.internal.ChainBean",
     "fresh": {
       "proxies": null,
       "serverAddress": null,
@@ -479,7 +479,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.juicity.JuicityBean",
+    "class": "xyz.nekobyte.nekobox.fmt.juicity.JuicityBean",
     "fresh": {
       "uuid": null,
       "password": null,
@@ -520,7 +520,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.masterdnsvpn.MasterDnsVpnBean",
+    "class": "xyz.nekobyte.nekobox.fmt.masterdnsvpn.MasterDnsVpnBean",
     "fresh": {
       "domains": null,
       "dataEncryptionMethod": null,
@@ -609,7 +609,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.mieru.MieruBean",
+    "class": "xyz.nekobyte.nekobox.fmt.mieru.MieruBean",
     "fresh": {
       "protocol": null,
       "username": null,
@@ -647,7 +647,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.naive.NaiveBean",
+    "class": "xyz.nekobyte.nekobox.fmt.naive.NaiveBean",
     "fresh": {
       "proto": null,
       "username": null,
@@ -697,7 +697,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.olcrtc.OlcrtcBean",
+    "class": "xyz.nekobyte.nekobox.fmt.olcrtc.OlcrtcBean",
     "fresh": {
       "carrier": null,
       "roomId": null,
@@ -747,7 +747,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "fresh": {
       "method": null,
       "password": null,
@@ -815,7 +815,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocksr.ShadowsocksRBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocksr.ShadowsocksRBean",
     "fresh": {
       "method": null,
       "password": null,
@@ -859,7 +859,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.snell.SnellBean",
+    "class": "xyz.nekobyte.nekobox.fmt.snell.SnellBean",
     "fresh": {
       "psk": null,
       "version": null,
@@ -903,7 +903,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.socks.SOCKSBean",
+    "class": "xyz.nekobyte.nekobox.fmt.socks.SOCKSBean",
     "fresh": {
       "protocol": null,
       "sUoT": null,
@@ -941,7 +941,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.ssh.SSHBean",
+    "class": "xyz.nekobyte.nekobox.fmt.ssh.SSHBean",
     "fresh": {
       "username": null,
       "authType": null,
@@ -985,7 +985,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "fresh": {
       "password": null,
       "uuid": null,
@@ -1122,7 +1122,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.trojan_go.TrojanGoBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan_go.TrojanGoBean",
     "fresh": {
       "password": null,
       "sni": null,
@@ -1172,7 +1172,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.tuic.TuicBean",
+    "class": "xyz.nekobyte.nekobox.fmt.tuic.TuicBean",
     "fresh": {
       "token": null,
       "caText": null,
@@ -1240,7 +1240,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "fresh": {
       "alterId": null,
       "uuid": null,
@@ -1377,7 +1377,7 @@
     }
   },
   {
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "fresh": {
       "localAddress": null,
       "privateKey": null,
@@ -1448,7 +1448,7 @@
     }
   },
   {
-    "class": "moe.matsuri.nb4a.proxy.anytls.AnyTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean",
     "fresh": {
       "password": null,
       "sni": null,
@@ -1501,7 +1501,7 @@
     }
   },
   {
-    "class": "moe.matsuri.nb4a.proxy.config.ConfigBean",
+    "class": "xyz.nekobyte.nekobox.proxy.config.ConfigBean",
     "fresh": {
       "type": null,
       "config": null,
@@ -1533,7 +1533,7 @@
     }
   },
   {
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "fresh": {
       "version": null,
       "password": null,

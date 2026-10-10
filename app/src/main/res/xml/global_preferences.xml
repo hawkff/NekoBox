@@ -12,11 +12,11 @@
         app:key="screen_appearance"
         app:summary="@string/settings_appearance_summary"
         app:title="@string/settings_appearance">
-        <moe.matsuri.nb4a.ui.ThemePickerPreference
+        <xyz.nekobyte.nekobox.ui.ThemePickerPreference
             android:title="@string/theme"
             app:icon="@drawable/ic_baseline_color_lens_24"
             app:key="appTheme" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/night_mode"
             app:entryValues="@array/int_array_4"
@@ -24,7 +24,7 @@
             app:key="nightTheme"
             app:title="@string/night_mode"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue=""
             app:entries="@array/language_entries"
             app:entryValues="@array/language_values"
@@ -61,7 +61,7 @@
             app:key="isAutoConnect"
             app:summary="@string/auto_connect_summary"
             app:title="@string/auto_connect" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="vpn"
             app:entries="@array/service_modes"
             app:entryValues="@array/service_mode_values"
@@ -69,7 +69,7 @@
             app:key="serviceMode"
             app:title="@string/service_mode"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/tun_implementation"
             app:entryValues="@array/int_array_3"
@@ -77,7 +77,7 @@
             app:key="tunImplementation"
             app:title="@string/tun_implementation"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.MTUPreference
+        <xyz.nekobyte.nekobox.ui.MTUPreference
             app:defaultValue="1500"
             app:entries="@array/mtu_select"
             app:entryValues="@array/mtu_select"
@@ -208,7 +208,7 @@
         <SwitchPreference
             app:key="bypassLanInCore"
             app:title="@string/bypass_lan_in_core" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="1"
             app:entries="@array/traffic_sniffing_values"
             app:entryValues="@array/int_array_3"
@@ -221,7 +221,7 @@
             app:key="resolveDestination"
             app:summary="@string/resolve_destination_summary"
             app:title="@string/resolve_destination" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/ipv6_mode"
             app:entryValues="@array/int_array_4"
@@ -229,7 +229,7 @@
             app:key="ipv6Mode"
             app:title="@string/ipv6"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/rules_dat_provider"
             app:entryValues="@array/int_array_5"
@@ -266,7 +266,7 @@
             app:key="remoteDns"
             app:title="@string/remote_dns"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="auto"
             app:entries="@array/dns_network_select"
             app:entryValues="@array/dns_network_select"
@@ -279,14 +279,14 @@
             app:key="directDns"
             app:title="@string/direct_dns"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="auto"
             app:entries="@array/dns_network_select"
             app:entryValues="@array/dns_network_select"
             app:key="domain_strategy_for_direct"
             app:title="@string/domain_strategy_for_direct"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="auto"
             app:entries="@array/dns_network_select"
             app:entryValues="@array/dns_network_select"
@@ -361,7 +361,7 @@
         <SwitchPreference
             app:key="allowInsecureOnRequest"
             app:title="@string/allow_insecure_on_request_sum" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="1.2"
             app:entries="@array/app_tls_version"
             app:entryValues="@array/app_tls_version"
@@ -390,7 +390,7 @@
         app:key="screen_notification"
         app:summary="@string/settings_notification_summary"
         app:title="@string/settings_notification">
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="1000"
             app:entries="@array/notification_entry"
             app:entryValues="@array/notification_value"
@@ -426,7 +426,7 @@
             app:key="helpToImprove"
             app:summary="@string/help_to_improve_summary"
             app:title="@string/help_to_improve" />
-        <moe.matsuri.nb4a.ui.LongClickListPreference
+        <xyz.nekobyte.nekobox.ui.LongClickListPreference
             app:defaultValue="0"
             app:entries="@array/log_level"
             app:entryValues="@array/int_array_5"
@@ -434,7 +434,7 @@
             app:key="logLevel"
             app:title="@string/log_level"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.EditConfigPreference
+        <xyz.nekobyte.nekobox.ui.EditConfigPreference
             app:icon="@drawable/ic_baseline_layers_24"
             app:key="globalCustomConfig"
             app:title="@string/custom_config"
@@ -444,7 +444,7 @@
             app:key="enableClashAPI"
             app:summary="@string/enable_clash_api_summary"
             app:title="@string/enable_clash_api" />
-        <moe.matsuri.nb4a.ui.UrlTestPreference
+        <xyz.nekobyte.nekobox.ui.UrlTestPreference
             app:defaultValue="http://www.gstatic.com/generate_204"
             app:icon="@drawable/ic_baseline_cast_connected_24"
             app:key="connectionTestURL"

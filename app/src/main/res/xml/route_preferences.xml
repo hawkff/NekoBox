@@ -6,13 +6,13 @@
         app:key="routeName"
         app:title="@string/route_name"
         app:useSimpleSummaryProvider="true" />
-    <moe.matsuri.nb4a.ui.EditConfigPreference
+    <xyz.nekobyte.nekobox.ui.EditConfigPreference
         app:icon="@drawable/ic_baseline_layers_24"
         app:key="serverConfig"
         app:title="@string/custom_config"
         app:useSimpleSummaryProvider="true" />
     <PreferenceCategory app:title="@string/cag_route">
-        <io.nekohasekai.sagernet.widget.AppListPreference
+        <xyz.nekobyte.nekobox.widget.AppListPreference
             app:icon="@drawable/ic_baseline_legend_toggle_24"
             app:key="routePackages"
             app:title="@string/apps" />
@@ -48,7 +48,7 @@
             app:key="routeRuleset"
             app:title="RuleSet (.srs, .json)"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:entries="@array/route_protocol_entry"
             app:entryValues="@array/route_protocol_value"
             app:icon="@drawable/ic_baseline_compare_arrows_24"
@@ -60,7 +60,7 @@
             app:key="routeProtocol"
             app:title="protocol"
             app:useSimpleSummaryProvider="true" />
-        <io.nekohasekai.sagernet.widget.OutboundPreference
+        <xyz.nekobyte.nekobox.widget.OutboundPreference
             app:icon="@drawable/ic_hardware_router"
             app:key="routeOutbound"
             app:title="outbound"

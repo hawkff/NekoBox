@@ -1,7 +1,7 @@
 <resources>
     <!-- API 26+: edge-to-edge window bars. Every other attr is inherited from
-         Base.Theme.SagerNet (values/themes.xml); do not redeclare them here. -->
-    <style name="Theme.SagerNet" parent="Base.Theme.SagerNet">
+         Base.Theme.NekoBox (values/themes.xml); do not redeclare them here. -->
+    <style name="Theme.NekoBox" parent="Base.Theme.NekoBox">
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>

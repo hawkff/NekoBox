@@ -19,7 +19,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/appBarBackgroundColor"
             android:theme="?actionBarTheme"
-            app:popupTheme="@style/ThemeOverlay.SagerNet.Toolbar.Popup" />
+            app:popupTheme="@style/ThemeOverlay.NekoBox.Toolbar.Popup" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.fragment.app.FragmentContainerView

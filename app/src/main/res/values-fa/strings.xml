@@ -485,14 +485,13 @@
     <string name="please_update_force">برنامه شما خیلی قدیمی شده است (%s). و در %s کار نمی‌کند. باید نسخه جدید را دانلود کنید!</string>
     <string name="connection_test_delete_unavailable">پاک‌کردن غیرقابل‌دسترس‌ها</string>
     <string name="move">حرکت</string>
-    <string name="exe_prefer_provider">ارائه‌دهنده برگزیده افزونه‌ها</string>
     <string name="create_shortcut">ساخت میانبر</string>
     <string name="app_tls_version">نسخه TLS </string>
     <string name="hop_interval">مدت زمان Port hopping (به ثانیه)</string>
     <string name="domain_strategy_for_remote">راهبرد دامنه برای ارتباط از راه دور</string>
     <string name="domain_strategy_for_direct">راهبرد دامنه برای ارتباط مستقیم</string>
     <string name="domain_strategy_for_server">راهبرد دامنه برای نشانی‌های سرور</string>
-    <string name="show_bottom_bar">نمایش نوار پایین مانند SagerNet</string>
+    <string name="show_bottom_bar">نمایش نوار پایین</string>
     <string name="utls_fingerprint">اثر انگشت uTLS</string>
     <string name="custom_outbound_json">خروجی سفارشی JSON</string>
     <string name="custom_config_json">پراکسی سفارشی JSON</string>

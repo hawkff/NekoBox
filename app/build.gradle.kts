@@ -22,7 +22,7 @@ android {
         viewBinding = true
         aidl = true
     }
-    namespace = "io.nekohasekai.sagernet"
+    namespace = "xyz.nekobyte.nekobox"
     defaultConfig {
         for ((name, fallback) in mapOf(
             "POSTHOG_PROJECT_TOKEN" to "",

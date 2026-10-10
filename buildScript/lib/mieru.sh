@@ -2,9 +2,8 @@
 # Build the Mieru client binary for all Android ABIs and install them as
 # bundled native executables (app/executableSo/<abi>/libmieru.so).
 #
-# This lets NekoBox run Mieru profiles without the separate external plugin
-# (moe.matsuri.exe.mieru). PluginManager.initNativeInternal resolves
-# "mieru-plugin" -> libmieru.so from nativeLibraryDir.
+# PluginManager resolves "mieru-plugin" to the bundled libmieru.so before
+# looking for an external APK that implements the current plugin contract.
 #
 # Usage: buildScript/lib/mieru.sh (from the repository root)
 set -e

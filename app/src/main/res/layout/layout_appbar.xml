@@ -15,6 +15,6 @@
         android:background="?attr/appBarBackgroundColor"
         android:theme="?actionBarTheme"
         android:touchscreenBlocksFocus="false"
-        app:popupTheme="@style/ThemeOverlay.SagerNet.Toolbar.Popup"
+        app:popupTheme="@style/ThemeOverlay.NekoBox.Toolbar.Popup"
         app:title="@string/app_name" />
 </com.google.android.material.appbar.AppBarLayout>

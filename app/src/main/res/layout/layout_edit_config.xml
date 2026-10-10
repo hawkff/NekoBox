@@ -53,7 +53,7 @@
             android:src="@drawable/baseline_keyboard_tab_24"
             app:tint="?attr/colorOnPrimary" />
 
-        <moe.matsuri.nb4a.ui.ExtendedKeyboard
+        <xyz.nekobyte.nekobox.ui.ExtendedKeyboard
             android:id="@+id/extended_keyboard"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

@@ -465,14 +465,13 @@
     <string name="please_update_force">Ваша програма занадто стара (%s) і перестала працювати %s. Будь ласка, оновіть її!</string>
     <string name="connection_test_delete_unavailable">Очистити недоступні</string>
     <string name="move">Перемістити</string>
-    <string name="exe_prefer_provider">Пріоритетний постачальник плагіна</string>
     <string name="create_shortcut">Створити ярлик</string>
     <string name="app_tls_version">Мінімальна версія TLS для підписки</string>
     <string name="hop_interval">Інтервал зміни портів (секунди)</string>
     <string name="domain_strategy_for_remote">Стратегія доменів для віддаленого</string>
     <string name="domain_strategy_for_direct">Стратегія доменів для прямого</string>
     <string name="domain_strategy_for_server">Стратегія доменів для адреси сервера</string>
-    <string name="show_bottom_bar">Показувати нижню панель, як у SagerNet</string>
+    <string name="show_bottom_bar">Показувати нижню панель</string>
     <string name="utls_fingerprint">Відбиток uTLS</string>
     <string name="custom_outbound_json">Власний JSON вихідного з\'єднання</string>
     <string name="custom_config_json">Власний JSON конфігурації</string>

@@ -6,7 +6,7 @@
         app:title="@string/profile_name"
         app:useSimpleSummaryProvider="true" />
 
-    <moe.matsuri.nb4a.ui.SimpleMenuPreference
+    <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
         app:defaultValue="2"
         app:entries="@array/hysteria_version"
         app:entryValues="@array/hysteria_version"
@@ -27,7 +27,7 @@
             app:key="serverPorts"
             app:title="@string/server_port"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="0"
             app:entries="@array/hysteria2_obfs_type"
             app:entryValues="@array/hysteria2_obfs_type_value"
@@ -51,7 +51,7 @@
             app:key="serverHy2GeckoMaxPacket"
             app:title="@string/hysteria2_gecko_max_packet"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:entries="@array/hysteria_auth_type"
             app:entryValues="@array/int_array_3"
             app:icon="@drawable/ic_baseline_compare_arrows_24"
@@ -63,7 +63,7 @@
             app:icon="@drawable/ic_settings_password"
             app:key="serverPassword"
             app:title="@string/hysteria_auth_payload" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="https"
             app:entries="@array/hysteria_protocol"
             app:entryValues="@array/int_array_3"

@@ -65,7 +65,6 @@ depot.json
 # Local build env + local-only sources (kept off the public fork).
 buildenv.local.sh
 /libcore/gomobile/
-app/src/main/java/io/nekohasekai/sagernet/ktx/AgentDebugLog.kt
 
 # Local policy and verification helpers.
 /scripts/check-agents-untracked.sh

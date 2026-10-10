@@ -1,7 +1,7 @@
 [
   {
     "name": "SubscriptionBean-defaults",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0500000000000000810000008100a00500000000000080000000008181818181000000000000000000",
     "decoded": {
       "type": 0,
@@ -40,7 +40,7 @@
   },
   {
     "name": "SubscriptionBean-v0",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0000000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95",
     "decoded": {
       "type": 37,
@@ -79,7 +79,7 @@
   },
   {
     "name": "SubscriptionBean-v1",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0100000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95",
     "decoded": {
       "type": 37,
@@ -118,7 +118,7 @@
   },
   {
     "name": "SubscriptionBean-v2",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0200000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95250000008f66696c74657252656765782de6b58be8af95",
     "decoded": {
       "type": 37,
@@ -157,7 +157,7 @@
   },
   {
     "name": "SubscriptionBean-v3",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0300000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95250000008f66696c74657252656765782de6b58be8af9595637573746f6d446e735265736f6c7665722de6b58be8af95",
     "decoded": {
       "type": 37,
@@ -196,7 +196,7 @@
   },
   {
     "name": "SubscriptionBean-v4",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0400000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95250000008f66696c74657252656765782de6b58be8af9595637573746f6d446e735265736f6c7665722de6b58be8af958e737570706f727455726c2de6b58be8af958e7765625061676555726c2de6b58be8af958c616e6e6f756e63652de6b58be8af952500000025000000",
     "decoded": {
       "type": 37,
@@ -235,7 +235,7 @@
   },
   {
     "name": "SubscriptionBean-v5",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0500000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95250000008f66696c74657252656765782de6b58be8af9595637573746f6d446e735265736f6c7665722de6b58be8af958e737570706f727455726c2de6b58be8af958e7765625061676555726c2de6b58be8af958c616e6e6f756e63652de6b58be8af95250000002500000001",
     "decoded": {
       "type": 37,
@@ -274,7 +274,7 @@
   },
   {
     "name": "SubscriptionBean-v6",
-    "class": "io.nekohasekai.sagernet.database.SubscriptionBean",
+    "class": "xyz.nekobyte.nekobox.database.SubscriptionBean",
     "hex": "0600000025000000886c696e6b2de6b58be8af9501010193637573746f6d557365724167656e742de6b58be8af9501250000002500000098737562736372697074696f6e55736572696e666f2de6b58be8af95250000008f66696c74657252656765782de6b58be8af9595637573746f6d446e735265736f6c7665722de6b58be8af958e737570706f727455726c2de6b58be8af958e7765625061676555726c2de6b58be8af958c616e6e6f756e63652de6b58be8af952500000025000000012500000091696d706f72745761726e696e672de6b58be8af958f6261636b75704c696e6b732de6b58be8af958f6f6666657265644c696e6b2de6b58be8af95956f6666657265644261636b75704c696e6b2de6b58be8af9525000000",
     "decoded": {
       "type": 37,
@@ -313,7 +313,7 @@
   },
   {
     "name": "AmneziaWGBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.amneziawg.AmneziaWGBean",
+    "class": "xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean",
     "hex": "000000003132372e302e302eb138040000818181818c050000810000000000000000000000000000000000000000000000000000000081818181818181818101000000818181",
     "decoded": {
       "localAddress": "",
@@ -357,7 +357,7 @@
   },
   {
     "name": "AmneziaWGBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.amneziawg.AmneziaWGBean",
+    "class": "xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean",
     "hex": "0000000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af95250000002500000025000000250000002500000025000000250000008668312de6b58be8af958668322de6b58be8af958668332de6b58be8af958668342de6b58be8af958669312de6b58be8af958669322de6b58be8af958669332de6b58be8af958669342de6b58be8af958669352de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -401,7 +401,7 @@
   },
   {
     "name": "HttpBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000a0000003132372e302e302eb1380400008181817463f06e6f6ee500810000000000000000000008000000000000000400000004000000006400000064000000818101000000818181",
     "decoded": {
       "username": "",
@@ -452,7 +452,7 @@
   },
   {
     "name": "HttpBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -503,7 +503,7 @@
   },
   {
     "name": "HttpBean-standard-v1-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -554,7 +554,7 @@
   },
   {
     "name": "HttpBean-standard-v2-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -605,7 +605,7 @@
   },
   {
     "name": "HttpBean-standard-v3-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -656,7 +656,7 @@
   },
   {
     "name": "HttpBean-standard-v4-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -707,7 +707,7 @@
   },
   {
     "name": "HttpBean-standard-v5-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -758,7 +758,7 @@
   },
   {
     "name": "HttpBean-standard-v6-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -809,7 +809,7 @@
   },
   {
     "name": "HttpBean-standard-v7-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -860,7 +860,7 @@
   },
   {
     "name": "HttpBean-standard-v8-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -911,7 +911,7 @@
   },
   {
     "name": "HttpBean-standard-v9-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -962,7 +962,7 @@
   },
   {
     "name": "HttpBean-standard-v10-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.http.HttpBean",
+    "class": "xyz.nekobyte.nekobox.fmt.http.HttpBean",
     "hex": "000000000a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -1013,7 +1013,7 @@
   },
   {
     "name": "HysteriaBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "090000003132372e302e302eb13804000002000000000000008100000000818181000000000000000000810000000000000000000a0000003434b30000000000020000b0040000008101000000818181",
     "decoded": {
       "protocolVersion": 2,
@@ -1047,7 +1047,7 @@
   },
   {
     "name": "HysteriaBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0000000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af958f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9525000000250000000101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1081,7 +1081,7 @@
   },
   {
     "name": "HysteriaBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0100000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af958f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af952500000025000000018a6361546578742de6b58be8af9525000000250000000101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1115,7 +1115,7 @@
   },
   {
     "name": "HysteriaBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0200000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af958f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af9525000000250000000101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1149,7 +1149,7 @@
   },
   {
     "name": "HysteriaBean-v3",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0300000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af9525000000250000000101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1183,7 +1183,7 @@
   },
   {
     "name": "HysteriaBean-v4",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0400000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af95250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1217,7 +1217,7 @@
   },
   {
     "name": "HysteriaBean-v5",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0500000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af952500000025000000012500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1251,7 +1251,7 @@
   },
   {
     "name": "HysteriaBean-v6",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0600000070726f66696c652e6578616d706ce525000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af95250000002500000001250000008f736572766572506f7274732de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 1,
@@ -1285,7 +1285,7 @@
   },
   {
     "name": "HysteriaBean-v7",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000025000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af95250000002500000001250000008f736572766572506f7274732de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 37,
@@ -1319,7 +1319,7 @@
   },
   {
     "name": "HysteriaBean-v8",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000025000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af95250000002500000001250000008f736572766572506f7274732de6b58be8af9525000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 37,
@@ -1353,7 +1353,7 @@
   },
   {
     "name": "HysteriaBean-v9",
-    "class": "io.nekohasekai.sagernet.fmt.hysteria.HysteriaBean",
+    "class": "xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000025000000250000008f617574685061796c6f61642de6b58be8af95250000008f6f62667573636174696f6e2de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af952500000025000000018a6361546578742de6b58be8af95250000002500000001250000008f736572766572506f7274732de6b58be8af95250000002500000025000000018d656368436f6e6669672de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocolVersion": 37,
@@ -1387,7 +1387,7 @@
   },
   {
     "name": "ChainBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.internal.ChainBean",
+    "class": "xyz.nekobyte.nekobox.fmt.internal.ChainBean",
     "hex": "010000000000000001000000818181",
     "decoded": {
       "proxies": [],
@@ -1401,7 +1401,7 @@
   },
   {
     "name": "ChainBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.internal.ChainBean",
+    "class": "xyz.nekobyte.nekobox.fmt.internal.ChainBean",
     "hex": "000000008d6469736361726465642de6b58be8af952500000002000000ffffffffffff1f00ffffffffffff1f0001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "proxies": [
@@ -1418,7 +1418,7 @@
   },
   {
     "name": "ChainBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.internal.ChainBean",
+    "class": "xyz.nekobyte.nekobox.fmt.internal.ChainBean",
     "hex": "0100000002000000ffffffffffff1f00ffffffffffff1f0001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "proxies": [
@@ -1435,7 +1435,7 @@
   },
   {
     "name": "JuicityBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.juicity.JuicityBean",
+    "class": "xyz.nekobyte.nekobox.fmt.juicity.JuicityBean",
     "hex": "010000003132372e302e302eb138040000818181810001000000818181",
     "decoded": {
       "uuid": "",
@@ -1453,7 +1453,7 @@
   },
   {
     "name": "JuicityBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.juicity.JuicityBean",
+    "class": "xyz.nekobyte.nekobox.fmt.juicity.JuicityBean",
     "hex": "0000000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958c70617373776f72642de6b58be8af9587736e692de6b58be8af959970696e6e656443657274636861696e5368613235362de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "uuid": "uuid-测试",
@@ -1471,7 +1471,7 @@
   },
   {
     "name": "JuicityBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.juicity.JuicityBean",
+    "class": "xyz.nekobyte.nekobox.fmt.juicity.JuicityBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958c70617373776f72642de6b58be8af9587736e692de6b58be8af959970696e6e656443657274636861696e5368613235362de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "uuid": "uuid-测试",
@@ -1489,7 +1489,7 @@
   },
   {
     "name": "MasterDnsVpnBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.masterdnsvpn.MasterDnsVpnBean",
+    "class": "xyz.nekobyte.nekobox.fmt.masterdnsvpn.MasterDnsVpnBean",
     "hex": "000000003132372e302e302eb138040000810000000081382e382e382e380a312e312e312eb103000000030000000400000001010000000000000000007800000026000000c800000096000000a00f00000035000000494e46cf8101000000818181",
     "decoded": {
       "domains": "",
@@ -1523,7 +1523,7 @@
   },
   {
     "name": "MasterDnsVpnBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.masterdnsvpn.MasterDnsVpnBean",
+    "class": "xyz.nekobyte.nekobox.fmt.masterdnsvpn.MasterDnsVpnBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008b646f6d61696e732de6b58be8af952500000091656e6372797074696f6e4b65792de6b58be8af958d7265736f6c766572732de6b58be8af952500000025000000250000000101012500000025000000250000002500000025000000250000002500000001250000008c6c6f674c6576656c2de6b58be8af957bfd01000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "domains": "domains-测试",
@@ -1557,7 +1557,7 @@
   },
   {
     "name": "MieruBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.mieru.MieruBean",
+    "class": "xyz.nekobyte.nekobox.fmt.mieru.MieruBean",
     "hex": "000000003132372e302e302eb1380400005443d0818101000000818181",
     "decoded": {
       "protocol": "TCP",
@@ -1574,7 +1574,7 @@
   },
   {
     "name": "MieruBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.mieru.MieruBean",
+    "class": "xyz.nekobyte.nekobox.fmt.mieru.MieruBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000005443d08c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocol": "TCP",
@@ -1591,7 +1591,7 @@
   },
   {
     "name": "MieruBean-UDP",
-    "class": "io.nekohasekai.sagernet.fmt.mieru.MieruBean",
+    "class": "xyz.nekobyte.nekobox.fmt.mieru.MieruBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000005544d08c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocol": "UDP",
@@ -1608,7 +1608,7 @@
   },
   {
     "name": "NaiveBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.naive.NaiveBean",
+    "class": "xyz.nekobyte.nekobox.fmt.naive.NaiveBean",
     "hex": "030000003132372e302e302eb1bb01000068747470f38181818181000000000001000000818181",
     "decoded": {
       "proto": "https",
@@ -1629,7 +1629,7 @@
   },
   {
     "name": "NaiveBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.naive.NaiveBean",
+    "class": "xyz.nekobyte.nekobox.fmt.naive.NaiveBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008970726f746f2de6b58be8af958c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af95906578747261486561646572732de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "proto": "proto-测试",
@@ -1650,7 +1650,7 @@
   },
   {
     "name": "NaiveBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.naive.NaiveBean",
+    "class": "xyz.nekobyte.nekobox.fmt.naive.NaiveBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008970726f746f2de6b58be8af958c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af95906578747261486561646572732de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "proto": "proto-测试",
@@ -1671,7 +1671,7 @@
   },
   {
     "name": "NaiveBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.naive.NaiveBean",
+    "class": "xyz.nekobyte.nekobox.fmt.naive.NaiveBean",
     "hex": "0200000070726f66696c652e6578616d706ce5250000008970726f746f2de6b58be8af958c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af95906578747261486561646572732de6b58be8af95906365727469666963617465732de6b58be8af9587736e692de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "proto": "proto-测试",
@@ -1692,7 +1692,7 @@
   },
   {
     "name": "NaiveBean-v3",
-    "class": "io.nekohasekai.sagernet.fmt.naive.NaiveBean",
+    "class": "xyz.nekobyte.nekobox.fmt.naive.NaiveBean",
     "hex": "0300000070726f66696c652e6578616d706ce5250000008970726f746f2de6b58be8af958c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af95906578747261486561646572732de6b58be8af95906365727469666963617465732de6b58be8af9587736e692de6b58be8af95250000000101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "proto": "proto-测试",
@@ -1713,7 +1713,7 @@
   },
   {
     "name": "OlcrtcBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.olcrtc.OlcrtcBean",
+    "class": "xyz.nekobyte.nekobox.fmt.olcrtc.OlcrtcBean",
     "hex": "000000003132372e302e302eb1380400006a697473e98181817670386368616e6e65ec1e000000080000008101000000818181",
     "decoded": {
       "carrier": "jitsi",
@@ -1734,7 +1734,7 @@
   },
   {
     "name": "OlcrtcBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.olcrtc.OlcrtcBean",
+    "class": "xyz.nekobyte.nekobox.fmt.olcrtc.OlcrtcBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008b636172726965722de6b58be8af958a726f6f6d49642de6b58be8af958c636c69656e7449642de6b58be8af958a6b65794865782de6b58be8af958d7472616e73706f72742de6b58be8af9525000000250000008d646e735365727665722de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "carrier": "carrier-测试",
@@ -1755,7 +1755,7 @@
   },
   {
     "name": "ShadowsocksBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "050000003132372e302e302eb1380400006165732d3235362d6763ed8181000000000000000800000000000000040000000400000000640000006400000001000000818181",
     "decoded": {
       "method": "aes-256-gcm",
@@ -1782,7 +1782,7 @@
   },
   {
     "name": "ShadowsocksBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af958a706c7567696e2de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1809,7 +1809,7 @@
   },
   {
     "name": "ShadowsocksBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af958a706c7567696e2de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1836,7 +1836,7 @@
   },
   {
     "name": "ShadowsocksBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "0200000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af958a706c7567696e2de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1863,7 +1863,7 @@
   },
   {
     "name": "ShadowsocksBean-v3",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "0300000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af958a706c7567696e2de6b58be8af95010101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1890,7 +1890,7 @@
   },
   {
     "name": "ShadowsocksBean-v4",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "0400000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af958a706c7567696e2de6b58be8af95010101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1917,7 +1917,7 @@
   },
   {
     "name": "ShadowsocksBean-v5",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocks.ShadowsocksBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean",
     "hex": "0500000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af958a706c7567696e2de6b58be8af95010101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1944,7 +1944,7 @@
   },
   {
     "name": "ShadowsocksRBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocksr.ShadowsocksRBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocksr.ShadowsocksRBean",
     "hex": "000000003132372e302e302eb1380400006e6f6ee5816f72696769ee81706c6169ee8101000000818181",
     "decoded": {
       "method": "none",
@@ -1963,7 +1963,7 @@
   },
   {
     "name": "ShadowsocksRBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.shadowsocksr.ShadowsocksRBean",
+    "class": "xyz.nekobyte.nekobox.fmt.shadowsocksr.ShadowsocksRBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008a6d6574686f642de6b58be8af958c70617373776f72642de6b58be8af955443d09170726f746f636f6c506172616d2de6b58be8af95886f6266732de6b58be8af958d6f626673506172616d2de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "method": "method-测试",
@@ -1982,7 +1982,7 @@
   },
   {
     "name": "SnellBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.snell.SnellBean",
+    "class": "xyz.nekobyte.nekobox.fmt.snell.SnellBean",
     "hex": "020000003132372e302e302eb1bb01000081040000008181008101000000818181",
     "decoded": {
       "psk": "",
@@ -2001,7 +2001,7 @@
   },
   {
     "name": "SnellBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.snell.SnellBean",
+    "class": "xyz.nekobyte.nekobox.fmt.snell.SnellBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008770736b2de6b58be8af95250000008c6f6266734d6f64652de6b58be8af958c6f626673486f73742de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "psk": "psk-测试",
@@ -2020,7 +2020,7 @@
   },
   {
     "name": "SnellBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.snell.SnellBean",
+    "class": "xyz.nekobyte.nekobox.fmt.snell.SnellBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008770736b2de6b58be8af95250000008c6f6266734d6f64652de6b58be8af958c6f626673486f73742de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "psk": "psk-测试",
@@ -2039,7 +2039,7 @@
   },
   {
     "name": "SnellBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.snell.SnellBean",
+    "class": "xyz.nekobyte.nekobox.fmt.snell.SnellBean",
     "hex": "0200000070726f66696c652e6578616d706ce5250000008770736b2de6b58be8af95250000008c6f6266734d6f64652de6b58be8af958c6f626673486f73742de6b58be8af95018b6e6574776f726b2de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "psk": "psk-测试",
@@ -2058,7 +2058,7 @@
   },
   {
     "name": "SOCKSBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.socks.SOCKSBean",
+    "class": "xyz.nekobyte.nekobox.fmt.socks.SOCKSBean",
     "hex": "020000003132372e302e302eb1380400000200000081810001000000818181",
     "decoded": {
       "protocol": 2,
@@ -2075,7 +2075,7 @@
   },
   {
     "name": "SOCKSBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.socks.SOCKSBean",
+    "class": "xyz.nekobyte.nekobox.fmt.socks.SOCKSBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocol": 2,
@@ -2092,7 +2092,7 @@
   },
   {
     "name": "SOCKSBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.socks.SOCKSBean",
+    "class": "xyz.nekobyte.nekobox.fmt.socks.SOCKSBean",
     "hex": "0100000070726f66696c652e6578616d706ce525000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocol": 37,
@@ -2109,7 +2109,7 @@
   },
   {
     "name": "SOCKSBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.socks.SOCKSBean",
+    "class": "xyz.nekobyte.nekobox.fmt.socks.SOCKSBean",
     "hex": "0200000070726f66696c652e6578616d706ce525000000250000008c757365726e616d652de6b58be8af958c70617373776f72642de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "protocol": 37,
@@ -2126,7 +2126,7 @@
   },
   {
     "name": "SSHBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.ssh.SSHBean",
+    "class": "xyz.nekobyte.nekobox.fmt.ssh.SSHBean",
     "hex": "000000003132372e302e302eb116000000726f6ff401000000818101000000818181",
     "decoded": {
       "username": "root",
@@ -2145,7 +2145,7 @@
   },
   {
     "name": "SSHBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.ssh.SSHBean",
+    "class": "xyz.nekobyte.nekobox.fmt.ssh.SSHBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c757365726e616d652de6b58be8af95010000008c70617373776f72642de6b58be8af958d7075626c69634b65792de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -2164,7 +2164,7 @@
   },
   {
     "name": "SSHBean-0",
-    "class": "io.nekohasekai.sagernet.fmt.ssh.SSHBean",
+    "class": "xyz.nekobyte.nekobox.fmt.ssh.SSHBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c757365726e616d652de6b58be8af95000000008d7075626c69634b65792de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -2183,7 +2183,7 @@
   },
   {
     "name": "SSHBean-2",
-    "class": "io.nekohasekai.sagernet.fmt.ssh.SSHBean",
+    "class": "xyz.nekobyte.nekobox.fmt.ssh.SSHBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c757365726e616d652de6b58be8af95020000008e707269766174654b65792de6b58be8af9598707269766174654b6579506173737068726173652de6b58be8af958d7075626c69634b65792de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "username": "username-测试",
@@ -2202,7 +2202,7 @@
   },
   {
     "name": "TrojanBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000a0000003132372e302e302eb1380400008181817463f0746cf381818100818181008100000000000000000000080000000000000004000000040000000064000000640000008101000000818181",
     "decoded": {
       "password": "",
@@ -2252,7 +2252,7 @@
   },
   {
     "name": "TrojanBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2302,7 +2302,7 @@
   },
   {
     "name": "TrojanBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2352,7 +2352,7 @@
   },
   {
     "name": "TrojanBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2402,7 +2402,7 @@
   },
   {
     "name": "TrojanBean-standard-v1-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2452,7 +2452,7 @@
   },
   {
     "name": "TrojanBean-standard-v2-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2502,7 +2502,7 @@
   },
   {
     "name": "TrojanBean-standard-v3-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2552,7 +2552,7 @@
   },
   {
     "name": "TrojanBean-standard-v4-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2602,7 +2602,7 @@
   },
   {
     "name": "TrojanBean-standard-v5-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2652,7 +2652,7 @@
   },
   {
     "name": "TrojanBean-standard-v6-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2702,7 +2702,7 @@
   },
   {
     "name": "TrojanBean-standard-v7-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2752,7 +2752,7 @@
   },
   {
     "name": "TrojanBean-standard-v8-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2802,7 +2802,7 @@
   },
   {
     "name": "TrojanBean-standard-v9-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2852,7 +2852,7 @@
   },
   {
     "name": "TrojanBean-standard-v10-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.trojan.TrojanBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan.TrojanBean",
     "hex": "020000000a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af9525000000010125000000250000002500000025000000250000000125000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2902,7 +2902,7 @@
   },
   {
     "name": "TrojanGoBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.trojan_go.TrojanGoBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan_go.TrojanGoBean",
     "hex": "010000003132372e302e302eb13804000081816f726967696e61ec6e6f6ee5810001000000818181",
     "decoded": {
       "password": "",
@@ -2923,7 +2923,7 @@
   },
   {
     "name": "TrojanGoBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.trojan_go.TrojanGoBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan_go.TrojanGoBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af9587736e692de6b58be8af957463f08e656e6372797074696f6e2de6b58be8af958a706c7567696e2de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2944,7 +2944,7 @@
   },
   {
     "name": "TrojanGoBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.trojan_go.TrojanGoBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan_go.TrojanGoBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af9587736e692de6b58be8af957463f08e656e6372797074696f6e2de6b58be8af958a706c7567696e2de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2965,7 +2965,7 @@
   },
   {
     "name": "TrojanGoBean-ws",
-    "class": "io.nekohasekai.sagernet.fmt.trojan_go.TrojanGoBean",
+    "class": "xyz.nekobyte.nekobox.fmt.trojan_go.TrojanGoBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af9587736e692de6b58be8af9577f388686f73742de6b58be8af9588706174682de6b58be8af958e656e6372797074696f6e2de6b58be8af958a706c7567696e2de6b58be8af950101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -2986,7 +2986,7 @@
   },
   {
     "name": "TuicBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.tuic.TuicBean",
+    "class": "xyz.nekobyte.nekobox.fmt.tuic.TuicBean",
     "hex": "020000003132372e302e302eb13804000081816e61746976e563756269e38100007805000081000081050000008101000000818181",
     "decoded": {
       "token": "",
@@ -3013,7 +3013,7 @@
   },
   {
     "name": "TuicBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.tuic.TuicBean",
+    "class": "xyz.nekobyte.nekobox.fmt.tuic.TuicBean",
     "hex": "0000000070726f66696c652e6578616d706ce52500000089746f6b656e2de6b58be8af958a6361546578742de6b58be8af959075647052656c61794d6f64652de6b58be8af9598636f6e67657374696f6e436f6e74726f6c6c65722de6b58be8af9588616c706e2de6b58be8af9501012500000087736e692de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "token": "token-测试",
@@ -3040,7 +3040,7 @@
   },
   {
     "name": "TuicBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.tuic.TuicBean",
+    "class": "xyz.nekobyte.nekobox.fmt.tuic.TuicBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000089746f6b656e2de6b58be8af958a6361546578742de6b58be8af959075647052656c61794d6f64652de6b58be8af9598636f6e67657374696f6e436f6e74726f6c6c65722de6b58be8af9588616c706e2de6b58be8af9501012500000087736e692de6b58be8af95010101000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "token": "token-测试",
@@ -3067,7 +3067,7 @@
   },
   {
     "name": "TuicBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.tuic.TuicBean",
+    "class": "xyz.nekobyte.nekobox.fmt.tuic.TuicBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000089746f6b656e2de6b58be8af958a6361546578742de6b58be8af959075647052656c61794d6f64652de6b58be8af9598636f6e67657374696f6e436f6e74726f6c6c65722de6b58be8af9588616c706e2de6b58be8af9501012500000087736e692de6b58be8af9501017bfd2500000088757569642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "token": "token-测试",
@@ -3094,7 +3094,7 @@
   },
   {
     "name": "VMessBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a0000003132372e302e302eb13804000081617574ef81000000007463f06e6f6ee50081000000000000000000000800000000000000040000000400000000640000006400000001000000818181",
     "decoded": {
       "alterId": 0,
@@ -3144,7 +3144,7 @@
   },
   {
     "name": "VMessBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3194,7 +3194,7 @@
   },
   {
     "name": "VMessBean-standard-v1-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3244,7 +3244,7 @@
   },
   {
     "name": "VMessBean-standard-v1-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3294,7 +3294,7 @@
   },
   {
     "name": "VMessBean-standard-v1-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3344,7 +3344,7 @@
   },
   {
     "name": "VMessBean-standard-v1-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af958d6469736361726465642de6b58be8af958d6469736361726465642de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3394,7 +3394,7 @@
   },
   {
     "name": "VMessBean-standard-v1-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3444,7 +3444,7 @@
   },
   {
     "name": "VMessBean-standard-v1-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3494,7 +3494,7 @@
   },
   {
     "name": "VMessBean-standard-v1-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000078687474f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3544,7 +3544,7 @@
   },
   {
     "name": "VMessBean-standard-v1-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000006b63f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3594,7 +3594,7 @@
   },
   {
     "name": "VMessBean-standard-v2-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3644,7 +3644,7 @@
   },
   {
     "name": "VMessBean-standard-v2-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3694,7 +3694,7 @@
   },
   {
     "name": "VMessBean-standard-v2-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3744,7 +3744,7 @@
   },
   {
     "name": "VMessBean-standard-v2-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af958d6469736361726465642de6b58be8af958d6469736361726465642de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3794,7 +3794,7 @@
   },
   {
     "name": "VMessBean-standard-v2-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3844,7 +3844,7 @@
   },
   {
     "name": "VMessBean-standard-v2-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3894,7 +3894,7 @@
   },
   {
     "name": "VMessBean-standard-v2-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000078687474f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3944,7 +3944,7 @@
   },
   {
     "name": "VMessBean-standard-v2-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000006b63f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -3994,7 +3994,7 @@
   },
   {
     "name": "VMessBean-standard-v3-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4044,7 +4044,7 @@
   },
   {
     "name": "VMessBean-standard-v3-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4094,7 +4094,7 @@
   },
   {
     "name": "VMessBean-standard-v3-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4144,7 +4144,7 @@
   },
   {
     "name": "VMessBean-standard-v3-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af958d6469736361726465642de6b58be8af958d6469736361726465642de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4194,7 +4194,7 @@
   },
   {
     "name": "VMessBean-standard-v3-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4244,7 +4244,7 @@
   },
   {
     "name": "VMessBean-standard-v3-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4294,7 +4294,7 @@
   },
   {
     "name": "VMessBean-standard-v3-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000078687474f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4344,7 +4344,7 @@
   },
   {
     "name": "VMessBean-standard-v3-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000006b63f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4394,7 +4394,7 @@
   },
   {
     "name": "VMessBean-standard-v4-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4444,7 +4444,7 @@
   },
   {
     "name": "VMessBean-standard-v4-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4494,7 +4494,7 @@
   },
   {
     "name": "VMessBean-standard-v4-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4544,7 +4544,7 @@
   },
   {
     "name": "VMessBean-standard-v4-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4594,7 +4594,7 @@
   },
   {
     "name": "VMessBean-standard-v4-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4644,7 +4644,7 @@
   },
   {
     "name": "VMessBean-standard-v4-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4694,7 +4694,7 @@
   },
   {
     "name": "VMessBean-standard-v4-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4744,7 +4744,7 @@
   },
   {
     "name": "VMessBean-standard-v4-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af95250000006b63f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4794,7 +4794,7 @@
   },
   {
     "name": "VMessBean-standard-v5-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4844,7 +4844,7 @@
   },
   {
     "name": "VMessBean-standard-v5-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4894,7 +4894,7 @@
   },
   {
     "name": "VMessBean-standard-v5-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4944,7 +4944,7 @@
   },
   {
     "name": "VMessBean-standard-v5-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -4994,7 +4994,7 @@
   },
   {
     "name": "VMessBean-standard-v5-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5044,7 +5044,7 @@
   },
   {
     "name": "VMessBean-standard-v5-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5094,7 +5094,7 @@
   },
   {
     "name": "VMessBean-standard-v5-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5144,7 +5144,7 @@
   },
   {
     "name": "VMessBean-standard-v5-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000006b63f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5194,7 +5194,7 @@
   },
   {
     "name": "VMessBean-standard-v6-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5244,7 +5244,7 @@
   },
   {
     "name": "VMessBean-standard-v6-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5294,7 +5294,7 @@
   },
   {
     "name": "VMessBean-standard-v6-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5344,7 +5344,7 @@
   },
   {
     "name": "VMessBean-standard-v6-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5394,7 +5394,7 @@
   },
   {
     "name": "VMessBean-standard-v6-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5444,7 +5444,7 @@
   },
   {
     "name": "VMessBean-standard-v6-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5494,7 +5494,7 @@
   },
   {
     "name": "VMessBean-standard-v6-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5544,7 +5544,7 @@
   },
   {
     "name": "VMessBean-standard-v6-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000006b63f08c6d4b6370536565642de6b58be8af958e686561646572547970652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5594,7 +5594,7 @@
   },
   {
     "name": "VMessBean-standard-v7-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5644,7 +5644,7 @@
   },
   {
     "name": "VMessBean-standard-v7-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5694,7 +5694,7 @@
   },
   {
     "name": "VMessBean-standard-v7-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5744,7 +5744,7 @@
   },
   {
     "name": "VMessBean-standard-v7-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5794,7 +5794,7 @@
   },
   {
     "name": "VMessBean-standard-v7-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5844,7 +5844,7 @@
   },
   {
     "name": "VMessBean-standard-v7-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5894,7 +5894,7 @@
   },
   {
     "name": "VMessBean-standard-v7-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5944,7 +5944,7 @@
   },
   {
     "name": "VMessBean-standard-v7-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000006b63f08c6d4b6370536565642de6b58be8af958e686561646572547970652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -5994,7 +5994,7 @@
   },
   {
     "name": "VMessBean-standard-v8-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6044,7 +6044,7 @@
   },
   {
     "name": "VMessBean-standard-v8-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6094,7 +6094,7 @@
   },
   {
     "name": "VMessBean-standard-v8-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6144,7 +6144,7 @@
   },
   {
     "name": "VMessBean-standard-v8-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6194,7 +6194,7 @@
   },
   {
     "name": "VMessBean-standard-v8-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6244,7 +6244,7 @@
   },
   {
     "name": "VMessBean-standard-v8-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6294,7 +6294,7 @@
   },
   {
     "name": "VMessBean-standard-v8-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6344,7 +6344,7 @@
   },
   {
     "name": "VMessBean-standard-v8-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000006b63f08c6d4b6370536565642de6b58be8af958e686561646572547970652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6394,7 +6394,7 @@
   },
   {
     "name": "VMessBean-standard-v9-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6444,7 +6444,7 @@
   },
   {
     "name": "VMessBean-standard-v9-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6494,7 +6494,7 @@
   },
   {
     "name": "VMessBean-standard-v9-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6544,7 +6544,7 @@
   },
   {
     "name": "VMessBean-standard-v9-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6594,7 +6594,7 @@
   },
   {
     "name": "VMessBean-standard-v9-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6644,7 +6644,7 @@
   },
   {
     "name": "VMessBean-standard-v9-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6694,7 +6694,7 @@
   },
   {
     "name": "VMessBean-standard-v9-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6744,7 +6744,7 @@
   },
   {
     "name": "VMessBean-standard-v9-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000006b63f08c6d4b6370536565642de6b58be8af958e686561646572547970652de6b58be8af952500000025000000746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6794,7 +6794,7 @@
   },
   {
     "name": "VMessBean-standard-v10-tcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000007463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6844,7 +6844,7 @@
   },
   {
     "name": "VMessBean-standard-v10-ws",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000077f388686f73742de6b58be8af9588706174682de6b58be8af9525000000976561726c79446174614865616465724e616d652de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6894,7 +6894,7 @@
   },
   {
     "name": "VMessBean-standard-v10-http",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000687474f088686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6944,7 +6944,7 @@
   },
   {
     "name": "VMessBean-standard-v10-grpc",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000677270e388706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -6994,7 +6994,7 @@
   },
   {
     "name": "VMessBean-standard-v10-quic",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af9525000000717569e3746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -7044,7 +7044,7 @@
   },
   {
     "name": "VMessBean-standard-v10-httpupgrade",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000068747470757067726164e588686f73742de6b58be8af9588706174682de6b58be8af95746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -7094,7 +7094,7 @@
   },
   {
     "name": "VMessBean-standard-v10-xhttp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af952500000078687474f088686f73742de6b58be8af9588706174682de6b58be8af958d78687474704d6f64652de6b58be8af957bfd746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -7144,7 +7144,7 @@
   },
   {
     "name": "VMessBean-standard-v10-kcp",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "0a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af95250000006b63f08c6d4b6370536565642de6b58be8af958e686561646572547970652de6b58be8af95250000002500000025000000746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af95250000000101250000002500000025000000250000002500000001250000002500000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "alterId": 37,
@@ -7194,7 +7194,7 @@
   },
   {
     "name": "WireGuardBean-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "hex": "020000003132372e302e302eb138040000818181818c0500008101000000818181",
     "decoded": {
       "localAddress": "",
@@ -7222,7 +7222,7 @@
   },
   {
     "name": "WireGuardBean-v0",
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "hex": "0000000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -7250,7 +7250,7 @@
   },
   {
     "name": "WireGuardBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "hex": "0100000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -7278,7 +7278,7 @@
   },
   {
     "name": "WireGuardBean-v2",
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "hex": "0200000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -7306,7 +7306,7 @@
   },
   {
     "name": "AnyTLSBean-defaults",
-    "class": "moe.matsuri.nb4a.proxy.anytls.AnyTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean",
     "hex": "010000003132372e302e302eb13804000081818181810081818101000000818181",
     "decoded": {
       "password": "",
@@ -7328,7 +7328,7 @@
   },
   {
     "name": "AnyTLSBean-v0",
-    "class": "moe.matsuri.nb4a.proxy.anytls.AnyTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean",
     "hex": "0000000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af959375746c7346696e6765727072696e742de6b58be8af95018d656368436f6e6669672de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -7350,7 +7350,7 @@
   },
   {
     "name": "AnyTLSBean-v1",
-    "class": "moe.matsuri.nb4a.proxy.anytls.AnyTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean",
     "hex": "0100000070726f66696c652e6578616d706ce5250000008c70617373776f72642de6b58be8af9587736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af959375746c7346696e6765727072696e742de6b58be8af95018d656368436f6e6669672de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "password": "password-测试",
@@ -7372,7 +7372,7 @@
   },
   {
     "name": "ConfigBean-defaults",
-    "class": "moe.matsuri.nb4a.proxy.config.ConfigBean",
+    "class": "xyz.nekobyte.nekobox.proxy.config.ConfigBean",
     "hex": "000000003132372e302e302eb138040000000000008101000000818181",
     "decoded": {
       "type": 0,
@@ -7387,7 +7387,7 @@
   },
   {
     "name": "ConfigBean-v0",
-    "class": "moe.matsuri.nb4a.proxy.config.ConfigBean",
+    "class": "xyz.nekobyte.nekobox.proxy.config.ConfigBean",
     "hex": "0000000070726f66696c652e6578616d706ce525000000250000008a636f6e6669672de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "type": 37,
@@ -7402,7 +7402,7 @@
   },
   {
     "name": "ShadowTLSBean-defaults",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000a0000003132372e302e302eb1380400008181817463f0746cf38181810081818100810000000000000000000008000000000000000400000004000000006400000064000000030000008101000000818181",
     "decoded": {
       "version": 3,
@@ -7453,7 +7453,7 @@
   },
   {
     "name": "ShadowTLSBean-v0",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000002500000025000000012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7504,7 +7504,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v1-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000100000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af9525000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7555,7 +7555,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v2-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000200000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af950101018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7606,7 +7606,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v3-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000300000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7657,7 +7657,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v4-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000400000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7708,7 +7708,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v5-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000500000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7759,7 +7759,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v6-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000600000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7810,7 +7810,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v7-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000700000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000002500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7861,7 +7861,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v8-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000800000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000002500000025000000012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7912,7 +7912,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v9-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000900000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000002500000025000000012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -7963,7 +7963,7 @@
   },
   {
     "name": "ShadowTLSBean-standard-v10-tcp",
-    "class": "moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSBean",
+    "class": "xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean",
     "hex": "000000000a00000070726f66696c652e6578616d706ce52500000088757569642de6b58be8af958e656e6372797074696f6e2de6b58be8af9593766c657373456e6372797074696f6e2de6b58be8af957463f0746cf387736e692de6b58be8af9588616c706e2de6b58be8af95906365727469666963617465732de6b58be8af95019375746c7346696e6765727072696e742de6b58be8af95917265616c6974795075624b65792de6b58be8af95927265616c69747953686f727449642de6b58be8af95018d656368436f6e6669672de6b58be8af952500000001012500000025000000250000002500000025000000012500000025000000250000008c70617373776f72642de6b58be8af9501000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "version": 37,
@@ -8014,7 +8014,7 @@
   },
   {
     "name": "VMessBean-standard-v0-plain",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "000000006c65676163792e6578616d706ce5bb010000a530303030303030302d303030302d303030302d303030302d303030303030303030303031617574ef000000007463f06e6f6ee500000000010000006c65676163792d706c6169ee8181",
     "decoded": {
       "alterId": 0,
@@ -8064,7 +8064,7 @@
   },
   {
     "name": "VMessBean-standard-v0-ech",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "000000006c65676163792e6578616d706ce5bb010000a530303030303030302d303030302d303030302d303030302d303030303030303030303031617574ef000000007463f06e6f6ee50100876563682de6b58be8af9500000000010000006c65676163792d6563e88181",
     "decoded": {
       "alterId": 0,
@@ -8114,7 +8114,7 @@
   },
   {
     "name": "VMessBean-standard-v0-packet-probe",
-    "class": "io.nekohasekai.sagernet.fmt.v2ray.VMessBean",
+    "class": "xyz.nekobyte.nekobox.fmt.v2ray.VMessBean",
     "hex": "000000006c65676163792e6578616d706ce5bb010000a530303030303030302d303030302d303030302d303030302d303030303030303030303031617574ef000000007463f06e6f6ee500010000000000006c65676163792d7061636b65742d70726f62e58181",
     "decoded": {
       "alterId": 0,
@@ -8164,7 +8164,7 @@
   },
   {
     "name": "WireGuardBean-v3",
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "hex": "0300000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af9531302e302e302e302f380a666430303a3a2fb819000000d7015b506565725d0a5075626c69634b6579203d20706565722de6b58be8af950a456e64706f696e74203d205b323030313a6462383a3a315d3a35313832300a416c6c6f776564495073203d203139322e3136382e342e302f32340a31302e302e302e310a666430303a3ab1636f72702e6578616d706ce502000000a168747470733a2f2f646e732de6b58be8af952e6578616d706c652f646e732d71756572796c61622e6578616d706ce50100000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -8192,7 +8192,7 @@
   },
   {
     "name": "WireGuardBean-v3-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean",
+    "class": "xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean",
     "hex": "0300000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af9581000000008181810000000081810000000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -8220,7 +8220,7 @@
   },
   {
     "name": "AmneziaWGBean-v1",
-    "class": "io.nekohasekai.sagernet.fmt.amneziawg.AmneziaWGBean",
+    "class": "xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean",
     "hex": "0100000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af95250000002500000025000000250000002500000025000000250000008668312de6b58be8af958668322de6b58be8af958668332de6b58be8af958668342de6b58be8af958669312de6b58be8af958669322de6b58be8af958669332de6b58be8af958669342de6b58be8af958669352de6b58be8af9531302e302e302e302f380a666430303a3a2fb819000000d7015b506565725d0a5075626c69634b6579203d20706565722de6b58be8af950a456e64706f696e74203d205b323030313a6462383a3a315d3a35313832300a416c6c6f776564495073203d203139322e3136382e342e302f32340a31302e302e302e310a666430303a3ab1636f72702e6578616d706ce502000000a168747470733a2f2f646e732de6b58be8af952e6578616d706c652f646e732d71756572796c61622e6578616d706ce50100000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",
@@ -8264,7 +8264,7 @@
   },
   {
     "name": "AmneziaWGBean-v1-defaults",
-    "class": "io.nekohasekai.sagernet.fmt.amneziawg.AmneziaWGBean",
+    "class": "xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean",
     "hex": "0100000070726f66696c652e6578616d706ce525000000906c6f63616c416464726573732de6b58be8af958e707269766174654b65792de6b58be8af9591706565725075626c69634b65792de6b58be8af9594706565725072655368617265644b65792de6b58be8af95250000008c72657365727665642de6b58be8af95250000002500000025000000250000002500000025000000250000008668312de6b58be8af958668322de6b58be8af958668332de6b58be8af958668342de6b58be8af958669312de6b58be8af958669322de6b58be8af958669332de6b58be8af958669342de6b58be8af958669352de6b58be8af9581000000008181810000000081810000000001000000886e616d652de6b58be8af957bfd7bfd",
     "decoded": {
       "localAddress": "localAddress-测试",

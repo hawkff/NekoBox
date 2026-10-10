@@ -66,7 +66,7 @@ def apply_device_config(args, config):
         "&& mv no_backup/local-api.json.tmp no_backup/local-api.json",
         data=json.dumps(config).encode(),
     )
-    adb_shell(args.serial, "am", "start", "-n", f"{args.package}/io.nekohasekai.sagernet.ui.MainActivity")
+    adb_shell(args.serial, "am", "start", "-n", f"{args.package}/xyz.nekobyte.nekobox.ui.MainActivity")
 
 
 def configure(args, enabled):

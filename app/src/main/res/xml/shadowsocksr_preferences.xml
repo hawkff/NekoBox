@@ -18,7 +18,7 @@
             app:title="@string/server_port"
             app:useSimpleSummaryProvider="true" />
 
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:entries="@array/ssr_enc_method_value"
             app:entryValues="@array/ssr_enc_method_value"
             app:icon="@drawable/ic_notification_enhanced_encryption"
@@ -30,7 +30,7 @@
             app:icon="@drawable/ic_settings_password"
             app:key="serverPassword"
             app:title="@string/password" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:entries="@array/ssr_protocol_value"
             app:entryValues="@array/ssr_protocol_value"
             app:icon="@drawable/ic_baseline_compare_arrows_24"
@@ -42,7 +42,7 @@
             app:key="serverProtocolParam"
             app:title="@string/protocol_param"
             app:useSimpleSummaryProvider="true" />
-        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:entries="@array/ssr_obfs_value"
             app:entryValues="@array/ssr_obfs_value"
             app:icon="@drawable/ic_baseline_texture_24"

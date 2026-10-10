@@ -7,4 +7,4 @@ dependencyResolutionManagement {
 }
 
 include(":app")
-rootProject.name = "NB4A"
+rootProject.name = "NekoBox"

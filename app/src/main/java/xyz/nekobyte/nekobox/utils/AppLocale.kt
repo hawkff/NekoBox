@@ -1,0 +1,21 @@
+package xyz.nekobyte.nekobox.utils
+
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import xyz.nekobyte.nekobox.database.DataStore
+
+object AppLocale {
+
+    // Empty tag means "follow system".
+    fun localeList(tag: String?): LocaleListCompat = if (tag.isNullOrEmpty()) {
+        LocaleListCompat.getEmptyLocaleList()
+    } else {
+        LocaleListCompat.forLanguageTags(tag)
+    }
+
+    // Applies the in-app language. AppCompat handles persistence (API 33+ via the
+    // framework, below via SharedPreferences) and recreates active activities.
+    fun apply(tag: String? = DataStore.appLanguage) {
+        AppCompatDelegate.setApplicationLocales(localeList(tag))
+    }
+}

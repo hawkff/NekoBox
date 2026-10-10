@@ -7,7 +7,7 @@
         android:shortcutShortLabel="@string/quick_toggle">
         <intent
             android:action="android.intent.action.MAIN"
-            android:targetClass="io.nekohasekai.sagernet.QuickToggleShortcut"
+            android:targetClass="xyz.nekobyte.nekobox.QuickToggleShortcut"
             android:targetPackage="{{TARGET_PACKAGE}}" />
     </shortcut>
     <shortcut
@@ -17,7 +17,7 @@
         android:shortcutShortLabel="@string/quick_enable">
         <intent
             android:action="android.intent.action.MAIN"
-            android:targetClass="io.nekohasekai.sagernet.ui.QuickEnableShortcut"
+            android:targetClass="xyz.nekobyte.nekobox.ui.QuickEnableShortcut"
             android:targetPackage="{{TARGET_PACKAGE}}" />
     </shortcut>
     <shortcut
@@ -27,7 +27,7 @@
         android:shortcutShortLabel="@string/quick_disable">
         <intent
             android:action="android.intent.action.MAIN"
-            android:targetClass="io.nekohasekai.sagernet.ui.QuickDisableShortcut"
+            android:targetClass="xyz.nekobyte.nekobox.ui.QuickDisableShortcut"
             android:targetPackage="{{TARGET_PACKAGE}}" />
     </shortcut>
     <shortcut
@@ -37,7 +37,7 @@
         android:shortcutShortLabel="@string/add_profile_methods_scan_qr_code">
         <intent
             android:action="android.intent.action.MAIN"
-            android:targetClass="io.nekohasekai.sagernet.ui.ScannerActivity"
+            android:targetClass="xyz.nekobyte.nekobox.ui.ScannerActivity"
             android:targetPackage="{{TARGET_PACKAGE}}" />
     </shortcut>
 </shortcuts>

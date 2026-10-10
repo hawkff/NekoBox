@@ -101,7 +101,7 @@
     <!-- notification category -->
     <string name="service_vpn">VPN 服務</string>
     <string name="service_proxy">代理服務</string>
-    <string name="forward_success">SagerNet 已啟動。</string>
+    <string name="forward_success">代理已啟動。</string>
     <string name="invalid_server">伺服器名稱無效</string>
     <string name="stop">停止</string>
     <string name="stopping">正在關閉…</string>
@@ -470,14 +470,13 @@
     <string name="please_update_force">您的 APP (%s) 版本過舊，已於 %s 停止工作，請立即升級。</string>
     <string name="connection_test_delete_unavailable">清理不可用配置</string>
     <string name="move">移動</string>
-    <string name="exe_prefer_provider">首選外掛提供者</string>
     <string name="create_shortcut">建立快捷方式</string>
     <string name="app_tls_version">訂閱最低 TLS 版本</string>
     <string name="hop_interval">埠跳躍間隔(秒)</string>
     <string name="domain_strategy_for_remote">域名策略（遠端）</string>
     <string name="domain_strategy_for_direct">域名策略（直連）</string>
     <string name="domain_strategy_for_server">域名策略（伺服器地址）</string>
-    <string name="show_bottom_bar">像 SagerNet 一樣顯示底欄</string>
+    <string name="show_bottom_bar">顯示底欄</string>
     <string name="utls_fingerprint">uTLS 指紋</string>
     <string name="custom_outbound_json">自定義出站 JSON</string>
     <string name="custom_config_json">自定義配置 JSON</string>

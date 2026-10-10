@@ -28,7 +28,7 @@
                 android:theme="?actionBarTheme"
                 android:touchscreenBlocksFocus="false"
                 app:layout_collapseMode="pin"
-                app:popupTheme="@style/ThemeOverlay.SagerNet.Toolbar.Popup"
+                app:popupTheme="@style/ThemeOverlay.NekoBox.Toolbar.Popup"
                 app:title="@string/app_name" />
 
             <LinearLayout

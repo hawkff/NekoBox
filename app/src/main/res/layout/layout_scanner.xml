@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <io.nekohasekai.sagernet.widget.ScannerOverlayView
+    <xyz.nekobyte.nekobox.widget.ScannerOverlayView
         android:id="@+id/overlayView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

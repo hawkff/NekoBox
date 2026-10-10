@@ -1,0 +1,753 @@
+package xyz.nekobyte.nekobox.ui
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.provider.OpenableColumns
+import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.FileProvider
+import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import com.jakewharton.processphoenix.ProcessPhoenix
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Credentials
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import org.json.JSONObject
+import xyz.nekobyte.nekobox.BuildConfig
+import xyz.nekobyte.nekobox.NekoBox
+import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.database.*
+import xyz.nekobyte.nekobox.database.preference.PublicDatabase
+import xyz.nekobyte.nekobox.databinding.LayoutBackupBinding
+import xyz.nekobyte.nekobox.databinding.LayoutImportBinding
+import xyz.nekobyte.nekobox.databinding.LayoutProgressBinding
+import xyz.nekobyte.nekobox.fmt.tailscale.profilesForBackup
+import xyz.nekobyte.nekobox.ktx.*
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.IOException
+import java.util.*
+import java.util.zip.ZipInputStream
+import kotlin.coroutines.resume
+
+private suspend fun Call.awaitResponse(): Response = suspendCancellableCoroutine { continuation ->
+    continuation.invokeOnCancellation { cancel() }
+    enqueue(
+        object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                continuation.resumeWith(Result.failure(e))
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                continuation.resume(response) { _, undeliveredResponse, _ ->
+                    undeliveredResponse.close()
+                }
+            }
+        },
+    )
+}
+
+internal fun backupFileName(now: Date = Date()): String {
+    val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(now)
+    return "nekobox_backup_$timestamp.json"
+}
+
+class BackupFragment : NamedFragment(R.layout.layout_backup) {
+
+    private var pendingExportData: ByteArray? = null
+    private var isBackupInProgress = false
+    private var isRestoreInProgress = false
+    private var backupJob: Job? = null
+    private var snackbar: Snackbar? = null
+    private var restoreJob: Job? = null
+
+    override fun onDestroyView() {
+        backupJob?.cancel()
+        backupJob = null
+        isBackupInProgress = false
+        snackbar?.dismiss()
+        snackbar = null
+        pendingExportData = null
+        // if a restore operation is in progress, cancel it
+        if (isRestoreInProgress) {
+            restoreJob?.cancel()
+            restoreJob = null
+            isRestoreInProgress = false
+            MessageStore.showMessage(requireActivity(), R.string.restore_cancelled)
+        }
+        super.onDestroyView()
+    }
+
+    override fun name0() = app.getString(R.string.backup)
+
+    var content = ""
+    private val exportSettings = registerForActivityResult(ActivityResultContracts.CreateDocument()) { data ->
+        val exportData = pendingExportData.also { pendingExportData = null }
+        if (data == null) {
+            isBackupInProgress = false
+            return@registerForActivityResult
+        }
+        if (exportData == null) {
+            isBackupInProgress = false
+            snackbar(R.string.action_export_err).show()
+            return@registerForActivityResult
+        }
+        val contentResolver = requireActivity().contentResolver
+        backupJob = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    contentResolver.openOutputStream(data)!!.use { os ->
+                        os.write(exportData)
+                    }
+                }
+                snackbar(getString(R.string.action_export_msg)).show()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logs.w(e)
+                snackbar(e.readableMessage).show()
+            } finally {
+                isBackupInProgress = false
+            }
+        }
+    }
+
+    private fun backupIsBusy() = isBackupInProgress || pendingExportData != null
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val binding = LayoutBackupBinding.bind(view)
+
+        binding.actionExport.setOnClickListener {
+            if (backupIsBusy()) {
+                showMessage(R.string.backup_in_progress)
+                return@setOnClickListener
+            }
+            val backupConfigurations = binding.backupConfigurations.isChecked
+            val backupRules = binding.backupRules.isChecked
+            val backupSettings = binding.backupSettings.isChecked
+            isBackupInProgress = true
+            backupJob = viewLifecycleOwner.lifecycleScope.launch {
+                var destinationPending = false
+                try {
+                    val exportData = withContext(Dispatchers.IO) {
+                        doBackup(
+                            backupConfigurations,
+                            backupRules,
+                            backupSettings,
+                            BackupArchiveFormat.JSON,
+                        )
+                    }
+                    pendingExportData = exportData
+                    startFilesForResult(
+                        exportSettings,
+                        backupFileName(),
+                    )
+                    destinationPending = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Logs.w(e)
+                    snackbar(e.readableMessage).show()
+                } finally {
+                    if (!destinationPending) {
+                        pendingExportData = null
+                        isBackupInProgress = false
+                    }
+                }
+            }
+        }
+
+        binding.actionShare.setOnClickListener {
+            if (backupIsBusy()) {
+                showMessage(R.string.backup_in_progress)
+                return@setOnClickListener
+            }
+            val backupConfigurations = binding.backupConfigurations.isChecked
+            val backupRules = binding.backupRules.isChecked
+            val backupSettings = binding.backupSettings.isChecked
+            isBackupInProgress = true
+            backupJob = viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val cacheFile = withContext(Dispatchers.IO) {
+                        val shareData = doBackup(
+                            backupConfigurations,
+                            backupRules,
+                            backupSettings,
+                            BackupArchiveFormat.JSON,
+                        )
+                        val shareDir = File(app.cacheDir, "share").apply { mkdirs() }
+                        File(
+                            shareDir,
+                            backupFileName(),
+                        ).also { it.writeBytes(shareData) }
+                    }
+                    startActivity(
+                        Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).setType("application/json")
+                                .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                .putExtra(
+                                    Intent.EXTRA_STREAM,
+                                    FileProvider.getUriForFile(
+                                        app,
+                                        BuildConfig.APPLICATION_ID + ".cache",
+                                        cacheFile,
+                                    ),
+                                ),
+                            app.getString(R.string.abc_shareactionprovider_share_with),
+                        ),
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Logs.w(e)
+                    snackbar(e.readableMessage).show()
+                } finally {
+                    isBackupInProgress = false
+                }
+            }
+        }
+
+        binding.actionImportFile.setOnClickListener {
+            startFilesForResult(importFile, "*/*")
+        }
+
+        setupWebDAV(binding)
+    }
+
+    private fun setupWebDAV(binding: LayoutBackupBinding) {
+        binding.webdavSettings.setOnClickListener {
+            startActivity(Intent(requireContext(), WebDAVSettingsActivity::class.java))
+        }
+
+        binding.backupToWebdav.setOnClickListener {
+            if (DataStore.webdavServer.isNullOrEmpty()) {
+                showMessage(R.string.webdav_server_empty)
+                return@setOnClickListener
+            }
+            backupToWebDAV()
+        }
+
+        binding.restoreFromWebdav.setOnClickListener {
+            if (DataStore.webdavServer.isNullOrEmpty()) {
+                showMessage(R.string.webdav_server_empty)
+                return@setOnClickListener
+            }
+            restoreFromWebDAV()
+        }
+    }
+
+    private fun backupToWebDAV() {
+        if (backupIsBusy()) {
+            showMessage(R.string.backup_in_progress)
+            return
+        }
+        isBackupInProgress = true
+        val activity = requireActivity()
+        backupJob = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val backupData = doBackup(
+                        true, // back up configs and groups
+                        true, // back up route rules
+                        true, // back up settings
+                        BackupArchiveFormat.ZIP,
+                    )
+
+                    val client = OkHttpClient()
+
+                    // normalize URL
+                    val baseUrl = DataStore.webdavServer!!.trimEnd('/')
+                    val path = DataStore.webdavPath?.trim('/')?.takeIf { it.isNotEmpty() } ?: "Nekobox"
+
+                    // use an English-formatted timestamp as the file name, with a .zip suffix
+                    val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                    val version = BuildConfig.VERSION_NAME
+                    val fileName = "nekobox_backup_${version}_$timestamp.zip"
+
+                    // ensure baseUrl is a valid URL that uses TLS
+                    // (WebDAV backup contains all config keys, plaintext http:// is forbidden)
+                    val baseHttpUrl = WebDAVSecurity.requireSecureUrl(baseUrl)
+
+                    val dirUrl = baseHttpUrl.newBuilder().apply {
+                        path.split('/').filter { it.isNotEmpty() }.forEach { segment ->
+                            addPathSegment(segment)
+                        }
+                    }.build()
+
+                    val fileUrl = dirUrl.newBuilder()
+                        .addPathSegment(fileName)
+                        .build()
+
+                    Logs.d("WebDAV backup - Directory URL: ${redactedWebDavUrlForLog(dirUrl)}")
+                    Logs.d("WebDAV backup - File URL: ${redactedWebDavUrlForLog(fileUrl)}")
+
+                    // first check whether the directory exists
+                    val propfindRequest = Request.Builder()
+                        .url(dirUrl)
+                        .method("PROPFIND", null)
+                        .header(
+                            "Authorization",
+                            Credentials.basic(
+                                DataStore.webdavUsername ?: "",
+                                DataStore.webdavPassword ?: "",
+                            ),
+                        )
+                        .header("Depth", "0")
+                        .build()
+
+                    var needCreateDir = false
+                    client.newCall(propfindRequest).awaitResponse().use { response ->
+                        Logs.d("WebDAV backup - PROPFIND response: ${response.code}")
+                        when (response.code) {
+                            404 -> needCreateDir = true
+
+                            207 -> needCreateDir = false
+
+                            // directory exists
+                            401 -> throw Exception("Authentication failed")
+
+                            else -> {
+                                if (!response.isSuccessful) {
+                                    Logs.e("WebDAV backup - PROPFIND failed: ${response.code} ${response.message}")
+                                    throw Exception("Failed to check directory (${response.code}): ${response.message}")
+                                }
+                            }
+                        }
+                    }
+
+                    currentCoroutineContext().ensureActive()
+
+                    // create the directory if needed
+                    if (needCreateDir) {
+                        Logs.d("WebDAV backup - Creating directory")
+                        val mkcolRequest = Request.Builder()
+                            .url(dirUrl)
+                            .method("MKCOL", null)
+                            .header(
+                                "Authorization",
+                                Credentials.basic(
+                                    DataStore.webdavUsername ?: "",
+                                    DataStore.webdavPassword ?: "",
+                                ),
+                            )
+                            .build()
+
+                        client.newCall(mkcolRequest).awaitResponse().use { response ->
+                            if (!response.isSuccessful) {
+                                Logs.e("WebDAV backup - MKCOL failed: ${response.code} ${response.message}")
+                                throw Exception("Failed to create directory (${response.code}): ${response.message}")
+                            }
+                        }
+                    }
+
+                    currentCoroutineContext().ensureActive()
+
+                    // use the correct Content-Type when uploading the file
+                    val putRequest = Request.Builder()
+                        .url(fileUrl)
+                        .put(backupData.toRequestBody("application/zip".toMediaType()))
+                        .apply {
+                            header(
+                                "Authorization",
+                                Credentials.basic(
+                                    DataStore.webdavUsername ?: "",
+                                    DataStore.webdavPassword ?: "",
+                                ),
+                            )
+                        }
+                        .build()
+
+                    client.newCall(putRequest).awaitResponse().use { response ->
+                        if (!response.isSuccessful) {
+                            Logs.e("WebDAV backup - PUT failed: ${response.code} ${response.message}")
+                            throw Exception("Upload failed (${response.code}): ${response.message}")
+                        }
+                        Logs.d("WebDAV backup - Upload successful")
+                    }
+                }
+
+                MessageStore.showMessage(activity, R.string.webdav_backup_success)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logs.w(e)
+
+                val errorMessage = try {
+                    if (isAdded) {
+                        getString(R.string.webdav_backup_failed, e.message ?: "")
+                    } else {
+                        app.getString(R.string.webdav_backup_failed, e.message ?: "")
+                    }
+                } catch (ex: Exception) {
+                    "WebDAV backup failed: ${e.message ?: ""}"
+                }
+
+                MessageStore.showMessage(activity, errorMessage)
+            } finally {
+                isBackupInProgress = false
+            }
+        }
+    }
+
+    private fun restoreFromWebDAV() {
+        if (isRestoreInProgress) {
+            showMessage(R.string.restore_in_progress)
+            return
+        }
+        isRestoreInProgress = true
+        val activity = requireActivity()
+        restoreJob = runOnDefaultDispatcher {
+            try {
+                val client = OkHttpClient()
+                val baseUrl = DataStore.webdavServer!!.trimEnd('/')
+                val path = DataStore.webdavPath?.trim('/')?.takeIf { it.isNotEmpty() } ?: "Nekobox"
+
+                // WebDAV backup contains all config keys, plaintext http:// is forbidden
+                val baseHttpUrl = WebDAVSecurity.requireSecureUrl(baseUrl)
+
+                val dirUrl = baseHttpUrl.newBuilder().apply {
+                    path.split('/').filter { it.isNotEmpty() }.forEach { segment ->
+                        addPathSegment(segment)
+                    }
+                }.build()
+
+                Logs.d("WebDAV restore - Directory URL: ${redactedWebDavUrlForLog(dirUrl)}")
+
+                // first list the directory contents to find the latest backup file
+                val propfindRequest = Request.Builder()
+                    .url(dirUrl)
+                    .method("PROPFIND", null)
+                    .header(
+                        "Authorization",
+                        Credentials.basic(
+                            DataStore.webdavUsername ?: "",
+                            DataStore.webdavPassword ?: "",
+                        ),
+                    )
+                    .header("Depth", "1")
+                    .build()
+
+                // get the latest backup file name
+                val latestBackup = client.newCall(propfindRequest).execute().use { response ->
+                    if (response.code != 207) {
+                        Logs.e("WebDAV restore - PROPFIND failed: ${response.code} ${response.message}")
+                        throw Exception("Failed to list directory (${response.code}): ${response.message}")
+                    }
+
+                    val responseBody = response.body?.byteStream()
+                        ?.use { it.readBytesBounded().toString(Charsets.UTF_8) }
+                        ?: throw Exception("Empty response")
+
+                    val patterns = listOf(
+                        """<D:href>[^<]*?nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)</D:href>""".toRegex(),
+                        """<d:href>[^<]*?nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)</d:href>""".toRegex(),
+                        """<href>[^<]*?nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)</href>""".toRegex(),
+                    )
+
+                    val backupFiles = mutableListOf<String>()
+
+                    for (pattern in patterns) {
+                        val matches = pattern.findAll(responseBody)
+                        matches.forEach { match ->
+                            val href = match.value
+                            val fileName = """nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)""".toRegex()
+                                .find(href)?.value
+                            if (fileName != null) {
+                                backupFiles.add(fileName)
+                            }
+                        }
+                        if (backupFiles.isNotEmpty()) break
+                    }
+
+                    Logs.d("WebDAV restore - Found ${backupFiles.size} candidate backup files")
+
+                    backupFiles.maxByOrNull { fileName ->
+                        """(\d{8}_\d{6})""".toRegex().find(fileName)?.value ?: ""
+                    } ?: throw Exception("No backup found")
+                }
+
+                // download the latest backup file
+                val fileUrl = dirUrl.newBuilder()
+                    .addPathSegment(latestBackup)
+                    .build()
+                Logs.d("WebDAV restore - File URL: ${redactedWebDavUrlForLog(fileUrl)}")
+
+                val getRequest = Request.Builder()
+                    .url(fileUrl)
+                    .get()
+                    .header(
+                        "Authorization",
+                        Credentials.basic(
+                            DataStore.webdavUsername ?: "",
+                            DataStore.webdavPassword ?: "",
+                        ),
+                    )
+                    .build()
+
+                val content = client.newCall(getRequest).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Logs.e("WebDAV restore - GET failed: ${response.code} ${response.message}")
+                        throw Exception("Download failed (${response.code}): ${response.message}")
+                    }
+                    response.body?.byteStream()?.use { it.readBytesBounded() }
+                        ?: throw Exception("Empty backup file")
+                }
+
+                Logs.d("WebDAV restore - Successfully downloaded backup file, size: ${content.size}")
+
+                // process the content based on file type
+                val backupContent = if (latestBackup.endsWith(".zip")) {
+                    // ZIP file handling
+                    ZipInputStream(content.inputStream()).use { zis ->
+                        zis.nextEntry?.let { entry ->
+                            if (entry.name.endsWith(".json")) {
+                                zis.readBytesBounded().toString(Charsets.UTF_8)
+                            } else {
+                                throw Exception("Invalid backup file format")
+                            }
+                        } ?: throw Exception("Invalid backup file format")
+                    }
+                } else {
+                    // JSON file handling
+                    content.toString(Charsets.UTF_8)
+                }
+
+                // parse and import the backup data
+                val json = JSONObject(backupContent)
+                onMainDispatcher {
+                    // if the Fragment has been destroyed, cancel the restore operation
+                    if (!isAdded) {
+                        MessageStore.showMessage(activity, R.string.restore_cancelled)
+                        return@onMainDispatcher
+                    }
+
+                    val import = LayoutImportBinding.inflate(layoutInflater)
+                    if (!json.has("profiles")) {
+                        import.backupConfigurations.isVisible = false
+                    }
+                    if (!json.has("rules")) {
+                        import.backupRules.isVisible = false
+                    }
+                    if (!json.has("settings")) {
+                        import.backupSettings.isVisible = false
+                    }
+
+                    MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.backup_import)
+                        .setView(import.root)
+                        .setPositiveButton(R.string.backup_import) { _, _ ->
+                            NekoBox.stopService()
+
+                            val binding = LayoutProgressBinding.inflate(layoutInflater)
+                            binding.content.text = getString(R.string.backup_importing)
+                            val dialog = AlertDialog.Builder(requireContext())
+                                .setView(binding.root)
+                                .setCancelable(false)
+                                .show()
+                            runOnDefaultDispatcher {
+                                runCatching {
+                                    // check again whether it has been cancelled
+                                    if (!isAdded) {
+                                        MessageStore.showMessage(activity, R.string.restore_cancelled)
+                                        return@runOnDefaultDispatcher
+                                    }
+                                    finishImport(
+                                        json,
+                                        import.backupConfigurations.isChecked,
+                                        import.backupRules.isChecked,
+                                        import.backupSettings.isChecked,
+                                    )
+                                    ProcessPhoenix.triggerRebirth(
+                                        activity,
+                                        Intent(activity, MainActivity::class.java),
+                                    )
+                                }.onFailure {
+                                    Logs.w(it)
+                                    onMainDispatcher {
+                                        MessageStore.showMessage(activity, it.readableMessage)
+                                    }
+                                }
+
+                                onMainDispatcher {
+                                    dialog.dismiss()
+                                }
+                            }
+                        }
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                Logs.w(e)
+                onMainDispatcher {
+                    MessageStore.showMessage(activity, e.readableMessage)
+                }
+            } finally {
+                isRestoreInProgress = false
+            }
+        }
+    }
+
+    private suspend fun doBackup(
+        profile: Boolean,
+        rule: Boolean,
+        setting: Boolean,
+        format: BackupArchiveFormat,
+    ): ByteArray {
+        if (setting) {
+            // configurationStore writes are async write-through; drain pending commits so a
+            // just-changed setting is present in the backup rather than only in the live snapshot.
+            DataStore.configurationStore.awaitWrites()
+        }
+        val out = JSONObject().apply {
+            put("version", BackupFormatV2.VERSION)
+            if (profile) {
+                put("profiles", BackupFormatV2.encodeProfiles(profilesForBackup()))
+                put("groups", BackupFormatV2.encodeGroups(ProfileDatabase.groupDao.allGroups()))
+            }
+            if (rule) {
+                put("rules", BackupFormatV2.encodeRules(ProfileDatabase.rulesDao.allRules()))
+            }
+            if (setting) {
+                put("settings", BackupFormatV2.encodeSettings(PublicDatabase.kvPairDao.all()))
+            }
+        }
+
+        return encodeBackupArchive(out.toStringPretty(), format)
+    }
+
+    val importFile = registerForActivityResult(ActivityResultContracts.GetContent()) { file ->
+        if (file != null) {
+            runOnDefaultDispatcher {
+                startImport(file)
+            }
+        }
+    }
+
+    suspend fun startImport(file: Uri) {
+        val activity = requireActivity()
+        val fileName = requireContext().contentResolver.query(file, null, null, null, null)
+            ?.use { cursor ->
+                cursor.moveToFirst()
+                cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME).let(cursor::getString)
+            }
+            ?.takeIf { it.isNotBlank() } ?: file.pathSegments.last()
+            .substringAfterLast('/')
+            .substringAfter(':')
+
+        if (!fileName.endsWith(".json") && !fileName.endsWith(".zip")) {
+            onMainDispatcher {
+                snackbar(getString(R.string.backup_not_file, fileName)).show()
+            }
+            return
+        }
+
+        try {
+            val content = requireContext().contentResolver.openInputStream(file)!!.use { input ->
+                if (fileName.endsWith(".zip")) {
+                    ZipInputStream(BufferedInputStream(input)).use { zis ->
+                        zis.nextEntry?.let { entry ->
+                            if (entry.name.endsWith(".json")) {
+                                zis.readBytesBounded().toString(Charsets.UTF_8)
+                            } else {
+                                throw Exception("Invalid backup file format")
+                            }
+                        } ?: throw Exception("Invalid backup file format")
+                    }
+                } else {
+                    input.readBytesBounded().toString(Charsets.UTF_8)
+                }
+            }
+
+            val json = JSONObject(content)
+            onMainDispatcher {
+                val import = LayoutImportBinding.inflate(layoutInflater)
+                if (!json.has("profiles")) {
+                    import.backupConfigurations.isVisible = false
+                }
+                if (!json.has("rules")) {
+                    import.backupRules.isVisible = false
+                }
+                if (!json.has("settings")) {
+                    import.backupSettings.isVisible = false
+                }
+                MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.backup_import)
+                    .setView(import.root)
+                    .setPositiveButton(R.string.backup_import) { _, _ ->
+                        NekoBox.stopService()
+
+                        val binding = LayoutProgressBinding.inflate(layoutInflater)
+                        binding.content.text = getString(R.string.backup_importing)
+                        val dialog = AlertDialog.Builder(requireContext())
+                            .setView(binding.root)
+                            .setCancelable(false)
+                            .show()
+                        runOnDefaultDispatcher {
+                            runCatching {
+                                finishImport(
+                                    json,
+                                    import.backupConfigurations.isChecked,
+                                    import.backupRules.isChecked,
+                                    import.backupSettings.isChecked,
+                                )
+                                triggerFullRestart(requireContext())
+                            }.onFailure {
+                                Logs.w(it)
+                                onMainDispatcher {
+                                    dialog.dismiss()
+                                    MessageStore.showMessage(activity, it.readableMessage)
+                                }
+                            }
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        } catch (e: Exception) {
+            Logs.w(e)
+            onMainDispatcher {
+                MessageStore.showMessage(activity, e.readableMessage)
+            }
+        }
+    }
+
+    suspend fun finishImport(content: JSONObject, profile: Boolean, rule: Boolean, setting: Boolean) {
+        restoreBackup(
+            content,
+            profile,
+            rule,
+            setting,
+            DatabaseBackupRestoreOperations,
+        )
+    }
+
+    private fun showMessage(message: String) {
+        MessageStore.showMessage(message)
+    }
+
+    private fun showMessage(@StringRes resId: Int) {
+        MessageStore.showMessage(requireActivity(), resId)
+    }
+
+    private fun showMessage(@StringRes resId: Int, vararg args: Any) {
+        MessageStore.showMessage(requireActivity(), resId, *args)
+    }
+}

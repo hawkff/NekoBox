@@ -88,7 +88,7 @@ jobs:
             # Migrations plus the theme palette checks (attr resolution, contrast floors).
             # ThemeSmokeTest's screenshot pass stays a manual tool: minutes long, 70 PNGs.
             ./gradlew :app:connectedOssDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=io.nekohasekai.sagernet.database.SagerDatabaseMigrationTest,io.nekohasekai.sagernet.database.ProfileArchiveMigrationTest,io.nekohasekai.sagernet.ui.ThemeSmokeTest#everyPaletteResolvesLayoutAttrs,io.nekohasekai.sagernet.ui.ThemeSmokeTest#everyPaletteMeetsContrastFloors \
+              -Pandroid.testInstrumentationRunnerArguments.class=xyz.nekobyte.nekobox.database.ProfileDatabaseMigrationTest,xyz.nekobyte.nekobox.database.ProfileArchiveMigrationTest,xyz.nekobyte.nekobox.ui.ThemeSmokeTest#everyPaletteResolvesLayoutAttrs,xyz.nekobyte.nekobox.ui.ThemeSmokeTest#everyPaletteMeetsContrastFloors \
               --no-configuration-cache
       - name: Result note
         if: steps.kvm.outputs.kvm == 'false'

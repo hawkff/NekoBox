@@ -1,0 +1,958 @@
+package xyz.nekobyte.nekobox.fmt.v2ray
+
+import android.text.TextUtils
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.json.JSONObject
+import xyz.nekobyte.nekobox.SingBoxOptions.*
+import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.fmt.http.HttpBean
+import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
+import xyz.nekobyte.nekobox.ktx.*
+import xyz.nekobyte.nekobox.utils.NGUtil
+import xyz.nekobyte.nekobox.utils.listByLineOrComma
+import java.net.URLDecoder
+
+private val supportedKcpHeaderType = arrayOf(
+    "none",
+    "srtp",
+    "utp",
+    "wechat-video",
+    "dtls",
+    "wireguard",
+    "dns",
+)
+
+data class VmessQRCode(
+    var v: String = "",
+    var ps: String = "",
+    var add: String = "",
+    var port: String = "",
+    var id: String = "",
+    var aid: String = "0",
+    var scy: String = "",
+    var net: String = "",
+    var type: String = "",
+    var host: String = "",
+    var path: String = "",
+    var tls: String = "",
+    var sni: String = "",
+    var alpn: String = "",
+    var fp: String = "",
+    var ech: String = "",
+    var mode: String? = null,
+    var extra: JsonElement? = null,
+)
+
+// Xray `echConfigList`: a base64 ECH config list, or a DoH URL (optionally `domain+url`) the
+// client queries at connect time. Both are kept so the link exports unchanged; see
+// buildSingBoxOutboundTLS for how the URL form runs.
+private fun StandardV2RayBean.applyECHParam(value: String) {
+    if (value.isBlank()) return
+    enableECH = true
+    echConfig = value
+}
+
+/** True for Xray's dynamic form, a DoH URL instead of an inline config list. */
+private fun StandardV2RayBean.echConfigIsURL() = echConfig!!.contains("://")
+
+/** The stored ECH config as the compact base64 share links carry, without PEM armour. */
+private fun StandardV2RayBean.echParam() = echConfig!!.lines().filterNot { it.startsWith("-----") }.joinToString("").trim()
+
+fun StandardV2RayBean.isTLS(): Boolean = security == "tls"
+
+fun StandardV2RayBean.setTLS(boolean: Boolean) {
+    security = if (boolean) "tls" else ""
+}
+
+/** Transports a share link may name; the core builds each of them. */
+private val SHARE_LINK_TRANSPORTS = setOf("tcp", "http", "kcp", "ws", "grpc", "httpupgrade", "xhttp", "quic")
+
+private class UnsupportedShareLinkException(message: String) : IllegalArgumentException(message)
+
+/**
+ * Xray share-link options this app cannot honor that change which servers a connection accepts:
+ * a pinned certificate (pcs), the names a certificate is checked against (vcn) and Finalmask
+ * traffic masking (fm). Without them a link would trust certificates its provider meant to
+ * refuse, or would not reach a server that expects masked traffic. Each may be empty.
+ */
+private val UNSUPPORTED_LINK_OPTIONS = listOf("pcs", "vcn", "fm")
+
+private fun decodeLinkComponent(value: String) = runCatching { URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
+
+/**
+ * Refuses a share link that carries an option from [UNSUPPORTED_LINK_OPTIONS] with a value. It
+ * runs before any of the link formats is tried, so another format cannot accept the link without
+ * it.
+ */
+internal fun requireSupportedLinkOptions(link: String) {
+    val query = link.substringBefore('#').substringAfter('?', "")
+    for (parameter in query.split('&')) {
+        val name = decodeLinkComponent(parameter.substringBefore('='))
+        if (name in UNSUPPORTED_LINK_OPTIONS && decodeLinkComponent(parameter.substringAfter('=', "")).isNotBlank()) {
+            throw UnsupportedShareLinkException("unsupported $name")
+        }
+    }
+}
+
+fun parseV2Ray(link: String): StandardV2RayBean {
+    requireSupportedLinkOptions(link)
+
+    // Try parse stupid formats first
+
+    if (!link.contains("?")) {
+        try {
+            return parseV2RayN(link)
+        } catch (e: UnsupportedShareLinkException) {
+            // A readable link with unsupported settings; the other formats would misread it.
+            throw e
+        } catch (_: Exception) {
+            Logs.i("V2RayN parser rejected input")
+        }
+    }
+
+    try {
+        return tryResolveVmess4Kitsunebi(link)
+    } catch (_: Exception) {
+        Logs.i("Kitsunebi parser rejected input")
+    }
+
+    // "std" format
+
+    val bean = VMessBean().apply { if (link.startsWith("vless://")) alterId = -1 }
+    val url = link.replace("vmess://", "https://").replace("vless://", "https://").toHttpUrl()
+
+    if (url.password.isNotBlank()) {
+        // https://github.com/v2fly/v2fly-github-io/issues/26 (rarely use)
+        bean.serverAddress = url.host
+        bean.serverPort = url.port
+        bean.name = url.fragment
+
+        var protocol = url.username
+        bean.type = protocol
+        bean.alterId = url.password.substringAfterLast('-').toInt()
+        bean.uuid = url.password.substringBeforeLast('-')
+
+        if (protocol.endsWith("+tls")) {
+            bean.security = "tls"
+            protocol = protocol.substring(0, protocol.length - 4)
+
+            url.queryParameter("tlsServerName")?.let {
+                if (it.isNotBlank()) {
+                    bean.sni = it
+                }
+            }
+        }
+
+        when (protocol) {
+//            "tcp" -> {
+//                url.queryParameter("type")?.let { type ->
+//                    if (type == "http") {
+//                        bean.headerType = "http"
+//                        url.queryParameter("host")?.let {
+//                            bean.host = it
+//                        }
+//                    }
+//                }
+//            }
+            "http" -> {
+                url.queryParameter("path")?.let {
+                    bean.path = it
+                }
+                url.queryParameter("host")?.let {
+                    bean.host = it.split("|").joinToString(",")
+                }
+            }
+
+            "ws" -> {
+                url.queryParameter("path")?.let {
+                    bean.path = it
+                }
+                url.queryParameter("host")?.let {
+                    bean.host = it
+                }
+            }
+
+            "grpc" -> {
+                url.queryParameter("serviceName")?.let {
+                    bean.path = it
+                }
+            }
+
+            "httpupgrade" -> {
+                url.queryParameter("path")?.let {
+                    bean.path = it
+                }
+                url.queryParameter("host")?.let {
+                    bean.host = it
+                }
+            }
+
+            "xhttp", "splithttp" -> {
+                bean.type = "xhttp"
+                url.queryParameter("host")?.let {
+                    bean.host = it
+                }
+                url.queryParameter("path")?.let {
+                    bean.path = it
+                }
+                url.queryParameter("mode")?.let {
+                    bean.xhttpMode = it
+                }
+                url.queryParameter("extra")?.let {
+                    bean.xhttpExtra = XhttpExtraConverter.xrayToSingBox(it)
+                }
+            }
+        }
+    } else {
+        // also vless format
+        bean.parseDuckSoft(url)
+    }
+
+    return bean
+}
+
+// https://github.com/XTLS/Xray-core/issues/91
+fun StandardV2RayBean.parseDuckSoft(url: HttpUrl) {
+    serverAddress = url.host
+    serverPort = url.port
+    name = url.fragment
+
+    if (this is TrojanBean) {
+        password = url.username
+    } else {
+        uuid = url.username
+    }
+
+    // not ducksoft fmt path
+    if (url.pathSegments.size > 1 || url.pathSegments[0].isNotBlank()) {
+        path = url.pathSegments.joinToString("/")
+    }
+
+    type = url.queryParameter("type")?.takeIf { it.isNotBlank() } ?: "tcp"
+    if (type == "h2" || url.queryParameter("headerType") == "http") type = "http"
+    if (type == "splithttp") type = "xhttp"
+    // Xray's newer name for its TCP transport.
+    if (type == "raw") type = "tcp"
+    // An unknown transport or security would build as plain TCP or without TLS, which is not the
+    // node the link describes, so such a link is refused.
+    if (type !in SHARE_LINK_TRANSPORTS) error("unsupported transport")
+
+    security = url.queryParameter("security")
+    if (security.isNullOrBlank()) {
+        security = if (this is TrojanBean) "tls" else "none"
+    }
+
+    when (security) {
+        "none" -> {}
+
+        "tls", "reality" -> {
+            // REALITY's ML-DSA-65 server verification has no counterpart in the core.
+            if (!url.queryParameter("pqv").isNullOrBlank()) error("unsupported REALITY verification")
+            security = "tls"
+            url.queryParameter("allowInsecure")?.let {
+                allowInsecure = it == "1" || it == "true"
+            }
+            url.queryParameter("sni")?.let {
+                sni = it
+            }
+            url.queryParameter("host")?.let {
+                if (sni.isNullOrBlank()) sni = it
+            }
+            url.queryParameter("alpn")?.let {
+                if (it != "none") alpn = it
+            }
+            url.queryParameter("cert")?.let {
+                certificates = it
+            }
+            url.queryParameter("pbk")?.let {
+                realityPubKey = it
+            }
+            url.queryParameter("sid")?.let {
+                realityShortId = it
+            }
+            url.queryParameterPreservingPlus("ech")?.let {
+                applyECHParam(it)
+            }
+        }
+
+        else -> error("unsupported security")
+    }
+
+    when (type) {
+        "http" -> {
+            url.queryParameter("host")?.let {
+                host = it
+            }
+            url.queryParameter("path")?.let {
+                path = it
+            }
+        }
+
+        "kcp" -> {
+            url.queryParameter("seed")?.let {
+                mKcpSeed = it
+            }
+            url.queryParameter("headerType")?.let {
+                if (it.isNotBlank()) {
+                    if (it !in supportedKcpHeaderType) error("unsupported headerType")
+                    headerType = it
+                }
+            }
+            url.queryParameter("mtu")?.let {
+                kcpMtu = it.toIntOrNull()
+            }
+            url.queryParameter("tti")?.let {
+                kcpTti = it.toIntOrNull()
+            }
+            url.queryParameter("cwnd")?.let {
+                kcpCwndMultiplier = it.toIntOrNull()
+            }
+        }
+
+        "ws" -> {
+            url.queryParameter("host")?.let {
+                host = it
+            }
+            url.queryParameter("path")?.let {
+                path = it
+            }
+            url.queryParameter("ed")?.let { ed ->
+                wsMaxEarlyData = ed.toInt()
+
+                url.queryParameter("eh")?.let {
+                    earlyDataHeaderName = it
+                }
+            }
+        }
+
+        "grpc" -> {
+            url.queryParameter("serviceName")?.let {
+                path = it
+            }
+        }
+
+        "httpupgrade" -> {
+            url.queryParameter("host")?.let {
+                host = it
+            }
+            url.queryParameter("path")?.let {
+                path = it
+            }
+        }
+
+        "xhttp" -> {
+            url.queryParameter("host")?.let {
+                host = it
+            }
+            url.queryParameter("path")?.let {
+                path = it
+            }
+            url.queryParameter("mode")?.let {
+                xhttpMode = it
+            }
+            url.queryParameter("extra")?.let {
+                xhttpExtra = XhttpExtraConverter.xrayToSingBox(it)
+            }
+        }
+    }
+
+    // maybe from matsuri vmess exoprt
+    if (this is VMessBean && !isVLESS) {
+        url.queryParameter("encryption")?.let {
+            encryption = it
+        }
+    }
+
+    url.queryParameter("packetEncoding")?.let {
+        when (it) {
+            "packet" -> packetEncoding = 1
+            "xudp" -> packetEncoding = 2
+        }
+    }
+
+    url.queryParameter("flow")?.let {
+        if (isVLESS) {
+            encryption = it.removeSuffix("-udp443")
+        }
+    }
+
+    // VLESS encryption (ML-KEM-768)
+    url.queryParameter("encryption")?.let {
+        if (isVLESS && it != "none") {
+            vlessEncryption = it
+        }
+    }
+
+    url.queryParameter("fp")?.let {
+        utlsFingerprint = it
+    }
+}
+
+// not sure whose format this is
+private fun tryResolveVmess4Kitsunebi(server: String): VMessBean {
+    // vmess://YXV0bzo1YWY1ZDBlYy02ZWEwLTNjNDMtOTNkYi1jYTMwMDg1MDNiZGJAMTgzLjIzMi41Ni4xNjE6MTIwMg
+    // ?remarks=*%F0%9F%87%AF%F0%9F%87%B5JP%20-355%20TG@moon365free&obfsParam=%7B%22Host%22:%22183.232.56.161%22%7D&path=/v2ray&obfs=websocket&alterId=0
+
+    var result = server.replace("vmess://", "")
+    val indexSplit = result.indexOf("?")
+    if (indexSplit > 0) {
+        result = result.substring(0, indexSplit)
+    }
+    result = NGUtil.decode(result)
+
+    val arr1 = result.split('@')
+    if (arr1.count() != 2) {
+        throw IllegalStateException("invalid kitsunebi format")
+    }
+    val arr21 = arr1[0].split(':')
+    val arr22 = arr1[1].split(':')
+    if (arr21.count() != 2) {
+        throw IllegalStateException("invalid kitsunebi format")
+    }
+
+    return VMessBean().apply {
+        serverAddress = arr22[0]
+        serverPort = NGUtil.parseInt(arr22[1])
+        uuid = arr21[1]
+        encryption = arr21[0]
+        if (indexSplit < 0) return@apply
+
+        val url = ("https://localhost/path?" + server.substringAfter("?")).toHttpUrl()
+        url.queryParameter("remarks")?.apply { name = this }
+        url.queryParameter("alterId")?.apply { alterId = this.toInt() }
+        url.queryParameter("path")?.apply { path = this }
+        url.queryParameter("tls")?.apply { security = "tls" }
+        url.queryParameter("allowInsecure")
+            ?.apply { if (this == "1" || this == "true") allowInsecure = true }
+        url.queryParameter("obfs")?.apply {
+            type = this.replace("websocket", "ws").replace("none", "tcp")
+            if (type == "ws") {
+                url.queryParameter("obfsParam")?.apply {
+                    if (this.startsWith("{")) {
+                        host = JSONObject(this).getStr("Host")
+                    } else if (security == "tls") {
+                        sni = this
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Throws on V2RayN link variants the core cannot run.
+fun parseV2RayN(link: String): VMessBean {
+    val result = link.substringAfter("vmess://").decodeBase64UrlSafe()
+    if (result.contains("= vmess")) {
+        return parseCsvVMess(result)
+    }
+    val bean = VMessBean()
+    // The JSON form carries the same options as the query of the other forms.
+    val options = runCatching { JSONObject(result) }.getOrNull()
+    for (name in UNSUPPORTED_LINK_OPTIONS) {
+        val value = options?.takeUnless { it.isNull(name) }?.opt(name)?.toString()
+        if (!value.isNullOrBlank()) throw UnsupportedShareLinkException("unsupported $name")
+    }
+    val vmessQRCode = Gson().fromJson(result, VmessQRCode::class.java)
+
+    // Although VmessQRCode fields are non null, looks like Gson may still create null fields
+    if (TextUtils.isEmpty(vmessQRCode.add) ||
+        TextUtils.isEmpty(vmessQRCode.port) ||
+        TextUtils.isEmpty(vmessQRCode.id) ||
+        TextUtils.isEmpty(vmessQRCode.net)
+    ) {
+        throw Exception("invalid VmessQRCode")
+    }
+
+    bean.name = vmessQRCode.ps
+    bean.serverAddress = vmessQRCode.add
+    bean.serverPort = vmessQRCode.port.toIntOrNull()
+    bean.encryption = vmessQRCode.scy
+    bean.uuid = vmessQRCode.id
+    bean.alterId = vmessQRCode.aid.toIntOrNull()
+    bean.type = when (val net = vmessQRCode.net) {
+        "splithttp" -> "xhttp"
+        "h2" -> "http"
+        "raw" -> "tcp"
+        else -> net
+    }
+    if (bean.type !in SHARE_LINK_TRANSPORTS) throw UnsupportedShareLinkException("unsupported transport")
+    if (bean.type == "xhttp") {
+        bean.xhttpMode = vmessQRCode.mode
+        val extra = vmessQRCode.extra?.takeUnless { it.isJsonNull }?.let {
+            if (it.isJsonPrimitive && it.asJsonPrimitive.isString) it.asString else it.toString()
+        } ?: XhttpExtraConverter.flattenedExtra(JSONObject(result))?.toString()
+        if (extra != null) bean.xhttpExtra = XhttpExtraConverter.xrayToSingBox(extra)
+    }
+    bean.host = vmessQRCode.host
+    bean.path = vmessQRCode.path
+    val headerType = vmessQRCode.type
+
+    when (bean.type) {
+        "tcp" -> {
+            if (headerType == "http") {
+                bean.type = "http"
+            }
+        }
+    }
+    // Gson stores an explicit JSON null despite the declared type.
+    val tls: String? = vmessQRCode.tls
+    when (tls) {
+        null, "", "none" -> {}
+
+        "tls", "reality" -> {
+            bean.security = "tls"
+            bean.sni = vmessQRCode.sni
+            if (bean.sni.isNullOrBlank()) bean.sni = bean.host
+            if (vmessQRCode.alpn != "none") bean.alpn = vmessQRCode.alpn
+            bean.utlsFingerprint = vmessQRCode.fp
+            bean.applyECHParam(vmessQRCode.ech)
+        }
+
+        else -> throw UnsupportedShareLinkException("unsupported security")
+    }
+
+    return bean
+}
+
+private fun parseCsvVMess(csv: String): VMessBean {
+    val args = csv.split(",")
+
+    val bean = VMessBean()
+
+    bean.serverAddress = args[1]
+    bean.serverPort = args[2].toInt()
+    bean.encryption = args[3]
+    bean.uuid = args[4].replace("\"", "")
+
+    args.subList(5, args.size).forEach {
+        when {
+            it == "over-tls=true" -> bean.security = "tls"
+
+            it.startsWith("tls-host=") -> bean.host = it.substringAfter("=")
+
+            it.startsWith("obfs=") -> bean.type = it.substringAfter("=")
+
+            it.startsWith("obfs-path=") || it.contains("Host:") -> {
+                runCatching {
+                    bean.path = it.substringAfter("obfs-path=\"").substringBefore("\"obfs")
+                }
+                runCatching {
+                    bean.host = it.substringAfter("Host:").substringBefore("[")
+                }
+            }
+        }
+    }
+
+    return bean
+}
+
+fun VMessBean.toV2rayN(): String {
+    val bean = this
+    return "vmess://" + VmessQRCode().apply {
+        v = "2"
+        ps = bean.name!!
+        add = bean.serverAddress!!
+        port = bean.serverPort.toString()
+        id = bean.uuid!!
+        aid = bean.alterId.toString()
+        net = if (bean.type == "splithttp") "xhttp" else bean.type!!
+        if (net == "xhttp") {
+            mode = bean.xhttpMode
+            if (!bean.xhttpExtra.isNullOrBlank()) {
+                val converted = XhttpExtraConverter.singBoxToXray(bean.xhttpExtra!!)
+                extra = runCatching { JsonParser.parseString(converted) }.getOrElse { com.google.gson.JsonPrimitive(converted) }
+            }
+        }
+        host = bean.host!!
+        path = bean.path!!
+
+        when (net) {
+            "http" -> {
+                if (!isTLS()) {
+                    type = "http"
+                    net = "tcp"
+                }
+            }
+        }
+
+        if (isTLS()) {
+            tls = "tls"
+            if (bean.realityPubKey!!.isNotBlank()) {
+                tls = "reality"
+            }
+        }
+
+        scy = bean.encryption!!
+        sni = bean.sni!!
+        alpn = bean.alpn!!.replace("\n", ",")
+        fp = bean.utlsFingerprint!!
+        if (bean.enableECH!!) ech = bean.echParam()
+    }.let {
+        NGUtil.encode(Gson().toJson(it))
+    }
+}
+
+fun StandardV2RayBean.toUriVMessVLESSTrojan(isTrojan: Boolean): String {
+    // VMess
+    if (this is VMessBean && !isVLESS) {
+        return toV2rayN()
+    }
+
+    // VLESS & Trojan (ducksoft fmt)
+    val builder = linkBuilder()
+        .username(if (this is TrojanBean) password!! else uuid!!)
+        .host(serverAddress!!)
+        .port(serverPort!!)
+        .addQueryParameter("type", type)
+
+    if (isVLESS) {
+        // Add encryption if configured
+        if (vlessEncryption!!.isNotBlank() && vlessEncryption != "none") {
+            builder.addQueryParameter("encryption", vlessEncryption)
+        } else {
+            builder.addQueryParameter("encryption", "none")
+        }
+
+        if (encryption != "auto") builder.addQueryParameter("flow", encryption)
+    }
+
+    when (type) {
+        "tcp" -> {}
+
+        "ws", "http", "httpupgrade" -> {
+            if (host!!.isNotBlank()) {
+                builder.addQueryParameter("host", host)
+            }
+            if (path!!.isNotBlank()) {
+                builder.addQueryParameter("path", path)
+            }
+            if (type == "ws") {
+                if (wsMaxEarlyData!! > 0) {
+                    builder.addQueryParameter("ed", "$wsMaxEarlyData")
+                    if (earlyDataHeaderName!!.isNotBlank()) {
+                        builder.addQueryParameter("eh", earlyDataHeaderName)
+                    }
+                }
+            } else if (type == "http" && !isTLS()) {
+                builder.setQueryParameter("type", "tcp")
+                builder.addQueryParameter("headerType", "http")
+            }
+        }
+
+        "kcp" -> {
+            if (headerType!!.isNotBlank() && headerType != "none") {
+                builder.addQueryParameter("headerType", headerType)
+            }
+            if (mKcpSeed!!.isNotBlank()) {
+                builder.addQueryParameter("seed", mKcpSeed)
+            }
+            if (kcpMtu != null && kcpMtu!! > 0) {
+                builder.addQueryParameter("mtu", kcpMtu.toString())
+            }
+            if (kcpTti != null && kcpTti!! > 0) {
+                builder.addQueryParameter("tti", kcpTti.toString())
+            }
+            if (kcpCwndMultiplier != null && kcpCwndMultiplier!! > 0) {
+                builder.addQueryParameter("cwnd", kcpCwndMultiplier.toString())
+            }
+        }
+
+        "xhttp", "splithttp" -> {
+            builder.setQueryParameter("type", "xhttp")
+            if (host!!.isNotBlank()) {
+                builder.addQueryParameter("host", host)
+            }
+            if (path!!.isNotBlank()) {
+                builder.addQueryParameter("path", path)
+            }
+            if (xhttpMode!!.isNotBlank()) {
+                builder.addQueryParameter("mode", xhttpMode)
+            }
+            if (xhttpExtra!!.isNotBlank()) {
+                builder.addQueryParameter("extra", XhttpExtraConverter.singBoxToXray(xhttpExtra!!))
+            }
+        }
+
+        "grpc" -> {
+            if (path!!.isNotBlank()) {
+                builder.setQueryParameter("serviceName", path)
+            }
+        }
+    }
+
+    if (security!!.isNotBlank() && security != "none") {
+        builder.addQueryParameter("security", security)
+        when (security) {
+            "tls" -> {
+                if (sni!!.isNotBlank()) {
+                    builder.addQueryParameter("sni", sni)
+                }
+                if (alpn!!.isNotBlank()) {
+                    builder.addQueryParameter("alpn", alpn!!.replace("\n", ","))
+                }
+                if (certificates!!.isNotBlank()) {
+                    builder.addQueryParameter("cert", certificates)
+                }
+                if (allowInsecure!!) {
+                    builder.addQueryParameter("allowInsecure", "1")
+                }
+                if (utlsFingerprint!!.isNotBlank()) {
+                    builder.addQueryParameter("fp", utlsFingerprint)
+                }
+                if (enableECH!!) {
+                    echParam().takeIf { it.isNotBlank() }?.let { builder.addQueryParameter("ech", it) }
+                }
+                if (realityPubKey!!.isNotBlank()) {
+                    builder.setQueryParameter("security", "reality")
+                    builder.addQueryParameter("pbk", realityPubKey)
+                    builder.addQueryParameter("sid", realityShortId)
+                }
+            }
+        }
+    }
+
+    when (packetEncoding) {
+        1 -> {
+            builder.addQueryParameter("packetEncoding", "packetaddr")
+        }
+
+        2 -> {
+            builder.addQueryParameter("packetEncoding", "xudp")
+        }
+    }
+
+    if (name!!.isNotBlank()) {
+        builder.encodedFragment(name!!.urlSafe())
+    }
+
+    return builder.toLink(if (isTrojan) "trojan" else "vless")
+}
+
+fun buildSingBoxOutboundStreamSettings(bean: StandardV2RayBean): V2RayTransportOptions? {
+    when (bean.type) {
+        "tcp" -> {
+            return null
+        }
+
+        "ws" -> {
+            return V2RayTransportOptions_WebsocketOptions().apply {
+                type = "ws"
+                headers = if (bean.host!!.isNotBlank()) mapOf("Host" to bean.host!!) else emptyMap()
+
+                if (bean.path!!.contains("?ed=")) {
+                    path = bean.path!!.substringBefore("?ed=")
+                    max_early_data = bean.path!!.substringAfter("?ed=").toIntOrNull() ?: 2048
+                    early_data_header_name = "Sec-WebSocket-Protocol"
+                } else {
+                    path = bean.path.takeIf { it!!.isNotBlank() } ?: "/"
+                }
+
+                if (bean.wsMaxEarlyData!! > 0) {
+                    max_early_data = bean.wsMaxEarlyData
+                }
+
+                if (bean.earlyDataHeaderName!!.isNotBlank()) {
+                    early_data_header_name = bean.earlyDataHeaderName
+                }
+            }
+        }
+
+        "kcp" -> {
+            return V2RayTransportOptions_KCPOptions().apply {
+                type = "kcp"
+                mtu = if (bean.kcpMtu != null && bean.kcpMtu!! > 0) bean.kcpMtu!! else 1350
+                tti = if (bean.kcpTti != null && bean.kcpTti!! > 0) bean.kcpTti!! else 50
+                uplink_capacity = 12
+                downlink_capacity = 100
+                congestion = false
+                read_buffer_size = 1
+                write_buffer_size = 1
+                if (bean.kcpCwndMultiplier != null && bean.kcpCwndMultiplier!! > 0) {
+                    cwnd_multiplier = bean.kcpCwndMultiplier!!
+                }
+                header_type = bean.headerType.takeIf { it!!.isNotBlank() } ?: "none"
+                if (bean.mKcpSeed!!.isNotBlank()) {
+                    seed = bean.mKcpSeed
+                }
+            }
+        }
+
+        "http" -> {
+            return V2RayTransportOptions_HTTPOptions().apply {
+                type = "http"
+                if (!bean.isTLS()) method = "GET" // v2ray tcp header
+                if (bean.host!!.isNotBlank()) {
+                    host = bean.host!!.split(",")
+                }
+                path = bean.path.takeIf { it!!.isNotBlank() } ?: "/"
+            }
+        }
+
+        "quic" -> {
+            return V2RayTransportOptions().apply {
+                type = "quic"
+            }
+        }
+
+        "grpc" -> {
+            return V2RayTransportOptions_GRPCOptions().apply {
+                type = "grpc"
+                service_name = bean.path
+            }
+        }
+
+        "httpupgrade" -> {
+            return V2RayTransportOptions_HTTPUpgradeOptions().apply {
+                type = "httpupgrade"
+                host = bean.host
+                path = bean.path
+            }
+        }
+
+        "xhttp", "splithttp" -> {
+            val baseConfig = V2RayTransportOptions_XHTTPOptions().apply {
+                type = "xhttp"
+                mode = bean.xhttpMode.takeIf { it!!.isNotBlank() } ?: "auto"
+                host = bean.host.takeIf { it!!.isNotBlank() }
+                path = bean.path.takeIf { it!!.isNotBlank() } ?: "/"
+            }
+            if (bean.xhttpExtra.isNullOrBlank()) return baseConfig
+            val extraJson = try {
+                JSONObject(bean.xhttpExtra!!)
+            } catch (_: Exception) {
+                error("Invalid XHTTP extra settings")
+            }
+            val coreExtra = XhttpExtraConverter.forCore(extraJson)
+            return try {
+                val gson = Gson()
+                val baseJson = JSONObject(gson.toJson(baseConfig))
+                coreExtra.keys().forEach { key -> baseJson.put(key, coreExtra.get(key)) }
+                gson.fromJson(baseJson.toString(), V2RayTransportOptions_XHTTPOptions::class.java)
+            } catch (_: Exception) {
+                error("Invalid XHTTP extra settings")
+            }
+        }
+    }
+
+    return null
+}
+
+fun buildSingBoxOutboundTLS(bean: StandardV2RayBean): OutboundTLSOptions? {
+    if (bean.security != "tls") return null
+    return OutboundTLSOptions().apply {
+        enabled = true
+        insecure = bean.allowInsecure!! || DataStore.globalAllowInsecure
+        if (bean.sni!!.isNotBlank()) server_name = bean.sni
+        if (bean.alpn!!.isNotBlank()) {
+            // when the transport protocol is WebSocket, filter out h2 and h3
+            val alpnList = bean.alpn!!.listByLineOrComma()
+            if (bean.type == "ws") {
+                val filtered = alpnList.filter { it == "http/1.1" }
+                if (filtered.isNotEmpty()) alpn = filtered
+            } else {
+                alpn = alpnList
+            }
+        }
+        if (bean.certificates!!.isNotBlank()) certificate = bean.certificates
+        var fp = bean.utlsFingerprint
+        if (bean.realityPubKey!!.isNotBlank()) {
+            reality = OutboundRealityOptions().apply {
+                enabled = true
+                public_key = bean.realityPubKey
+                short_id = bean.realityShortId
+            }
+            if (fp.isNullOrBlank()) fp = "chrome"
+        }
+        if (fp!!.isNotBlank()) {
+            utls = OutboundUTLSOptions().apply {
+                enabled = true
+                fingerprint = fp
+            }
+        }
+        if (bean.enableECH!!) {
+            ech = OutboundECHOptions().apply {
+                enabled = true
+                // Without a config sing-box queries the HTTPS record itself, which is what the
+                // DoH URL form asks for.
+                if (bean.echConfig!!.isNotBlank() && !bean.echConfigIsURL()) {
+                    config = if (bean.echConfig!!.contains("BEGIN ECH CONFIGS")) {
+                        bean.echConfig!!.lines()
+                    } else {
+                        listOf("-----BEGIN ECH CONFIGS-----", bean.echConfig!!.trim(), "-----END ECH CONFIGS-----")
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun buildSingBoxOutboundStandardV2RayBean(bean: StandardV2RayBean): Outbound {
+    when (bean) {
+        is HttpBean -> {
+            return Outbound_HTTPOptions().apply {
+                type = "http"
+                server = bean.serverAddress
+                server_port = bean.serverPort
+                username = bean.username
+                password = bean.password
+                tls = buildSingBoxOutboundTLS(bean)
+            }
+        }
+
+        is VMessBean -> {
+            if (bean.isVLESS) {
+                return Outbound_VLESSOptions().apply {
+                    type = "vless"
+                    server = bean.serverAddress
+                    server_port = bean.serverPort
+                    uuid = bean.uuid
+                    if (bean.encryption!!.isNotBlank() && bean.encryption != "auto") {
+                        flow = bean.encryption
+                    }
+                    if (bean.vlessEncryption!!.isNotBlank() && bean.vlessEncryption != "none") {
+                        encryption = bean.vlessEncryption
+                    }
+                    when (bean.packetEncoding) {
+                        0 -> packet_encoding = ""
+                        1 -> packet_encoding = "packetaddr"
+                        2 -> packet_encoding = "xudp"
+                    }
+                    tls = buildSingBoxOutboundTLS(bean)
+                    transport = buildSingBoxOutboundStreamSettings(bean)
+                }
+            }
+            return Outbound_VMessOptions().apply {
+                type = "vmess"
+                server = bean.serverAddress
+                server_port = bean.serverPort
+                uuid = bean.uuid
+                alter_id = bean.alterId
+                security = bean.encryption.takeIf { it!!.isNotBlank() } ?: "auto"
+                when (bean.packetEncoding) {
+                    0 -> packet_encoding = ""
+                    1 -> packet_encoding = "packetaddr"
+                    2 -> packet_encoding = "xudp"
+                }
+                tls = buildSingBoxOutboundTLS(bean)
+                transport = buildSingBoxOutboundStreamSettings(bean)
+            }
+        }
+
+        is TrojanBean -> {
+            return Outbound_TrojanOptions().apply {
+                type = "trojan"
+                server = bean.serverAddress
+                server_port = bean.serverPort
+                password = bean.password
+                tls = buildSingBoxOutboundTLS(bean)
+                transport = buildSingBoxOutboundStreamSettings(bean)
+            }
+        }
+
+        else -> throw IllegalStateException("can't reach")
+    }
+}

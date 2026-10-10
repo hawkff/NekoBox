@@ -1,0 +1,462 @@
+package xyz.nekobyte.nekobox.database
+
+import android.content.Context
+import android.content.Intent
+import androidx.room.*
+import com.esotericsoftware.kryo.io.ByteBufferInput
+import com.esotericsoftware.kryo.io.ByteBufferOutput
+import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.SingBoxOptions.BrutalOptions
+import xyz.nekobyte.nekobox.SingBoxOptions.MultiplexOptions
+import xyz.nekobyte.nekobox.fmt.*
+import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
+import xyz.nekobyte.nekobox.fmt.http.HttpBean
+import xyz.nekobyte.nekobox.fmt.hysteria.*
+import xyz.nekobyte.nekobox.fmt.internal.ChainBean
+import xyz.nekobyte.nekobox.fmt.juicity.JuicityBean
+import xyz.nekobyte.nekobox.fmt.mieru.MieruBean
+import xyz.nekobyte.nekobox.fmt.mieru.buildMieruConfig
+import xyz.nekobyte.nekobox.fmt.naive.NaiveBean
+import xyz.nekobyte.nekobox.fmt.naive.buildNaiveConfig
+import xyz.nekobyte.nekobox.fmt.shadowsocks.*
+import xyz.nekobyte.nekobox.fmt.shadowsocksr.ShadowsocksRBean
+import xyz.nekobyte.nekobox.fmt.snell.SnellBean
+import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.fmt.ssh.SSHBean
+import xyz.nekobyte.nekobox.fmt.tailscale.TailscaleBean
+import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
+import xyz.nekobyte.nekobox.fmt.tuic.TuicBean
+import xyz.nekobyte.nekobox.fmt.v2ray.*
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
+import xyz.nekobyte.nekobox.ktx.app
+import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean
+import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean
+import xyz.nekobyte.nekobox.ui.profile.ProfileSettingsActivity
+import java.util.UUID
+
+@Entity(
+    tableName = "proxy_entities",
+    indices = [Index("groupId", name = "groupId")],
+)
+data class ProxyEntity(
+    @PrimaryKey(autoGenerate = true) var id: Long = 0L,
+    var groupId: Long = 0L,
+    var type: Int = 0,
+    var userOrder: Long = 0L,
+    var tx: Long = 0L,
+    var rx: Long = 0L,
+    // Lifetime (all-time) totals, accumulated across sessions. Additive columns (schema v12);
+    // tx/rx above stay the live/session value the UI already shows. Not part of the Kryo
+    // serializeToBuffer wire format (backup/export stats are out of scope), so the on-disk
+    // blob format is unchanged. A DB default of 0 is required for the additive AutoMigration.
+    @ColumnInfo(defaultValue = "0")
+    var lifetimeRx: Long = 0L,
+    @ColumnInfo(defaultValue = "0")
+    var lifetimeTx: Long = 0L,
+    var status: Int = 0,
+    var ping: Int = 0,
+    // Tailscale node provenance; unrelated to protocol authentication UUID fields in beans.
+    var uuid: String = "",
+    var error: String? = null,
+    var socksBean: SOCKSBean? = null,
+    var httpBean: HttpBean? = null,
+    var ssBean: ShadowsocksBean? = null,
+    var ssrBean: ShadowsocksRBean? = null,
+    var vmessBean: VMessBean? = null,
+    var trojanBean: TrojanBean? = null,
+    var mieruBean: MieruBean? = null,
+    var naiveBean: NaiveBean? = null,
+    var hysteriaBean: HysteriaBean? = null,
+    var tuicBean: TuicBean? = null,
+    var juicityBean: JuicityBean? = null,
+    var sshBean: SSHBean? = null,
+    var wgBean: WireGuardBean? = null,
+    var shadowTLSBean: ShadowTLSBean? = null,
+    var anyTLSBean: AnyTLSBean? = null,
+    var chainBean: ChainBean? = null,
+    var configBean: ConfigBean? = null,
+    var snellBean: SnellBean? = null,
+    var awgBean: AmneziaWGBean? = null,
+    var tailscaleBean: TailscaleBean? = null,
+    var archivedData: ByteArray? = null,
+) : Serializable() {
+
+    companion object {
+        const val TYPE_SOCKS = 0
+        const val TYPE_HTTP = 1
+        const val TYPE_SS = 2
+        const val TYPE_SSR = 3
+        const val TYPE_VMESS = 4
+        const val TYPE_TROJAN = 6
+
+        const val TYPE_SSH = 17
+        const val TYPE_WG = 18
+
+        const val TYPE_NAIVE = 9
+        const val TYPE_HYSTERIA = 15
+        const val TYPE_SHADOWTLS = 19
+        const val TYPE_TUIC = 20
+        const val TYPE_MIERU = 21
+        const val TYPE_ANYTLS = 22
+        const val TYPE_JUICITY = 23
+        const val TYPE_SNELL = 24
+        const val TYPE_AWG = 26
+        const val TYPE_TAILSCALE = 28
+
+        const val TYPE_CONFIG = 998
+
+        // 999 was the Matsuri "Neko Plugin" protocol (removed). Reserved: do not
+        // reuse the id; rows with this type are purged by the v11 migration.
+        const val TYPE_NEKO = 999
+
+        const val TYPE_CHAIN = 8
+
+        val chainName by lazy { app.getString(R.string.proxy_chain) }
+
+        @JvmField
+        val CREATOR = object : CREATOR<ProxyEntity>() {
+
+            override fun newInstance(): ProxyEntity = ProxyEntity()
+
+            override fun newArray(size: Int): Array<ProxyEntity?> = arrayOfNulls(size)
+        }
+    }
+
+    @Ignore
+    @Transient
+    var dirty: Boolean = false
+
+    override fun initializeDefaultValues() {
+    }
+
+    override fun serializeToBuffer(output: ByteBufferOutput) {
+        output.writeInt(0)
+
+        output.writeLong(id)
+        output.writeLong(groupId)
+        output.writeInt(type)
+        output.writeLong(userOrder)
+        output.writeLong(tx)
+        output.writeLong(rx)
+        output.writeInt(status)
+        output.writeInt(ping)
+        output.writeString(uuid)
+        output.writeString(error)
+
+        val data = KryoConverters.serialize(requireBean())
+        output.writeVarInt(data.size, true)
+        output.writeBytes(data)
+
+        output.writeBoolean(dirty)
+    }
+
+    override fun deserializeFromBuffer(input: ByteBufferInput) {
+        val version = input.readInt()
+
+        id = input.readLong()
+        groupId = input.readLong()
+        type = input.readInt()
+        userOrder = input.readLong()
+        tx = input.readLong()
+        rx = input.readLong()
+        status = input.readInt()
+        ping = input.readInt()
+        uuid = input.readString()
+        error = input.readString()
+        putByteArray(input.readBytes(input.readVarInt(true)))
+
+        dirty = input.readBoolean()
+    }
+
+    fun putByteArray(byteArray: ByteArray) {
+        val descriptor = ProtocolRegistry.forType(type)
+        if (descriptor == null) {
+            archivedData = byteArray.copyOf()
+        } else {
+            descriptor.setBean(this, descriptor.deserialize(byteArray))
+        }
+    }
+
+    fun displayType(): String = ProtocolRegistry.forType(type)?.displayType?.invoke(this) ?: app.getString(R.string.profile_archived)
+
+    fun displayName() = requireBean().displayName()
+    fun displayAddress() = requireBean().displayAddress()
+
+    fun requireBean(): AbstractBean {
+        val descriptor = ProtocolRegistry.forType(type)
+            ?: return ArchivedBean(type, archivedData ?: byteArrayOf()).apply { initializeDefaultValues() }
+        return descriptor.getBean(this) ?: error("Null ${displayType()} profile")
+    }
+
+    fun haveLink(): Boolean = when (type) {
+        TYPE_CHAIN -> false
+        else -> true
+    }
+
+    fun haveSettings() = ProtocolRegistry.forType(type)?.settingsActivityClass != null
+
+    fun canBuild() = ProtocolRegistry.forType(type)?.canBuild == true
+
+    fun haveStandardLink(): Boolean {
+        requireBean()
+        return ProtocolRegistry.forType(type)?.hasStandardLink == true
+    }
+
+    fun toStdLink(compact: Boolean = false): String {
+        val bean = requireBean()
+        return ProtocolRegistry.forType(type)?.toStandardLink?.invoke(bean) ?: bean.toUniversalLink()
+    }
+
+    fun exportConfig(): Pair<String, String> {
+        var name = "${requireBean().displayName()}.json"
+
+        return with(requireBean()) {
+            StringBuilder().apply {
+                val config = buildConfig(this@ProxyEntity, forExport = true)
+                append(config.config)
+
+                if (!config.externalIndex.all { it.chain.isEmpty() }) {
+                    name = "profiles.txt"
+                }
+
+                for ((chain) in config.externalIndex) {
+                    chain.entries.forEachIndexed { index, (port, profile) ->
+                        when (val bean = profile.requireBean()) {
+                            is MieruBean -> {
+                                append("\n\n")
+                                append(bean.buildMieruConfig(port))
+                            }
+
+                            is NaiveBean -> {
+                                append("\n\n")
+                                append(bean.buildNaiveConfig(port))
+                            }
+
+                            is HysteriaBean -> {
+                                append("\n\n")
+                                append(bean.buildHysteria1Config(port, null))
+                            }
+                        }
+                    }
+                }
+            }.toString()
+        } to name
+    }
+
+    fun needExternal(): Boolean = ProtocolRegistry.forType(type)?.needExternal?.invoke(this) ?: false
+
+    fun singMux(): MultiplexOptions? = when (type) {
+        TYPE_VMESS -> MultiplexOptions().apply {
+            enabled = vmessBean!!.enableMux
+            padding = vmessBean!!.muxPadding
+            protocol = when (vmessBean!!.muxType) {
+                1 -> "smux"
+                2 -> "yamux"
+                else -> "h2mux"
+            }
+            // muxMode 0: max_streams mode, 1: connections mode
+            if (vmessBean!!.muxMode == 1) {
+                max_connections = vmessBean!!.muxMaxConnections
+                min_streams = vmessBean!!.muxMinStreams
+            } else {
+                max_streams = vmessBean!!.muxConcurrency
+            }
+            if (vmessBean!!.muxBrutal == true) {
+                brutal = BrutalOptions().apply {
+                    enabled = true
+                    up_mbps = vmessBean!!.muxBrutalUpMbps
+                    down_mbps = vmessBean!!.muxBrutalDownMbps
+                }
+            }
+        }
+
+        TYPE_TROJAN -> MultiplexOptions().apply {
+            enabled = trojanBean!!.enableMux
+            padding = trojanBean!!.muxPadding
+            protocol = when (trojanBean!!.muxType) {
+                1 -> "smux"
+                2 -> "yamux"
+                else -> "h2mux"
+            }
+            // muxMode 0: max_streams mode, 1: connections mode
+            if (trojanBean!!.muxMode == 1) {
+                max_connections = trojanBean!!.muxMaxConnections
+                min_streams = trojanBean!!.muxMinStreams
+            } else {
+                max_streams = trojanBean!!.muxConcurrency
+            }
+            if (trojanBean!!.muxBrutal == true) {
+                brutal = BrutalOptions().apply {
+                    enabled = true
+                    up_mbps = trojanBean!!.muxBrutalUpMbps
+                    down_mbps = trojanBean!!.muxBrutalDownMbps
+                }
+            }
+        }
+
+        TYPE_SS -> MultiplexOptions().apply {
+            enabled = ssBean!!.enableMux
+            padding = ssBean!!.muxPadding
+            protocol = when (ssBean!!.muxType) {
+                1 -> "smux"
+                2 -> "yamux"
+                else -> "h2mux"
+            }
+            // muxMode 0: max_streams mode, 1: connections mode
+            if (ssBean!!.muxMode == 1) {
+                max_connections = ssBean!!.muxMaxConnections
+                min_streams = ssBean!!.muxMinStreams
+            } else {
+                max_streams = ssBean!!.muxConcurrency
+            }
+            if (ssBean!!.muxBrutal == true) {
+                brutal = BrutalOptions().apply {
+                    enabled = true
+                    up_mbps = ssBean!!.muxBrutalUpMbps
+                    down_mbps = ssBean!!.muxBrutalDownMbps
+                }
+            }
+        }
+
+        else -> null
+    }
+
+    fun putBean(bean: AbstractBean): ProxyEntity {
+        if (bean is ArchivedBean) {
+            require(ProtocolRegistry.forType(bean.originalType) == null) { "Cannot archive an active profile type" }
+            ProtocolRegistry.clearAllBeans(this)
+            type = bean.originalType
+            archivedData = KryoConverters.serialize(bean)
+            return this
+        }
+        ProtocolRegistry.clearAllBeans(this)
+        val descriptor = ProtocolRegistry.forBean(bean) ?: error("Unregistered bean class ${bean.javaClass.simpleName}")
+        type = descriptor.type
+        descriptor.setBean(this, bean)
+        return this
+    }
+
+    fun settingIntent(ctx: Context, isSubscription: Boolean): Intent? {
+        val activityClass = ProtocolRegistry.forType(type)?.settingsActivityClass ?: return null
+        return Intent(ctx, activityClass).apply {
+            putExtra(ProfileSettingsActivity.EXTRA_PROFILE_ID, id)
+            putExtra(ProfileSettingsActivity.EXTRA_IS_SUBSCRIPTION, isSubscription)
+        }
+    }
+
+    @androidx.room.Dao
+    interface Dao {
+
+        @Query("select * from proxy_entities")
+        fun getAll(): List<ProxyEntity>
+
+        @Query("SELECT id FROM proxy_entities WHERE groupId = :groupId ORDER BY userOrder")
+        fun getIdsByGroup(groupId: Long): List<Long>
+
+        @Query("SELECT id FROM proxy_entities WHERE type = :type")
+        fun getIdsByType(type: Int): List<Long>
+
+        @Query("SELECT * FROM proxy_entities WHERE groupId = :groupId ORDER BY userOrder")
+        fun getByGroup(groupId: Long): List<ProxyEntity>
+
+        @Query("SELECT * FROM proxy_entities WHERE id in (:proxyIds)")
+        fun getEntities(proxyIds: List<Long>): List<ProxyEntity>
+
+        @Query("UPDATE proxy_entities SET userOrder = :order WHERE id = :id")
+        fun updateOrder(id: Long, order: Long): Int
+
+        @Query("SELECT COUNT(*) FROM proxy_entities WHERE groupId = :groupId")
+        fun countByGroup(groupId: Long): Long
+
+        @Query("SELECT  MAX(userOrder) + 1 FROM proxy_entities WHERE groupId = :groupId")
+        fun nextOrder(groupId: Long): Long?
+
+        @Query("SELECT * FROM proxy_entities WHERE id = :proxyId")
+        fun getById(proxyId: Long): ProxyEntity?
+
+        @Query("DELETE FROM proxy_entities WHERE id IN (:proxyId)")
+        fun deleteById(proxyId: Long): Int
+
+        @Query("DELETE FROM proxy_entities WHERE id IN (:proxyIds)")
+        fun deleteByIds(proxyIds: List<Long>): Int
+
+        @Query("DELETE FROM proxy_entities WHERE groupId = :groupId")
+        fun deleteByGroup(groupId: Long)
+
+        @Query("DELETE FROM proxy_entities WHERE groupId in (:groupId)")
+        fun deleteByGroup(groupId: LongArray)
+
+        @Delete
+        fun deleteProxy(proxy: ProxyEntity): Int
+
+        @Delete
+        fun deleteProxy(proxies: List<ProxyEntity>): Int
+
+        @Update
+        fun updateProxyRow(proxy: ProxyEntity): Int
+
+        // Editors and test results may hold old snapshots across reset or backup export.
+        // Ordinary updates cannot roll back the durable node marker or a saved exit.
+        @Transaction
+        fun updateProxy(proxy: ProxyEntity): Int {
+            if (proxy.type == TYPE_TAILSCALE) {
+                val current = getById(proxy.id)
+                proxy.uuid = if (current?.type == TYPE_TAILSCALE) current.uuid else UUID.randomUUID().toString()
+                if (current?.type == TYPE_TAILSCALE) {
+                    proxy.tailscaleBean = proxy.tailscaleBean?.clone()?.apply {
+                        exitNode = current.tailscaleBean?.exitNode.orEmpty()
+                    }
+                }
+            }
+            return updateProxyRow(proxy)
+        }
+
+        @Transaction
+        fun updateProxy(proxies: List<ProxyEntity>): Int = proxies.sumOf { updateProxy(it) }
+
+        @Query("UPDATE proxy_entities SET tailscaleBean = :bean WHERE id = :id AND type = 28 AND uuid = :identity")
+        fun updateTailscaleBean(id: Long, identity: String, bean: TailscaleBean): Int
+
+        @Query("UPDATE proxy_entities SET uuid = :marker WHERE id = :id AND type = 28")
+        fun setTailscaleMarker(id: Long, marker: String): Int
+
+        @Query("UPDATE proxy_entities SET rx = :rx, tx = :tx WHERE id = :proxyId")
+        fun updateTraffic(proxyId: Long, rx: Long, tx: Long): Int
+
+        // Additive lifetime accumulation (schema v12). Callers pass the per-session DELTA since
+        // the last flush (never absolute totals) so re-entrant persist() cannot double-count.
+        @Query(
+            "UPDATE proxy_entities SET lifetimeRx = lifetimeRx + :rxDelta, lifetimeTx = lifetimeTx + :txDelta WHERE id = :proxyId",
+        )
+        fun addLifetimeTraffic(proxyId: Long, rxDelta: Long, txDelta: Long): Int
+
+        @Insert
+        fun addProxyRow(proxy: ProxyEntity): Long
+
+        @Transaction
+        fun addProxy(proxy: ProxyEntity): Long {
+            if (proxy.type == TYPE_TAILSCALE) proxy.uuid = UUID.randomUUID().toString()
+            return addProxyRow(proxy)
+        }
+
+        @Insert
+        fun insertRows(proxies: List<ProxyEntity>)
+
+        @Transaction
+        fun insert(proxies: List<ProxyEntity>) {
+            proxies.filter { it.id == 0L && it.type == TYPE_TAILSCALE }.forEach {
+                it.uuid = UUID.randomUUID().toString()
+            }
+            insertRows(proxies)
+        }
+
+        @Query("DELETE FROM proxy_entities WHERE groupId = :groupId")
+        fun deleteAll(groupId: Long): Int
+
+        @Query("DELETE FROM proxy_entities")
+        fun reset()
+    }
+
+    override fun describeContents(): Int = 0
+}
