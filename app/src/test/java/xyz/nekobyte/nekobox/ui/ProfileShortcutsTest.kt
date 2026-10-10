@@ -7,6 +7,7 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import androidx.core.content.getSystemService
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -14,6 +15,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.util.ReflectionHelpers
 import xyz.nekobyte.nekobox.QuickToggleShortcut
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
@@ -64,6 +66,21 @@ class ProfileShortcutsTest {
         assertEquals("value", migrated.intent!!.getStringExtra("preserved"))
         ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
         assertEquals(1, manager.pinnedShortcuts.size)
+    }
+
+    @Test
+    fun retriesEnablingAShortcutWhoseTargetsWereAlreadyUpdated() {
+        pin("shortcut-profile-17")
+        ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
+        // An interrupted migration can update the targets without completing enableShortcuts.
+        val updated = manager.pinnedShortcuts.single()
+        // The ShortcutManager shadow does not update ShortcutInfo's disabled flag.
+        val flags = ReflectionHelpers.getField<Int>(updated, "mFlags")
+        val disabled = ReflectionHelpers.getStaticField<Int>(ShortcutInfo::class.java, "FLAG_DISABLED")
+        ReflectionHelpers.setField(updated, "mFlags", flags or disabled)
+        assertFalse(updated.isEnabled)
+        ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
+        assertTrue(manager.pinnedShortcuts.single().isEnabled)
     }
 
     @Test

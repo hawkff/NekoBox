@@ -27,7 +27,8 @@ internal fun migratePinnedProfileShortcuts(context: Context) {
                 ?: return@mapNotNull null
             val intent = shortcut.intents?.singleOrNull() ?: return@mapNotNull null
             if (intent.component?.packageName != context.packageName || intent.getLongExtra("profile", -1) != profileId) return@mapNotNull null
-            if (intent.component == target && shortcut.activity == activity) return@mapNotNull null
+            // A previous attempt may have updated the targets without re-enabling the shortcut.
+            if (intent.component == target && shortcut.activity == activity && shortcut.isEnabled) return@mapNotNull null
             if (ProfileDatabase.proxyDao.getById(profileId)?.canBuild() != true) return@mapNotNull null
             val label = shortcut.shortLabel ?: return@mapNotNull null
             ShortcutInfo.Builder(context, shortcut.id)
