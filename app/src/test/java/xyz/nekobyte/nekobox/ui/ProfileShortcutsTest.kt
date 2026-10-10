@@ -15,6 +15,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.shadows.ShadowShortcutManager
 import org.robolectric.util.ReflectionHelpers
 import xyz.nekobyte.nekobox.QuickToggleShortcut
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -23,7 +26,7 @@ import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = Application::class)
+@Config(sdk = [35], application = Application::class, shadows = [ShortcutMigrationShadow::class])
 class ProfileShortcutsTest {
     private val context get() = RuntimeEnvironment.getApplication()
     private val manager get() = context.getSystemService<ShortcutManager>()!!
@@ -31,6 +34,9 @@ class ProfileShortcutsTest {
 
     @Before
     fun setUp() {
+        ShortcutMigrationShadow.updatesAllowed = true
+        ShortcutMigrationShadow.updateAttempts = 0
+        ShortcutMigrationShadow.enabledIds = emptyList()
         ConfigBuilderTestEnv.reset()
         ConfigBuilderTestEnv.io {
             ProfileDatabase.proxyDao.addProxy(
@@ -79,8 +85,12 @@ class ProfileShortcutsTest {
         val disabled = ReflectionHelpers.getStaticField<Int>(ShortcutInfo::class.java, "FLAG_DISABLED")
         ReflectionHelpers.setField(updated, "mFlags", flags or disabled)
         assertFalse(updated.isEnabled)
+        ShortcutMigrationShadow.updatesAllowed = false
+        ShortcutMigrationShadow.updateAttempts = 0
+        ShortcutMigrationShadow.enabledIds = emptyList()
         ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
-        assertTrue(manager.pinnedShortcuts.single().isEnabled)
+        assertEquals(0, ShortcutMigrationShadow.updateAttempts)
+        assertEquals(listOf("shortcut-profile-17"), ShortcutMigrationShadow.enabledIds)
     }
 
     @Test
@@ -91,5 +101,26 @@ class ProfileShortcutsTest {
         ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
         assertEquals(3, manager.pinnedShortcuts.size)
         manager.pinnedShortcuts.forEach { assertEquals(oldTarget, it.intent!!.component) }
+    }
+}
+
+@Implements(ShortcutManager::class)
+class ShortcutMigrationShadow : ShadowShortcutManager() {
+    @Implementation
+    override fun updateShortcuts(shortcuts: List<ShortcutInfo>): Boolean {
+        updateAttempts++
+        return updatesAllowed && super.updateShortcuts(shortcuts)
+    }
+
+    @Implementation
+    override fun enableShortcuts(ids: List<String>) {
+        enabledIds = ids.toList()
+        super.enableShortcuts(ids)
+    }
+
+    companion object {
+        var updatesAllowed = true
+        var updateAttempts = 0
+        var enabledIds = emptyList<String>()
     }
 }
