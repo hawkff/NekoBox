@@ -17,10 +17,7 @@ object PluginManager {
         override fun getLocalizedMessage() = NekoBox.application.getString(R.string.plugin_unknown, plugin)
     }
 
-    data class InitResult(
-        val path: String,
-        val info: ProviderInfo,
-    )
+    data class InitResult(val path: String)
 
     @Throws(Throwable::class)
     fun init(pluginId: String): InitResult? {
@@ -43,10 +40,7 @@ object PluginManager {
         // providers are signer-checked below, but they must not shadow binaries we ship.
         try {
             initNativeInternal(pluginId)?.let { path ->
-                return InitResult(
-                    path,
-                    ProviderInfo().apply { authority = Plugins.AUTHORITIES_PREFIX_NEKO_EXE },
-                )
+                return InitResult(path)
             }
         } catch (t: Throwable) {
             Logs.w("initNativeInternal failed", t)
@@ -54,7 +48,7 @@ object PluginManager {
 
         val info = Plugins.getPluginExternal(pluginId) ?: return null
         try {
-            initNativeFaster(info)?.let { return InitResult(it, info) }
+            initNativeFaster(info)?.let { return InitResult(it) }
         } catch (t: Throwable) {
             Logs.w("initNativeFaster failed", t)
         }
@@ -88,7 +82,7 @@ object PluginManager {
             }.absolutePath
         }
 
-    fun ComponentInfo.loadString(key: String) = when (val value = metaData.get(key)) {
+    fun ComponentInfo.loadString(key: String) = when (val value = metaData?.get(key)) {
         is String -> value
 
         is Int -> NekoBox.application.packageManager.getResourcesForApplication(applicationInfo)

@@ -3,11 +3,8 @@
 # APKs and install it as a bundled native executable
 # (app/executableSo/<abi>/libnaive.so).
 #
-# This lets NekoBox run NaïveProxy profiles without installing the separate
-# external plugin (moe.matsuri.exe.naive). PluginManager.initNativeInternal
-# resolves "naive-plugin" -> libnaive.so from nativeLibraryDir, mirroring the
-# bundled Mieru mechanism, and falls back to the external APK plugin
-# when the bundled binary is absent.
+# PluginManager resolves "naive-plugin" to the bundled libnaive.so before
+# looking for an external APK that implements the current plugin contract.
 #
 # Usage: buildScript/lib/naive.sh (from the repository root)
 set -e

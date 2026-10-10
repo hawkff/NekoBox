@@ -48,7 +48,6 @@ import xyz.nekobyte.nekobox.ktx.mkPort
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.ktx.unwrapIPV6Host
-import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean
 import xyz.nekobyte.nekobox.proxy.anytls.buildSingBoxOutboundAnyTLSBean
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
@@ -857,24 +856,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 bean.finalAddress = bean.serverAddress
                 bean.finalPort = bean.serverPort!!
                 if (bean.canMapping() && proxyEntity.needExternal()) {
-                    // With ss protect, don't use mapping
-                    var needExternal = true
-                    if (index == profileList.lastIndex) {
-                        val pluginId = when (bean) {
-                            // Only Hysteria v1 takes the external plugin path; v2 is
-                            // handled natively, so it never reaches needExternal().
-                            is HysteriaBean -> "hysteria-plugin"
-
-                            else -> ""
-                        }
-                        if (Plugins.isUsingMatsuriExe(pluginId)) {
-                            needExternal = false
-                        } else if (Plugins.getPluginExternal(pluginId) != null) {
-                            throw Exception(
-                                "You are using an unsupported $pluginId, please download the correct plugin.",
-                            )
-                        }
-                    }
+                    // Hysteria plugins must protect direct sockets through protect_path.
+                    val needExternal = index != profileList.lastIndex || bean !is HysteriaBean
                     if (needExternal) {
                         val mappingPort = mkPort()
                         bean.finalAddress = LOCALHOST

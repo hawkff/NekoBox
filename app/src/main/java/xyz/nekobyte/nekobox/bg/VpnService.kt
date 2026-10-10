@@ -186,7 +186,6 @@ class VpnService :
     }
 
     private fun tunBuilder(needBypassRootUid: Boolean): Builder {
-        // address & route & MTU ...... use NB4A GUI config
         val builder = Builder().setConfigureIntent(NekoBox.configureIntent(this))
             .setSession(getString(R.string.app_name))
             .setMtu(DataStore.mtu)
@@ -256,7 +255,7 @@ class VpnService :
             val added = mutableListOf<String>()
 
             individual.apply {
-                // Allow Matsuri itself using VPN.
+                // Keep this app inside the VPN in either app-routing mode.
                 remove(packageName)
                 if (!bypass) add(packageName)
             }.forEach {

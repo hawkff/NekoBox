@@ -48,7 +48,6 @@ import xyz.nekobyte.nekobox.ktx.FabContainer
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.alert
 import xyz.nekobyte.nekobox.ktx.isPreview
-import xyz.nekobyte.nekobox.ktx.launchCustomTab
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.ktx.readableMessage
@@ -334,12 +333,9 @@ class MainActivity :
                     R.string.profile_requiring_plugin,
                     profileName,
                     pluginEntity.displayName,
-                ),
+                ) + "\n\n" + getString(R.string.plugin_contract_required),
             )
-            .setPositiveButton(R.string.action_download) { _, _ ->
-                showDownloadDialog(pluginEntity)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 
@@ -415,39 +411,6 @@ class MainActivity :
                 ),
             )
             .setPositiveButton(android.R.string.ok, null)
-            .show()
-    }
-
-    private fun showDownloadDialog(pluginEntry: PluginEntry) {
-        var index = 0
-        var playIndex = -1
-        var fdroidIndex = -1
-
-        val items = mutableListOf<String>()
-        if (pluginEntry.downloadSource.playStore) {
-            items.add(getString(R.string.install_from_play_store))
-            playIndex = index++
-        }
-        if (pluginEntry.downloadSource.fdroid) {
-            items.add(getString(R.string.install_from_fdroid))
-            fdroidIndex = index++
-        }
-
-        items.add(getString(R.string.download))
-        val downloadIndex = index
-
-        MaterialAlertDialogBuilder(this).setTitle(pluginEntry.name)
-            .setItems(items.toTypedArray()) { _, which ->
-                when (which) {
-                    playIndex -> launchCustomTab(
-                        "https://play.google.com/store/apps/details?id=${pluginEntry.packageName}",
-                    )
-
-                    fdroidIndex -> launchCustomTab("https://f-droid.org/packages/${pluginEntry.packageName}/")
-
-                    downloadIndex -> launchCustomTab(pluginEntry.downloadSource.downloadLink)
-                }
-            }
             .show()
     }
 

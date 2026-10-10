@@ -43,12 +43,12 @@ func deferPanicToError(name string, onError func(error)) {
 
 func InitCore(process, cachePath, internalAssets, externalAssets string,
 	maxLogSizeKb int32, logEnable bool,
-	if1 NB4AInterface, if2 BoxPlatformInterface, if3 LocalDNSTransport,
+	if1 AppPlatformInterface, if2 BoxPlatformInterface, if3 LocalDNSTransport,
 ) {
 	defer deferPanicToError("InitCore", func(err error) { log.Println(err) })
 	isBgProcess = strings.HasSuffix(process, ":bg")
 
-	intfNB4A = if1
+	appPlatform = if1
 	intfBox = if2
 	useProcfs = intfBox.UseProcFS()
 	gLocalDNSTransport = newPlatformTransport(if3, "", option.LocalDNSServerOptions{})
@@ -73,7 +73,7 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	}
 
 	// nekoutils
-	nekoutils.Selector_OnProxySelected = intfNB4A.Selector_OnProxySelected
+	nekoutils.Selector_OnProxySelected = appPlatform.Selector_OnProxySelected
 
 	// Set up some component
 	go func() {

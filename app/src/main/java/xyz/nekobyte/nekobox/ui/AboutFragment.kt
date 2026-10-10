@@ -81,12 +81,11 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
             PackageCache.awaitLoadSync()
             for ((_, pkg) in PackageCache.installedPluginPackages) {
                 try {
-                    val pluginId = pkg.providers?.get(0)?.loadString(Plugins.METADATA_KEY_ID)
+                    val pluginId = Plugins.providers(pkg).firstOrNull()?.loadString(Plugins.METADATA_KEY_ID)
                     if (pluginId.isNullOrBlank()) continue
                     pluginItems += AboutItem(
                         icon = R.drawable.ic_baseline_nfc_24,
-                        text = getString(R.string.version_x, pluginId) +
-                            " (${Plugins.displayExeProvider(pkg.packageName)})",
+                        text = getString(R.string.version_x, pluginId),
                         subText = "v" + pkg.versionName,
                         onClick = {
                             startActivity(

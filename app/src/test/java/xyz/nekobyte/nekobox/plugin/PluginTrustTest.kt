@@ -308,15 +308,15 @@ class PluginTrustTest {
 
         val trusted = Candidate(
             "io.example.trusted",
-            "io.nekohasekai.sagernet.plugin.trusted",
+            "io.example.plugins.trusted",
             singleSigner(signerA),
         )
         val preferredButUntrusted = Candidate(
             "io.example.untrusted",
-            "moe.matsuri.exe.untrusted",
+            "io.example.plugins.untrusted",
             singleSigner(signerB),
         )
-        val unreadable = Candidate("io.example.unreadable", "moe.matsuri.exe.unreadable", null)
+        val unreadable = Candidate("io.example.unreadable", "io.example.plugins.unreadable", null)
         val result = PluginTrust.filterTrustedCandidates(
             listOf(preferredButUntrusted, unreadable, trusted),
             Candidate::packageName,

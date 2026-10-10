@@ -97,7 +97,7 @@ class LogcatFragment :
             R.id.action_send_logcat -> {
                 val context = requireContext()
                 runOnDefaultDispatcher {
-                    SendLog.sendLog(context, "NB4A")
+                    SendLog.sendLog(context, "NekoBox")
                 }
             }
 

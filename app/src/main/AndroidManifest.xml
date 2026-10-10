@@ -62,9 +62,8 @@
         android:required="false" />
 
     <queries>
-        <!-- Action declared by installed plugin APKs (external contract). -->
         <intent>
-            <action android:name="io.nekohasekai.sagernet.plugin.ACTION_NATIVE_PLUGIN" />
+            <action android:name="xyz.nekobyte.nekobox.plugin.ACTION_NATIVE_PLUGIN" />
         </intent>
     </queries>
 

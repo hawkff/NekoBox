@@ -14,7 +14,7 @@ import (
 )
 
 func extractAssets() {
-	useOfficialAssets := intfNB4A.UseOfficialAssets()
+	useOfficialAssets := appPlatform.UseOfficialAssets()
 	for _, name := range []string{geoipDat, geositeDat, yacdDstFolder} {
 		if err := extractAssetName(name, useOfficialAssets); err != nil {
 			log.Println("Extract", name, "failed:", err)

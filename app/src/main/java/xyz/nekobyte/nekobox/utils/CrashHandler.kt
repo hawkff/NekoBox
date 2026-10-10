@@ -58,7 +58,7 @@ object CrashHandler : Thread.UncaughtExceptionHandler {
         ProcessPhoenix.triggerRebirth(
             app,
             Intent(app, BlankActivity::class.java).apply {
-                putExtra("sendLog", "NB4A Crash")
+                putExtra("sendLog", "NekoBox Crash")
             },
         )
     }

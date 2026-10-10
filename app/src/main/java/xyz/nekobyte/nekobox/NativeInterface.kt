@@ -12,9 +12,9 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import libcore.AppPlatformInterface
 import libcore.BoxPlatformInterface
 import libcore.Libcore
-import libcore.NB4AInterface
 import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.bg.ServiceNotification
@@ -33,7 +33,7 @@ const val TAILSCALE_LOGIN_NOTIFICATION = "tailscale-authentication"
 
 class NativeInterface :
     BoxPlatformInterface,
-    NB4AInterface {
+    AppPlatformInterface {
 
     //  libbox interface
 
@@ -138,7 +138,7 @@ class NativeInterface :
         }
     }.toString()
 
-    // nb4a interface
+    // App configuration and selector callbacks
 
     override fun useOfficialAssets(): Boolean = DataStore.rulesProvider == 0
 
