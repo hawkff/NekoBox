@@ -20,7 +20,6 @@ import xyz.nekobyte.nekobox.ktx.long
 import xyz.nekobyte.nekobox.ktx.parsePort
 import xyz.nekobyte.nekobox.ktx.string
 import xyz.nekobyte.nekobox.ktx.stringToInt
-import xyz.nekobyte.nekobox.ktx.stringToIntIfExists
 
 // Default exclusion patterns for the system HTTP proxy (appendHttpProxy).
 // These are Android ProxyInfo host/suffix patterns (NOT CIDRs): private and
@@ -59,7 +58,8 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var selectedProxy by configurationStore.long(Key.PROFILE_ID)
     var selectedGroup by configurationStore.long(Key.PROFILE_GROUP) { currentGroupId() } // "ungrouped" group id = 1
 
-    // only in bg process
+    // Read by native socket callbacks as well as the service lifecycle.
+    @Volatile
     var vpnService: VpnService? = null
     var baseService: BaseService.Interface? = null
 
@@ -314,9 +314,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var serverAuthType by profileCacheStore.stringToInt(Key.SERVER_AUTH_TYPE)
     var serverUploadSpeed by profileCacheStore.stringToInt(Key.SERVER_UPLOAD_SPEED)
     var serverDownloadSpeed by profileCacheStore.stringToInt(Key.SERVER_DOWNLOAD_SPEED)
-    var serverStreamReceiveWindow by profileCacheStore.stringToIntIfExists(Key.SERVER_STREAM_RECEIVE_WINDOW)
-    var serverConnectionReceiveWindow by profileCacheStore.stringToIntIfExists(Key.SERVER_CONNECTION_RECEIVE_WINDOW)
-    var serverDisableMtuDiscovery by profileCacheStore.boolean(Key.SERVER_DISABLE_MTU_DISCOVERY)
     var serverHopInterval by profileCacheStore.stringToInt(Key.SERVER_HOP_INTERVAL) { 10 }
 
     var serverHy2ObfsType by profileCacheStore.stringToInt(Key.SERVER_HY2_OBFS_TYPE)

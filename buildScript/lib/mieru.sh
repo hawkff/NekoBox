@@ -37,6 +37,7 @@ fi
 
 WORK="$(pwd)/.mieru-build"
 OUT="$(pwd)/app/executableSo"
+PROTECT_PATCH="$(pwd)/buildScript/lib/mieru-protect.patch"
 
 # Fetch source (shallow clone at the pinned tag). Re-clone fresh if the existing
 # checkout is missing or its git operations fail (e.g. corrupted by a prior build).
@@ -58,6 +59,14 @@ if [ "$need_clone" -eq 1 ]; then
 fi
 
 pushd "$WORK" >/dev/null
+
+# Propagate Android VPN protection failures before the client can use an unprotected socket.
+if git apply --check --whitespace=error-all "$PROTECT_PATCH" 2>/dev/null; then
+  git apply --whitespace=error-all "$PROTECT_PATCH"
+elif ! git apply --reverse --check "$PROTECT_PATCH" 2>/dev/null; then
+  echo "Error: Mieru socket-protection patch does not match the source." >&2
+  exit 1
+fi
 
 build_abi() {
   local abi="$1" goarch="$2" cc="$3" goarm="$4"

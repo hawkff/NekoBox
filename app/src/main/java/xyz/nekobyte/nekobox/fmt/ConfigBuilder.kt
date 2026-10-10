@@ -174,7 +174,7 @@ const val LOCALHOST = "127.0.0.1"
 private val coreOutboundTypes = setOf(
     "direct", "block", "selector", "urltest", "socks", "http", "shadowsocks", "shadowsocksr",
     "vmess", "trojan", "tor", "ssh", "shadowtls", "vless", "anytls", "snell",
-    "hysteria", "tuic", "hysteria2", "juicity", "wireguard", "amneziawg",
+    "tuic", "hysteria2", "juicity", "wireguard", "amneziawg",
 )
 
 // IANA STUN/TURN ports (plain and TLS) plus Google's 19302-19309 STUN/TURN range. Only
@@ -279,6 +279,9 @@ private fun autoDnsDomainStrategy(s: String, ipv6Mode: Int): String? {
 }
 
 fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean = false): ConfigBuildResult {
+    require(proxy.canBuild()) {
+        NekoBox.application.getString(if (proxy.isHysteria1()) R.string.hysteria1_retired else R.string.profile_unsupported)
+    }
     if (proxy.type == TYPE_CONFIG) {
         val bean = proxy.requireBean() as ConfigBean
         if (bean.type == 0) {
@@ -856,55 +859,51 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 bean.finalAddress = bean.serverAddress
                 bean.finalPort = bean.serverPort!!
                 if (bean.canMapping() && proxyEntity.needExternal()) {
-                    // Hysteria plugins must protect direct sockets through protect_path.
-                    val needExternal = index != profileList.lastIndex || bean !is HysteriaBean
-                    if (needExternal) {
-                        val mappingPort = mkPort()
-                        bean.finalAddress = LOCALHOST
-                        bean.finalPort = mappingPort
+                    val mappingPort = mkPort()
+                    bean.finalAddress = LOCALHOST
+                    bean.finalPort = mappingPort
 
-                        inbounds.add(
-                            Inbound_DirectOptions().apply {
-                                type = "direct"
-                                listen = LOCALHOST
-                                listen_port = mappingPort
-                                tag = "$chainTag-mapping-${proxyEntity.id}"
+                    inbounds.add(
+                        Inbound_DirectOptions().apply {
+                            type = "direct"
+                            listen = LOCALHOST
+                            listen_port = mappingPort
+                            tag = "$chainTag-mapping-${proxyEntity.id}"
 
-                                override_address = bean.serverAddress
-                                override_port = bean.serverPort
+                            override_address = bean.serverAddress
+                            override_port = bean.serverPort
 
-                                pastInboundTag = checkNotNull(tag)
+                            pastInboundTag = checkNotNull(tag)
 
-                                // no chain rule and not outbound, so need to set to direct
-                                if (index == profileList.lastIndex) {
-                                    if (DataStore.enableTLSFragment) {
-                                        routeRules.add(
-                                            Rule_DefaultOptions().apply {
-                                                network = listOf("tcp")
-                                                inbound = listOf(pastInboundTag)
-                                                outbound = TAG_FRAGMENT
-                                            },
-                                        )
-                                    }
-
+                            // no chain rule and not outbound, so need to set to direct
+                            if (index == profileList.lastIndex) {
+                                if (DataStore.enableTLSFragment) {
                                     routeRules.add(
                                         Rule_DefaultOptions().apply {
+                                            network = listOf("tcp")
                                             inbound = listOf(pastInboundTag)
-                                            action = "resolve"
-                                            strategy = if (forTest) null else defaultServerDomainStrategy
-                                            mappingResolvers[this] = serverHostOf(bean)
-                                        },
-                                    )
-                                    routeRules.add(
-                                        Rule_DefaultOptions().apply {
-                                            inbound = listOf(pastInboundTag)
-                                            outbound = TAG_DIRECT
+                                            outbound = TAG_FRAGMENT
                                         },
                                     )
                                 }
-                            },
-                        )
-                    }
+
+                                routeRules.add(
+                                    Rule_DefaultOptions().apply {
+                                        inbound = listOf(pastInboundTag)
+                                        action = "resolve"
+                                        strategy = if (forTest) null else defaultServerDomainStrategy
+                                        mappingResolvers[this] = serverHostOf(bean)
+                                    },
+                                )
+                                routeRules.add(
+                                    Rule_DefaultOptions().apply {
+                                        inbound = listOf(pastInboundTag)
+                                        outbound = TAG_DIRECT
+                                    },
+                                )
+                            }
+                        },
+                    )
                 }
 
                 if (currentOutbound is Endpoint) endpointList.add(currentOutbound) else outbounds.add(currentOutbound)

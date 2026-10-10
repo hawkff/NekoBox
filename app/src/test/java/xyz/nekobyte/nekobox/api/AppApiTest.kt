@@ -23,6 +23,7 @@ import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.*
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
+import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -142,6 +143,43 @@ class AppApiTest {
         objectResult("profiles.delete", params("id" to id, "confirm" to true))
         error("not_found", "profiles.get", params("id" to id))
         assertEquals(0L, DataStore.selectedProxy)
+    }
+
+    @Test
+    fun retiredHysteriaProfilesRemainReadableButCannotBeCreatedChangedOrRun() {
+        val group = group()
+        val legacy = ProxyEntity(groupId = group).putBean(
+            HysteriaBean().apply {
+                protocolVersion = 1
+                name = "legacy"
+                authPayload = "fictional-legacy-secret"
+                initializeDefaultValues()
+            },
+        ).also { it.id = ConfigBuilderTestEnv.io { ProfileDatabase.proxyDao.addProxy(it) } }
+        val id = legacy.id
+        val safe = objectResult("profiles.get", params("id" to id))
+        assertFalse(safe.getBoolean("canBuild"))
+        assertFalse(safe.has("configuration"))
+        val full = objectResult("profiles.get", params("id" to id, "includeSecrets" to true)).getJSONObject("configuration")
+        assertEquals(1, full.getInt("protocolVersion"))
+        assertEquals("fictional-legacy-secret", full.getString("authPayload"))
+        assertTrue(objectResult("profiles.export", params("id" to id, "includeSecrets" to true)).getString("text").startsWith("hysteria://"))
+        error("invalid_parameters", "profiles.create", params("groupId" to group, "type" to ProxyEntity.TYPE_HYSTERIA, "configuration" to full))
+        error("invalid_parameters", "profiles.create", params("groupId" to group, "type" to ProxyEntity.TYPE_CONFIG, "configuration" to params("type" to 1, "config" to """{"type":"hysteria","server":"192.0.2.1","server_port":443}""")))
+        error("invalid_parameters", "profiles.update", params("id" to id, "configuration" to params("name" to "changed")))
+        error("invalid_parameters", "profiles.clone", params("id" to id, "groupId" to group))
+        error("invalid_parameters", "profiles.select", params("id" to id))
+        error("invalid_parameters", "plugins.inspect", params("name" to "hysteria-plugin"))
+        error("invalid_parameters", "profiles.test", params("id" to id))
+        error("invalid_parameters", "service.start", params("id" to id))
+        DataStore.serviceState = BaseService.State.Connected
+        error("invalid_parameters", "service.reload", params("id" to id))
+        DataStore.serviceState = BaseService.State.Stopped
+        val current = objectResult("profiles.create", params("groupId" to group, "type" to ProxyEntity.TYPE_HYSTERIA, "configuration" to params("protocolVersion" to 2))).getLong("id")
+        error("invalid_parameters", "profiles.update", params("id" to current, "configuration" to params("protocolVersion" to 1)))
+        assertEquals(2, objectResult("profiles.get", params("id" to current, "includeSecrets" to true)).getJSONObject("configuration").getInt("protocolVersion"))
+        assertEquals("legacy", objectResult("profiles.get", params("id" to id)).getString("name"))
+        assertEquals(2, objectResult("profiles.list").getInt("total"))
     }
 
     @Test

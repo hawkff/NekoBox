@@ -66,11 +66,8 @@ object PluginManager {
             return null
         }
         return when (pluginId) {
-            // Hysteria v1 resolves through the external plugin only; its bundled sidecar was removed.
             "mieru-plugin" -> soIfExist("libmieru.so")
-
             "naive-plugin" -> soIfExist("libnaive.so")
-
             else -> null
         }
     }

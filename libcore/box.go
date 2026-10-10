@@ -292,8 +292,8 @@ func serveProtectLocked(start bool) {
 		protectCloser = nil
 	}
 	if start {
-		protectCloser = serveProtect("protect_path", func(fd int) {
-			intfBox.AutoDetectInterfaceControl(int32(fd))
+		protectCloser = serveProtect("protect_path", func(fd int) error {
+			return intfBox.AutoDetectInterfaceControl(int32(fd))
 		})
 	}
 }

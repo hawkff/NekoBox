@@ -10,7 +10,7 @@ import xyz.nekobyte.nekobox.database.RoutingProfiles
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.Serializable
 import xyz.nekobyte.nekobox.fmt.http.parseHttp
-import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria1
+import xyz.nekobyte.nekobox.fmt.hysteria.isHysteria1
 import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2
 import xyz.nekobyte.nekobox.fmt.juicity.parseJuicity
 import xyz.nekobyte.nekobox.fmt.naive.parseNaive
@@ -180,7 +180,12 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
         if (startsWith("sn://")) {
             Logs.d("Trying universal parser")
             runCatching {
-                entities.add(parseUniversal(this))
+                val bean = parseUniversal(this)
+                if (bean.isHysteria1()) {
+                    failures += "hysteria"
+                    return
+                }
+                entities.add(bean)
             }.onFailure {
                 Logs.w("Universal parser rejected input")
             }
@@ -253,13 +258,6 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
                 entities.add(parseNaive(this))
             }.onFailure {
                 Logs.w("Naive parser rejected input")
-            }
-        } else if (startsWith("hysteria://")) {
-            Logs.d("Trying Hysteria 1 parser")
-            runCatching {
-                entities.add(parseHysteria1(this))
-            }.onFailure {
-                Logs.w("Hysteria 1 parser rejected input")
             }
         } else if (startsWith("hysteria2://") || startsWith("hy2://")) {
             Logs.d("Trying Hysteria 2 parser")

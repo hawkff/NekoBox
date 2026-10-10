@@ -228,20 +228,31 @@ class HysteriaFmtTest {
     }
 
     @Test
-    fun hysteria1_preservesBothReceiveWindows() {
+    fun hysteria1_retainsBothReceiveWindowsInStoredProfiles() {
         ConfigBuilderTestEnv.reset()
         val bean = hysteria2Bean().apply {
             protocolVersion = 1
             streamReceiveWindow = 65_536
             connectionReceiveWindow = 262_144
         }
-        val outbound = buildSingBoxOutboundHysteriaBean(bean) as SingBoxOptions.Outbound_HysteriaOptions
-        assertEquals(65_536L, outbound.recv_window_conn)
-        assertEquals(262_144L, outbound.recv_window)
+        val restored = KryoConverters.deserialize(HysteriaBean(), KryoConverters.serialize(bean))
+        assertEquals(65_536, restored.streamReceiveWindow)
+        assertEquals(262_144, restored.connectionReceiveWindow)
+        assertThrows(IllegalStateException::class.java) { buildSingBoxOutboundHysteriaBean(restored) }
     }
 
     @Test
-    fun hysteria1_ignoresEchFields() {
+    fun unsupportedVersionDoesNotIncludeCredentialsInTheError() {
+        val bean = hysteria2Bean().apply {
+            protocolVersion = 3
+            authPayload = "fictional-private-password"
+        }
+        val failure = assertThrows(IllegalStateException::class.java) { buildSingBoxOutboundHysteriaBean(bean) }
+        assertEquals("Unsupported Hysteria version: 3", failure.message)
+    }
+
+    @Test
+    fun hysteria1_cannotRunEvenWithEchFields() {
         val bean = hysteria2Bean().apply {
             protocolVersion = 1
             authPayloadType = HysteriaBean.TYPE_STRING
@@ -249,7 +260,7 @@ class HysteriaFmtTest {
             echConfig = this@HysteriaFmtTest.echConfig
         }
 
-        val outbound = buildSingBoxOutboundHysteriaBean(bean) as SingBoxOptions.Outbound_HysteriaOptions
-        assertNull(checkNotNull(outbound.tls).ech)
+        assertThrows(IllegalStateException::class.java) { buildSingBoxOutboundHysteriaBean(bean) }
+        assertTrue(bean.toUri().startsWith("hysteria://"))
     }
 }

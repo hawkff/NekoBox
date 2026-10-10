@@ -8,7 +8,6 @@ import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
 import xyz.nekobyte.nekobox.fmt.http.toUri
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
-import xyz.nekobyte.nekobox.fmt.hysteria.canUseSingBox
 import xyz.nekobyte.nekobox.fmt.hysteria.toUri
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.juicity.JuicityBean
@@ -177,7 +176,6 @@ object ProtocolRegistry {
             getBean = { it.hysteriaBean },
             setBean = { e, b -> e.hysteriaBean = b as HysteriaBean? },
             displayType = { "Hysteria" + it.hysteriaBean!!.protocolVersion },
-            needExternal = { !it.hysteriaBean!!.canUseSingBox() },
             settingsActivityClass = HysteriaSettingsActivity::class.java,
             toStandardLink = { (it as HysteriaBean).toUri() },
         ),

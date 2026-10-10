@@ -22,6 +22,7 @@ import xyz.nekobyte.nekobox.database.preference.KeyValuePair
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.KryoConverters
+import xyz.nekobyte.nekobox.fmt.hysteria.isHysteria1
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.isUsableChainHop
 import xyz.nekobyte.nekobox.fmt.tailscale.profilesForBackup
@@ -638,7 +639,11 @@ internal class AppApi(private val context: Context, private val runtime: ApiRunt
             val state = runtime.serviceState()
             if (state == BaseService.State.Idle) reject("service_unavailable", "The service connection is not ready")
             if (!state.canStop) reject("service_stopped", "Start the service before reloading it")
-            val id = if (it.has("id")) profile(it.positiveId()).id else -1L
+            val id = if (it.has("id")) {
+                profile(it.positiveId()).also { target -> requireApi(target.canBuild(), "Unsupported profiles cannot run") }.id
+            } else {
+                -1L
+            }
             DataStore.configurationStore.awaitWrites()
             withContext(Dispatchers.Main) { NekoBox.reloadService(id) }
             JSONObject().put("accepted", true)
@@ -801,7 +806,7 @@ internal class AppApi(private val context: Context, private val runtime: ApiRunt
         put("lifetimeRx", profile.lifetimeRx)
         put("lifetimeTx", profile.lifetimeTx)
         put("canBuild", profile.canBuild())
-        if (secrets && profile.canBuild()) put("configuration", ApiBean.encode(profile.requireBean()))
+        if (secrets && (profile.canBuild() || profile.isHysteria1())) put("configuration", ApiBean.encode(profile.requireBean()))
     }
     private fun groupJson(group: ProxyGroup, secrets: Boolean) = JSONObject().apply {
         put("id", group.id)
@@ -817,6 +822,7 @@ internal class AppApi(private val context: Context, private val runtime: ApiRunt
         if (secrets) group.subscription?.let { put("subscription", ApiBean.encode(it)) }
     }
     internal fun validateBean(bean: AbstractBean, editingId: Long = 0L, lookup: (Long) -> ProxyEntity = ::profile) {
+        requireApi(!bean.isHysteria1(), context.getString(R.string.hysteria1_retired))
         requireApi(bean.serverPort in 1..65535, "serverPort must be 1..65535")
         requireApi(!bean.serverAddress.isNullOrBlank(), "serverAddress is required")
         if (bean is ChainBean) {
