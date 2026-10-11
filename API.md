@@ -17,7 +17,7 @@ python3 scripts/app-api.py call api.describe
 python3 scripts/app-api.py call api.openapi > openapi.json
 ```
 
-The client requires Python 3.9 or later and `adb`. `--package` defaults to `com.nb4a.debug`. It writes only the app's private `no_backup/local-api.json`, launches `MainActivity`, and creates an ADB port forward on a free host port. Repeated enrollment reuses a matching forward, including during token rotation. It does not install, uninstall, clear data, stop the VPN or grant Android permissions.
+The client requires Python 3.9 or later and `adb`. `--package` defaults to `xyz.nekobyte.nekobox.debug`. It writes only the app's private `no_backup/local-api.json`, launches `MainActivity`, and creates an ADB port forward on a free host port. Repeated enrollment reuses a matching forward, including during token rotation. It does not install, uninstall, clear data, stop the VPN or grant Android permissions.
 
 The client saves the forwarded port and token in `~/.config/nekobox/api.json` with mode `0600`. Use a different `--state` path for each device. The app keeps its API credentials outside Android backups and its own exported backups.
 

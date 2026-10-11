@@ -258,7 +258,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", type=Path, default=Path.home() / ".config/nekobox/api.json")
     parser.add_argument("--serial")
-    parser.add_argument("--package", default="com.nb4a.debug")
+    parser.add_argument("--package", default="xyz.nekobyte.nekobox.debug")
     commands = parser.add_subparsers(dest="action", required=True)
     for name in ("enable", "disable"):
         commands.add_parser(name).add_argument("--rotate", action="store_true")
