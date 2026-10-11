@@ -12,18 +12,21 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.RuleEntity
+import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.chainContains
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
+import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 
 @RunWith(RobolectricTestRunner::class)
@@ -107,6 +110,47 @@ class ConfigBuilderGoldenTest {
 
             assertTrue(outbound.getJSONObject("tls").getBoolean("enabled"))
             assertEquals(TAG_FRAGMENT, outbound.getString("detour"))
+        } finally {
+            DataStore.enableTLSFragment = previousTlsFragment
+        }
+    }
+
+    @Test
+    fun tlsFragment_keepsTheFirstHopResolverWhenServerStrategyIsAuto() {
+        val previousTlsFragment = DataStore.enableTLSFragment
+        try {
+            DataStore.enableTLSFragment = true
+            DataStore.configurationStore.putString("domain_strategy_for_server", "auto")
+            val group = ConfigBuilderTestEnv.io {
+                ProfileDatabase.groupDao.createGroup(
+                    ProxyGroup(
+                        type = GroupType.SUBSCRIPTION,
+                        subscription = SubscriptionBean().applyDefaultValues().apply {
+                            customDnsResolver = "https://subscription.example/dns-query"
+                        },
+                    ),
+                )
+            }
+            val profile = addProfile(
+                group,
+                VMessBean().apply {
+                    serverAddress = "node.example"
+                    serverPort = 443
+                    uuid = "d342d11e-d424-4583-b36e-524ab1f0afa4"
+                    alterId = 0
+                    encryption = "auto"
+                    security = "tls"
+                    sni = "node.example"
+                    name = "fragment-resolver"
+                    initializeDefaultValues()
+                },
+            )
+
+            val outbound = outbound(JSONObject(build(profile).config), "vmess")
+
+            // The fragment outbound is local, so the subscription's resolver still applies.
+            assertEquals(TAG_FRAGMENT, outbound.getString("detour"))
+            assertEquals("dns-sub-$group", outbound.getJSONObject("domain_resolver").getString("server"))
         } finally {
             DataStore.enableTLSFragment = previousTlsFragment
         }
