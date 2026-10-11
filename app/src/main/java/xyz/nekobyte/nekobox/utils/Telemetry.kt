@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.utils
 
 import android.os.Build
+import android.os.SystemClock
 import androidx.preference.PreferenceDataStore
 import androidx.room.InvalidationTracker
 import com.posthog.PersonProfiles
@@ -18,6 +19,7 @@ import io.sentry.protocol.Mechanism
 import io.sentry.protocol.SentryException
 import io.sentry.protocol.SentryStackFrame
 import io.sentry.protocol.SentryStackTrace
+import kotlinx.coroutines.CancellationException
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import xyz.nekobyte.nekobox.BuildConfig
@@ -33,6 +35,24 @@ import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+internal enum class ConnectionOutcome { CONNECTED, NO_PROFILE, DNS_ERROR, PLUGIN_MISSING, PREPARE_ERROR, START_ERROR, PROCESS_EXIT }
+internal enum class DiagnosticOperation { SERVICE_PREPARE, SERVICE_START, SERVICE_RELOAD, EXTERNAL_PROCESS }
+
+internal class ConnectionAttempt(private val report: (ConnectionOutcome, Long) -> Unit = Telemetry::connectionResult) {
+    private val startedAt = SystemClock.elapsedRealtime()
+    private val completed = AtomicBoolean(false)
+
+    fun complete(outcome: ConnectionOutcome) {
+        if (completed.compareAndSet(false, true)) report(outcome, SystemClock.elapsedRealtime() - startedAt)
+    }
+}
+
+private const val MAX_CONNECTION_DURATION_MS = 300_000L
+
+internal fun diagnosticDue(previous: Long?, now: Long) = previous == null || now - previous >= 60_000L
+
+internal fun diagnosticAllowed(generation: AtomicBoolean, current: AtomicBoolean, enabled: Boolean) = generation === current && generation.get() && enabled
+
 object Telemetry : OnPreferenceDataStoreChangeListener {
     private val worker by lazy { Executors.newSingleThreadExecutor { Thread(it, "Telemetry").apply { isDaemon = true } } }
 
@@ -43,7 +63,46 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
     // close() keeps the SDK executors alive for setup(), so retain and reuse their owner.
     private var analytics: PostHogInterface? = null
     private var analyticsHttp: OkHttpClient? = null
-    private val analyticsCache by lazy { File(app.cacheDir, "telemetry-posthog") }
+    private val analyticsCache by lazy { File(app.cacheDir, if (mainProcess) "telemetry-posthog" else "telemetry-posthog-service") }
+    private val lastFailureReport = mutableMapOf<DiagnosticOperation, Long>()
+
+    internal fun connectionResult(outcome: ConnectionOutcome, durationMillis: Long) = diagnostic {
+        analytics?.capture(
+            "connection_result",
+            properties = mapOf("outcome" to outcome.name.lowercase(), "duration_ms" to durationMillis.coerceIn(0, MAX_CONNECTION_DURATION_MS)),
+        )
+    }
+
+    internal fun connectionInterrupted() = diagnostic {
+        analytics?.capture("connection_interrupted")
+    }
+
+    internal fun reportFailure(operation: DiagnosticOperation, error: Throwable) {
+        if (error is CancellationException) return
+        diagnostic {
+            val now = SystemClock.elapsedRealtime()
+            if (!diagnosticDue(lastFailureReport[operation], now)) return@diagnostic
+            lastFailureReport[operation] = now
+            Sentry.withScope { scope ->
+                scope.setTag("operation", operation.name.lowercase())
+                Sentry.captureException(error)
+            }
+        }
+    }
+
+    private fun diagnostic(send: () -> Unit) {
+        if (BuildConfig.POSTHOG_PROJECT_TOKEN.isBlank() && BuildConfig.SENTRY_DSN.isBlank()) return
+        val generation = consent
+        if (!runCatching { diagnosticAllowed(generation, consent, DataStore.helpToImprove) }.getOrDefault(false)) return
+        worker.execute {
+            try {
+                if (!diagnosticAllowed(generation, consent, DataStore.helpToImprove)) return@execute
+                send()
+            } catch (_: Exception) {
+                Logs.w("Telemetry report failed")
+            }
+        }
+    }
 
     fun initialize(isMainProcess: Boolean) {
         if (BuildConfig.POSTHOG_PROJECT_TOKEN.isBlank() && BuildConfig.SENTRY_DSN.isBlank()) return
@@ -85,11 +144,11 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
         consent = permission
         val allowed = { permission.get() && runCatching { DataStore.helpToImprove }.getOrDefault(false) }
 
-        if (mainProcess && BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank()) {
+        if (BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank()) {
             try {
                 analyticsHttp = telemetryHttpClient(allowed)
                 analytics = setupPostHog(analytics, postHogConfig(BuildConfig.POSTHOG_PROJECT_TOKEN, BuildConfig.POSTHOG_HOST, analyticsCache, analyticsHttp!!, allowed))
-                analytics?.capture("app_opened")
+                if (mainProcess) analytics?.capture("app_opened")
             } catch (_: Exception) {
                 Logs.w("PostHog initialization failed")
             }
@@ -112,7 +171,7 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
         analytics?.close()
         analyticsHttp?.connectionPool?.evictAll()
         analyticsHttp = null
-        if (mainProcess && !analyticsCache.deleteRecursively()) Logs.w("PostHog cache cleanup failed")
+        if (!analyticsCache.deleteRecursively()) Logs.w("PostHog cache cleanup failed")
         Sentry.close()
     }
 }
@@ -147,22 +206,36 @@ internal fun postHogConfig(token: String, host: String, cache: File, client: OkH
         surveys = false
         errorTrackingConfig.autoCapture = false
         maxQueueSize = 20
+        flushAt = 1
         addBeforeSend { event ->
             runCatching {
-                if (allowed() && event.event == "app_opened") {
+                if (allowed()) {
+                    val diagnosticProperties = when (event.event) {
+                        "app_opened", "connection_interrupted" -> emptyMap()
+
+                        "connection_result" -> {
+                            val outcome = event.properties?.get("outcome") as? String ?: return@runCatching null
+                            if (ConnectionOutcome.entries.none { it.name.lowercase() == outcome }) return@runCatching null
+                            val duration = (event.properties?.get("duration_ms") as? Long)
+                                ?.takeIf { it in 0..MAX_CONNECTION_DURATION_MS } ?: return@runCatching null
+                            mapOf("outcome" to outcome, "duration_ms" to duration)
+                        }
+
+                        else -> return@runCatching null
+                    }
                     PostHogEvent(
                         event = event.event,
                         distinctId = event.distinctId,
                         timestamp = event.timestamp,
                         uuid = event.uuid,
-                        properties = mutableMapOf(
+                        properties = mutableMapOf<String, Any>(
                             "app_version" to BuildConfig.VERSION_NAME,
                             "app_build" to BuildConfig.VERSION_CODE,
                             "android_api" to Build.VERSION.SDK_INT,
                             "build_type" to BuildConfig.BUILD_TYPE,
                             "\$geoip_disable" to true,
                             "\$process_person_profile" to false,
-                        ),
+                        ).apply { putAll(diagnosticProperties) },
                     )
                 } else {
                     null
@@ -176,6 +249,7 @@ internal fun sentryOptions(dsn: String, options: SentryAndroidOptions = SentryAn
     require(dsn.toHttpUrlOrNull()?.isHttps == true) { "Sentry requires an HTTPS DSN" }
     return options.apply {
         this.dsn = dsn
+        addInAppInclude("xyz.nekobyte.nekobox")
         release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
         environment = BuildConfig.BUILD_TYPE
         dataCollection.userInfo = false
@@ -214,6 +288,7 @@ internal fun sentryOptions(dsn: String, options: SentryAndroidOptions = SentryAn
 
 internal fun sanitizedCrashEvent(event: SentryEvent): SentryEvent? {
     val exceptions = event.exceptions?.takeIf { it.isNotEmpty() } ?: return null
+    val handled = exceptions.none { it.mechanism?.isHandled == false }
     // Copy an allowlist instead of redacting messages that can contain entire VPN configs.
     return SentryEvent(event.timestamp).apply {
         eventId = event.eventId
@@ -222,13 +297,15 @@ internal fun sanitizedCrashEvent(event: SentryEvent): SentryEvent? {
         environment = event.environment
         platform = "java"
         setTag("android_api", Build.VERSION.SDK_INT.toString())
+        event.getTag("operation")?.takeIf { value -> DiagnosticOperation.entries.any { it.name.lowercase() == value } }
+            ?.let { setTag("operation", it) }
         this.exceptions = exceptions.map { exception ->
             SentryException().apply {
                 type = exception.type
                 module = exception.module
                 mechanism = Mechanism().apply {
-                    type = "UncaughtExceptionHandler"
-                    isHandled = false
+                    isHandled = handled
+                    type = if (isHandled == true) "generic" else "UncaughtExceptionHandler"
                 }
                 stacktrace = exception.stacktrace?.let { trace ->
                     SentryStackTrace(
