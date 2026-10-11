@@ -471,15 +471,8 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     }
 
     private fun setupNotification() {
-        val profileTrafficStatistics = findPreference<SwitchPreference>(Key.PROFILE_TRAFFIC_STATISTICS)
-        findPreference<SimpleMenuPreference>(Key.SPEED_INTERVAL)?.let { speedInterval ->
-            profileTrafficStatistics?.isEnabled = speedInterval.value.toString() != "0"
-            speedInterval.setOnPreferenceChangeListener { _, newValue ->
-                profileTrafficStatistics?.isEnabled = newValue.toString() != "0"
-                needReload()
-                true
-            }
-        }
+        findPreference<SwitchPreference>(Key.PROFILE_TRAFFIC_STATISTICS)?.onPreferenceChangeListener = reloadListener
+        findPreference<SimpleMenuPreference>(Key.SPEED_INTERVAL)?.onPreferenceChangeListener = reloadListener
         findPreference<SwitchPreference>(Key.SHOW_DIRECT_SPEED)?.onPreferenceChangeListener = reloadListener
     }
 

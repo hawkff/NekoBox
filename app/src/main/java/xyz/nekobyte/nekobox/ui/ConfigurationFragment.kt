@@ -1183,9 +1183,9 @@ class ConfigurationFragment @JvmOverloads constructor(
                             profile.status = 0
 
                             try {
-                                val result = urlTest.doTest(profile)
+                                val latency = urlTest.doTest(profile, result.prepareUrlTest())
                                 profile.status = 1
-                                profile.ping = result
+                                profile.ping = latency
                                 // Clear any stale error from a previous failed test so a now-passing
                                 // profile doesn't keep showing an old failure message.
                                 profile.error = null
