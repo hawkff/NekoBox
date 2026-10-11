@@ -1,7 +1,9 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.util.Xml
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.xmlpull.v1.XmlPullParser
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 
@@ -21,6 +23,29 @@ internal fun redactedWebDavUrlForLog(url: HttpUrl): String {
 }
 
 object WebDAVSecurity {
+
+    internal fun isBackupName(name: String) = name.startsWith("nekobox_backup_") &&
+        (name.endsWith(".json") || name.endsWith(".zip")) &&
+        name.length <= 200 && name.none { it == '/' || it == '\\' || it.isISOControl() }
+
+    internal fun backupFiles(xml: String, directory: HttpUrl): List<String> {
+        require(!xml.contains("<!DOCTYPE", ignoreCase = true) && !xml.contains("<!ENTITY", ignoreCase = true)) { "DTD declarations are not allowed" }
+        val parser = Xml.newPullParser()
+        parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
+        parser.setInput(xml.reader())
+        val files = linkedSetOf<String>()
+        val base = directory.newBuilder().addPathSegment("").build()
+        while (parser.next() != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType != XmlPullParser.START_TAG || parser.name != "href" || parser.namespace != "DAV:") continue
+            val url = base.resolve(parser.nextText()) ?: continue
+            if (url.scheme != directory.scheme || url.host != directory.host || url.port != directory.port || url.query != null || url.fragment != null) continue
+            if (url.pathSegments.dropLast(1).filter { it.isNotEmpty() } != directory.pathSegments.filter { it.isNotEmpty() }) continue
+            val name = url.pathSegments.last()
+            if (isBackupName(name)) files += name
+            require(files.size <= 1000) { "WebDAV listing is too large" }
+        }
+        return files.sortedDescending()
+    }
 
     /**
      * Validates and parses a user-provided WebDAV server URL.

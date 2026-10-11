@@ -20,6 +20,7 @@ import xyz.nekobyte.nekobox.fmt.hysteria.buildSingBoxOutboundHysteriaBean
 import xyz.nekobyte.nekobox.fmt.internal.chainHops
 import xyz.nekobyte.nekobox.fmt.juicity.JuicityBean
 import xyz.nekobyte.nekobox.fmt.juicity.buildSingBoxOutboundJuicityBean
+import xyz.nekobyte.nekobox.fmt.mieru.MieruBean
 import xyz.nekobyte.nekobox.fmt.naive.NaiveBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.buildSingBoxOutboundShadowsocksBean
@@ -306,10 +307,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val lookupCache = BuildLookupCache()
     val group = lookupCache.group(proxy.groupId)
 
-    fun readableTag(name_: String): String {
+    fun readableTag(name_: String, changes: ChainBuildChanges): String {
         var name = name_
         var count = 0
-        while (!readableNames.add(name)) {
+        while (!changes.add(readableNames, name)) {
             count++
             name = "$name_-$count"
         }
@@ -595,7 +596,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
 
         // returns outbound tag; selected: the main profile or a selector member, not a rule outbound
         @Suppress("UNCHECKED_CAST")
-        fun buildChain(chainId: Long, entity: ProxyEntity, selected: Boolean): String {
+        fun buildChain(chainId: Long, entity: ProxyEntity, selected: Boolean, changes: ChainBuildChanges): String {
             val profileList = entity.resolveChain()
             // Validate before touching the shared lists: a chain skipped halfway would leave
             // outbounds with a detour to a tag that is never created. The first dialed hop is
@@ -649,7 +650,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 if (index == profileList.lastIndex) {
                     needGlobal = true
                     tagOut = "g-" + proxyEntity.id
-                    bypassDNSBeans += proxyEntity.requireBean()
+                    changes.add(bypassDNSBeans, proxyEntity.requireBean())
 
                     // Per-subscription custom resolver (#71). The resolver belongs to the
                     // subscription that owns this chain (entity.groupId), not necessarily the
@@ -671,16 +672,15 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                                 if (hop.groupId == ownerGid) {
                                     val host = serverHostOf(hop.requireBean())
                                     if (host != null && !host.isIpAddress()) {
-                                        perGroupResolver[ownerGid] = resolver
-                                        perGroupServerHosts.getOrPut(ownerGid) { mutableSetOf() }
-                                            .add(host)
-                                        hostResolvers.getOrPut(host) { mutableSetOf() }.add(resolver)
+                                        changes.put(perGroupResolver, ownerGid, resolver)
+                                        changes.add(perGroupServerHosts, ownerGid, host)
+                                        changes.add(hostResolvers, host, resolver)
                                     }
                                 } else {
                                     // hop from another (non-custom) group sharing this chain
                                     val host = serverHostOf(hop.requireBean())
                                     if (host != null && !host.isIpAddress()) {
-                                        nonCustomFinalHosts.add(host)
+                                        changes.add(nonCustomFinalHosts, host)
                                     }
                                 }
                             }
@@ -690,7 +690,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                             profileList.forEach { hop ->
                                 val host = serverHostOf(hop.requireBean())
                                 if (host != null && !host.isIpAddress()) {
-                                    nonCustomFinalHosts.add(host)
+                                    changes.add(nonCustomFinalHosts, host)
                                 }
                             }
                         }
@@ -698,7 +698,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 }
 
                 if (index == 0) {
-                    tagOut = readableTag(bean.displayName())
+                    tagOut = readableTag(bean.displayName(), changes)
                 }
 
                 // Resolve reuse before linking the previous hop: a standalone profile may
@@ -727,7 +727,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 // now tagOut is determined
                 if (needGlobal) {
                     if (reusedGlobalTag != null) return@forEachIndexed
-                    globalOutbounds[proxyEntity.id] = tagOut
+                    changes.put(globalOutbounds, proxyEntity.id, tagOut)
                 }
 
                 if (proxyEntity.needExternal()) { // externel outbound
@@ -744,10 +744,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         // Skip for export: the exported naive config (ProxyEntity.
                         // buildNaiveConfig without creds) would otherwise mismatch and
                         // produce a broken standalone config.
-                        if (bean is NaiveBean && !forExport) {
+                        if ((bean is NaiveBean || bean is MieruBean) && !forExport) {
                             val user = "neko"
                             val pass = UUID.randomUUID().toString().replace("-", "")
-                            localProxyCredentials[localPort] = user to pass
+                            changes.put(localProxyCredentials, localPort, user to pass)
                             username = user
                             password = pass
                         }
@@ -843,7 +843,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                             domainListDNSDirectForce.add("full:$serverAddress")
                         }
                     }
-                    outboundHosts[this] = serverHostOf(bean)
+                    changes.put(outboundHosts, this, serverHostOf(bean))
 
                     _hack_config_map["tag"] = tagOut
 
@@ -892,7 +892,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                                         inbound = listOf(pastInboundTag)
                                         action = "resolve"
                                         strategy = if (forTest) null else defaultServerDomainStrategy
-                                        mappingResolvers[this] = serverHostOf(bean)
+                                        changes.put(mappingResolvers, this, serverHostOf(bean))
                                     },
                                 )
                                 routeRules.add(
@@ -945,38 +945,14 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         fun buildChainOrSkip(chainId: Long, entity: ProxyEntity, selected: Boolean): String? {
             // buildChain appends to these as it goes; a hop that fails halfway must not leave an
             // outbound whose detour points at a tag that is never created, or a global tag for it.
-            val appended = listOf(outbounds, endpointList, inbounds, routeRules, externalIndexMap).map { it to it.size }
-            val globalBefore = HashMap(globalOutbounds)
-            val namesBefore = readableNames.toSet()
-            val bypassBefore = bypassDNSBeans.toSet()
-            val forceDnsSize = domainListDNSDirectForce.size
-            val resolverBefore = perGroupResolver.toMap()
-            val groupHostsBefore = perGroupServerHosts.mapValues { it.value.toMutableSet() }
-            val hostResolversBefore = hostResolvers.mapValues { it.value.toMutableSet() }
-            val finalHostsBefore = nonCustomFinalHosts.toSet()
-            val outboundHostsBefore = outboundHosts.keys.toSet()
-            val mappingResolversBefore = mappingResolvers.keys.toSet()
-            val credentialsBefore = localProxyCredentials.keys.toSet()
+            val appended = listOf(outbounds, endpointList, inbounds, routeRules, externalIndexMap, domainListDNSDirectForce).map { it to it.size }
+            val changes = ChainBuildChanges()
             return try {
-                buildChain(chainId, entity, selected)
+                buildChain(chainId, entity, selected, changes)
             } catch (e: Exception) {
                 if (entity.id == proxy.id || e is kotlinx.coroutines.CancellationException) throw e
                 for ((list, size) in appended) list.subList(size, list.size).clear()
-                globalOutbounds.clear()
-                globalOutbounds.putAll(globalBefore)
-                readableNames.retainAll(namesBefore)
-                bypassDNSBeans.retainAll(bypassBefore)
-                domainListDNSDirectForce.subList(forceDnsSize, domainListDNSDirectForce.size).clear()
-                perGroupResolver.clear()
-                perGroupResolver.putAll(resolverBefore)
-                perGroupServerHosts.clear()
-                perGroupServerHosts.putAll(groupHostsBefore)
-                hostResolvers.clear()
-                hostResolvers.putAll(hostResolversBefore)
-                nonCustomFinalHosts.retainAll(finalHostsBefore)
-                outboundHosts.keys.retainAll(outboundHostsBefore)
-                mappingResolvers.keys.retainAll(mappingResolversBefore)
-                localProxyCredentials.keys.retainAll(credentialsBefore)
+                changes.rollback()
                 if (selected) {
                     runOnMainDispatcher { Toast.makeText(NekoBox.application, e.readableMessage, Toast.LENGTH_LONG).show() }
                 } else {
@@ -1016,7 +992,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 },
             )
         } else {
-            val mainTag = buildChain(0, proxy, true)
+            val mainTag = buildChain(0, proxy, true, ChainBuildChanges())
             tagMap[proxy.id] = mainTag
         }
         // build outbounds from route item

@@ -32,12 +32,13 @@ internal object BackupFormatV2 {
     fun decodeRules(array: JSONArray): List<RuleEntity> = array.mapObjects(::decodeRule)
 
     fun encodeSettings(settings: List<KeyValuePair>): JSONArray = JSONArray().apply {
-        sanitizeSettings(settings).forEach { put(encodeSetting(it)) }
+        settings.filterNot { it.key == Key.PLUGIN_SIGNER_APPROVALS }.forEach { put(encodeSetting(it)) }
     }
 
     fun decodeSettings(array: JSONArray): List<KeyValuePair> = sanitizeSettings(array.mapObjects(::decodeSetting))
 
     fun sanitizeSettings(settings: List<KeyValuePair>) = settings.filterNot { it.key == Key.PLUGIN_SIGNER_APPROVALS }
+        .onEach { it.validateValue() }
 
     fun encodeProfile(profile: ProxyEntity): JSONObject = JSONObject().apply {
         put("id", profile.id)

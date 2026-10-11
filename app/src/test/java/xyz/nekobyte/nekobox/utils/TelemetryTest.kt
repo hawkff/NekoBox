@@ -16,6 +16,7 @@ import io.sentry.SentryLevel
 import io.sentry.SentryOptions
 import io.sentry.UncaughtExceptionHandlerIntegration
 import io.sentry.android.core.SentryAndroid
+import io.sentry.protocol.Mechanism
 import io.sentry.protocol.SentryException
 import io.sentry.protocol.SentryStackFrame
 import io.sentry.protocol.SentryStackTrace
@@ -33,12 +34,14 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowSystemClock
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
 import xyz.nekobyte.nekobox.database.preference.RoomPreferenceDataStore
 import java.io.File
 import java.io.IOException
+import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -92,6 +95,109 @@ class TelemetryTest {
         assertNull(filter.run(event.copy(event = "\$screen")))
         enabled = false
         assertNull(filter.run(event))
+    }
+
+    @Test
+    fun diagnosticEventsKeepOnlyKnownOutcomesAndBoundedDurations() {
+        var enabled = true
+        val config = postHogConfig("phc_example", "https://example.com", analyticsCache, telemetryHttpClient { enabled }) { enabled }
+        val filter = config.beforeSendList.single()
+        assertEquals(1, config.flushAt)
+        for (outcome in ConnectionOutcome.entries) {
+            val event = PostHogEvent(
+                "connection_result",
+                "random-session",
+                mutableMapOf("outcome" to outcome.name.lowercase(), "duration_ms" to 321L, "profile" to "private profile"),
+            )
+            val safe = requireNotNull(filter.run(event))
+            assertEquals(outcome.name.lowercase(), safe.properties?.get("outcome"))
+            assertEquals(321L, safe.properties?.get("duration_ms"))
+            assertNull(safe.properties?.get("profile"))
+            assertEquals(8, safe.properties?.size)
+            assertNull(filter.run(event.copy(properties = mutableMapOf("outcome" to "private endpoint", "duration_ms" to 321L))))
+            for (duration in listOf(-1L, 300_001L, "private value", Double.NaN)) {
+                assertNull(filter.run(event.copy(properties = mutableMapOf("outcome" to outcome.name.lowercase(), "duration_ms" to duration))))
+            }
+            enabled = false
+            assertNull(filter.run(event))
+            enabled = true
+        }
+        val interrupted = PostHogEvent("connection_interrupted", "random-session", mutableMapOf("message" to "private config"))
+        assertEquals(6, requireNotNull(filter.run(interrupted)).properties?.size)
+        enabled = false
+        assertNull(filter.run(interrupted))
+    }
+
+    @Test
+    fun failureReportsAreLimitedToOnePerMinuteForEachOperation() {
+        assertTrue(diagnosticDue(null, 0))
+        assertFalse(diagnosticDue(1_000, 60_999))
+        assertTrue(diagnosticDue(1_000, 61_000))
+        assertFalse(diagnosticDue(61_000, 61_000))
+        assertFalse(diagnosticDue(1_000, 999))
+    }
+
+    @Test
+    fun aConnectionAttemptReportsOnlyItsFirstOutcome() {
+        for (first in listOf(ConnectionOutcome.PROCESS_EXIT, ConnectionOutcome.START_ERROR, ConnectionOutcome.CONNECTED)) {
+            val reports = mutableListOf<Pair<ConnectionOutcome, Long>>()
+            val attempt = ConnectionAttempt { outcome, duration -> reports += outcome to duration }
+            ShadowSystemClock.advanceBy(Duration.ofMillis(25))
+            attempt.complete(first)
+            ShadowSystemClock.advanceBy(Duration.ofMillis(25))
+            ConnectionOutcome.entries.forEach(attempt::complete)
+            assertEquals(listOf(first to 25L), reports)
+        }
+    }
+
+    @Test
+    fun separateAttemptsRetainRepeatedOutcomesWithinOneMinute() {
+        val reports = mutableListOf<ConnectionOutcome>()
+        repeat(3) {
+            ConnectionAttempt { outcome, _ -> reports += outcome }.complete(ConnectionOutcome.CONNECTED)
+        }
+        assertEquals(List(3) { ConnectionOutcome.CONNECTED }, reports)
+    }
+
+    @Test
+    fun queuedDiagnosticsCannotCrossConsentGenerations() {
+        val original = AtomicBoolean(true)
+        assertTrue(diagnosticAllowed(original, original, true))
+        assertFalse(diagnosticAllowed(original, original, false))
+        assertFalse(diagnosticAllowed(original, AtomicBoolean(true), true))
+        original.set(false)
+        assertFalse(diagnosticAllowed(original, original, true))
+    }
+
+    @Test
+    fun handledErrorsRetainOnlyTheKnownOperationAndSafeMechanism() {
+        val exception = SentryException().apply {
+            type = "IllegalStateException"
+            value = "private endpoint"
+            mechanism = Mechanism().apply {
+                type = "private mechanism"
+                isHandled = true
+            }
+        }
+        val event = SentryEvent().apply {
+            exceptions = listOf(exception)
+            setTag("operation", "service_start")
+            setTag("profile", "private profile")
+        }
+        val safe = requireNotNull(sanitizedCrashEvent(event))
+        assertEquals("service_start", safe.getTag("operation"))
+        assertNull(safe.getTag("profile"))
+        val mechanism = requireNotNull(safe.exceptions?.single()?.mechanism)
+        assertEquals(true, mechanism.isHandled)
+        assertEquals("generic", mechanism.type)
+        assertNull(safe.exceptions?.single()?.value)
+
+        event.setTag("operation", "private operation")
+        exception.mechanism?.isHandled = false
+        val crash = requireNotNull(sanitizedCrashEvent(event))
+        assertNull(crash.getTag("operation"))
+        assertEquals(false, crash.exceptions?.single()?.mechanism?.isHandled)
+        assertEquals("UncaughtExceptionHandler", crash.exceptions?.single()?.mechanism?.type)
     }
 
     @Test
@@ -245,10 +351,10 @@ class TelemetryTest {
             assertNull(options.cacheDirPath)
             assertTrue(options.integrations.single() is UncaughtExceptionHandlerIntegration)
             requireNotNull(Thread.getDefaultUncaughtExceptionHandler())
-                .uncaughtException(Thread.currentThread(), IllegalStateException("private config"))
+                .uncaughtException(Thread.currentThread(), IllegalStateException("private config", IllegalArgumentException("private cause")))
             assertTrue(delegated)
             assertNotNull(report)
-            assertTrue(requireNotNull(report?.exceptions).all { it.value == null })
+            assertTrue(requireNotNull(report?.exceptions).all { it.value == null && it.mechanism?.isHandled == false })
             Sentry.close()
             assertSame(localHandler, Thread.getDefaultUncaughtExceptionHandler())
         } finally {

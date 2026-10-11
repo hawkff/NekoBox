@@ -1,6 +1,5 @@
 package xyz.nekobyte.nekobox.api
 
-import android.util.Xml
 import okhttp3.Credentials
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -9,7 +8,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import org.xmlpull.v1.XmlPullParser
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.readBytesBounded
 import xyz.nekobyte.nekobox.ktx.readTextBounded
@@ -41,7 +39,11 @@ internal class ApiWebDav {
         return client.newCall(request).execute().use { response ->
             if (response.code != 207) reject("remote_error", "WebDAV did not return a directory listing")
             val body = response.body.byteStream().use { it.readTextBounded(2L * 1024 * 1024) }
-            parseListing(body, directory)
+            try {
+                JSONArray(WebDAVSecurity.backupFiles(body, directory))
+            } catch (e: IllegalArgumentException) {
+                reject("invalid_parameters", e.message ?: "Invalid WebDAV listing")
+            }
         }
     }
 
@@ -60,7 +62,7 @@ internal class ApiWebDav {
     }
 
     fun download(name: String): JSONObject {
-        requireApi(validName(name), "Invalid backup filename")
+        requireApi(WebDAVSecurity.isBackupName(name), "Invalid backup filename")
         val url = directory().newBuilder().addPathSegment(name).build()
         return client.newCall(request(url).get().build()).execute().use { response ->
             if (!response.isSuccessful) reject("remote_error", "Could not download the WebDAV backup")
@@ -74,31 +76,6 @@ internal class ApiWebDav {
                 bytes.toString(Charsets.UTF_8)
             }
             JSONObject(content)
-        }
-    }
-
-    companion object {
-        internal fun validName(name: String) = name.startsWith("nekobox_backup_") &&
-            (name.endsWith(".json") || name.endsWith(".zip")) &&
-            name.length <= 200 && name.none { it == '/' || it == '\\' || it.isISOControl() }
-
-        internal fun parseListing(xml: String, directory: HttpUrl): JSONArray {
-            requireApi(!xml.contains("<!DOCTYPE", ignoreCase = true) && !xml.contains("<!ENTITY", ignoreCase = true), "DTD declarations are not allowed")
-            val parser = Xml.newPullParser()
-            parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
-            parser.setInput(xml.reader())
-            val files = linkedSetOf<String>()
-            while (parser.next() != XmlPullParser.END_DOCUMENT) {
-                if (parser.eventType != XmlPullParser.START_TAG || parser.name != "href" || parser.namespace != "DAV:") continue
-                val href = parser.nextText()
-                val url = directory.newBuilder().addPathSegment("").build().resolve(href) ?: continue
-                if (url.scheme != directory.scheme || url.host != directory.host || url.port != directory.port || url.query != null || url.fragment != null) continue
-                if (url.pathSegments.dropLast(1).filter { it.isNotEmpty() } != directory.pathSegments.filter { it.isNotEmpty() }) continue
-                val name = url.pathSegments.last()
-                if (validName(name)) files += name
-                requireApi(files.size <= 1000, "WebDAV listing is too large")
-            }
-            return JSONArray(files.sortedDescending())
         }
     }
 }

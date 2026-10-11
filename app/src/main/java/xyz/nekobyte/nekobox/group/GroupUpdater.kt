@@ -12,9 +12,11 @@ import xyz.nekobyte.nekobox.fmt.http.HttpBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.naive.NaiveBean
 import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
+import xyz.nekobyte.nekobox.fmt.tuic.TuicBean
 import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.isTLS
 import xyz.nekobyte.nekobox.ktx.*
+import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.util.*
@@ -93,7 +95,7 @@ abstract class GroupUpdater {
         }
     }
 
-    protected fun rewriteAddress(bean: AbstractBean, addresses: List<InetAddress>, ipv6First: Boolean) {
+    internal fun rewriteAddress(bean: AbstractBean, addresses: List<InetAddress>, ipv6First: Boolean) {
         val address = addresses.sortedBy { (it is Inet4Address) xor ipv6First }[0].hostAddress
 
         with(bean) {
@@ -113,6 +115,14 @@ abstract class GroupUpdater {
                 }
 
                 is HysteriaBean -> {
+                    if (sni!!.isBlank()) sni = bean.serverAddress
+                }
+
+                is TuicBean -> {
+                    if (sni!!.isBlank()) sni = bean.serverAddress
+                }
+
+                is AnyTLSBean -> {
                     if (sni!!.isBlank()) sni = bean.serverAddress
                 }
             }

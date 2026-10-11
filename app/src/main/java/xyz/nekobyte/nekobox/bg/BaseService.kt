@@ -29,7 +29,11 @@ import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.plugin.PluginManager
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import xyz.nekobyte.nekobox.utils.ConnectionAttempt
+import xyz.nekobyte.nekobox.utils.ConnectionOutcome
 import xyz.nekobyte.nekobox.utils.DefaultNetworkListener
+import xyz.nekobyte.nekobox.utils.DiagnosticOperation
+import xyz.nekobyte.nekobox.utils.Telemetry
 import xyz.nekobyte.nekobox.utils.Util
 import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
@@ -370,7 +374,9 @@ class BaseService {
                     throw e
                 } catch (e: Exception) {
                     Logs.w(e)
+                    Telemetry.reportFailure(DiagnosticOperation.SERVICE_RELOAD, e)
                     onMainDispatcher {
+                        if (data.state == State.Connected) Telemetry.connectionInterrupted()
                         stopRunner(
                             false,
                             "${(this@Interface as Context).getString(R.string.service_failed)}: ${e.readableMessage}",
@@ -636,6 +642,7 @@ class BaseService {
 
             val data = data
             if (data.state != State.Stopped) return Service.START_NOT_STICKY
+            val attempt = ConnectionAttempt()
             this as Context
             // This start ends the gap of a restart, if there was one.
             data.restarting = false
@@ -681,12 +688,14 @@ class BaseService {
                         // onStartConnect returns it), not from inside onStartConnect, so a
                         // racing stopRunner() never sees this outer setup coroutine as the
                         // tracked job once the inner connect job exists.
-                        data.connectingJob = onStartConnect(proxy)
+                        data.connectingJob = onStartConnect(proxy, attempt)
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     Logs.w(e)
+                    attempt.complete(ConnectionOutcome.PREPARE_ERROR)
+                    Telemetry.reportFailure(DiagnosticOperation.SERVICE_PREPARE, e)
                     onMainDispatcher {
                         stopRunner(
                             false,
@@ -729,11 +738,12 @@ class BaseService {
             data.closeReceiverRegistered = true
         }
 
-        private fun onStartConnect(proxy: ProxyInstance?): Job? {
+        private fun onStartConnect(proxy: ProxyInstance?, attempt: ConnectionAttempt): Job? {
             this as Context
             val data = data
             if (proxy == null) { // gracefully shutdown: https://stackoverflow.com/q/47337857/2245107
                 data.notification = createNotification("")
+                attempt.complete(ConnectionOutcome.NO_PROFILE)
                 stopRunner(false, getString(R.string.profile_empty))
                 return null
             }
@@ -759,6 +769,12 @@ class BaseService {
 
                     proxy.processes = GuardedProcessPool {
                         Logs.w(it)
+                        Telemetry.reportFailure(DiagnosticOperation.EXTERNAL_PROCESS, it)
+                        when (data.state) {
+                            State.Connected -> Telemetry.connectionInterrupted()
+                            State.Connecting -> attempt.complete(ConnectionOutcome.PROCESS_EXIT)
+                            else -> Unit
+                        }
                         stopRunner(false, it.readableMessage)
                     }
 
@@ -771,16 +787,21 @@ class BaseService {
                     (data.locationSpoofing ?: LocationSpoofing(this@Interface).also { data.locationSpoofing = it }).start(proxy)
 
                     lateInit()
+                    attempt.complete(ConnectionOutcome.CONNECTED)
                 } catch (_: CancellationException) { // if the job was cancelled, it is canceller's responsibility to call stopRunner
                 } catch (_: UnknownHostException) {
+                    attempt.complete(ConnectionOutcome.DNS_ERROR)
                     stopRunner(false, getString(R.string.invalid_server))
                 } catch (e: PluginManager.PluginNotFoundException) {
+                    attempt.complete(ConnectionOutcome.PLUGIN_MISSING)
                     Toast.makeText(this@Interface, e.readableMessage, Toast.LENGTH_SHORT).show()
                     Logs.w(e)
                     data.binder.missingPlugin(e.plugin)
                     // Carries a message so the kill switch treats it as a failure and holds the tun.
                     stopRunner(false, e.readableMessage)
                 } catch (exc: Throwable) {
+                    attempt.complete(ConnectionOutcome.START_ERROR)
+                    Telemetry.reportFailure(DiagnosticOperation.SERVICE_START, exc)
                     if (exc.javaClass.name.endsWith("proxyerror")) {
                         // error from golang
                         Logs.w(exc.readableMessage)

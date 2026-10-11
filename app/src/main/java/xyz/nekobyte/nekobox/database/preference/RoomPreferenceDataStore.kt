@@ -338,6 +338,7 @@ open class RoomPreferenceDataStore(
             KeyValuePair(value.key).also {
                 it.valueType = value.valueType
                 it.value = value.value.copyOf()
+                it.validateValue()
             }
         }
         if (!cached) {
@@ -358,11 +359,11 @@ open class RoomPreferenceDataStore(
                     if (resetGeneration.get() != resetGenAtSchedule) {
                         throw IOException("preference reset interrupted durable replacement")
                     }
-                    replaceRows(copies)
                     val replacement = HashMap<String, CachedValue>(copies.size)
                     for (value in copies) {
                         value.toCached()?.let { replacement[value.key] = it }
                     }
+                    replaceRows(copies)
                     synchronized(writeLock) {
                         if (resetGeneration.get() == resetGenAtSchedule) {
                             synchronized(pendingLock) {

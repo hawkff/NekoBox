@@ -25,6 +25,7 @@ import android.content.Intent
 import android.content.pm.ShortcutManager
 import android.os.Build
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.getSystemService
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -36,6 +37,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
+import xyz.nekobyte.nekobox.ui.confirmVpnShortcut
 
 @Suppress("DEPRECATION")
 class QuickToggleShortcut :
@@ -43,6 +45,7 @@ class QuickToggleShortcut :
     NekoBoxConnection.Callback {
     private val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_SHORTCUT)
     private var profileId = -1L
+    private var confirmation: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,7 +74,9 @@ class QuickToggleShortcut :
             finish()
         } else {
             profileId = intent.getLongExtra("profile", -1L)
-            connection.connect(this, this)
+            confirmation = confirmVpnShortcut(R.string.quick_toggle, R.string.shortcut_toggle_confirmation) {
+                connection.connect(this, this)
+            }
             if (Build.VERSION.SDK_INT >= 25) {
                 getSystemService<ShortcutManager>()!!.reportShortcutUsed(
                     if (profileId >= 0) "shortcut-profile-$profileId" else "toggle",
@@ -115,6 +120,7 @@ class QuickToggleShortcut :
     override fun stateChanged(state: BaseService.State, profileName: String?, msg: String?) {}
 
     override fun onDestroy() {
+        confirmation?.dismiss()
         connection.disconnect(this)
         super.onDestroy()
     }

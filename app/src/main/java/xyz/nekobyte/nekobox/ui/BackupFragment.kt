@@ -458,26 +458,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                         ?.use { it.readBytesBounded().toString(Charsets.UTF_8) }
                         ?: throw Exception("Empty response")
 
-                    val patterns = listOf(
-                        """<D:href>[^<]*?nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)</D:href>""".toRegex(),
-                        """<d:href>[^<]*?nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)</d:href>""".toRegex(),
-                        """<href>[^<]*?nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)</href>""".toRegex(),
-                    )
-
-                    val backupFiles = mutableListOf<String>()
-
-                    for (pattern in patterns) {
-                        val matches = pattern.findAll(responseBody)
-                        matches.forEach { match ->
-                            val href = match.value
-                            val fileName = """nekobox_backup_[^<]*?\d{8}_\d{6}\.(json|zip)""".toRegex()
-                                .find(href)?.value
-                            if (fileName != null) {
-                                backupFiles.add(fileName)
-                            }
-                        }
-                        if (backupFiles.isNotEmpty()) break
-                    }
+                    val backupFiles = WebDAVSecurity.backupFiles(responseBody, dirUrl)
 
                     Logs.d("WebDAV restore - Found ${backupFiles.size} candidate backup files")
 

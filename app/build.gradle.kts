@@ -34,6 +34,9 @@ android {
                     ?: requireLocalProperties().getProperty(name, fallback)
                 ).trim()
             require(value.none { it.isISOControl() }) { "$name contains control characters" }
+            require(name != "POSTHOG_PROJECT_TOKEN" || !value.startsWith("phx_")) {
+                "POSTHOG_PROJECT_TOKEN requires a project ingestion key, not a personal API key"
+            }
             val escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
             buildConfigField("String", name, "\"$escaped\"")
         }

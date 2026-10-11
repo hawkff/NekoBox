@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_enable_confirmation">Start the VPN or proxy connection?</string>
+    <string name="shortcut_disable_confirmation">Stop the VPN or proxy connection?</string>
+    <string name="shortcut_toggle_confirmation">Allow this shortcut to start, stop, or switch the VPN or proxy connection?</string>
+</resources>

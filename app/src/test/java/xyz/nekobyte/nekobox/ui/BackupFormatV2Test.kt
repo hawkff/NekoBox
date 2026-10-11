@@ -1,8 +1,10 @@
 package xyz.nekobyte.nekobox.ui
 
 import org.json.JSONArray
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -237,6 +239,31 @@ class BackupFormatV2Test {
         assertEquals("set-key", decoded[1].key)
         assertEquals(KeyValuePair.TYPE_STRING_SET, decoded[1].valueType)
         assertEquals(setOf("one", "two"), decoded[1].stringSet)
+    }
+
+    @Test
+    fun settingsExportPreservesUnreadablePayloadsWhileImportRejectsThem() {
+        val values = listOf(
+            KeyValuePair("truncated").apply {
+                valueType = KeyValuePair.TYPE_LONG
+                value = byteArrayOf(1)
+            },
+            KeyValuePair("unknown").apply {
+                valueType = 999
+                value = byteArrayOf(2, 3)
+            },
+        )
+        val encoded = BackupFormatV2.encodeSettings(values + KeyValuePair(Key.PLUGIN_SIGNER_APPROVALS).put(setOf("local-approval")))
+        assertEquals(values.size, encoded.length())
+        values.forEachIndexed { index, original ->
+            val saved = BackupFormatV2.decodeSetting(encoded.getJSONObject(index))
+            assertEquals(original.key, saved.key)
+            assertEquals(original.valueType, saved.valueType)
+            assertArrayEquals(original.value, saved.value)
+            assertThrows(IllegalArgumentException::class.java) {
+                BackupFormatV2.decodeSettings(JSONArray().put(encoded.getJSONObject(index)))
+            }
+        }
     }
 
     @Test

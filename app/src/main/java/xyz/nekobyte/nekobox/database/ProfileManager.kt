@@ -4,6 +4,8 @@ import android.database.sqlite.SQLiteCantOpenDatabaseException
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.fmt.AbstractBean
+import xyz.nekobyte.nekobox.fmt.KryoConverters
+import xyz.nekobyte.nekobox.fmt.buildConfig
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
@@ -11,6 +13,66 @@ import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import java.io.IOException
 import java.sql.SQLException
 import java.util.*
+import java.util.concurrent.Callable
+
+internal class ProfileTestResult(val profile: ProxyEntity) {
+    private class Snapshot(profile: ProxyEntity) {
+        private val type = profile.type
+        private val uuid = profile.uuid
+        private val groupId = profile.groupId
+        private val configuration = KryoConverters.serialize(profile.requireBean())
+
+        fun matches(current: ProxyEntity) = current.type == type && current.uuid == uuid && current.groupId == groupId &&
+            KryoConverters.serialize(current.requireBean()).contentEquals(configuration)
+    }
+
+    private val root = Snapshot(profile)
+    private var dependencies: Map<Long, Snapshot?>? = emptyMap()
+    private var groups = emptyMap<Long, Pair<Long, Long>?>()
+
+    // Capture the same database view the probe builder reads, including missing hops.
+    fun prepareUrlTest() = ProfileDatabase.instance.runInTransaction(
+        Callable {
+            dependencies = null
+            val pending = ArrayDeque<Long>()
+            if (profile.type == ProxyEntity.TYPE_CHAIN) pending.addAll(profile.chainBean?.proxies.orEmpty())
+            groups = if (profile.type == ProxyEntity.TYPE_CONFIG && profile.configBean?.type == 0) {
+                emptyMap()
+            } else {
+                val group = ProfileDatabase.groupDao.getById(profile.groupId)
+                group?.let { pending.addAll(listOf(it.frontProxy, it.landingProxy).filter { id -> id > 0 }) }
+                mapOf(profile.groupId to group?.let { it.frontProxy to it.landingProxy })
+            }
+            val captured = linkedMapOf<Long, Snapshot?>()
+            val visited = hashSetOf(profile.id)
+            while (pending.isNotEmpty()) {
+                val id = pending.removeFirst()
+                if (!visited.add(id)) continue
+                val hop = ProfileDatabase.proxyDao.getById(id)
+                captured[id] = hop?.let(::Snapshot)
+                if (hop?.type == ProxyEntity.TYPE_CHAIN) pending.addAll(hop.chainBean?.proxies.orEmpty())
+            }
+            // Keep the snapshot if building fails, so an unchanged broken chain can retain its error.
+            dependencies = captured
+            buildConfig(profile, forTest = true)
+        },
+    )
+
+    fun matches(current: ProxyEntity): Boolean {
+        val captured = dependencies ?: return false
+        if (!root.matches(current)) return false
+        if (groups.any { (id, expected) ->
+                ProfileDatabase.groupDao.getById(id)?.let { it.frontProxy to it.landingProxy } != expected
+            }
+        ) {
+            return false
+        }
+        return captured.all { (id, expected) ->
+            val hop = ProfileDatabase.proxyDao.getById(id)
+            if (expected == null) hop == null else hop != null && expected.matches(hop)
+        }
+    }
+}
 
 object ProfileManager {
 
@@ -114,14 +176,17 @@ object ProfileManager {
         }
     }
 
-    /**
-     * Batch-persist profiles WITHOUT firing per-profile onUpdated listener rounds.
-     * For callers that follow up with GroupManager.postReload(groupId), which
-     * re-renders the whole group anyway (e.g. connection-test finalization).
-     */
-    suspend fun updateProfileQuietly(profiles: List<ProxyEntity>) {
-        if (profiles.isEmpty()) return
-        ProfileDatabase.proxyDao.updateProxy(profiles)
+    // A probe may finish after an edit, subscription refresh or restore.
+    internal suspend fun updateTestResults(results: List<ProfileTestResult>) {
+        if (results.isEmpty()) return
+        ProfileDatabase.instance.runInTransaction {
+            for (result in results) {
+                val tested = result.profile
+                val current = ProfileDatabase.proxyDao.getById(tested.id) ?: continue
+                if (!result.matches(current)) continue
+                ProfileDatabase.proxyDao.updateTestResult(tested.id, tested.status, tested.ping, tested.error)
+            }
+        }
     }
 
     suspend fun updateTraffic(profileId: Long, rx: Long, tx: Long) {
