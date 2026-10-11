@@ -1,269 +1,175 @@
 <div align="center">
 
-# 🐱 NekoBox for Android 🐱
+# NekoBox for Android
 
-**One app, every modern proxy. Built on sing-box.**
-
-[![API](https://img.shields.io/badge/Android-6.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://android-arsenal.com/api?level=23)
-[![License](https://img.shields.io/badge/License-GPL--3.0-0A7BBB?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
+![Android 6.0+](https://img.shields.io/badge/Android-6.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-0A7BBB?style=flat-square)](LICENSE)
 
 </div>
 
-<br>
+## Contents
 
-## ⚠️ Disclaimer
+- [Disclaimer](#disclaimer)
+- [Download](#download)
+- [Protocols](#protocols)
+  - [Tailscale](#tailscale)
+- [Subscriptions](#subscriptions)
+  - [Provider metadata](#provider-metadata)
+- [Routing](#routing)
+  - [Routing profiles](#routing-profiles)
+- [Leak protection](#leak-protection)
+- [Automation, sharing and diagnostics](#automation-sharing-and-diagnostics)
+- [Local control API](#local-control-api)
+- [Usage and crash reporting](#usage-and-crash-reporting)
+- [License](#license)
 
-> This project is intended solely for technical research and code learning purposes and does not provide any form of network proxy service. Please do not use this project for any activity that violates local laws and regulations, and do not use it in production environments. Users are fully responsible for any risks that may arise from using this project. If you download or reference this project, please delete all related content within 24 hours and avoid long-term storage, distribution, or dissemination of any part of it. **The author reserves the right to modify, update, or remove any part of this project or its contents at any time without prior notice.**
+## Disclaimer
 
-<br>
+This project's sole purpose is technical research. It does not provide any network proxy service. Do not use it for anything that breaks local laws or regulations. You bear all risk that comes from using it. The author may change, update or remove any part of this project or its contents at any time without notice.
 
-## 📥 Downloads
+## Download
 
-> 🛑 **Note:** The Google Play build has been controlled by a third party since May 2024 and is closed-source. Please don't install it.
+Get the APK for your device's processor from the [Releases page](https://github.com/hawkff/NekoBox/releases).
 
-Grab the latest signed APK from the [**Releases**](https://github.com/hawkff/NekoBoxForAndroid/releases) page.
+Do not install NekoBox from Google Play. A third party has controlled that listing since May 2024, and its builds are closed source.
 
-<br>
+## Protocols
 
-## 🚀 Protocols
+| Group | Protocols |
+| --- | --- |
+| Standard | SOCKS 4, 4a and 5, HTTP, HTTPS, SSH |
+| Shadowsocks and V2Ray | Shadowsocks, ShadowsocksR, VMess, VLESS, Trojan |
+| TLS and multiplexing | AnyTLS, ShadowTLS, Snell 1 to 5 |
+| QUIC | Hysteria 2, TUIC 5, Juicity |
+| WireGuard | WireGuard, AmneziaWG, Tailscale |
+| Bundled clients | NaïveProxy, Mieru |
+| Custom | A sing-box outbound or a complete sing-box configuration, in a Custom Config profile |
 
-### 🧩 Core
+The profile editors offer these transport and security options:
 
-`SOCKS 4/4a/5` · `HTTP(S)` · `SSH` · `Shadowsocks` · `ShadowsocksR` · `VMess` · `VLESS` · `Trojan`
+| Protocol | V2Ray transports | Reality | ECH | Obfuscation |
+| --- | :---: | :---: | :---: | :---: |
+| VMess | ✅ | ✅ | ✅ | ❌ |
+| VLESS | ✅ | ✅ | ✅ | ❌ |
+| Trojan | ✅ | ✅ | ✅ | ❌ |
+| AnyTLS | ❌ | ✅ | ❌ | ❌ |
+| Hysteria 2 | ❌ | ❌ | ✅ | ✅ |
+| TUIC 5 | ❌ | ❌ | ❌ | ❌ |
+| Juicity | ❌ | ❌ | ❌ | ❌ |
 
-### 🔐 Modern TLS & multiplexing
+The V2Ray transports are TCP, mKCP, WebSocket, HTTP/2, QUIC, gRPC, HTTPUpgrade and XHTTP. ECH is Encrypted Client Hello. Hysteria 2 obfuscation uses Salamander or Gecko.
 
-`AnyTLS` · `ShadowTLS` · `Snell 1–5` · `VLESS-XHTTP` · `VLESS-Reality`
+NekoBox discontinued support for Hysteria 1. It keeps your saved Hysteria 1 profiles, including those from subscriptions, so you can export them.
 
-XHTTP / Reality config examples are below.
+### Tailscale
 
-### ⚡ QUIC & high-speed
+A Tailscale profile joins a tailnet with an auth key. Without a key, the app asks you to sign in through the browser. Set Control URL to use Headscale or another coordination server.
 
-`TUIC 5` · `Juicity` · `Hysteria 2`
+Choose an exit node from the tailnet to send internet traffic through it. Without one, the profile reaches tailnet addresses and MagicDNS names but not the internet. Turn on Use tailnet subnet routes to reach subnets that other nodes advertise.
 
-The Hysteria 2 client supports Salamander and Gecko obfuscation.
+Open Tailscale status from the profile editor to see this node and its peers, ping a peer or change the exit node without restarting the VPN. With the service off, the screen can also check a saved profile or sign it in.
 
-### 🛡️ WireGuard family
+To put other proxies in front of Tailscale in a chain, turn on Always use DERP. Otherwise direct peer connections leave from the device and skip those proxies.
 
-`WireGuard` · `AmneziaWG` · `Tailscale`
+## Subscriptions
 
-Tailscale joins a tailnet with an auth key and can use an exit node and subnet routes. It works as the last hop of a chain; turn on "Always use DERP" there so peer traffic stays behind the chain.
+To add a subscription, open Group, create a group, set its type to Subscription and enter the link. To add single profiles, use Add profile in Configuration. It reads the clipboard, a file or a QR code.
 
-### 🌐 Obfuscated transports
+The app reads these formats:
 
-- `NaïveProxy` (Bundled)
-- `Mieru` (Bundled)
+- Share links, one per line or Base64-encoded
+- Clash and Mihomo configurations
+- sing-box outbounds, imported as Custom Config profiles
+- Shadowsocks and ShadowsocksR JSON
+- Hysteria 2 client configurations
+- WireGuard and AmneziaWG `.conf` files
 
-<details>
-<summary><b>🕰️ Legacy protocols</b> (kept for compatibility)</summary>
+The app imports share links from Xray panels such as 3x-ui as the panels generate them. These include `wireguard://` links, AmneziaVPN `vpn://` links, links with the `ech` parameter and VMess links with flattened XHTTP settings. It runs Shadowsocks over WebSocket through its built-in `v2ray-plugin`. Other Shadowsocks transports have no sing-box equivalent, so the app skips those links.
 
-<br>
+The app imports server profiles and drops the rest of the source, such as routing rules, DNS settings, inbounds and proxy groups. The import preview lists what it dropped and the entries it could not read.
 
-- `Hysteria 1` - native over UDP; an external sidecar covers the rare faketcp transport
+Subscription format, in the group's settings, sets the format that the app asks for in its User-Agent header. Providers can ignore the request. The NekoBox default prefers Clash and Mihomo. You can ask for share links or sing-box outbounds instead, or choose Auto. Auto tries each format, keeps the one that gives the most profiles the app can import, and moves to another if that one stops working.
 
-</details>
+Updates keep a profile that the provider stopped listing if you selected it or a rule, chain or group uses it. If the provider switches formats, the app asks before an update replaces your profiles, because replaced profiles lose their traffic history and custom settings. Background updates keep the old profiles until you update by hand.
 
-<br>
+In the group's settings, you can add up to five HTTPS backup links. The app tries them in order if the main link fails.
 
-<details>
-<summary>XHTTP - TLS configuration example</summary>
-
-<pre><code class="language-json">
-{
-    "no_grpc_header": false,  // stream-up/one
-	"x_padding_bytes": "100-10000",
-	"sc_max_each_post_bytes": 1000000, // packet-up only
-	"sc_min_posts_interval_ms": 30, // packet-up only
-	"xmux": {
-		"max_concurrency": "16-32",
-		"max_connections": "0-0",
-		"c_max_reuse_times": "0-0",
-		"h_max_request_times": "600-900",
-		"h_max_reusable_secs": "1800-3000",
-		"h_keep_alive_period": 0
-	},
-    "x_padding_obfs_mode": false,
-    "x_padding_key": "",
-    "x_padding_header": "",
-    "x_padding_placement": "",
-    "x_padding_method": "",
-    "uplink_http_method": "",
-    "session_placement": "",
-    "session_key": "",
-    "seq_placement": "",
-    "seq_key": "",
-    "uplink_data_placement": "",
-    "uplink_data_key": "",
-    "uplink_chunk_size": 0,
-	"download": {
-		"mode": "auto",
-		"host": "b.yourdomain.com",
-		"path": "/xhttp",
-        "no_grpc_header": false,  // stream-up/one
-	    "x_padding_bytes": "100-10000",
-	    "sc_max_each_post_bytes": 1000000, // packet-up only
-	    "sc_min_posts_interval_ms": 30, // packet-up only
-		"xmux": {
-			"max_concurrency": "16-32",
-			"max_connections": "0-0",
-			"c_max_reuse_times": "0-0",
-			"h_max_request_times": "600-900",
-			"h_max_reusable_secs": "1800-3000",
-			"h_keep_alive_period": 0
-		},
-        "x_padding_obfs_mode": false,
-        "x_padding_key": "",
-        "x_padding_header": "",
-        "x_padding_placement": "",
-        "x_padding_method": "",
-        "uplink_http_method": "",
-        "session_placement": "",
-        "session_key": "",
-        "seq_placement": "",
-        "seq_key": "",
-        "uplink_data_placement": "",
-        "uplink_data_key": "",
-        "uplink_chunk_size": 0,
-		"server": "$(ip_or_domain_of_your_cdn)",
-		"server_port": 443,
-		"tls": {
-			"enabled": true,
-			"server_name": "b.yourdomain.com",
-			"alpn": "h2",
-			"utls": {
-				"enabled": true,
-				"fingerprint": "chrome"
-			}
-		}
-	}
-}
-</code></pre>
-</details>
-
-<details>
-<summary>XHTTP - Reality configuration example</summary>
-
-<pre><code class="language-json">
-{
-    "no_grpc_header": false,  // stream-up/one
-	"x_padding_bytes": "100-10000",
-	"sc_max_each_post_bytes": 1000000, // packet-up only
-	"sc_min_posts_interval_ms": 30, // packet-up only
-	"xmux": {
-		"max_concurrency": "16-32",
-		"max_connections": "0-0",
-		"c_max_reuse_times": "0-0",
-		"h_max_request_times": "600-900",
-		"h_max_reusable_secs": "1800-3000",
-		"h_keep_alive_period": 0
-	},
-    "x_padding_obfs_mode": false,
-    "x_padding_key": "",
-    "x_padding_header": "",
-    "x_padding_placement": "",
-    "x_padding_method": "",
-    "uplink_http_method": "",
-    "session_placement": "",
-    "session_key": "",
-    "seq_placement": "",
-    "seq_key": "",
-    "uplink_data_placement": "",
-    "uplink_data_key": "",
-    "uplink_chunk_size": 0,
-	"download": {
-		"mode": "auto",
-		"host": "example.com",
-		"path": "/xhttp",
-        "no_grpc_header": false,  // stream-up/one
-	    "x_padding_bytes": "100-10000",
-	    "sc_max_each_post_bytes": 1000000, // packet-up only
-	    "sc_min_posts_interval_ms": 30, // packet-up only
-		"xmux": {
-			"max_concurrency": "16-32",
-			"max_connections": "0-0",
-			"c_max_reuse_times": "0-0",
-			"h_max_request_times": "600-900",
-			"h_max_reusable_secs": "1800-3000",
-			"h_keep_alive_period": 0
-		},
-        "x_padding_obfs_mode": false,
-        "x_padding_key": "",
-        "x_padding_header": "",
-        "x_padding_placement": "",
-        "x_padding_method": "",
-        "uplink_http_method": "",
-        "session_placement": "",
-        "session_key": "",
-        "seq_placement": "",
-        "seq_key": "",
-        "uplink_data_placement": "",
-        "uplink_data_key": "",
-        "uplink_chunk_size": 0,
-		"server": "$(ip_or_domain_of_your_cdn)",
-		"server_port": 443,
-		"tls": {
-			"enabled": true,
-			"server_name": "example.com",
-			"reality": {
-				"enabled": true,
-				"public_key": "$(your_publicKey)",
-				"short_id": "$(your_shortId)"
-			},
-			"utls": {
-				"enabled": true,
-				"fingerprint": "chrome"
-			}
-		}
-	}
-}
-</code></pre>
-</details>
-
-<br>
-
-## 🔗 Subscriptions
-
-Imports the common formats: Shadowsocks, ClashMeta, v2rayN, and sing-box outbounds.
-Only nodes are parsed; routing rules and other non-node fields are ignored.
-
-Share links from Xray panels such as 3x-ui import as they are generated: `wireguard://` and `vpn://` (AmneziaWG) links, the `ech` parameter, flattened VMess XHTTP settings, and Shadowsocks over WebSocket through the built-in `v2ray-plugin`. Shadowsocks over other transports cannot be expressed by sing-box and is skipped.
-
-A per-subscription **Send device ID** switch, off by default, adds `X-HWID` (a random per-install ID), `X-Device-OS`, `X-Ver-OS` and `X-Device-Model` to every fetch. Panels with a device limit reject clients without them.
+Send device ID is off by default. Turn it on for providers that count devices, such as [3x-ui](https://github.com/MHSanaei/3x-ui), [Marzban](https://github.com/Gozargah/Marzban) and [Remnawave](https://github.com/remnawave/panel) panels. The app then sends `X-HWID`, a random ID for this install, along with `X-Device-OS`, `X-Ver-OS` and `X-Device-Model`. It sends these headers over HTTPS and leaves them out of plain HTTP requests.
 
 ### Provider metadata
 
-The app reads these keys from response headers or from `#key: value` lines at the top of the body. Headers win, and a fetch that omits a key clears it.
+The app reads these keys from response headers, or from `#key: value` lines at the top of the subscription. If both carry a key, the app uses the header. An update that omits a key clears its old value.
 
 | Key | Effect |
 | --- | --- |
-| `profile-title` | Group name (plain or `base64:` prefixed) |
-| `subscription-userinfo` | Traffic and `expire=` shown on the group (`expire=0` means no expiry); a reminder is posted daily during the last three days and once after expiry |
-| `support-url`, `profile-web-page-url` | Menu entries on the group (`http` and `https` links only) |
-| `announce` | Text shown on the group, up to 200 characters, plain or `base64:` prefixed |
-| `profile-update-interval` | Auto-update interval in hours, applied when the provider changes it; your own edits stay in between |
-| `routing` | An `sn://routing/` link, see below; the subscription stores it and refreshes only the profile it delivered, never activates it and never touches your own profiles |
+| `profile-title` | Names the group. Plain text, or Base64 after a `base64:` prefix. |
+| `subscription-userinfo` | Shows traffic use and the `expire=` date on the group. `expire=0` means no expiry. With notifications allowed, the app reminds you once a day in the last three days and once after expiry. |
+| `support-url`, `profile-web-page-url` | Adds the link to the group's menu. Accepts HTTP and HTTPS links. |
+| `announce` | Shows up to 200 characters on the group. Plain text, or Base64 after a `base64:` prefix. |
+| `profile-update-interval` | Sets the update interval in hours and turns on automatic updates each time the provider changes the value. Between changes, your own setting stays. |
+| `new-url`, `new-domain` | Proposes a new HTTPS link, or the current link on a new host. |
+| `fallback-url` | Proposes an HTTPS backup link. |
+| `routing` | Delivers a routing profile. See [Routing profiles](#routing-profiles). |
 
-### Routing profile links
+Proposed links appear in the group settings. The app starts using one after you accept it. From then on, updates send the subscription's credentials to that link, plus the device ID if you turned that on.
 
-`sn://routing/<base64>` carries an exported routing profile (Route → Routing profiles → Export to clipboard). Opening the link, pasting it into Routing profiles → Import from Clipboard, or delivering it through the `routing` subscription key imports the profile. A profile with the same name is replaced; the active profile is applied live when refreshed.
+## Routing
 
-<br>
+Route rules, in the Route screen, control where traffic goes. A rule matches apps, domains, IP addresses, ports, TCP or UDP, the detected protocol, or a rule set in `.srs` or `.json` format. It sends matching traffic through the proxy or a profile you select, lets it bypass the proxy, or blocks it. To choose which apps use the VPN at all, open Settings > Route Settings > Apps VPN mode.
+
+A domain or app rule can also send matching DNS queries through the rule's proxy, so the lookups leave through the same exit as the traffic. You can give it a custom resolver. This setting, DNS through this proxy, is off by default. Those queries do not fall back to another resolver if the proxy fails.
+
+A Proxy Chain profile connects through several profiles in order. Add exit proxy, in the Configuration menu, builds a chain from the selected profile to an exit profile you pick, then selects it and reconnects. In a group, Automatic selection uses the member with the lowest test latency and switches if that member fails or a faster one recovers.
+
+### Routing profiles
+
+A routing profile saves your route rules, DNS settings and per-app VPN settings under one name. Manage them in Route > Routing profiles. You can export a profile to a file, or to the clipboard as an `sn://routing/` link that carries the export JSON in Base64.
+
+Opening a link, or importing one from the clipboard or a file, asks for confirmation and adds the profile without switching to it. An import replaces any profile with the same name. If you replace the active profile, its new rules and settings take effect at once.
+
+A subscription can deliver one routing profile through the `routing` key, or as a link on its own line in the body. The app stores that profile apart from yours and refreshes it on each update. It takes the rules and leaves your DNS, app and other settings alone. You decide whether to switch to it.
+
+The app also reads Happ and INCY routing links in the form `<scheme>://routing/add/<base64>`. It turns their domain and IP lists into block, proxy and direct rules, and reports the settings it leaves out. Provider requests to turn routing off, or to switch to the delivered profile, have no effect.
+
+## Leak protection
+
+Settings > Leak protection has these controls:
+
+- Kill switch keeps the VPN interface up while the proxy restarts or fails. Tunneled apps lose their connection instead of reaching your network outside the tunnel. Apps you excluded from the VPN keep direct access. Stop the service to release the block.
+- Always-on VPN and Block connections without VPN open Android's own settings. They also cover the time when the app's process is not running, which the kill switch cannot do.
+- WebRTC leak protection rejects STUN, and TURN on its standard ports, inside the tunnel, so websites cannot use WebRTC to find your addresses. Voice and video calls in tunneled apps may stop working.
+- Simulate location, under GPS spoofing, gives apps the approximate location of the proxy's exit IP address, or coordinates you enter. It is off by default and needs this app set as the mock location app in Developer options. All apps see the simulated location, Maps and navigation included, so turn it off from its notification before you navigate. The app looks up the exit location through the proxy, at ipapi.co unless you change the location service.
+
+These controls work in VPN mode. A running service does not prove that protection works, so run a connection test after each start or reconnect.
+
+## Automation, sharing and diagnostics
+
+Network automation, under Settings > Connection, acts when the device joins mobile data, Ethernet, any Wi-Fi network or a Wi-Fi network you name. A rule can connect with a profile, switch profiles or disconnect. Android hides Wi-Fi names from apps without the location permission, so rules for a named network need it.
+
+Share connection, in the Configuration menu, lets other devices use your connection through an HTTP and SOCKS5 proxy with a generated username and password. The proxy listens on all of the device's IPv4 networks, Wi-Fi and hotspot included, so anyone there with the credentials can connect. Regenerate the credentials to lock out devices that hold the old ones.
+
+The Configuration menu tests profiles by TCP ping, ICMP ping or URL test. A URL test checks that the server reaches the internet. Under Tools > Network, NAT behaviour discovery checks your NAT type over STUN.
+
+Under Tools > Backup, you can save profiles, routing rules and settings to a file or to WebDAV, and restore them. Backups contain your server credentials, so keep them private.
+
+Turn on Enable Clash API in Settings > Advanced to serve the Clash API at `127.0.0.1:9090`. The setting also adds the sing-box Dashboard screen, which shows the bundled Yacd-meta dashboard.
 
 ## Local control API
 
-An optional token-authenticated loopback API controls profiles, subscriptions, routing, settings and service operations. See [API.md](API.md) for enrollment, command discovery and the Python client. It is off by default and keeps Android permission checks.
+The local control API lets scripts on the device, or on a computer through ADB, operate the app over HTTP. It is off by default. Enable it under Settings > Advanced > Local control API, and it listens on `127.0.0.1:9091`. Its token grants administrative access to the app, including credential export and backup restore, so keep it private. [API.md](API.md) covers setup, the command list and the Python client.
 
 ## Usage and crash reporting
 
-Settings > Advanced > **Help to improve** controls PostHog and Sentry together. The switch defaults to on. A build without account settings sends nothing. Turning it off stops reporting in both the UI and VPN processes without restarting the VPN. A request already in flight may still reach the provider.
+The Help to improve switch, under Settings > Advanced, turns PostHog and Sentry reporting on or off together. It is on by default. A build without PostHog or Sentry settings sends nothing to that service.
 
-PostHog receives an `app_opened` event when the UI process starts or reporting is re-enabled, with the app version, build type and Android API level. Its random identifier lasts only for that reporting session. Sentry receives Java/Kotlin crash exception types and stack frames from both processes. Reports omit exception messages, profiles, credentials, traffic, logs and account or hardware identifiers. Session replay, screen capture, performance tracing and native crash capture are not enabled. Both services can see the connection's source IP address. PostHog's event payload disables GeoIP enrichment and person profiles.
+Reports leave out exception messages, profiles, credentials, traffic, logs, and account or hardware identifiers. Session replay, screenshots, performance tracing and native crash capture stay off.
 
-PostHog uses a bounded queue in app cache. The app clears it before starting reporting and on opt-out, and creates a new directory for each reporting session so old reports cannot be replayed. Sentry uses a memory-only queue. Offline reports may be lost. The existing local crash report remains available. Reporting failures do not prevent a VPN connection.
+Turning reporting off stops it in the app and VPN processes without restarting the VPN. A request already in flight may still arrive. The app deletes PostHog's event queue when you turn reporting off. It starts a new queue each time reporting starts, so it does not send events left from an earlier session. Sentry keeps reports in memory and loses unsent ones when the process exits. Crashes still go to the app's own log.
 
-### Account setup
+<details>
+<summary>Reporting from your own build</summary>
 
-Create a PostHog project and a Sentry project, then put their public ingestion settings in the build environment or the ignored `local.properties` file:
+Create a PostHog project and a Sentry project. Put their public ingestion settings in environment variables or in the `local.properties` file, which Git ignores:
 
 ```properties
 POSTHOG_PROJECT_TOKEN=phc_example_project_token
@@ -271,25 +177,12 @@ POSTHOG_HOST=https://us.i.posthog.com
 SENTRY_DSN=https://examplePublicKey@o0.ingest.us.sentry.io/0
 ```
 
-Replace the example token and DSN with the values from the project dashboards. For an EU PostHog project, use `https://eu.i.posthog.com`. Environment variables override `local.properties`. Rebuild the app after changing these values. Each integration works independently; leaving its token or DSN empty disables it.
+Replace the examples with values from your project dashboards. EU PostHog projects use `https://eu.i.posthog.com`. Environment variables override `local.properties`. An empty token or DSN turns that service off. Rebuild the app after you change these values.
 
-The token and DSN are public ingestion credentials embedded in the APK. Do not put PostHog personal API keys or Sentry auth tokens here. No symbol-upload credentials or build-time upload plugin are required. Release builds retain Java/Kotlin class names and source line numbers; native Go/NDK crashes remain in local Android logs.
+The build embeds these values in the APK, so use public ingestion keys. It rejects PostHog personal API keys, which start with `phx_`. Keep Sentry auth tokens out of these settings too. Release builds keep Java and Kotlin class names and line numbers, so Sentry shows readable stack traces without uploaded mapping files. Native Go and NDK crashes stay in Android's local logs.
 
-## Credits
+</details>
 
-Core:
+## License
 
-- [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
-
-Android GUI:
-
-- [shadowsocks/shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)
-- [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet)
-
-Web Dashboard:
-
-- [Yacd-meta](https://github.com/MetaCubeX/Yacd-meta)
-
-## Contributors
-
-![Contributors](https://contrib.rocks/image?repo=starifly/NekoBoxForAndroid)
+[GNU General Public License v3.0](LICENSE)
