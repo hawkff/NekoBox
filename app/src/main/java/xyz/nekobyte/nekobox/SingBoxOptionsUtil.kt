@@ -18,9 +18,10 @@ object SingBoxOptionsUtil {
                 auto2("domain_strategy_for_direct", "")
             }
 
-            // server
+            // server: "auto" is as-is. The first hop resolves through Direct DNS;
+            // later chain hops pass their hostname through earlier hops.
             else -> {
-                auto2("domain_strategy_for_server", "prefer_ipv4")
+                auto2("domain_strategy_for_server", "")
             }
         }
     }
