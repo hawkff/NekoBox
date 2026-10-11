@@ -24,8 +24,10 @@ import android.app.Activity
 import android.content.pm.ShortcutManager
 import android.os.Build
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.getSystemService
 import xyz.nekobyte.nekobox.NekoBox
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
@@ -34,10 +36,13 @@ class QuickEnableShortcut :
     Activity(),
     NekoBoxConnection.Callback {
     private val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_SHORTCUT)
+    private var confirmation: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        connection.connect(this, this)
+        confirmation = confirmVpnShortcut(R.string.quick_enable, R.string.shortcut_enable_confirmation) {
+            connection.connect(this, this)
+        }
         if (Build.VERSION.SDK_INT >= 25) {
             getSystemService<ShortcutManager>()!!.reportShortcutUsed("enable")
         }
@@ -54,6 +59,7 @@ class QuickEnableShortcut :
     override fun stateChanged(state: BaseService.State, profileName: String?, msg: String?) {}
 
     override fun onDestroy() {
+        confirmation?.dismiss()
         connection.disconnect(this)
         super.onDestroy()
     }

@@ -1506,10 +1506,10 @@ object RawUpdater : GroupUpdater() {
                                     }
                                 }
                                 if (ip.isNotBlank()) {
-                                    bean.serverAddress = ip
                                     if (bean.sni.isNullOrBlank() && !bean.serverAddress.isNullOrBlank() && !bean.serverAddress!!.isIpAddress()) {
                                         bean.sni = bean.serverAddress
                                     }
+                                    bean.serverAddress = ip
                                 }
                                 proxies.add(bean)
                             }

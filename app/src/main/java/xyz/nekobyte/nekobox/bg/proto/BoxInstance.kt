@@ -80,7 +80,8 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                 when (val bean = profile.requireBean()) {
                     is MieruBean -> {
                         initPlugin("mieru-plugin")
-                        pluginConfigs[port] = bean.buildMieruConfig(port)
+                        val creds = checkNotNull(config.localProxyCredentials[port]) { "Missing Mieru SOCKS credentials" }
+                        pluginConfigs[port] = bean.buildMieruConfig(port, creds.first, creds.second)
                     }
 
                     is NaiveBean -> {
@@ -94,6 +95,13 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
         loadConfig()
     }
 
+    internal fun writeSidecarFile(directory: File, prefix: String, suffix: String, content: String): File {
+        val file = File.createTempFile(prefix, suffix, directory)
+        cacheFiles.add(file)
+        file.writeText(content)
+        return file
+    }
+
     open fun launch() {
         val cacheDir = File(NekoBox.application.cacheDir, "tmpcfg")
         cacheDir.mkdirs()
@@ -102,9 +110,7 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                 val config = pluginConfigs[port].orEmpty()
                 when (val bean = profile.requireBean()) {
                     is MieruBean -> {
-                        val configFile = File(cacheDir, "mieru_${SystemClock.elapsedRealtime()}.json")
-                        configFile.writeText(config)
-                        cacheFiles.add(configFile)
+                        val configFile = writeSidecarFile(cacheDir, "mieru-", ".json", config)
                         processes.start(
                             listOf(initPlugin("mieru-plugin").path, "run"),
                             mieruEnvironment(configFile),
@@ -112,14 +118,10 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                     }
 
                     is NaiveBean -> {
-                        val configFile = File(cacheDir, "naive_${SystemClock.elapsedRealtime()}.json")
-                        configFile.writeText(config)
-                        cacheFiles.add(configFile)
+                        val configFile = writeSidecarFile(cacheDir, "naive-", ".json", config)
                         val env = mutableMapOf<String, String>()
                         bean.certificates?.takeIf { it.isNotBlank() }?.let { certificates ->
-                            val certFile = File(cacheDir, "naive_${SystemClock.elapsedRealtime()}.crt")
-                            certFile.writeText(certificates)
-                            cacheFiles.add(certFile)
+                            val certFile = writeSidecarFile(cacheDir, "naive-", ".crt", certificates)
                             env["SSL_CERT_FILE"] = certFile.absolutePath
                         }
                         processes.start(listOf(initPlugin("naive-plugin").path, configFile.absolutePath), env)

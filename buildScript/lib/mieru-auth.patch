@@ -1,0 +1,97 @@
+--- a/pkg/socks5/auth.go
++++ b/pkg/socks5/auth.go
+@@ -92,6 +92,10 @@
+ 		}
+ 	}
+ 
++	if len(s.config.AuthOpts.IngressCredentials) > 0 {
++		requestNoAuth = false
++	}
++
+ 	if !requestNoAuth && !requestUserPassAuth {
+ 		HandshakeErrors.Add(1)
+ 		if _, err := conn.Write([]byte{constant.Socks5Version, constant.Socks5NoAcceptableAuth}); err != nil {
+@@ -100,11 +104,6 @@
+ 		return fmt.Errorf("socks5 client provided authentication is not supported by socks5 server")
+ 	}
+ 	if requestNoAuth {
+-		// Handle no authentication. This has higher priority than user password authentication.
+-		if !requestUserPassAuth && len(s.config.AuthOpts.IngressCredentials) > 0 {
+-			HandshakeErrors.Add(1)
+-			return fmt.Errorf("socks5 client requested no authentication, but user and password are required by socks5 server")
+-		}
+ 		if _, err := conn.Write([]byte{constant.Socks5Version, constant.Socks5NoAuth}); err != nil {
+ 			HandshakeErrors.Add(1)
+ 			return fmt.Errorf("write authentication response (no authentication required) failed: %w", err)
+--- /dev/null
++++ b/pkg/socks5/auth_required_test.go
+@@ -0,0 +1,69 @@
++package socks5
++
++import (
++	"io"
++	"net"
++	"testing"
++	"time"
++)
++
++func TestConfiguredCredentialsCannotBeBypassedByOfferedMethods(t *testing.T) {
++	for _, test := range []struct {
++		name       string
++		methods    []byte
++		configured bool
++		password   string
++		method     byte
++		failure    bool
++	}{
++		{"no-auth", []byte{0}, true, "", 255, true},
++		{"password", []byte{2}, true, "secret", 2, false},
++		{"both", []byte{0, 2}, true, "secret", 2, false},
++		{"both-reversed", []byte{2, 0}, true, "secret", 2, false},
++		{"wrong-password", []byte{0, 2}, true, "wrong", 2, true},
++		{"unconfigured", []byte{0, 2}, false, "", 0, false},
++	} {
++		t.Run(test.name, func(t *testing.T) {
++			serverConn, client := net.Pipe()
++			defer serverConn.Close()
++			defer client.Close()
++			client.SetDeadline(time.Now().Add(5 * time.Second))
++			server := &Server{config: &Config{HandshakeTimeout: 5 * time.Second}}
++			if test.configured {
++				server.config.AuthOpts.IngressCredentials = []Credential{{User: "user", Password: "secret"}}
++			}
++			done := make(chan error, 1)
++			go func() {
++				defer serverConn.Close()
++				done <- server.handleAuthentication(serverConn)
++			}()
++			if _, err := client.Write(append([]byte{5, byte(len(test.methods))}, test.methods...)); err != nil {
++				t.Fatal(err)
++			}
++			reply := make([]byte, 2)
++			if _, err := io.ReadFull(client, reply); err != nil {
++				t.Fatal(err)
++			}
++			if reply[0] != 5 || reply[1] != test.method {
++				t.Fatalf("selected method %v, want [5 %d]", reply, test.method)
++			}
++			if test.method == 2 {
++				request := append([]byte{1, 4}, []byte("user")...)
++				request = append(request, byte(len(test.password)))
++				request = append(request, []byte(test.password)...)
++				if _, err := client.Write(request); err != nil {
++					t.Fatal(err)
++				}
++				if _, err := io.ReadFull(client, reply); err != nil {
++					t.Fatal(err)
++				}
++				if reply[0] != 1 || (reply[1] != 0) != test.failure {
++					t.Fatalf("authentication reply %v, want failure %v", reply, test.failure)
++				}
++			}
++			if err := <-done; (err != nil) != test.failure {
++				t.Fatalf("authentication error %v, want failure %v", err, test.failure)
++			}
++		})
++	}
++}

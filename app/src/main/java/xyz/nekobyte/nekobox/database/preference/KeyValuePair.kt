@@ -87,6 +87,33 @@ class KeyValuePair() : Parcelable {
             null
         }
 
+    @Suppress("DEPRECATION")
+    fun validateValue() {
+        when (valueType) {
+            TYPE_UNINITIALIZED -> require(value.isEmpty())
+
+            TYPE_BOOLEAN -> require(value.size == 1)
+
+            TYPE_FLOAT, TYPE_INT -> require(value.size == 4)
+
+            TYPE_LONG -> require(value.size == 8)
+
+            TYPE_STRING -> Unit
+
+            TYPE_STRING_SET -> {
+                val buffer = ByteBuffer.wrap(value)
+                while (buffer.hasRemaining()) {
+                    require(buffer.remaining() >= Int.SIZE_BYTES) { "Truncated string-set length" }
+                    val length = buffer.int
+                    require(length in 0..buffer.remaining()) { "Invalid string-set length" }
+                    buffer.position(buffer.position() + length)
+                }
+            }
+
+            else -> throw IllegalArgumentException("Unknown setting value type")
+        }
+    }
+
     @Ignore
     constructor(key: String) : this() {
         this.key = key
@@ -130,9 +157,10 @@ class KeyValuePair() : Parcelable {
         val stream = ByteArrayOutputStream()
         val intBuffer = ByteBuffer.allocate(4)
         for (v in value) {
+            val bytes = v.toByteArray()
             intBuffer.rewind()
-            stream.write(intBuffer.putInt(v.length).array())
-            stream.write(v.toByteArray())
+            stream.write(intBuffer.putInt(bytes.size).array())
+            stream.write(bytes)
         }
         this.value = stream.toByteArray()
         return this

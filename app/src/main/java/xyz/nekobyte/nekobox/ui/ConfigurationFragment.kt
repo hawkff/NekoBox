@@ -50,6 +50,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.ProfileTestResult
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.SubscriptionBean
@@ -102,7 +103,6 @@ import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -908,7 +908,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         return false
     }
 
-    inner class TestDialog {
+    private inner class TestDialog {
         val binding = LayoutProgressListBinding.inflate(layoutInflater)
         val builder = MaterialAlertDialogBuilder(requireContext()).setView(binding.root)
             .setPositiveButton(R.string.minimize) { _, _ ->
@@ -925,13 +925,14 @@ class ConfigurationFragment @JvmOverloads constructor(
         val dialogStatus = AtomicInteger(0) // 1: hidden 2: cancelled
         var notification: ConnectionTestNotification? = null
 
-        val results: MutableSet<ProxyEntity> = ConcurrentHashMap.newKeySet()
+        val results: MutableSet<ProfileTestResult> = ConcurrentHashMap.newKeySet()
         var proxyN = 0
         val finishedN = AtomicInteger(0)
 
-        fun update(profile: ProxyEntity) {
+        fun update(result: ProfileTestResult) {
+            val profile = result.profile
             if (dialogStatus.get() != 2) {
-                results.add(profile)
+                results.add(result)
             }
             runOnMainDispatcher {
                 val context = context ?: return@runOnMainDispatcher
@@ -1030,30 +1031,21 @@ class ConfigurationFragment @JvmOverloads constructor(
                 return@filter false
             }
             test.proxyN = profilesList.size
-            val profiles = ConcurrentLinkedQueue(profilesList)
+            val profiles = ConcurrentLinkedQueue(profilesList.map(::ProfileTestResult))
             repeat(DataStore.connectionTestConcurrent) {
                 testJobs.add(
                     launch(Dispatchers.IO) {
                         while (isActive) {
-                            val profile = profiles.poll() ?: break
+                            val result = profiles.poll() ?: break
+                            val profile = result.profile
 
                             profile.status = 0
-                            var address = profile.requireBean().serverAddress
-                            if (!address!!.isIpAddress()) {
-                                try {
-                                    NekoBox.underlyingNetwork!!.getAllByName(address).apply {
-                                        if (isNotEmpty()) {
-                                            address = this[0].hostAddress
-                                        }
-                                    }
-                                } catch (ignored: UnknownHostException) {
-                                }
-                            }
+                            val address = resolvePingAddress(profile.requireBean().serverAddress!!, NekoBox.underlyingNetwork)
                             if (!isActive) break
-                            if (!address!!.isIpAddress()) {
+                            if (address == null) {
                                 profile.status = 2
                                 profile.error = app.getString(R.string.connection_test_domain_not_found)
-                                test.update(profile)
+                                test.update(result)
                                 continue
                             }
                             try {
@@ -1064,7 +1056,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                                     profile.status = 1
                                     profile.ping = latency
                                     profile.error = null
-                                    test.update(profile)
+                                    test.update(result)
                                 } else {
                                     val socket =
                                         NekoBox.underlyingNetwork?.socketFactory?.createSocket()
@@ -1085,7 +1077,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                                         profile.ping = (SystemClock.elapsedRealtime() - start).toInt()
                                         // Clear any stale error from a previous failed test.
                                         profile.error = null
-                                        test.update(profile)
+                                        test.update(result)
                                     } finally {
                                         socket.closeQuietly()
                                     }
@@ -1124,7 +1116,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                                         }
                                     }
                                 }
-                                test.update(profile)
+                                test.update(result)
                             }
                         }
                     },
@@ -1138,24 +1130,22 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
         }
         test.cancel = {
-            test.dialogStatus.set(2)
-            try {
-                dialog.dismiss()
-            } catch (e: IllegalStateException) {
-                Logs.w(e)
-            } // dialog window may be gone after rotation (#1141)
-            runOnDefaultDispatcher {
-                mainJob.cancel()
-                testJobs.forEach { it.cancel() }
+            if (test.dialogStatus.getAndSet(2) != 2) {
                 try {
-                    ProfileManager.updateProfileQuietly(test.results.toList())
-                } catch (e: Exception) {
+                    dialog.dismiss()
+                } catch (e: IllegalStateException) {
                     Logs.w(e)
                 }
-                GroupManager.postReload(DataStore.currentGroupId())
-                DataStore.runningTest = false
+                runOnDefaultDispatcher {
+                    try {
+                        finishConnectionTests(mainJob, test.results)
+                    } catch (e: Exception) {
+                        Logs.w(e)
+                    }
+                }
             }
         }
+        mainJob.invokeOnCompletion { runOnMainDispatcher { test.cancel() } }
         test.minimize = {
             test.dialogStatus.set(1)
             test.notification = ConnectionTestNotification(
@@ -1182,13 +1172,14 @@ class ConfigurationFragment @JvmOverloads constructor(
             groupName = group.displayName()
             val profilesList = ProfileDatabase.proxyDao.getByGroup(group.id)
             test.proxyN = profilesList.size
-            val profiles = ConcurrentLinkedQueue(profilesList)
+            val profiles = ConcurrentLinkedQueue(profilesList.map(::ProfileTestResult))
             repeat(DataStore.connectionTestConcurrent) {
                 testJobs.add(
                     launch(Dispatchers.IO) {
                         val urlTest = UrlTest(service) // note: this is NOT in bg process
                         while (isActive) {
-                            val profile = profiles.poll() ?: break
+                            val result = profiles.poll() ?: break
+                            val profile = result.profile
                             profile.status = 0
 
                             try {
@@ -1212,7 +1203,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                             }
 
                             if (!isActive) break
-                            test.update(profile)
+                            test.update(result)
                         }
                     },
                 )
@@ -1225,24 +1216,22 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
         }
         test.cancel = {
-            test.dialogStatus.set(2)
-            try {
-                dialog.dismiss()
-            } catch (e: IllegalStateException) {
-                Logs.w(e)
-            } // dialog window may be gone after rotation (#1141)
-            runOnDefaultDispatcher {
-                mainJob.cancel()
-                testJobs.forEach { it.cancel() }
+            if (test.dialogStatus.getAndSet(2) != 2) {
                 try {
-                    ProfileManager.updateProfileQuietly(test.results.toList())
-                } catch (e: Exception) {
+                    dialog.dismiss()
+                } catch (e: IllegalStateException) {
                     Logs.w(e)
                 }
-                GroupManager.postReload(DataStore.currentGroupId())
-                DataStore.runningTest = false
+                runOnDefaultDispatcher {
+                    try {
+                        finishConnectionTests(mainJob, test.results)
+                    } catch (e: Exception) {
+                        Logs.w(e)
+                    }
+                }
             }
         }
+        mainJob.invokeOnCompletion { runOnMainDispatcher { test.cancel() } }
         test.minimize = {
             test.dialogStatus.set(1)
             test.notification = ConnectionTestNotification(

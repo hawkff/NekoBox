@@ -16,6 +16,8 @@ import xyz.nekobyte.nekobox.fmt.TAG_PROXY
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
+internal fun trafficPollingInterval(notificationInterval: Int) = notificationInterval.takeIf { it > 0 }?.toLong() ?: 1_000L
+
 class TrafficLooper(
     val data: BaseService.Data,
     private val sc: CoroutineScope,
@@ -154,10 +156,10 @@ class TrafficLooper(
     }
 
     private suspend fun loop() {
-        val delayMs = DataStore.speedInterval.toLong()
+        val notificationInterval = DataStore.speedInterval
+        val delayMs = trafficPollingInterval(notificationInterval)
         val showDirectSpeed = DataStore.showDirectSpeed
         val profileTrafficStatistics = DataStore.profileTrafficStatistics
-        if (delayMs == 0L) return
 
         var trafficUpdater: TrafficUpdater? = null
         var proxy: ProxyInstance?
@@ -267,7 +269,7 @@ class TrafficLooper(
 
             // ServiceNotification
             data.notification?.apply {
-                if (listenPostSpeed) postNotificationSpeedUpdate(speed)
+                if (notificationInterval > 0 && listenPostSpeed) postNotificationSpeedUpdate(speed)
             }
 
             delay(delayMs)

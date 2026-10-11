@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteCantOpenDatabaseException
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.fmt.AbstractBean
+import xyz.nekobyte.nekobox.fmt.KryoConverters
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
@@ -11,6 +12,10 @@ import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import java.io.IOException
 import java.sql.SQLException
 import java.util.*
+
+internal class ProfileTestResult(val profile: ProxyEntity) {
+    val configuration = KryoConverters.serialize(profile.requireBean())
+}
 
 object ProfileManager {
 
@@ -114,14 +119,18 @@ object ProfileManager {
         }
     }
 
-    /**
-     * Batch-persist profiles WITHOUT firing per-profile onUpdated listener rounds.
-     * For callers that follow up with GroupManager.postReload(groupId), which
-     * re-renders the whole group anyway (e.g. connection-test finalization).
-     */
-    suspend fun updateProfileQuietly(profiles: List<ProxyEntity>) {
-        if (profiles.isEmpty()) return
-        ProfileDatabase.proxyDao.updateProxy(profiles)
+    // A probe may finish after an edit, subscription refresh or restore.
+    internal suspend fun updateTestResults(results: List<ProfileTestResult>) {
+        if (results.isEmpty()) return
+        ProfileDatabase.instance.runInTransaction {
+            for (result in results) {
+                val tested = result.profile
+                val current = ProfileDatabase.proxyDao.getById(tested.id) ?: continue
+                if (current.type != tested.type || current.uuid != tested.uuid || current.groupId != tested.groupId) continue
+                if (!KryoConverters.serialize(current.requireBean()).contentEquals(result.configuration)) continue
+                ProfileDatabase.proxyDao.updateTestResult(tested.id, tested.status, tested.ping, tested.error)
+            }
+        }
     }
 
     suspend fun updateTraffic(profileId: Long, rx: Long, tx: Long) {

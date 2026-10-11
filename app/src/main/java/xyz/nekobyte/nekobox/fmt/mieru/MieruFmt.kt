@@ -22,7 +22,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.ktx.toStringPretty
 
-fun MieruBean.buildMieruConfig(port: Int): String {
+fun MieruBean.buildMieruConfig(port: Int, listenUsername: String? = null, listenPassword: String? = null): String {
+    require((listenUsername == null && listenPassword == null) || (!listenUsername.isNullOrBlank() && !listenPassword.isNullOrBlank())) {
+        "Both SOCKS credentials are required"
+    }
     val serverInfo = JSONArray().apply {
         put(
             JSONObject().apply {
@@ -44,6 +47,9 @@ fun MieruBean.buildMieruConfig(port: Int): String {
     return JSONObject().apply {
         put("activeProfile", "default")
         put("socks5Port", port)
+        if (listenUsername != null) {
+            put("socks5Authentication", JSONArray().put(JSONObject().put("user", listenUsername).put("password", listenPassword)))
+        }
         // TODO: follow NekoBox logging level.
         put("loggingLevel", "INFO")
         put(

@@ -242,6 +242,26 @@ class CachedPreferenceDataStoreTest {
     }
 
     @Test
+    fun malformedReplacementNeverChangesRowsOrSnapshot() {
+        for (cached in listOf(false, true)) {
+            val dao = FakeDao().apply { put(KeyValuePair("kept").put("original")) }
+            val store = RoomPreferenceDataStore(dao, cached = cached, diskExecutor = directExecutor)
+            store.prime()
+            val malformed = KeyValuePair("broken").apply {
+                valueType = KeyValuePair.TYPE_LONG
+                value = byteArrayOf()
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                runBlocking { store.replaceAllDurable(listOf(malformed)) }
+            }
+            assertEquals(listOf("kept"), dao.all().map { it.key })
+            assertEquals("original", store.getString("kept"))
+            store.refreshBlocking()
+            assertEquals("original", store.getString("kept"))
+        }
+    }
+
+    @Test
     fun awaitWrites_surfacesWriteThroughFailure() {
         // A DAO whose put() throws simulates a failed DB commit on the disk worker.
         val failingDao = object : KeyValuePair.Dao {

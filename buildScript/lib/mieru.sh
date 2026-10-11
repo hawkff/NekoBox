@@ -37,7 +37,7 @@ fi
 
 WORK="$(pwd)/.mieru-build"
 OUT="$(pwd)/app/executableSo"
-PROTECT_PATCH="$(pwd)/buildScript/lib/mieru-protect.patch"
+CLIENT_PATCHES=("$(pwd)/buildScript/lib/mieru-protect.patch" "$(pwd)/buildScript/lib/mieru-auth.patch")
 
 # Fetch source (shallow clone at the pinned tag). Re-clone fresh if the existing
 # checkout is missing or its git operations fail (e.g. corrupted by a prior build).
@@ -60,13 +60,15 @@ fi
 
 pushd "$WORK" >/dev/null
 
-# Propagate Android VPN protection failures before the client can use an unprotected socket.
-if git apply --check --whitespace=error-all "$PROTECT_PATCH" 2>/dev/null; then
-  git apply --whitespace=error-all "$PROTECT_PATCH"
-elif ! git apply --reverse --check "$PROTECT_PATCH" 2>/dev/null; then
-  echo "Error: Mieru socket-protection patch does not match the source." >&2
-  exit 1
-fi
+# Require local authentication and propagate Android VPN protection failures.
+for patch in "${CLIENT_PATCHES[@]}"; do
+  if git apply --check --whitespace=error-all "$patch" 2>/dev/null; then
+    git apply --whitespace=error-all "$patch"
+  elif ! git apply --reverse --check "$patch" 2>/dev/null; then
+    echo "Error: Mieru patch does not match the source: $(basename "$patch")" >&2
+    exit 1
+  fi
+done
 
 build_abi() {
   local abi="$1" goarch="$2" cc="$3" goarm="$4"

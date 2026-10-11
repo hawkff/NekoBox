@@ -423,6 +423,9 @@ data class ProxyEntity(
         @Query("UPDATE proxy_entities SET uuid = :marker WHERE id = :id AND type = 28")
         fun setTailscaleMarker(id: Long, marker: String): Int
 
+        @Query("UPDATE proxy_entities SET status = :status, ping = :ping, error = :error WHERE id = :id")
+        fun updateTestResult(id: Long, status: Int, ping: Int, error: String?): Int
+
         @Query("UPDATE proxy_entities SET rx = :rx, tx = :tx WHERE id = :proxyId")
         fun updateTraffic(proxyId: Long, rx: Long, tx: Long): Int
 

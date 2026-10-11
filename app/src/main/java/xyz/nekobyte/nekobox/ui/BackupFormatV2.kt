@@ -38,6 +38,7 @@ internal object BackupFormatV2 {
     fun decodeSettings(array: JSONArray): List<KeyValuePair> = sanitizeSettings(array.mapObjects(::decodeSetting))
 
     fun sanitizeSettings(settings: List<KeyValuePair>) = settings.filterNot { it.key == Key.PLUGIN_SIGNER_APPROVALS }
+        .onEach { it.validateValue() }
 
     fun encodeProfile(profile: ProxyEntity): JSONObject = JSONObject().apply {
         put("id", profile.id)

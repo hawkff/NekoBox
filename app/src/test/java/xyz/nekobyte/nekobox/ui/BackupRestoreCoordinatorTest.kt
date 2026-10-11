@@ -117,6 +117,24 @@ class BackupRestoreCoordinatorTest {
     }
 
     @Test
+    fun truncatedTypedSettingsInEitherFormatFailBeforeAnyWrite() = runTest {
+        for (version in listOf(1, BackupFormatV2.VERSION)) {
+            val malformed = KeyValuePair("truncated").apply {
+                valueType = KeyValuePair.TYPE_LONG
+                value = byteArrayOf()
+            }
+            val content = backup(version).apply {
+                put("settings", if (version == 1) encodeParcels(listOf(malformed)) else JSONArray().put(BackupFormatV2.encodeSetting(malformed)))
+            }
+            val operations = FakeOperations()
+            val before = operations.snapshot()
+            assertNotNull(runCatching { restoreBackup(content, true, true, true, operations) }.exceptionOrNull())
+            assertEquals(emptyList<String>(), operations.calls)
+            assertEquals(before, operations.snapshot())
+        }
+    }
+
+    @Test
     fun selectedProfilesWithoutGroups_failsBeforeAnyOperation() = runTest {
         val operations = FakeOperations()
         val initialState = operations.snapshot()
