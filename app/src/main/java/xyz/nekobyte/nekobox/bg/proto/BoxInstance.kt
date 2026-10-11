@@ -6,6 +6,7 @@ import kotlinx.coroutines.selects.select
 import libcore.BoxInstance
 import libcore.Libcore
 import xyz.nekobyte.nekobox.NekoBox
+import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.GuardedProcessPool
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -13,8 +14,6 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.LOCALHOST
 import xyz.nekobyte.nekobox.fmt.buildConfig
-import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
-import xyz.nekobyte.nekobox.fmt.hysteria.buildHysteria1Config
 import xyz.nekobyte.nekobox.fmt.mieru.MieruBean
 import xyz.nekobyte.nekobox.fmt.mieru.buildMieruConfig
 import xyz.nekobyte.nekobox.fmt.naive.NaiveBean
@@ -29,6 +28,13 @@ import java.io.File
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
+
+// Standalone probes have no service socket when the VPN is stopped.
+internal fun mieruEnvironment(configFile: File) = mutableMapOf("MIERU_CONFIG_JSON_FILE" to configFile.absolutePath).apply {
+    if (DataStore.vpnService != null || DataStore.serviceState != BaseService.State.Stopped) {
+        put("MIERU_PROTECT_PATH", "protect_path")
+    }
+}
 
 abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
     lateinit var config: ConfigBuildResult
@@ -82,16 +88,6 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                         val creds = config.localProxyCredentials[port]
                         pluginConfigs[port] = bean.buildNaiveConfig(port, creds?.first, creds?.second)
                     }
-
-                    is HysteriaBean -> {
-                        initPlugin("hysteria-plugin")
-                        pluginConfigs[port] = bean.buildHysteria1Config(port) {
-                            File(app.cacheDir, "hysteria_${SystemClock.elapsedRealtime()}.ca").apply {
-                                parentFile?.mkdirs()
-                                cacheFiles.add(this)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -111,7 +107,7 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                         cacheFiles.add(configFile)
                         processes.start(
                             listOf(initPlugin("mieru-plugin").path, "run"),
-                            mutableMapOf("MIERU_CONFIG_JSON_FILE" to configFile.absolutePath, "MIERU_PROTECT_PATH" to "protect_path"),
+                            mieruEnvironment(configFile),
                         )
                     }
 
@@ -127,23 +123,6 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                             env["SSL_CERT_FILE"] = certFile.absolutePath
                         }
                         processes.start(listOf(initPlugin("naive-plugin").path, configFile.absolutePath), env)
-                    }
-
-                    is HysteriaBean -> {
-                        val configFile = File(cacheDir, "hysteria_${SystemClock.elapsedRealtime()}.json")
-                        configFile.writeText(config)
-                        cacheFiles.add(configFile)
-                        val commands = mutableListOf(
-                            initPlugin("hysteria-plugin").path,
-                            "--no-check",
-                            "--config",
-                            configFile.absolutePath,
-                            "--log-level",
-                            if (DataStore.logLevel > 0) "trace" else "warn",
-                            "client",
-                        )
-                        if (bean.protocol == HysteriaBean.PROTOCOL_FAKETCP) commands.addAll(0, listOf("su", "-c"))
-                        processes.start(commands)
                     }
                 }
             }

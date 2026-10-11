@@ -246,16 +246,12 @@ class RawUpdaterParseTest {
     }
 
     @Test
-    fun jsonEndpointValidation_preservesHysteriaPortStorage() = runTest {
-        for (input in listOf(
-            """{"server":"192.0.2.3:8443","up_mbps":10,"auth_str":"example"}""",
-            """{"server":"192.0.2.3:8443","auth":"example"}""",
-        )) {
-            val bean = RawUpdater.parseRaw(input)!!.single() as HysteriaBean
-            assertEquals("192.0.2.3", bean.serverAddress)
-            assertEquals("8443", bean.serverPorts)
-            assertEquals("", bean.customConfigJson)
-        }
+    fun jsonEndpointValidation_preservesHysteria2PortStorage() = runTest {
+        val bean = RawUpdater.parseRaw("""{"server":"192.0.2.3:8443","auth":"example"}""")!!.single() as HysteriaBean
+        assertEquals("192.0.2.3", bean.serverAddress)
+        assertEquals("8443", bean.serverPorts)
+        assertEquals("", bean.customConfigJson)
+        assertNull(RawUpdater.parseRaw("""{"server":"192.0.2.3:8443","up_mbps":10,"auth_str":"example"}"""))
     }
 
     @Test
@@ -552,7 +548,6 @@ class RawUpdaterParseTest {
             "vmess://$uuid@192.0.2.8:443?type=tcp&encryption=auto&security=tls#vmess",
             "trojan://secret@192.0.2.9:443?security=tls&sni=a.example#trojan",
             "socks5://192.0.2.10:1080#socks",
-            "hysteria://192.0.2.11:443?auth=x&peer=a.example&upmbps=10&downmbps=50#hy1",
             "https://user:pass@192.0.2.12:443?sni=a.example#https-proxy",
         )
         fun with(link: String, option: String) = link.substringBefore('#') + (if ('?' in link.substringBefore('#')) "&" else "?") + option + "#" + link.substringAfter('#')

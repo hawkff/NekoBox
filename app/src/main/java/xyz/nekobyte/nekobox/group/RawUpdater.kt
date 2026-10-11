@@ -25,7 +25,6 @@ import xyz.nekobyte.nekobox.fmt.KryoConverters
 import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
-import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria1Json
 import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2Json
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.parseShadowsocks
@@ -220,7 +219,7 @@ object RawUpdater : GroupUpdater() {
     }
 
     internal fun requireUpdatableProfiles(profiles: List<ProxyEntity>) {
-        require(profiles.all { it.canBuild() }) { app.getString(R.string.profile_unsupported) }
+        require(profiles.all { it.canBuild() || it.isHysteria1() }) { app.getString(R.string.profile_unsupported) }
     }
 
     @SuppressLint("Recycle")
@@ -614,7 +613,7 @@ object RawUpdater : GroupUpdater() {
                 Triple(bean.javaClass, settings.publicKey, settings.server.unwrapIPV6Host() to settings.port) in consolidatedPeers
         }.mapTo(HashSet()) { it.id }
         val converted = unmatched.filter { stored ->
-            stored.id !in referenced && selected(stored.displayName()) &&
+            !stored.isHysteria1() && stored.id !in referenced && selected(stored.displayName()) &&
                 (requestChanged || stored.id in consolidatedIds || insertedRaw.any { it != (stored.requireBean() is ConfigBean) })
         }
         val peerLayoutChanged = converted.any { it.id in consolidatedIds }
@@ -648,10 +647,12 @@ object RawUpdater : GroupUpdater() {
         // A profile the provider no longer lists stays while something uses it, and while the
         // response has entries that did not import and may have been its node, unless the user
         // agreed to replace it. Kept profiles follow the listed ones in their previous order.
-        val kept = unmatched.filter { it.id in referenced || (partial && it.id !in convertedIds && selected(it.displayName())) }
+        val kept = unmatched.filter { it.isHysteria1() || it.id in referenced || (partial && it.id !in convertedIds && selected(it.displayName())) }
         val keptIds = kept.mapTo(HashSet()) { it.id }
         val toDelete = unmatched.filterNot { it.id in keptIds }
-        val keptReferenced = kept.count { it.id in referenced }
+        val keptRetired = kept.count { it.isHysteria1() }
+        val keptReferenced = kept.count { !it.isHysteria1() && it.id in referenced }
+        val keptPartial = kept.size - keptReferenced - keptRetired
 
         val failedEntries = preview.failed.groupingBy { it ?: app.getString(R.string.subscription_import_unknown_entry) }
             .eachCount().entries.joinToString(", ") { "${it.key} ${it.value}" }
@@ -661,7 +662,8 @@ object RawUpdater : GroupUpdater() {
             app.getString(R.string.subscription_import_dropped, preview.dropped.joinToString(", ") { app.getString(it.title) })
                 .takeIf { preview.behaviorDiffers },
             app.getString(R.string.subscription_kept_referenced, keptReferenced).takeIf { keptReferenced > 0 },
-            app.getString(R.string.subscription_kept_partial, kept.size - keptReferenced).takeIf { kept.size > keptReferenced },
+            app.getString(R.string.subscription_kept_partial, keptPartial).takeIf { keptPartial > 0 },
+            app.getString(R.string.subscription_kept_hysteria1, keptRetired).takeIf { keptRetired > 0 },
             app.getString(R.string.subscription_served_by_backup).takeIf { servedByBackup },
             routingNote,
         ).joinToString("\n")
@@ -673,6 +675,7 @@ object RawUpdater : GroupUpdater() {
         Logs.d("toReplace profiles: ${toReplace.size}")
 
         val toUpdate = ArrayList<ProxyEntity>()
+        val keptOrderChanges = mutableMapOf<Long, Long>()
         val toInsert = ArrayList<ProxyEntity>()
         val added = mutableListOf<String>()
         val updated = mutableMapOf<String, String>()
@@ -718,10 +721,7 @@ object RawUpdater : GroupUpdater() {
             userOrder++
         }
         for (entity in kept) {
-            if (entity.userOrder != userOrder) {
-                entity.userOrder = userOrder
-                toUpdate.add(entity)
-            }
+            if (entity.userOrder != userOrder) keptOrderChanges[entity.id] = userOrder
             userOrder++
         }
 
@@ -766,6 +766,8 @@ object RawUpdater : GroupUpdater() {
             if (toDelete.isNotEmpty()) {
                 deletedCount = ProfileDatabase.proxyDao.deleteProxy(toDelete)
             }
+            // Retained rows need only an order update; keep their serialized payloads byte-for-byte.
+            for ((id, order) in keptOrderChanges) updatedCount += ProfileDatabase.proxyDao.updateOrder(id, order)
 
             val existCount = ProfileDatabase.proxyDao.countByGroup(proxyGroup.id).toInt()
             if (existCount != proxies.size + kept.size) {
@@ -903,7 +905,11 @@ object RawUpdater : GroupUpdater() {
 
     internal suspend fun parseContent(body: String, fileName: String = ""): ParsedContent? {
         val report = ImportReport()
-        val proxies = parseRawContent(body, fileName, report)?.takeIf { it.isNotEmpty() } ?: return null
+        val proxies = parseRawContent(body, fileName, report).orEmpty()
+        if (proxies.isEmpty()) {
+            check("hysteria" !in report.failed) { app.getString(R.string.hysteria1_retired) }
+            return null
+        }
         return ParsedContent(proxies, report)
     }
 
@@ -1414,64 +1420,6 @@ object RawUpdater : GroupUpdater() {
                                     }
                                     initializeDefaultValues()
                                     checkWireGuardLimits()
-                                }
-                                proxies.add(bean)
-                            }
-
-                            "hysteria" -> {
-                                val bean = HysteriaBean()
-                                bean.protocolVersion = 1
-                                var hopPorts = ""
-                                for (opt in proxy) {
-                                    if (opt.value == null) continue
-                                    when (opt.key.replace("_", "-")) {
-                                        "name" -> bean.name = opt.value.toString()
-
-                                        "server" -> bean.serverAddress = opt.value as String
-
-                                        "port" -> bean.serverPorts = opt.value.toString()
-
-                                        "ports" -> hopPorts = opt.value.toString()
-
-                                        "obfs" -> bean.obfuscation = opt.value.toString()
-
-                                        "auth-str" -> {
-                                            bean.authPayloadType = HysteriaBean.TYPE_STRING
-                                            bean.authPayload = opt.value.toString()
-                                        }
-
-                                        "sni" -> bean.sni = opt.value.toString()
-
-                                        "skip-cert-verify" -> bean.allowInsecure = clashBoolean(opt.value)
-
-                                        "up" ->
-                                            bean.uploadMbps =
-                                                opt.value.toString().substringBefore(" ").toIntOrNull()
-                                                    ?: 100
-
-                                        "down" ->
-                                            bean.downloadMbps =
-                                                opt.value.toString().substringBefore(" ").toIntOrNull()
-                                                    ?: 100
-
-                                        "recv-window-conn" ->
-                                            bean.connectionReceiveWindow =
-                                                opt.value.toString().toIntOrNull() ?: 0
-
-                                        "recv-window" ->
-                                            bean.streamReceiveWindow =
-                                                opt.value.toString().toIntOrNull() ?: 0
-
-                                        "disable-mtu-discovery" -> bean.disableMtuDiscovery = clashBoolean(opt.value)
-
-                                        "alpn" -> {
-                                            val alpn = (opt.value as? (List<String>))
-                                            bean.alpn = alpn?.joinToString("\n") ?: "h3"
-                                        }
-                                    }
-                                }
-                                if (hopPorts.isNotBlank()) {
-                                    bean.serverPorts = hopPorts
                                 }
                                 proxies.add(bean)
                             }
@@ -2009,7 +1957,6 @@ object RawUpdater : GroupUpdater() {
         "vless",
         "anytls",
         "snell",
-        "hysteria",
         "tuic",
         "hysteria2",
         "juicity",
@@ -2038,8 +1985,9 @@ object RawUpdater : GroupUpdater() {
 
         if (json is JSONObject) {
             when {
-                json.has("server") && (json.has("up") || json.has("up_mbps")) -> {
-                    return listOf(json.parseHysteria1Json())
+                !json.has("type") && json.has("server") && (json.has("up") || json.has("up_mbps")) -> {
+                    report.failed += "hysteria"
+                    return emptyList()
                 }
 
                 // HY2 client config: server + a string auth. Distinguished from HY1 by the

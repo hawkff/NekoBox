@@ -149,9 +149,6 @@ object Key {
     const val SERVER_AUTH_TYPE = "serverAuthType"
     const val SERVER_UPLOAD_SPEED = "serverUploadSpeed"
     const val SERVER_DOWNLOAD_SPEED = "serverDownloadSpeed"
-    const val SERVER_STREAM_RECEIVE_WINDOW = "serverStreamReceiveWindow"
-    const val SERVER_CONNECTION_RECEIVE_WINDOW = "serverConnectionReceiveWindow"
-    const val SERVER_DISABLE_MTU_DISCOVERY = "serverDisableMtuDiscovery"
     const val SERVER_HOP_INTERVAL = "hopInterval"
 
     const val SERVER_HY2_OBFS_TYPE = "serverHy2ObfsType"

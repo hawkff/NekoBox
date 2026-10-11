@@ -6,15 +6,6 @@
         app:title="@string/profile_name"
         app:useSimpleSummaryProvider="true" />
 
-    <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
-        app:defaultValue="2"
-        app:entries="@array/hysteria_version"
-        app:entryValues="@array/hysteria_version"
-        app:icon="@drawable/ic_baseline_update_24"
-        app:key="protocolVersion"
-        app:title="@string/protocol_version"
-        app:useSimpleSummaryProvider="true" />
-
     <PreferenceCategory app:title="@string/proxy_cat">
 
         <EditTextPreference
@@ -51,35 +42,15 @@
             app:key="serverHy2GeckoMaxPacket"
             app:title="@string/hysteria2_gecko_max_packet"
             app:useSimpleSummaryProvider="true" />
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
-            app:entries="@array/hysteria_auth_type"
-            app:entryValues="@array/int_array_3"
-            app:icon="@drawable/ic_baseline_compare_arrows_24"
-            app:key="serverAuthType"
-            app:title="@string/hysteria_auth_type"
-            app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogLayout="@layout/layout_password_dialog"
             app:icon="@drawable/ic_settings_password"
             app:key="serverPassword"
-            app:title="@string/hysteria_auth_payload" />
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
-            app:defaultValue="https"
-            app:entries="@array/hysteria_protocol"
-            app:entryValues="@array/int_array_3"
-            app:icon="@drawable/ic_baseline_layers_24"
-            app:key="serverProtocol"
-            app:title="@string/protocol"
-            app:useSimpleSummaryProvider="true" />
+            app:title="@string/password" />
         <EditTextPreference
             app:icon="@drawable/ic_action_copyright"
             app:key="serverSNI"
             app:title="@string/sni"
-            app:useSimpleSummaryProvider="true" />
-        <EditTextPreference
-            app:icon="@drawable/ic_baseline_legend_toggle_24"
-            app:key="serverALPN"
-            app:title="@string/alpn"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:icon="@drawable/ic_baseline_vpn_key_24"
@@ -101,20 +72,6 @@
             app:key="serverDownloadSpeed"
             app:title="@string/hysteria_download_mbps"
             app:useSimpleSummaryProvider="true" />
-        <EditTextPreference
-            app:icon="@drawable/ic_baseline_texture_24"
-            app:key="serverStreamReceiveWindow"
-            app:title="@string/hysteria_stream_receive_window"
-            app:useSimpleSummaryProvider="true" />
-        <EditTextPreference
-            app:icon="@drawable/ic_baseline_transform_24"
-            app:key="serverConnectionReceiveWindow"
-            app:title="@string/hysteria_connection_receive_window"
-            app:useSimpleSummaryProvider="true" />
-        <SwitchPreference
-            app:icon="@drawable/ic_baseline_multiple_stop_24"
-            app:key="serverDisableMtuDiscovery"
-            app:title="@string/hysteria_disable_mtu_discovery" />
         <EditTextPreference
             app:key="hopInterval"
             app:title="@string/hop_interval"

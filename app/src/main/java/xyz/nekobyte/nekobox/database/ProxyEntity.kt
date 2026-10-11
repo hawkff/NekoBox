@@ -178,7 +178,7 @@ data class ProxyEntity(
         }
     }
 
-    fun displayType(): String = ProtocolRegistry.forType(type)?.displayType?.invoke(this) ?: app.getString(R.string.profile_archived)
+    fun displayType(): String = if (isHysteria1()) app.getString(R.string.hysteria1_unsupported) else ProtocolRegistry.forType(type)?.displayType?.invoke(this) ?: app.getString(R.string.profile_archived)
 
     fun displayName() = requireBean().displayName()
     fun displayAddress() = requireBean().displayAddress()
@@ -194,9 +194,15 @@ data class ProxyEntity(
         else -> true
     }
 
-    fun haveSettings() = ProtocolRegistry.forType(type)?.settingsActivityClass != null
+    fun haveSettings() = canBuild() && ProtocolRegistry.forType(type)?.settingsActivityClass != null
 
-    fun canBuild() = ProtocolRegistry.forType(type)?.canBuild == true
+    fun isHysteria1() = when (type) {
+        TYPE_HYSTERIA -> hysteriaBean?.protocolVersion == 1
+        TYPE_CONFIG -> configBean?.isHysteria1() == true
+        else -> false
+    }
+
+    fun canBuild() = ProtocolRegistry.forType(type)?.canBuild == true && !isHysteria1()
 
     fun haveStandardLink(): Boolean {
         requireBean()
@@ -231,11 +237,6 @@ data class ProxyEntity(
                             is NaiveBean -> {
                                 append("\n\n")
                                 append(bean.buildNaiveConfig(port))
-                            }
-
-                            is HysteriaBean -> {
-                                append("\n\n")
-                                append(bean.buildHysteria1Config(port, null))
                             }
                         }
                     }
@@ -338,6 +339,7 @@ data class ProxyEntity(
     }
 
     fun settingIntent(ctx: Context, isSubscription: Boolean): Intent? {
+        if (!haveSettings()) return null
         val activityClass = ProtocolRegistry.forType(type)?.settingsActivityClass ?: return null
         return Intent(ctx, activityClass).apply {
             putExtra(ProfileSettingsActivity.EXTRA_PROFILE_ID, id)

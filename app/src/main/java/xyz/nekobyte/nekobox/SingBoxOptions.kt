@@ -1100,66 +1100,6 @@ class SingBoxOptions {
         @JvmField var only_tcp_443: Boolean? = null
     }
 
-    class Outbound_HysteriaOptions : Outbound() {
-        @JvmField var detour: String? = null
-
-        @JvmField var bind_interface: String? = null
-
-        @JvmField var inet4_bind_address: String? = null
-
-        @JvmField var inet6_bind_address: String? = null
-
-        @JvmField var protect_path: String? = null
-
-        @JvmField var routing_mark: Int? = null
-
-        @JvmField var reuse_addr: Boolean? = null
-
-        @JvmField var connect_timeout: Long? = null
-
-        @JvmField var tcp_fast_open: Boolean? = null
-
-        @JvmField var tcp_multi_path: Boolean? = null
-
-        @JvmField var udp_fragment: Boolean? = null
-
-        @JvmField var domain_strategy: String? = null
-
-        @JvmField var fallback_delay: Long? = null
-
-        @JvmField var server: String? = null
-
-        @JvmField var server_port: Int? = null
-
-        @JvmField var up: String? = null
-
-        @JvmField var up_mbps: Int? = null
-
-        @JvmField var down: String? = null
-
-        @JvmField var down_mbps: Int? = null
-
-        @JvmField var obfs: String? = null
-
-        @JvmField var auth: String? = null
-
-        @JvmField var auth_str: String? = null
-
-        @JvmField var recv_window_conn: Long? = null
-
-        @JvmField var recv_window: Long? = null
-
-        @JvmField var disable_mtu_discovery: Boolean? = null
-
-        @JvmField var network: String? = null
-
-        @JvmField var tls: OutboundTLSOptions? = null
-
-        @JvmField var server_ports: List<String>? = null
-
-        @JvmField var hop_interval: String? = null
-    }
-
     class Outbound_SSHOptions : Outbound() {
         @JvmField var detour: String? = null
 

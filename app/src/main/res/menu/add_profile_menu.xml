@@ -53,7 +53,7 @@
                         android:title="@string/action_naive" />
                     <item
                         android:id="@+id/action_new_hysteria"
-                        android:title="@string/action_hysteria" />
+                        android:title="@string/action_hysteria2" />
                     <item
                         android:id="@+id/action_new_tuic"
                         android:title="@string/action_tuic" />

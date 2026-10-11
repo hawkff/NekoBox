@@ -28,6 +28,7 @@ import xyz.nekobyte.nekobox.ktx.isPreview
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
 import xyz.nekobyte.nekobox.ui.MainActivity
+import xyz.nekobyte.nekobox.ui.migratePinnedProfileShortcuts
 import xyz.nekobyte.nekobox.utils.*
 import xyz.nekobyte.nekobox.utils.JavaUtil
 import xyz.nekobyte.nekobox.utils.cleanWebview
@@ -111,6 +112,7 @@ class NekoBox :
             AppLocale.apply()
             runOnDefaultDispatcher {
                 DefaultNetworkListener.start(this) { underlyingNetwork = it }
+                migratePinnedProfileShortcuts(this@NekoBox)
             }
         }
 

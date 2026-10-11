@@ -127,8 +127,15 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                     createEntity().applyDefaultValues().init()
                 } else {
                     val entity = proxyEntity
-                    if (entity == null) {
+                    if (entity == null || !entity.canBuild()) {
                         onMainDispatcher {
+                            if (entity != null) {
+                                Toast.makeText(
+                                    this@ProfileSettingsActivity,
+                                    if (entity.isHysteria1()) R.string.hysteria1_retired else R.string.profile_unsupported,
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
                             finish()
                         }
                         return@runOnDefaultDispatcher

@@ -440,6 +440,14 @@
             android:exported="false"
             android:process=":bg" />
 
+        <receiver
+            android:name="xyz.nekobyte.nekobox.ui.ProfileShortcutMigrationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name="androidx.room.MultiInstanceInvalidationService"
             android:process=":bg" />

@@ -72,7 +72,8 @@ class HysteriaBean : AbstractBean() {
     @JvmField
     var echConfig: String? = null
 
-    override fun canMapping(): Boolean = (protocol!! != PROTOCOL_FAKETCP)
+    override fun canMapping(): Boolean = protocolVersion == 2
+    override fun canICMPing(): Boolean = protocolVersion == 2
 
     override fun initializeDefaultValues() {
         super.initializeDefaultValues()

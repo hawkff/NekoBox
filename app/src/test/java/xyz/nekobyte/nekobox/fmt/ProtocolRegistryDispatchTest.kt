@@ -262,6 +262,12 @@ class ProtocolRegistryDispatchTest {
                 }
             }
             val profile = ProxyEntity(id = index + 1L).putBean(bean)
+            if (!profile.canBuild()) {
+                assertThrows(IllegalArgumentException::class.java) {
+                    ConfigBuilderTestEnv.io { buildConfig(profile, forTest = true) }
+                }
+                continue
+            }
             if (profile.needExternal()) continue
             // Tailscale is built as a service config so the core also checks the MagicDNS wiring.
             val config = ConfigBuilderTestEnv.io { buildConfig(profile, forTest = bean !is TailscaleBean).config }

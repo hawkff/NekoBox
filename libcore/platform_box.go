@@ -42,12 +42,9 @@ func (w *boxPlatformInterfaceWrapper) UsePlatformAutoDetectInterfaceControl() bo
 }
 
 func (w *boxPlatformInterfaceWrapper) AutoDetectInterfaceControl(fd int) error {
-	// call protect_path
-	if !isBgProcess {
-		_ = sendFdToProtect(fd, "protect_path")
-		return nil
+	if intfBox == nil {
+		return fmt.Errorf("socket protection platform is not initialized")
 	}
-	// bg process call VPNService
 	return intfBox.AutoDetectInterfaceControl(int32(fd))
 }
 

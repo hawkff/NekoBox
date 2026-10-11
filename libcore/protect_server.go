@@ -13,7 +13,7 @@ import (
 // serveProtect listens on the unix socket at path. Each client connection carries one socket
 // fd over SCM_RIGHTS; the fd is passed to protect, closed, and one byte answers the client.
 // Clients are this app's UI process (sendFdToProtect) and the mieru sidecar (MIERU_PROTECT_PATH).
-func serveProtect(path string, protect func(fd int)) io.Closer {
+func serveProtect(path string, protect func(fd int) error) io.Closer {
 	os.Remove(path)
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
 	if err != nil {
@@ -35,8 +35,12 @@ func serveProtect(path string, protect func(fd int)) io.Closer {
 					log.Println("protect server:", err)
 					return
 				}
-				protect(fd)
-				syscall.Close(fd)
+				defer syscall.Close(fd)
+				if err := protect(fd); err != nil {
+					log.Println("protect server:", err)
+					// Older sidecars check only the reply length, so a failure must send no byte.
+					return
+				}
 				conn.Write([]byte{1})
 			}()
 		}

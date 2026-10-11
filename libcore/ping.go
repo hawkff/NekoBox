@@ -35,7 +35,9 @@ func IcmpPing(address string, timeout int32) (latency int32, err error) {
 		return 0, err
 	}
 	defer conn.Close()
-	protectPacketConn(conn)
+	if err := protectPacketConn(conn); err != nil {
+		return 0, err
+	}
 
 	request, err := (&icmp.Message{
 		Type: echo,
@@ -80,9 +82,8 @@ func IcmpPing(address string, timeout int32) (latency int32, err error) {
 
 const echoSeq = 1
 
-// protectPacketConn hands the socket to the platform so it bypasses the VPN; failures only mean
-// there is no VPN to bypass.
-func protectPacketConn(conn *icmp.PacketConn) {
+// The platform decides whether a VPN needs bypassing; a protection failure stops the probe.
+func protectPacketConn(conn *icmp.PacketConn) error {
 	var inner net.PacketConn
 	if v4 := conn.IPv4PacketConn(); v4 != nil {
 		inner = v4.PacketConn
@@ -93,13 +94,17 @@ func protectPacketConn(conn *icmp.PacketConn) {
 		SyscallConn() (syscall.RawConn, error)
 	})
 	if !ok {
-		return
+		return fmt.Errorf("ICMP socket does not expose a file descriptor")
 	}
 	rawConn, err := syscallConn.SyscallConn()
 	if err != nil {
-		return
+		return err
 	}
-	_ = rawConn.Control(func(fd uintptr) {
-		_ = newBoxPlatformInterfaceWrapper().AutoDetectInterfaceControl(int(fd))
-	})
+	var protectErr error
+	if err := rawConn.Control(func(fd uintptr) {
+		protectErr = newBoxPlatformInterfaceWrapper().AutoDetectInterfaceControl(int(fd))
+	}); err != nil {
+		return err
+	}
+	return protectErr
 }

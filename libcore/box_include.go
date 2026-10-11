@@ -23,7 +23,6 @@ import (
 	protocolDns "github.com/sagernet/sing-box/protocol/dns"
 	"github.com/sagernet/sing-box/protocol/group"
 	"github.com/sagernet/sing-box/protocol/http"
-	"github.com/sagernet/sing-box/protocol/hysteria"
 	"github.com/sagernet/sing-box/protocol/hysteria2"
 	"github.com/sagernet/sing-box/protocol/mixed"
 	"github.com/sagernet/sing-box/protocol/redirect"
@@ -87,7 +86,6 @@ func nekoboxAndroidOutboundRegistry() *outbound.Registry {
 	anytls.RegisterOutbound(registry)
 	snellprotocol.RegisterOutbound(registry)
 
-	hysteria.RegisterOutbound(registry)
 	tuic.RegisterOutbound(registry)
 	hysteria2.RegisterOutbound(registry)
 	juicity.RegisterOutbound(registry)

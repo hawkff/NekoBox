@@ -80,9 +80,11 @@ The app retains the latest 16 jobs until the API service stops. During a job, st
 
 ### Profiles and groups
 
-`profiles.types` describes the persisted fields for every protocol in the app's registry. Use its numeric `type` and field schema for creation. VMess/VLESS and Hysteria versions use the same switches as their profile editors. Transient runtime fields, database identities and traffic counters are not writable configuration.
+`profiles.types` describes the persisted fields for every protocol in the app's registry. Use its numeric `type` and field schema for creation. VMess/VLESS use the same switch as the profile editor. New Hysteria profiles must use version 2. Transient runtime fields, database identities and traffic counters are not writable configuration.
 
 `profiles.list` returns metadata without protocol credentials. Its optional `groupId`, `offset` and `limit` arguments support pagination; the default limit is 200 and the maximum is 1,000. `profiles.get` includes the configuration only with `includeSecrets: true`. Profile exports and backup exports require that flag too.
+
+Saved Hysteria 1 profiles report `canBuild: false`. You can read their configuration with `includeSecrets: true` and export their share links or backups. Creation, editing, cloning, selection, and connection attempts are not supported. Hysteria 2 requires a compatible server; changing a version field cannot upgrade a Hysteria 1 server.
 
 Create a group, then use the returned ID to create a profile. Supply JSON through files or stdin rather than putting credentials in command arguments:
 

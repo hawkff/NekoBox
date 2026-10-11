@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hysteria1_unsupported">Hysteria 1 (unsupported)</string>
+    <string name="hysteria1_retired">Hysteria 1 is no longer supported. Your saved profile is still available for export. Ask your provider for a Hysteria 2 profile.</string>
+    <string name="subscription_kept_hysteria1">Kept %d retired Hysteria 1 profiles for export.</string>
+    <string name="action_hysteria2" translatable="false">Hysteria 2</string>
+</resources>

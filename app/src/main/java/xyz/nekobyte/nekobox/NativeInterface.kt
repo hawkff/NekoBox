@@ -17,6 +17,7 @@ import libcore.BoxPlatformInterface
 import libcore.Libcore
 import org.json.JSONArray
 import org.json.JSONObject
+import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -24,6 +25,7 @@ import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.utils.PackageCache
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
 
@@ -38,7 +40,15 @@ class NativeInterface :
     //  libbox interface
 
     override fun autoDetectInterfaceControl(fd: Int) {
-        DataStore.vpnService?.protect(fd)
+        val vpn = DataStore.vpnService
+        if (vpn != null) {
+            if (!vpn.protect(fd)) throw IOException("VPN socket protection failed")
+        } else if (!NekoBox.application.isBgProcess) {
+            // A known stopped service needs no protection; unknown and transitional states must not bypass failures.
+            if (DataStore.serviceState != BaseService.State.Stopped) Libcore.protectSocket(fd)
+        } else if (DataStore.serviceMode == Key.MODE_VPN && DataStore.serviceState != BaseService.State.Stopped) {
+            throw IOException("VPN socket protection is unavailable")
+        }
     }
 
     override fun openTun(singTunOptionsJson: String, tunPlatformOptionsJson: String): Long {

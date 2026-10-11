@@ -92,6 +92,11 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	}()
 }
 
+// ProtectSocket asks the service process to protect a socket owned by the UI process.
+func ProtectSocket(fd int32) error {
+	return sendFdToProtect(int(fd), "protect_path")
+}
+
 func sendFdToProtect(fd int, path string) error {
 	socketFd, err := unix.Socket(unix.AF_UNIX, unix.SOCK_STREAM, 0)
 	if err != nil {
@@ -122,6 +127,9 @@ func sendFdToProtect(fd int, path string) error {
 	}
 	if n != 1 {
 		return fmt.Errorf("socket closed unexpectedly")
+	}
+	if dummy[0] != 1 {
+		return fmt.Errorf("VPN socket protection failed")
 	}
 	return nil
 }

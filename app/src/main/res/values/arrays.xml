@@ -481,17 +481,6 @@
         <item>@string/subscription</item>
     </string-array>
 
-    <string-array name="hysteria_auth_type">
-        <item>@string/plugin_disabled</item>
-        <item>STRING</item>
-        <item>BASE64</item>
-    </string-array>
-
-    <string-array name="hysteria_version">
-        <item>1</item>
-        <item>2</item>
-    </string-array>
-
     <string-array name="hysteria2_obfs_type">
         <item>@string/plugin_disabled</item>
         <item>Salamander</item>
@@ -541,12 +530,6 @@
         <item>gVisor</item>
         <item>System</item>
         <item>Mixed</item>
-    </string-array>
-
-    <string-array name="hysteria_protocol">
-        <item>UDP</item>
-        <item>FakeTCP (Root Required)</item>
-        <item>WeChat Video</item>
     </string-array>
 
     <string-array name="packet_encoding_entry">
