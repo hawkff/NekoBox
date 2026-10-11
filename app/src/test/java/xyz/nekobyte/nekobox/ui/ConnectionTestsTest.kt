@@ -9,9 +9,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileTestResult
 import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 
@@ -53,14 +55,73 @@ class ConnectionTestsTest {
     }
 
     @Test
-    fun persistenceFailureStillReleasesTheBatchFlag() = ConfigBuilderTestEnv.io {
-        val profile = ProxyEntity(groupId = 1).putBean(SOCKSBean().apply { initializeDefaultValues() })
+    fun persistenceFailureStillReloadsDistinctGroupsAndReleasesTheBatchFlag() = ConfigBuilderTestEnv.io {
+        val results = listOf(result(1), result(2), result(1))
+        val broken = results[1].profile
+        ProfileDatabase.proxyDao.updateProxyRow(broken.copy(socksBean = null))
+        val reloaded = mutableListOf<Long>()
+        withReloadListener({ reloaded.add(it) }) {
+            DataStore.runningTest = true
+            val worker = Job().apply { complete() }
+            val failure = runCatching { runBlocking { finishConnectionTests(worker, results) } }.exceptionOrNull()
+            assertEquals(NullPointerException::class.java, failure?.javaClass)
+            assertEquals(listOf(1L, 2L), reloaded)
+            assertFalse(DataStore.runningTest)
+            assertEquals(0, ProfileDatabase.proxyDao.getById(results.first().profile.id)!!.ping)
+        }
+    }
+
+    @Test
+    fun reloadFailureDoesNotReplacePersistenceFailure() = ConfigBuilderTestEnv.io {
+        val result = result(1)
+        ProfileDatabase.proxyDao.updateProxyRow(result.profile.copy(socksBean = null))
+        val reloadFailure = IllegalArgumentException("reload failed")
+        withReloadListener({ throw reloadFailure }) {
+            DataStore.runningTest = true
+            val worker = Job().apply { complete() }
+            val failure = runCatching { runBlocking { finishConnectionTests(worker, listOf(result)) } }.exceptionOrNull()
+            assertEquals(NullPointerException::class.java, failure?.javaClass)
+            assertSame(reloadFailure, failure!!.suppressed.single())
+            assertFalse(DataStore.runningTest)
+        }
+    }
+
+    @Test
+    fun reloadFailureOrCancellationPropagatesAfterSuccessfulPersistence() = ConfigBuilderTestEnv.io {
+        for (reloadFailure in listOf(IllegalArgumentException("reload failed"), CancellationException("cancelled"))) {
+            val result = result(1)
+            withReloadListener({ throw reloadFailure }) {
+                DataStore.runningTest = true
+                val worker = Job().apply { complete() }
+                val failure = runCatching { runBlocking { finishConnectionTests(worker, listOf(result)) } }.exceptionOrNull()
+                assertSame(reloadFailure, failure)
+                assertFalse(DataStore.runningTest)
+                assertEquals(42, ProfileDatabase.proxyDao.getById(result.profile.id)!!.ping)
+            }
+        }
+    }
+
+    private fun result(groupId: Long): ProfileTestResult {
+        val profile = ProxyEntity(groupId = groupId).putBean(SOCKSBean().apply { initializeDefaultValues() })
         profile.id = ProfileDatabase.proxyDao.addProxy(profile)
-        val result = ProfileTestResult(profile)
-        ProfileDatabase.proxyDao.updateProxyRow(profile.copy(socksBean = null))
-        DataStore.runningTest = true
-        val worker = Job().apply { complete() }
-        assertNotNull(runCatching { runBlocking { finishConnectionTests(worker, listOf(result)) } }.exceptionOrNull())
-        assertFalse(DataStore.runningTest)
+        return ProfileTestResult(profile).also {
+            profile.status = 1
+            profile.ping = 42
+        }
+    }
+
+    private fun withReloadListener(onReload: (Long) -> Unit, block: () -> Unit) {
+        val listener = object : GroupManager.Listener {
+            override suspend fun groupAdd(group: ProxyGroup) = Unit
+            override suspend fun groupUpdated(group: ProxyGroup) = Unit
+            override suspend fun groupRemoved(groupId: Long) = Unit
+            override suspend fun groupUpdated(groupId: Long) = onReload(groupId)
+        }
+        GroupManager.addListener(listener)
+        try {
+            block()
+        } finally {
+            GroupManager.removeListener(listener)
+        }
     }
 }

@@ -3,6 +3,7 @@ package xyz.nekobyte.nekobox.ui
 import android.net.Network
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import xyz.nekobyte.nekobox.bg.runRequiredCompletion
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileManager
@@ -22,8 +23,11 @@ internal fun resolvePingAddress(address: String, network: Network?): String? {
 internal suspend fun finishConnectionTests(job: Job, results: Collection<ProfileTestResult>) {
     try {
         job.cancelAndJoin()
-        ProfileManager.updateTestResults(results.toList())
-        results.map { it.profile.groupId }.distinct().forEach { GroupManager.postReload(it) }
+        runRequiredCompletion(
+            after = { results.map { it.profile.groupId }.distinct().forEach { GroupManager.postReload(it) } },
+        ) {
+            ProfileManager.updateTestResults(results.toList())
+        }
     } finally {
         DataStore.runningTest = false
     }
