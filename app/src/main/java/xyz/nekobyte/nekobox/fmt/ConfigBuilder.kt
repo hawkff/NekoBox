@@ -1534,8 +1534,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
         outboundHosts.forEach { (outbound, host) ->
             val strategy = if (forTest) null else SingBoxOptionsUtil.domainStrategy("server")
-            // A chain with as-is resolution must still pass hostnames to its next hop.
-            if (outbound._hack_config_map["detour"] == null || !strategy.isNullOrEmpty()) {
+            // A chain with as-is resolution must still pass hostnames to its next hop. The local
+            // fragment outbound is not a hop, so the first hop keeps its resolver behind it.
+            val detour = outbound._hack_config_map["detour"]
+            if (detour == null || detour == TAG_FRAGMENT || !strategy.isNullOrEmpty()) {
                 outbound._hack_config_map["domain_resolver"] = dnsResolver(resolverFor(host), strategy?.takeIf { it.isNotEmpty() } ?: directStrategy).asMap()
             }
         }

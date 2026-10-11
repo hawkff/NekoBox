@@ -12,18 +12,21 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.RuleEntity
+import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.chainContains
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
+import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 
 @RunWith(RobolectricTestRunner::class)
@@ -113,6 +116,47 @@ class ConfigBuilderGoldenTest {
     }
 
     @Test
+    fun tlsFragment_keepsTheFirstHopResolverWhenServerStrategyIsAuto() {
+        val previousTlsFragment = DataStore.enableTLSFragment
+        try {
+            DataStore.enableTLSFragment = true
+            DataStore.configurationStore.putString("domain_strategy_for_server", "auto")
+            val group = ConfigBuilderTestEnv.io {
+                ProfileDatabase.groupDao.createGroup(
+                    ProxyGroup(
+                        type = GroupType.SUBSCRIPTION,
+                        subscription = SubscriptionBean().applyDefaultValues().apply {
+                            customDnsResolver = "https://subscription.example/dns-query"
+                        },
+                    ),
+                )
+            }
+            val profile = addProfile(
+                group,
+                VMessBean().apply {
+                    serverAddress = "node.example"
+                    serverPort = 443
+                    uuid = "d342d11e-d424-4583-b36e-524ab1f0afa4"
+                    alterId = 0
+                    encryption = "auto"
+                    security = "tls"
+                    sni = "node.example"
+                    name = "fragment-resolver"
+                    initializeDefaultValues()
+                },
+            )
+
+            val outbound = outbound(JSONObject(build(profile).config), "vmess")
+
+            // The fragment outbound is local, so the subscription's resolver still applies.
+            assertEquals(TAG_FRAGMENT, outbound.getString("detour"))
+            assertEquals("dns-sub-$group", outbound.getJSONObject("domain_resolver").getString("server"))
+        } finally {
+            DataStore.enableTLSFragment = previousTlsFragment
+        }
+    }
+
+    @Test
     fun shadowsocksForTest_preservesMethodAndPassword() {
         val profile = addProfile(
             addGroup(),
@@ -188,6 +232,30 @@ class ConfigBuilderGoldenTest {
         assertEquals(tagOf("192.0.2.24"), detourOf("192.0.2.25"))
         assertEquals(tagOf("192.0.2.23"), detourOf("192.0.2.24"))
         assertEquals("", detourOf("192.0.2.23"))
+    }
+
+    @Test
+    fun serverStrategyAuto_passesLaterChainHopHostnamesThroughEarlierHops() {
+        val strategyKey = "domain_strategy_for_server"
+        val group = addGroup()
+        val entry = addSocks(group, "entry.example", 1081, "strategy-entry")
+        val exit = addSocks(group, "exit.example", 1082, "strategy-exit")
+        val chain = addChain(group, "strategy-chain", entry.id, exit.id)
+        fun hops() = objects(JSONObject(build(chain).config).getJSONArray("outbounds"))
+            .filter { it.optString("type") == "socks" }
+            .associateBy { it.getString("server") }
+
+        // Nothing saved and "auto" agree: the entry resolves through Direct DNS, and the exit's
+        // hostname travels through the entry.
+        for (saved in listOf(null, "auto")) {
+            DataStore.configurationStore.putString(strategyKey, saved)
+            val hops = hops()
+            assertEquals("dns-direct", hops.getValue("entry.example").getJSONObject("domain_resolver").getString("server"))
+            assertFalse(hops.getValue("exit.example").has("domain_resolver"))
+        }
+
+        DataStore.configurationStore.putString(strategyKey, "prefer_ipv4")
+        assertEquals("prefer_ipv4", hops().getValue("exit.example").getJSONObject("domain_resolver").getString("strategy"))
     }
 
     @Test

@@ -113,7 +113,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         return ProfileDatabase.groupDao.createGroup(ProxyGroup(ungrouped = true))
     }
 
-    var appTLSVersion by configurationStore.string(Key.APP_TLS_VERSION)
+    var appTLSVersion by configurationStore.string(Key.APP_TLS_VERSION) { "1.2" }
     var enableClashAPI by configurationStore.boolean(Key.ENABLE_CLASH_API)
     var showBottomBar by configurationStore.boolean(Key.SHOW_BOTTOM_BAR)
     var confirmProfileDelete by configurationStore.boolean(Key.CONFIRM_PROFILE_DELETE) { true }
