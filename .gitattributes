@@ -1,3 +1,2 @@
 # Unified diffs prefix Go indentation with a context marker.
 buildScript/lib/mieru-protect.patch -whitespace
-buildScript/lib/mieru-auth.patch -whitespace

@@ -50,8 +50,8 @@ class MieruAuthenticationDeviceTest {
             }
             connect(port).use { socket ->
                 socket.getOutputStream().write(byteArrayOf(5, 1, 0))
-                assertEquals(5, socket.getInputStream().read())
-                assertEquals(255, socket.getInputStream().read())
+                // Mieru refuses a client that offers no credentials by closing the connection.
+                assertEquals(-1, socket.getInputStream().read())
             }
             for ((methods, password) in listOf(
                 byteArrayOf(2) to "local-password",

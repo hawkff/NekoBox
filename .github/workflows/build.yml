@@ -54,7 +54,6 @@ jobs:
           git ls-files -s -- \
             buildScript/lib/mieru.sh \
             buildScript/lib/mieru-protect.patch \
-            buildScript/lib/mieru-auth.patch \
             buildScript/lib/naive.sh \
             buildScript/init/env.sh \
             buildScript/init/env_ndk.sh \

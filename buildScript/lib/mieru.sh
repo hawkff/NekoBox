@@ -17,10 +17,10 @@ if [ -z "$ANDROID_NDK_HOME" ]; then
 fi
 
 # Mieru release tag to build from source.
-MIERU_VERSION="${MIERU_VERSION:-v3.38.0}"
+MIERU_VERSION="${MIERU_VERSION:-v3.38.1}"
 # Immutable commit that MIERU_VERSION points to (pinned for reproducible builds;
 # update together with MIERU_VERSION on any bump).
-MIERU_COMMIT="${MIERU_COMMIT:-b961978c3be9dd26b94158487c760858e19d1db2}"
+MIERU_COMMIT="${MIERU_COMMIT:-a2208ee7a38fb41d843a13ecdde858e67ef2f485}"
 
 DEPS="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 # macOS NDK host dirs are darwin-x86_64 / darwin-arm64; fall back if linux is absent.
@@ -37,7 +37,7 @@ fi
 
 WORK="$(pwd)/.mieru-build"
 OUT="$(pwd)/app/executableSo"
-CLIENT_PATCHES=("$(pwd)/buildScript/lib/mieru-protect.patch" "$(pwd)/buildScript/lib/mieru-auth.patch")
+CLIENT_PATCHES=("$(pwd)/buildScript/lib/mieru-protect.patch")
 
 # Fetch source (shallow clone at the pinned tag). Re-clone fresh if the existing
 # checkout is missing or its git operations fail (e.g. corrupted by a prior build).
@@ -60,7 +60,7 @@ fi
 
 pushd "$WORK" >/dev/null
 
-# Require local authentication and propagate Android VPN protection failures.
+# Propagate Android VPN protection failures.
 for patch in "${CLIENT_PATCHES[@]}"; do
   if git apply --check --whitespace=error-all "$patch" 2>/dev/null; then
     git apply --whitespace=error-all "$patch"
