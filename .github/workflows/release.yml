@@ -58,7 +58,6 @@ jobs:
           git ls-files -s -- \
             buildScript/lib/mieru.sh \
             buildScript/lib/mieru-protect.patch \
-            buildScript/lib/mieru-auth.patch \
             buildScript/lib/naive.sh \
             buildScript/init/env.sh \
             buildScript/init/env_ndk.sh \
@@ -126,6 +125,9 @@ jobs:
       - name: Gradle Build
         env:
           BUILD_PLUGIN: none
+          # POSTHOG_HOST stays unset: an empty value would replace the build default.
+          POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           echo "sdk.dir=${ANDROID_HOME}" > local.properties
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
