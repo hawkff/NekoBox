@@ -136,7 +136,7 @@ require (
 
 replace github.com/sagernet/sing-box => ../../sing-box
 
-replace github.com/sagernet/sing-vmess => github.com/hawkff/sing-vmess v0.2.8-mod.2
+replace github.com/sagernet/sing-vmess => github.com/hawkff/sing-vmess v0.2.8-mod.3
 
 // Keep the existing import path across the module rename.
 replace github.com/dyhkwong/sing-juicity => github.com/exclavenetwork/sing-juicity v0.3.1
