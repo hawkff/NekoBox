@@ -115,6 +115,7 @@ class WireGuardConfigTest {
         assertEquals("192.0.2.20", outbound.getString("server"))
         assertEquals(key, outbound.getString("peer_public_key"))
         assertFalse(outbound.has("peers"))
+        assertTrue(outbound.getBoolean("udp_fragment"))
     }
 
     @Test
@@ -162,6 +163,7 @@ class WireGuardConfigTest {
 
         val amneziaOutbound = outbound(save("amnezia-peers", build(amnezia)), "amnezia")
         assertEquals("amneziawg", amneziaOutbound.getString("type"))
+        assertTrue(amneziaOutbound.getBoolean("udp_fragment"))
         assertEquals(4, amneziaOutbound.getInt("jc"))
         assertEquals(listOf("0.0.0.0/0"), amneziaOutbound.objects("peers")[0].getJSONArray("allowed_ips").strings())
         assertEquals(3, amneziaOutbound.objects("peers").size)
