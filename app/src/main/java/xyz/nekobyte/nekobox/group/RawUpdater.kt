@@ -1056,10 +1056,12 @@ object RawUpdater : GroupUpdater() {
                                         require(ws.keys.all { it.toString() in setOf("path", "headers") }) { "Unsupported WebSocket option" }
                                         val headers = ws["headers"] as? Map<*, *> ?: emptyMap<Any, Any>()
                                         require(headers.keys.all { it.toString().equals("host", ignoreCase = true) }) { "Unsupported WebSocket header" }
+                                        val wsHost = headers.values.firstOrNull()?.toString()?.takeIf { it.isNotBlank() }
+                                        val serverName = (proxy["servername"] ?: proxy["sni"])?.toString()?.takeIf { ssTls && it.isNotBlank() }
+                                        // The plugin also sends its host as the TLS server name, so a different one cannot be kept.
+                                        require(wsHost == null || serverName == null || wsHost == serverName) { "Unsupported Shadowsocks transport" }
                                         // Without a host the plugin sends a fixed default; an Xray client sends the server's name.
-                                        val host = headers.values.firstOrNull()?.toString()?.takeIf { it.isNotBlank() }
-                                            ?: (proxy["servername"] ?: proxy["sni"])?.toString()?.takeIf { ssTls && it.isNotBlank() }
-                                            ?: proxy["server"].toString()
+                                        val host = wsHost ?: serverName ?: proxy["server"].toString()
                                         ssPlugin.add("v2ray-plugin")
                                         ssPlugin.add("mode=websocket")
                                         ssPlugin.add("host=$host")

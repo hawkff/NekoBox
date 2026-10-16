@@ -371,11 +371,12 @@ class RawUpdaterParseTest {
               - {name: upgrade-extra, type: vless, server: 192.0.2.6, port: 443, uuid: $uuid, network: httpupgrade, http-upgrade-opts: {path: /u, headers: {X-Token: t}}}
               - {name: obfs-other, type: hysteria2, server: 192.0.2.7, port: 443, password: p, obfs: other, obfs-password: o}
               - {name: ss-ws-upgrade, type: ss, server: 192.0.2.8, port: 80, cipher: aes-256-gcm, password: p, network: ws, ws-opts: {path: /w, v2ray-http-upgrade: true}}
+              - {name: ss-wss-names, type: ss, server: 192.0.2.9, port: 443, cipher: aes-256-gcm, password: p, tls: true, servername: s.example, network: ws, ws-opts: {headers: {Host: h.example}}}
         """.trimIndent()
         val parsed = RawUpdater.parseImport(yaml)!!
         val byName = parsed.proxies.associateBy { it.displayName() }
         assertEquals(listOf("upgrade", "ss-ws", "ss-wss", "gecko"), parsed.proxies.map { it.displayName() })
-        assertEquals(listOf("ss", "vless", "hysteria2", "ss"), ImportPreview.of(parsed).failed)
+        assertEquals(listOf("ss", "vless", "hysteria2", "ss", "ss"), ImportPreview.of(parsed).failed)
 
         val upgrade = byName.getValue("upgrade") as VMessBean
         assertEquals("httpupgrade", upgrade.type)

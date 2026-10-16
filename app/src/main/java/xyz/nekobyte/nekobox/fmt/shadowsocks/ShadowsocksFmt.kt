@@ -22,9 +22,12 @@ private fun ShadowsocksBean.applyTransportParams(link: HttpUrl) {
         "tcp" -> if (tls) error("unsupported shadowsocks transport: tcp with tls")
 
         "ws" -> if (plugin!!.isBlank()) {
+            val wsHost = link.queryParameter("host")?.takeIf { it.isNotBlank() }
+            val sni = link.queryParameter("sni")?.takeIf { tls && it.isNotBlank() }
+            // The plugin also sends its host as the TLS server name, so a different SNI cannot be kept.
+            if (wsHost != null && sni != null && wsHost != sni) error("unsupported shadowsocks transport: host and sni differ")
             // Without a host the plugin sends a fixed default; an Xray client sends the server's name.
-            val host = link.queryParameter("host")?.takeIf { it.isNotBlank() }
-                ?: link.queryParameter("sni")?.takeIf { it.isNotBlank() } ?: serverAddress
+            val host = wsHost ?: sni ?: serverAddress
             plugin = listOfNotNull(
                 "v2ray-plugin",
                 "mode=websocket",
