@@ -18,6 +18,11 @@
             android:title="@string/menu_route" />
 
         <item
+            android:id="@+id/nav_tailscale"
+            android:icon="@drawable/ic_hardware_router"
+            android:title="@string/tailscale" />
+
+        <item
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_action_settings"
             android:title="@string/settings" />
