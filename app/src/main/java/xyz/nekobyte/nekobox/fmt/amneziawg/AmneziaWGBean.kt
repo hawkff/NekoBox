@@ -118,6 +118,34 @@ class AmneziaWGBean : AbstractBean() {
     @JvmField
     var serverPeerPosition: Int? = null
 
+    // AmneziaWG 3.1. The key is base64; the padding and timers are a number or a min-max range.
+    @JvmField
+    var headerProtectionKey: String? = null
+
+    @JvmField
+    var contentPaddingAddition: String? = null
+
+    @JvmField
+    var rekeyAfterTime: String? = null
+
+    @JvmField
+    var rekeyTimeout: String? = null
+
+    @JvmField
+    var rejectAfterTime: String? = null
+
+    @JvmField
+    var keepaliveTimeout: String? = null
+
+    @JvmField
+    var maxHandshakeAttempts: String? = null
+
+    @JvmField
+    var randomTrailers: Boolean? = null
+
+    @JvmField
+    var disableCookies: Boolean? = null
+
     override fun initializeDefaultValues() {
         super.initializeDefaultValues()
         localAddress = localAddress ?: ""
@@ -151,7 +179,20 @@ class AmneziaWGBean : AbstractBean() {
         customDnsServers = customDnsServers ?: ""
         customDnsDomains = customDnsDomains ?: ""
         serverPeerPosition = serverPeerPosition ?: 0
+        headerProtectionKey = headerProtectionKey ?: ""
+        contentPaddingAddition = contentPaddingAddition ?: ""
+        rekeyAfterTime = rekeyAfterTime ?: ""
+        rekeyTimeout = rekeyTimeout ?: ""
+        rejectAfterTime = rejectAfterTime ?: ""
+        keepaliveTimeout = keepaliveTimeout ?: ""
+        maxHandshakeAttempts = maxHandshakeAttempts ?: ""
+        randomTrailers = randomTrailers ?: false
+        disableCookies = disableCookies ?: false
     }
+
+    private fun usesVersion2Fields() = !headerProtectionKey.isNullOrEmpty() || !contentPaddingAddition.isNullOrEmpty() ||
+        !rekeyAfterTime.isNullOrEmpty() || !rekeyTimeout.isNullOrEmpty() || !rejectAfterTime.isNullOrEmpty() ||
+        !keepaliveTimeout.isNullOrEmpty() || !maxHandshakeAttempts.isNullOrEmpty() || randomTrailers == true || disableCookies == true
 
     private fun usesVersion1Fields() = !allowedIPs.isNullOrEmpty() || (persistentKeepalive ?: 0) != 0 ||
         !extraPeers.isNullOrEmpty() || !importedDnsServers.isNullOrEmpty() || !importedDnsDomains.isNullOrEmpty() ||
@@ -166,10 +207,17 @@ class AmneziaWGBean : AbstractBean() {
     }
 
     override fun serialize(output: ByteBufferOutput) {
-        // Profiles without version 1 fields keep the version 0 bytes: stored blobs stay stable,
-        // and so does the byte-based equality subscription updates compare profiles with.
-        val version1 = usesVersion1Fields()
-        output.writeInt(if (version1) 1 else 0)
+        // Profiles without newer fields keep their older bytes: stored blobs stay stable, and so
+        // does the byte-based equality subscription updates compare profiles with.
+        val version2 = usesVersion2Fields()
+        val version1 = version2 || usesVersion1Fields()
+        output.writeInt(
+            when {
+                version2 -> 2
+                version1 -> 1
+                else -> 0
+            },
+        )
         super.serialize(output)
         output.writeString(localAddress)
         output.writeString(privateKey)
@@ -203,6 +251,17 @@ class AmneziaWGBean : AbstractBean() {
             output.writeString(customDnsServers)
             output.writeString(customDnsDomains)
             output.writeInt(serverPeerPosition ?: 0)
+        }
+        if (version2) {
+            output.writeString(headerProtectionKey)
+            output.writeString(contentPaddingAddition)
+            output.writeString(rekeyAfterTime)
+            output.writeString(rekeyTimeout)
+            output.writeString(rejectAfterTime)
+            output.writeString(keepaliveTimeout)
+            output.writeString(maxHandshakeAttempts)
+            output.writeBoolean(randomTrailers == true)
+            output.writeBoolean(disableCookies == true)
         }
     }
 
@@ -241,6 +300,17 @@ class AmneziaWGBean : AbstractBean() {
             customDnsServers = input.readString()
             customDnsDomains = input.readString()
             serverPeerPosition = input.readInt()
+        }
+        if (version >= 2) {
+            headerProtectionKey = input.readString()
+            contentPaddingAddition = input.readString()
+            rekeyAfterTime = input.readString()
+            rekeyTimeout = input.readString()
+            rejectAfterTime = input.readString()
+            keepaliveTimeout = input.readString()
+            maxHandshakeAttempts = input.readString()
+            randomTrailers = input.readBoolean()
+            disableCookies = input.readBoolean()
         }
     }
 

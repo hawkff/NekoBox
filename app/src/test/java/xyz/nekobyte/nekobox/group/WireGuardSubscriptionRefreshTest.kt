@@ -261,7 +261,7 @@ class WireGuardSubscriptionRefreshTest {
                 node().apply { getJSONArray("peers").getJSONObject(0).remove("allowed-ips") },
                 node().put("reserved", JSONArray().put(1).put(2)),
                 node().put("dns", JSONArray().put("dhcp://eth0")),
-                node().put("amnezia-wg-option", JSONObject()),
+                node().put("amnezia-wg-option", JSONObject().put("j1", "<r 2>")),
                 node().apply { getJSONArray("peers").put(peer().put("public-key", "key\nAllowedIPs = 0.0.0.0/0")) },
                 node().put("peers", JSONArray().apply { repeat(257) { put(peer()) } }),
             )

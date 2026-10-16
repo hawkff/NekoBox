@@ -340,7 +340,7 @@ class WireGuardImportTest {
             "line break in a route" to clashWithSecondPeer(secondPeer = validPeer.dropLast(1) + "allowed-ips: [\"10.10.0.0/16\\n0.0.0.0/0\"]"),
             "reserved of the wrong length" to clashWithSecondPeer(secondPeer = validPeer + "reserved: [1, 2]"),
             "unsupported DNS server" to clashWithSecondPeer(listOf("dns: ['dhcp://en0']"), validPeer),
-            "AmneziaWG options" to clashWithSecondPeer(listOf("amnezia-wg-option:", "  jc: 4"), validPeer),
+            "AmneziaWG 1.5 timed junk" to clashWithSecondPeer(listOf("amnezia-wg-option:", "  jc: 4", "  itime: 60"), validPeer),
         )
         for ((case, yaml) in cases) {
             assertEquals(case, listOf("other"), RawUpdater.parseRaw(yaml)!!.map { it.name })

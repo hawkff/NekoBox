@@ -160,6 +160,8 @@
     <string name="kcp_header_type">Header Type</string>
     <string name="kcp_mtu">mKCP MTU</string>
     <string name="kcp_tti">mKCP TTI</string>
+    <string name="kcp_legacy">Legacy packet checksum</string>
+    <string name="kcp_legacy_sum">For servers before Xray-core 26.2 that use no seed</string>
     <string name="kcp_cwnd_multiplier">CWND Multiplier</string>
     <string name="grpc_service_name">gRPC ServiceName</string>
     <string name="tls">Use TLS</string>
@@ -965,5 +967,16 @@
     <string name="snell_obfs_host">Obfs host</string>
     <string name="snell_reuse">Reuse</string>
     <string name="snell_reuse_summary">v4/v5 only</string>
+    <string name="amneziawg_31">AmneziaWG 3.1</string>
+    <string name="amneziawg_header_protection_key">Header protection key</string>
+    <string name="amneziawg_content_padding">Content padding</string>
+    <string name="amneziawg_rekey_after_time">Rekey after (s)</string>
+    <string name="amneziawg_rekey_timeout">Rekey timeout (s)</string>
+    <string name="amneziawg_reject_after_time">Reject after (s)</string>
+    <string name="amneziawg_keepalive_timeout">Keepalive timeout (s)</string>
+    <string name="amneziawg_max_handshake_attempts">Handshake attempts</string>
+    <string name="amneziawg_random_trailers">Random trailers</string>
+    <string name="amneziawg_disable_cookies">Disable cookies</string>
+    <string name="amneziawg_range_hint">A number or a min-max range. Must match the server.</string>
 
 </resources>

@@ -1075,6 +1075,24 @@ class SingBoxOptions {
         @JvmField var i4: String? = null
 
         @JvmField var i5: String? = null
+
+        @JvmField var header_protection_key: String? = null
+
+        @JvmField var content_padding_addition: String? = null
+
+        @JvmField var rekey_after_time: String? = null
+
+        @JvmField var rekey_timeout: String? = null
+
+        @JvmField var reject_after_time: String? = null
+
+        @JvmField var keepalive_timeout: String? = null
+
+        @JvmField var max_handshake_attempts: String? = null
+
+        @JvmField var random_trailers: Boolean? = null
+
+        @JvmField var disable_cookies: Boolean? = null
     }
 
     // Endpoints share the outbound tag/type shape but live in the top-level "endpoints" array.
@@ -1683,6 +1701,8 @@ class SingBoxOptions {
         @JvmField var header_type: String? = null
 
         @JvmField var seed: String? = null
+
+        @JvmField var legacy: Boolean? = null
     }
 
     class Outbound_AnyTLSOptions : Outbound() {

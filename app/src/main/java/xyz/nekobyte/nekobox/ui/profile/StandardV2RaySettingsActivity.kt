@@ -69,6 +69,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
     private val kcpMtu = pbm.add(PreferenceBinding(Type.TextToInt, "kcpMtu"))
     private val kcpTti = pbm.add(PreferenceBinding(Type.TextToInt, "kcpTti"))
     private val kcpCwndMultiplier = pbm.add(PreferenceBinding(Type.TextToInt, "kcpCwndMultiplier"))
+    private val kcpLegacy = pbm.add(PreferenceBinding(Type.Bool, "kcpLegacy"))
 
     override fun StandardV2RayBean.init() {
         if (this is TrojanBean) {
@@ -204,6 +205,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
         kcpMtu.preference.isVisible = false
         kcpTti.preference.isVisible = false
         kcpCwndMultiplier.preference.isVisible = false
+        kcpLegacy.preference.isVisible = false
         wsCategory.isVisible = false
         xhttpCategory.isVisible = false
 
@@ -219,6 +221,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
                 kcpMtu.preference.isVisible = true
                 kcpTti.preference.isVisible = true
                 kcpCwndMultiplier.preference.isVisible = true
+                kcpLegacy.preference.isVisible = true
             }
 
             "http" -> {

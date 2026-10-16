@@ -178,4 +178,47 @@
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/amneziawg_31">
+        <EditTextPreference
+            app:dialogLayout="@layout/layout_password_dialog"
+            app:key="headerProtectionKey"
+            app:title="@string/amneziawg_header_protection_key" />
+        <EditTextPreference
+            app:dialogMessage="@string/amneziawg_range_hint"
+            app:key="contentPaddingAddition"
+            app:title="@string/amneziawg_content_padding"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/amneziawg_range_hint"
+            app:key="rekeyAfterTime"
+            app:title="@string/amneziawg_rekey_after_time"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/amneziawg_range_hint"
+            app:key="rekeyTimeout"
+            app:title="@string/amneziawg_rekey_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/amneziawg_range_hint"
+            app:key="rejectAfterTime"
+            app:title="@string/amneziawg_reject_after_time"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/amneziawg_range_hint"
+            app:key="keepaliveTimeout"
+            app:title="@string/amneziawg_keepalive_timeout"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/amneziawg_range_hint"
+            app:key="maxHandshakeAttempts"
+            app:title="@string/amneziawg_max_handshake_attempts"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreference
+            app:key="randomTrailers"
+            app:title="@string/amneziawg_random_trailers" />
+        <SwitchPreference
+            app:key="disableCookies"
+            app:title="@string/amneziawg_disable_cookies" />
+    </PreferenceCategory>
+
 </PreferenceScreen>
