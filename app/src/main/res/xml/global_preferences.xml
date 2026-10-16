@@ -195,7 +195,7 @@
         app:icon="@drawable/ic_maps_directions"
         app:key="screen_route"
         app:summary="@string/settings_route_summary"
-        app:title="@string/cag_route">
+        app:title="@string/settings_routing">
         <SwitchPreference
             app:icon="@drawable/ic_navigation_apps"
             app:key="proxyApps"
