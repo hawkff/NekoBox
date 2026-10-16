@@ -121,6 +121,13 @@ class PanelShareLinkTest {
         assertEquals("aes-256-gcm", bean.method)
         assertEquals("v2ray-plugin;mode=websocket;host=cdn.example;path=/ss;tls;mux=0", bean.plugin)
         assertEquals("", parseShadowsocks("ss://$userinfo@203.0.113.5:443?type=tcp#plain").plugin)
+        assertEquals(
+            "v2ray-plugin;mode=websocket;host=203.0.113.5;path=/ss;mux=0",
+            parseShadowsocks("ss://$userinfo@203.0.113.5:80?type=ws&path=%2Fss&host=&sni=other.example#no-host").plugin,
+        )
+        assertThrows(IllegalStateException::class.java) {
+            parseShadowsocks("ss://$userinfo@203.0.113.5:443?type=ws&host=cdn.example&security=tls&sni=other.example#names")
+        }
         assertThrows(IllegalStateException::class.java) {
             parseShadowsocks("ss://$userinfo@203.0.113.5:443?type=grpc&serviceName=ss#ss-grpc")
         }

@@ -10,6 +10,8 @@ import xyz.nekobyte.nekobox.utils.listByLineOrComma
 fun buildSingBoxOutboundAmneziaWGBean(bean: AmneziaWGBean): SingBoxOptions.Outbound_AmneziaWGOptions = SingBoxOptions.Outbound_AmneziaWGOptions().apply {
     bean.checkWireGuardLimits()
     type = "amneziawg"
+    // Let the system fragment packets larger than the path MTU, as WireGuard clients do, instead of failing to send them.
+    udp_fragment = true
     local_address = bean.localAddress!!.listByLineOrComma()
     private_key = bean.privateKey
     mtu = bean.mtu

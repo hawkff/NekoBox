@@ -177,6 +177,54 @@ func TestWireGuardStatusReportsAppliedPeerSettings(t *testing.T) {
 	}
 }
 
+// The app starts cores through NewSingBoxInstance, whose platform reports no default interface.
+// That must not leave the network paused and the WireGuard device down.
+func TestPlatformInstanceWireGuardHandshakes(t *testing.T) {
+	previous := intfBox
+	intfBox = socketProtectionPlatform{}
+	t.Cleanup(func() { intfBox = previous })
+	for _, outboundType := range []string{"wireguard", "amneziawg"} {
+		t.Run(outboundType, func(t *testing.T) {
+			clientPrivate, clientPublic := wireGuardTestKey(t)
+			serverAddress, serverPublic := startWireGuardTestServer(t, clientPublic)
+			server := M.ParseSocksaddr(serverAddress)
+			instance, err := NewSingBoxInstance(fmt.Sprintf(`{
+  "log": {"disabled": true},
+  "outbounds": [{
+    "type": %q, "tag": "wg", "local_address": ["10.78.0.2/32"], "private_key": %q,
+    "peers": [{"server": %q, "server_port": %d, "public_key": %q, "allowed_ips": ["10.78.0.0/24"], "persistent_keepalive_interval": 1}]
+  }]
+}`, outboundType, clientPrivate, server.AddrString(), server.Port, serverPublic), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { instance.Close() })
+			if err = instance.Start(); err != nil {
+				t.Fatal(err)
+			}
+			if instance.pauseManager.IsNetworkPaused() {
+				t.Fatal("network paused after start")
+			}
+			for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(50 * time.Millisecond) {
+				raw, err := WireGuardStatus(instance, "wg")
+				if err != nil {
+					t.Fatal(err)
+				}
+				var status wireGuardStatusJSON
+				if err = json.Unmarshal([]byte(raw), &status); err != nil {
+					t.Fatal(err)
+				}
+				if len(status.Peers) == 1 && status.Peers[0].LastHandshake != 0 {
+					return
+				}
+				if time.Now().After(deadline) {
+					t.Fatalf("no handshake: %s", raw)
+				}
+			}
+		})
+	}
+}
+
 // Reads racing Close either see the live device or report that the instance stopped.
 func TestWireGuardStatusDuringClose(t *testing.T) {
 	instance, ctx, _, _, _ := newWireGuardTestBox(t, "wireguard", 0)

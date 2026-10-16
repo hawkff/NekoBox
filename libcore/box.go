@@ -149,6 +149,11 @@ func (b *BoxInstance) Start() (err error) {
 		registerTailscaleInterfaces()
 		err = b.Box.Start()
 		b.running = err == nil
+		if b.running && b.pauseManager != nil {
+			// The stub interface monitor reports no default interface, so the network manager pauses the
+			// network at startup and nothing wakes it: WireGuard devices stay down, URL tests stay idle.
+			b.pauseManager.NetworkWake()
+		}
 		return err
 	}
 	return errors.New("already started")

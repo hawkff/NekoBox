@@ -1043,6 +1043,35 @@ object RawUpdater : GroupUpdater() {
                                         else -> error("Unsupported Shadowsocks plugin")
                                     }
                                 }
+                                // 3x-ui exports Shadowsocks over WebSocket as a stream transport; like its links, it maps onto
+                                // v2ray-plugin. Other transports have no counterpart.
+                                when (proxy["network"]?.toString()) {
+                                    null, "", "tcp" -> {}
+
+                                    "ws" -> {
+                                        val ssTls = clashBoolean(proxy["tls"] ?: false)
+                                        require(ssPlugin.isEmpty()) { "Unsupported Shadowsocks transport" }
+                                        require(!clashBoolean(proxy["skip-cert-verify"] ?: false)) { "Unsupported Shadowsocks transport" }
+                                        val ws = proxy["ws-opts"] as? Map<*, *> ?: emptyMap<Any, Any>()
+                                        require(ws.keys.all { it.toString() in setOf("path", "headers") }) { "Unsupported WebSocket option" }
+                                        val headers = ws["headers"] as? Map<*, *> ?: emptyMap<Any, Any>()
+                                        require(headers.keys.all { it.toString().equals("host", ignoreCase = true) }) { "Unsupported WebSocket header" }
+                                        val wsHost = headers.values.firstOrNull()?.toString()?.takeIf { it.isNotBlank() }
+                                        val serverName = (proxy["servername"] ?: proxy["sni"])?.toString()?.takeIf { ssTls && it.isNotBlank() }
+                                        // The plugin also sends its host as the TLS server name, so a different one cannot be kept.
+                                        require(wsHost == null || serverName == null || wsHost == serverName) { "Unsupported Shadowsocks transport" }
+                                        // Without a host the plugin sends a fixed default; an Xray client sends the server's name.
+                                        val host = wsHost ?: serverName ?: proxy["server"].toString()
+                                        ssPlugin.add("v2ray-plugin")
+                                        ssPlugin.add("mode=websocket")
+                                        ssPlugin.add("host=$host")
+                                        ws["path"]?.toString()?.takeIf { it.isNotBlank() }?.let { ssPlugin.add("path=$it") }
+                                        if (ssTls) ssPlugin.add("tls")
+                                        ssPlugin.add("mux=0")
+                                    }
+
+                                    else -> error("Unsupported Shadowsocks transport")
+                                }
                                 val mux = (proxy["smux"] as? Map<*, *>)?.let { parseClashMux(it) }
                                 proxies.add(
                                     ShadowsocksBean().apply {
@@ -1193,8 +1222,8 @@ object RawUpdater : GroupUpdater() {
                                                         bean.realityShortId =
                                                             realityOpt.value?.toString()
 
-                                                    // Dropping the post-quantum key exchange would weaken the handshake.
-                                                    "support-x25519mlkem768" -> if (clashBoolean(realityOpt.value)) error("Unsupported REALITY key exchange")
+                                                    // The core always offers the X25519MLKEM768 key share that current servers require.
+                                                    "support-x25519mlkem768" -> clashBoolean(realityOpt.value)
 
                                                     else -> error("Unsupported REALITY option")
                                                 }
@@ -1234,6 +1263,24 @@ object RawUpdater : GroupUpdater() {
                                                             bean.type = "httpupgrade"
                                                         }
                                                     }
+                                                }
+                                            }
+                                        }
+
+                                        // 3x-ui spells HTTPUpgrade as its own network with these options.
+                                        "http-upgrade-opts" -> (opt.value as? Map<String, Any?>)?.also {
+                                            for (huOpt in it) {
+                                                when (huOpt.key) {
+                                                    "path" -> bean.path = huOpt.value?.toString()
+
+                                                    "host" -> bean.host = huOpt.value?.toString()
+
+                                                    "headers" -> (huOpt.value as? Map<Any, Any?>)?.forEach { (key, value) ->
+                                                        require(key.toString().equals("host", ignoreCase = true)) { "Unsupported HTTPUpgrade header" }
+                                                        bean.host = value?.toString()
+                                                    }
+
+                                                    else -> error("Unsupported HTTPUpgrade option")
                                                 }
                                             }
                                         }
@@ -1440,6 +1487,17 @@ object RawUpdater : GroupUpdater() {
                                         "ports" -> hopPorts = opt.value.toString()
 
                                         "obfs-password" -> bean.obfuscation = opt.value.toString()
+
+                                        "obfs" -> bean.hysteria2ObfsType = when (opt.value.toString().lowercase()) {
+                                            "salamander" -> HysteriaBean.OBFS_SALAMANDER
+                                            "gecko" -> HysteriaBean.OBFS_GECKO
+                                            "" -> HysteriaBean.OBFS_NONE
+                                            else -> error("Unsupported Hysteria2 obfuscation")
+                                        }
+
+                                        "obfs-min-packet-size" -> bean.geckoMinPacketSize = opt.value.toString().toInt()
+
+                                        "obfs-max-packet-size" -> bean.geckoMaxPacketSize = opt.value.toString().toInt()
 
                                         "password" -> bean.authPayload = opt.value.toString()
 

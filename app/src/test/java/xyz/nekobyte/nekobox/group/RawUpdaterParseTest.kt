@@ -359,6 +359,38 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun clashNodesInThe3xUiSpellingKeepTheirTransportAndObfuscation() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val yaml = """
+            proxies:
+              - {name: upgrade, type: vless, server: 192.0.2.1, port: 443, uuid: $uuid, tls: true, network: httpupgrade, http-upgrade-opts: {path: /u, headers: {Host: cdn.example}}}
+              - {name: ss-ws, type: ss, server: 192.0.2.2, port: 80, cipher: aes-256-gcm, password: p, tls: false, network: ws, ws-opts: {path: /w}}
+              - {name: ss-wss, type: ss, server: 192.0.2.3, port: 443, cipher: aes-256-gcm, password: p, tls: true, servername: s.example, network: ws, ws-opts: {path: /w}}
+              - {name: gecko, type: hysteria2, server: 192.0.2.4, port: 443, password: p, obfs: gecko, obfs-password: o, obfs-min-packet-size: 300, obfs-max-packet-size: 900}
+              - {name: ss-grpc, type: ss, server: 192.0.2.5, port: 443, cipher: aes-256-gcm, password: p, network: grpc}
+              - {name: upgrade-extra, type: vless, server: 192.0.2.6, port: 443, uuid: $uuid, network: httpupgrade, http-upgrade-opts: {path: /u, headers: {X-Token: t}}}
+              - {name: obfs-other, type: hysteria2, server: 192.0.2.7, port: 443, password: p, obfs: other, obfs-password: o}
+              - {name: ss-ws-upgrade, type: ss, server: 192.0.2.8, port: 80, cipher: aes-256-gcm, password: p, network: ws, ws-opts: {path: /w, v2ray-http-upgrade: true}}
+              - {name: ss-wss-names, type: ss, server: 192.0.2.9, port: 443, cipher: aes-256-gcm, password: p, tls: true, servername: s.example, network: ws, ws-opts: {headers: {Host: h.example}}}
+        """.trimIndent()
+        val parsed = RawUpdater.parseImport(yaml)!!
+        val byName = parsed.proxies.associateBy { it.displayName() }
+        assertEquals(listOf("upgrade", "ss-ws", "ss-wss", "gecko"), parsed.proxies.map { it.displayName() })
+        assertEquals(listOf("ss", "vless", "hysteria2", "ss", "ss"), ImportPreview.of(parsed).failed)
+
+        val upgrade = byName.getValue("upgrade") as VMessBean
+        assertEquals("httpupgrade", upgrade.type)
+        assertEquals("/u", upgrade.path)
+        assertEquals("cdn.example", upgrade.host)
+        assertEquals("v2ray-plugin;mode=websocket;host=192.0.2.2;path=/w;mux=0", (byName.getValue("ss-ws") as ShadowsocksBean).plugin)
+        assertEquals("v2ray-plugin;mode=websocket;host=s.example;path=/w;tls;mux=0", (byName.getValue("ss-wss") as ShadowsocksBean).plugin)
+        val gecko = byName.getValue("gecko") as HysteriaBean
+        assertEquals(HysteriaBean.OBFS_GECKO, gecko.hysteria2ObfsType)
+        assertEquals(300, gecko.geckoMinPacketSize)
+        assertEquals(900, gecko.geckoMaxPacketSize)
+    }
+
+    @Test
     fun singBoxOutboundsOfTypesTheCoreDoesNotRun_areSkipped() = runTest {
         val text = JSONObject().put(
             "outbounds",
@@ -392,7 +424,7 @@ class RawUpdaterParseTest {
             "{name: ss-layer, type: trojan, $base, password: p, ss-opts: {enabled: true, method: aes-128-gcm, password: q}}",
             "{name: socks-tls, type: socks5, $base, tls: true}",
             "{name: shadow-tls, type: ss, $base, cipher: aes-128-gcm, password: p, plugin: shadow-tls, plugin-opts: {host: a.example}}",
-            "{name: mlkem, type: vless, $base, uuid: $uuid, tls: true, reality-opts: {public-key: k, support-x25519mlkem768: true}}",
+            "{name: mlkem-typo, type: vless, $base, uuid: $uuid, tls: true, reality-opts: {public-key: k, support-x25519mlkem768: maybe}}",
             "{name: reality-extra, type: vless, $base, uuid: $uuid, tls: true, reality-opts: {public-key: k, spider-x: /}}",
             "{name: ech-name, type: vless, $base, uuid: $uuid, tls: true, ech-opts: {enable: true, query-server-name: other.example}}",
             "{name: mux-anytls, type: anytls, $base, password: p, smux: {enabled: true}}",
@@ -411,6 +443,7 @@ class RawUpdaterParseTest {
             "{name: mux, type: vmess, $base, uuid: $uuid, cipher: auto, smux: {enabled: true, protocol: smux, max-connections: 4, min-streams: 2, padding: 'true', statistic: true, brutal-opts: {enabled: true, up: '50 Mbps', down: 100}}}",
             "{name: ss-mux, type: ss, $base, cipher: aes-128-gcm, password: p, smux: {enabled: true, protocol: yamux, max-streams: 16}}",
             "{name: mux-off, type: anytls, $base, password: p, smux: {enabled: false, only-tcp: true}}",
+            "{name: mlkem, type: vless, $base, uuid: $uuid, tls: true, reality-opts: {public-key: k, short-id: ab, support-x25519mlkem768: true}}",
         )
         val parsed = RawUpdater.parseImport("proxies:\n" + (refused + accepted).joinToString("\n") { "  - $it" })!!
         assertEquals(accepted.map { it.substringAfter("name: ").substringBefore(',') }, parsed.proxies.map { it.displayName() })
@@ -440,6 +473,9 @@ class RawUpdaterParseTest {
         assertEquals(0, ssMux.muxMode)
         assertEquals(16, ssMux.muxConcurrency)
         assertFalse(ssMux.muxBrutal!!)
+        val mlkem = byName.getValue("mlkem") as VMessBean
+        assertEquals("k", mlkem.realityPubKey)
+        assertEquals("ab", mlkem.realityShortId)
     }
 
     @Test

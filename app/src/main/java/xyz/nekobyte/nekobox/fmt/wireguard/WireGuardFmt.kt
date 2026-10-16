@@ -353,6 +353,8 @@ internal fun AbstractBean.wireGuardProfileDns(profileId: Long, tag: String): Wir
 fun buildSingBoxOutboundWireguardBean(bean: WireGuardBean): SingBoxOptions.Outbound_WireGuardOptions = SingBoxOptions.Outbound_WireGuardOptions().apply {
     bean.checkWireGuardLimits()
     type = "wireguard"
+    // Let the system fragment packets larger than the path MTU, as WireGuard clients do, instead of failing to send them.
+    udp_fragment = true
     local_address = bean.localAddress!!.listByLineOrComma()
     private_key = bean.privateKey
     mtu = bean.mtu
