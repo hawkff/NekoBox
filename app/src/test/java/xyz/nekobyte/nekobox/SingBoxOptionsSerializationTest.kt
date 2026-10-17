@@ -54,6 +54,10 @@ class SingBoxOptionsSerializationTest {
         assertEquals(SingBoxOptions.toJsonTree(dns), SingBoxOptions.toJsonTree(route))
         route.makeSingBoxRule(listOf("geoip:private", "geoip:test", "192.0.2.0/24", " "), true)
         assertEquals(listOf("example.com"), route.domain)
+        // A regex keeps its case, which escapes such as \D depend on, and matches without regard to case.
+        assertEquals(listOf("(?i)^Test"), route.domain_regex)
+        val regex = SingBoxOptions.DNSRule_DefaultOptions().apply { makeSingBoxRule(listOf("regexp:^\\D+\\.example$")) }
+        assertEquals(listOf("(?i)^\\D+\\.example$"), regex.domain_regex)
         assertEquals(listOf("geosite:test", "geoip:test"), route.rule_set)
         assertEquals(listOf("192.0.2.0/24"), route.ip_cidr)
         assertEquals(true, route.ip_is_private)

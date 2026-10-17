@@ -16,6 +16,7 @@
     <string name="subscription_served_by_backup">The main link failed; this update came from a backup link.</string>
     <string name="subscription_routing_off_ignored">The provider asked to turn routing off. Routing was not changed.</string>
     <string name="subscription_routing_rejected">The provider sent a routing profile that could not be read.</string>
+    <string name="subscription_routing_rules_not_imported">The routing rules in the subscription were not imported: %s.</string>
     <string name="subscription_representation_raw">sing-box outbounds</string>
     <string name="subscription_representation_native">share links or Clash/Mihomo nodes</string>
     <string name="subscription_representation_question">The provider now describes %1$d profiles as %2$s. Applying this update deletes them and adds new profiles: their traffic history and custom settings do not carry over. Profiles that are selected or used by rules, chains or groups stay. Apply the update?</string>

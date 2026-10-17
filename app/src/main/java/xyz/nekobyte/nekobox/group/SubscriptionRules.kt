@@ -129,6 +129,9 @@ internal object SubscriptionRules {
 
     private val CLASH_LOGIC = setOf("AND", "OR", "NOT", "SUB-RULE")
 
+    // What may follow the target; anything else means the value had a comma of its own, as a regex may.
+    private val CLASH_OPTIONS = setOf("no-resolve", "src")
+
     /**
      * The rules of a Clash config. A target is resolved through the config's proxy [groups] as Clash
      * starts them: a select group uses its first member. Any other proxy or group is the selected
@@ -158,12 +161,14 @@ internal object SubscriptionRules {
             val value = parts.getOrNull(1).orEmpty()
             val target = parts.getOrNull(2).orEmpty()
             val outbound = outbound(target)
+            val options = parts.drop(3)
+            val malformed = type in CLASH_LOGIC || value.isEmpty() || options.any { it !in CLASH_OPTIONS }
             // A target with no counterpart, such as PASS, is reported by its name.
-            val reason = if (outbound == null && type !in CLASH_LOGIC && value.isNotEmpty()) target.ifEmpty { type } else type
-            val entry = if (type in CLASH_LOGIC || value.isEmpty() || outbound == null) {
+            val reason = if (outbound == null && !malformed) target.ifEmpty { type } else type
+            val entry = if (malformed || outbound == null) {
                 null
             } else {
-                clashCondition(type, value)?.apply {
+                clashCondition(type, value, source = "src" in options)?.apply {
                     name = target
                     this.outbound = outbound
                 }
@@ -177,7 +182,16 @@ internal object SubscriptionRules {
         return collected.profile()
     }
 
-    private fun clashCondition(type: String, value: String): RuleEntity? = when (type) {
+    private fun clashCondition(type: String, value: String, source: Boolean): RuleEntity? = when {
+        // src matches where a connection comes from, which only address ranges can express here.
+        source -> if (type == "IP-CIDR" || type == "IP-CIDR6") address(value)?.let { RuleEntity(source = it) } else null
+
+        else -> destinationCondition(type, value)
+    }
+
+    private fun address(value: String) = ProviderRouting.ipEntry(value)?.takeUnless { it.startsWith("geoip:") }
+
+    private fun destinationCondition(type: String, value: String): RuleEntity? = when (type) {
         "DOMAIN" -> RuleEntity(domains = "full:$value")
 
         "DOMAIN-SUFFIX" -> RuleEntity(domains = "domain:$value")
@@ -188,12 +202,12 @@ internal object SubscriptionRules {
 
         "GEOSITE" -> RuleEntity(domains = "geosite:" + value.lowercase())
 
-        "IP-CIDR", "IP-CIDR6" -> ProviderRouting.ipEntry(value)?.takeUnless { it.startsWith("geoip:") }?.let { RuleEntity(ip = it) }
+        "IP-CIDR", "IP-CIDR6" -> address(value)?.let { RuleEntity(ip = it) }
 
         // Clash names private networks LAN.
         "GEOIP" -> RuleEntity(ip = "geoip:" + if (value.equals("LAN", ignoreCase = true)) "private" else value.lowercase())
 
-        "SRC-IP-CIDR" -> ProviderRouting.ipEntry(value)?.takeUnless { it.startsWith("geoip:") }?.let { RuleEntity(source = it) }
+        "SRC-IP-CIDR" -> address(value)?.let { RuleEntity(source = it) }
 
         "DST-PORT" -> ports(value)?.let { RuleEntity(port = it) }
 

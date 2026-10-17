@@ -493,14 +493,16 @@ object RawUpdater : GroupUpdater() {
                 app.getString(R.string.routing_profile_not_applied, routing.name, it.joinToString(", "))
             }
 
-            routingValue == null -> null
+            routingValue == null -> bodyRouting?.notes?.takeIf { it.isNotEmpty() }?.let {
+                app.getString(R.string.subscription_routing_rules_not_imported, it.joinToString(", "))
+            }
 
             RoutingProfiles.isDisableRequest(routingValue) -> app.getString(R.string.subscription_routing_off_ignored)
 
             else -> app.getString(R.string.subscription_routing_rejected)
         }
-        // The configs' routing rules are not lost when they became a profile or only send everything through the proxy.
-        val rulesKept = routing != null || bodyRouting?.let { it.ruleCount == 0 && it.notes.isEmpty() } == true
+        // The configs' routing rules became a profile, are reported above, or only send everything through the proxy.
+        val rulesKept = routing != null || bodyRouting != null
         val dropped = preview.dropped.filterNot { it == ImportPreview.Section.RULES && rulesKept }
 
         // Replacement and backup URLs a provider proposes wait for the user's approval.

@@ -84,6 +84,28 @@ class SubscriptionRulesTest {
     }
 
     @Test
+    fun entriesWithACommaAreRefusedBecauseRulesSplitThere() {
+        val xray = SubscriptionRules.fromXray(
+            JSONObject().put("rules", JSONArray().put(rule("outboundTag" to "direct", "domain" to list("regexp:^a{1,3}\\.example$", "full:kept.example")))),
+            outbounds,
+        )
+        assertEquals("full:kept.example", rules(xray).single().domains)
+        assertEquals(listOf("domain (1)"), xray.notes)
+        // Clash splits its rule line at commas too, so the regex runs into the target.
+        val clash = SubscriptionRules.fromClash(listOf("DOMAIN-REGEX,^a{1,3}\\.example$,DIRECT", "DOMAIN-REGEX,^\\D+\\.example$,DIRECT"), null)
+        assertEquals("regexp:^\\D+\\.example$", rules(clash).single().domains)
+        assertEquals(listOf("DOMAIN-REGEX (1)"), clash.notes)
+    }
+
+    @Test
+    fun clashSrcRulesMatchWhereConnectionsComeFrom() {
+        val clash = SubscriptionRules.fromClash(listOf("IP-CIDR,192.168.0.0/16,DIRECT,src", "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve", "GEOIP,CN,DIRECT,src"), null)
+        val rules = rules(clash)
+        assertEquals(listOf("192.168.0.0/16" to "", "" to "10.0.0.0/8"), rules.map { it.source to it.ip })
+        assertEquals(listOf("GEOIP (1)"), clash.notes)
+    }
+
+    @Test
     fun clashTargetsResolveThroughGroupsAsClashStartsThem() {
         val groups = listOf(
             mapOf("name" to "PROXY", "type" to "select", "proxies" to listOf("node-1", "DIRECT")),

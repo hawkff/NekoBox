@@ -633,6 +633,11 @@ class RawUpdaterTransactionTest {
             RawUpdater.updateFromContent(group, subscription, body(everything))
             assertEquals("", subscription.importWarning)
             assertEquals(listOf("Provider"), RoutingProfiles.list().map { it.name })
+
+            // Rules that cannot be imported are listed even when none of them can.
+            RawUpdater.updateFromContent(group, subscription, body(inbound, everything))
+            assertEquals(app.getString(R.string.subscription_routing_rules_not_imported, "inboundTag (1)"), subscription.importWarning)
+            assertEquals(listOf("Provider"), RoutingProfiles.list().map { it.name })
         }
     }
 

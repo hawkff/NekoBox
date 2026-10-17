@@ -33,12 +33,13 @@ fun SingBoxOptions.DNSRule_DefaultOptions.makeSingBoxRule(list: List<String>) {
     val suffixes = mutableListOf<String>()
     val regexes = mutableListOf<String>()
     val keywords = mutableListOf<String>()
+    // A regex keeps its case, which escapes such as \D depend on; the flag keeps the match case-insensitive.
     list.forEach {
         when {
             it.startsWith("geosite:") -> ruleSets.add(it)
             it.startsWith("full:") -> domains.add(it.removePrefix("full:").lowercase())
             it.startsWith("domain:") -> suffixes.add(it.removePrefix("domain:").lowercase())
-            it.startsWith("regexp:") -> regexes.add(it.removePrefix("regexp:").lowercase())
+            it.startsWith("regexp:") -> regexes.add("(?i)" + it.removePrefix("regexp:"))
             it.startsWith("keyword:") -> keywords.add(it.removePrefix("keyword:").lowercase())
             else -> suffixes.add(it.lowercase())
         }

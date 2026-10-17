@@ -373,7 +373,9 @@ internal object ProviderRouting {
     }
 
     // Xray matches a bare domain value anywhere in the name; here a bare value is a suffix.
+    // Rules here split their entries at commas, so an entry with one, such as a regex, cannot be stored.
     internal fun domainEntry(value: String): String? = when {
+        value.contains(',') -> null
         value.startsWith("geosite:") -> value.takeUnless { it.contains('@') || it.contains('!') }
         DOMAIN_PREFIXES.any { value.startsWith(it) } -> value
         value.contains(':') -> null
