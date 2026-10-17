@@ -379,7 +379,7 @@ class BaseService {
                         if (data.state == State.Connected) Telemetry.connectionInterrupted()
                         stopRunner(
                             false,
-                            "${(this@Interface as Context).getString(R.string.service_failed)}: ${e.readableMessage}",
+                            "${(this@Interface as Context).getString(R.string.service_failed)} ${e.readableMessage}",
                         )
                     }
                 }
@@ -699,7 +699,7 @@ class BaseService {
                     onMainDispatcher {
                         stopRunner(
                             false,
-                            "${getString(R.string.service_failed)}: ${e.readableMessage}",
+                            "${getString(R.string.service_failed)} ${e.readableMessage}",
                         )
                     }
                 }
@@ -810,7 +810,7 @@ class BaseService {
                     }
                     stopRunner(
                         false,
-                        "${getString(R.string.service_failed)}: ${exc.readableMessage}",
+                        "${getString(R.string.service_failed)} ${exc.readableMessage}",
                     )
                 } finally {
                     data.connectingJob = null
