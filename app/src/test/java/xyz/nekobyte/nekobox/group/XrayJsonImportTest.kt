@@ -130,6 +130,8 @@ class XrayJsonImportTest {
         val wg = RawUpdater.parseImport(config(wireGuard))!!.proxies.single() as WireGuardBean
         assertEquals("192.0.2.4", wg.serverAddress)
         assertEquals("1,2,3", wg.reserved)
+        // A single outbound that cannot import gives no profile.
+        assertNull(RawUpdater.parseImport(JSONObject().put("protocol", "vless").put("settings", JSONObject()).toString()))
         // A single outbound, not inside a config, imports too.
         assertEquals("192.0.2.2", (RawUpdater.parseImport(socks.toString())!!.proxies.single() as SOCKSBean).serverAddress)
     }
@@ -152,14 +154,23 @@ class XrayJsonImportTest {
             JSONObject().put("protocol", "http").put("settings", JSONObject().put("address", "192.0.2.3").put("port", 8443))
                 .put("streamSettings", JSONObject().put("security", "reality")),
             // Certificate constraints are refused for every protocol, not only those with share-link checks.
-            JSONObject().put("protocol", "shadowsocks").put("settings", JSONObject().put("address", "192.0.2.5").put("port", 443)
-                .put("method", "aes-256-gcm").put("password", "p"))
-                .put("streamSettings", JSONObject().put("network", "ws").put("security", "tls")
-                    .put("tlsSettings", JSONObject().put("pinnedPeerCertSha256", "abc"))),
+            JSONObject().put("protocol", "shadowsocks").put(
+                "settings",
+                JSONObject().put("address", "192.0.2.5").put("port", 443)
+                    .put("method", "aes-256-gcm").put("password", "p"),
+            )
+                .put(
+                    "streamSettings",
+                    JSONObject().put("network", "ws").put("security", "tls")
+                        .put("tlsSettings", JSONObject().put("pinnedPeerCertSha256", "abc")),
+                ),
             JSONObject().put("protocol", "hysteria").put("settings", JSONObject().put("address", "192.0.2.6").put("port", 443).put("version", 2))
-                .put("streamSettings", JSONObject().put("network", "hysteria").put("security", "tls")
-                    .put("hysteriaSettings", JSONObject().put("version", 2).put("auth", "a"))
-                    .put("tlsSettings", JSONObject().put("verifyPeerCertInNames", JSONArray().put("node.example")))),
+                .put(
+                    "streamSettings",
+                    JSONObject().put("network", "hysteria").put("security", "tls")
+                        .put("hysteriaSettings", JSONObject().put("version", 2).put("auth", "a"))
+                        .put("tlsSettings", JSONObject().put("verifyPeerCertInNames", JSONArray().put("node.example"))),
+                ),
         )
         for ((index, outbound) in refused.withIndex()) {
             val other = JSONObject().put("protocol", "vless").put("tag", "other").put("settings", JSONObject())
@@ -178,8 +189,10 @@ class XrayJsonImportTest {
         val redirect = JSONObject().put("protocol", "freedom").put("tag", "fragment").put("settings", JSONObject().put("redirect", "203.0.113.1:443"))
         assertTrue(RawUpdater.parseImport(config(vless(JSONObject(reality.toString()).put("sockopt", JSONObject().put("dialerProxy", "fragment"))), redirect)) == null)
         // A node that does not import reports no dropped fragmentation.
-        val unsupported = vless(JSONObject().put("network", "grpc").put("security", "none").put("sockopt", JSONObject().put("dialerProxy", "fragment"))
-            .put("grpcSettings", JSONObject().put("serviceName", "s").put("authority", "cdn.example")))
+        val unsupported = vless(
+            JSONObject().put("network", "grpc").put("security", "none").put("sockopt", JSONObject().put("dialerProxy", "fragment"))
+                .put("grpcSettings", JSONObject().put("serviceName", "s").put("authority", "cdn.example")),
+        )
         val failed = RawUpdater.parseImport(config(unsupported, fragment, vless()))!!
         assertTrue(ImportPreview.of(failed).dropped.isEmpty())
     }

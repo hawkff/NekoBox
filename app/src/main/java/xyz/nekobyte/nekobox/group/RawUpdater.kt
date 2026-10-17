@@ -2157,7 +2157,13 @@ object RawUpdater : GroupUpdater() {
 
                 // A single Xray outbound.
                 json.getStr("type") == null && json.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS -> {
-                    return listOf(XrayOutbound.parse(json, json.getStr("tag").orEmpty(), emptyList(), report))
+                    return try {
+                        listOf(XrayOutbound.parse(json, json.getStr("tag").orEmpty(), emptyList(), report))
+                    } catch (_: Exception) {
+                        Logs.w("Xray outbound rejected")
+                        report.failed += json.getStr("protocol").let { if (it == "hysteria") "hysteria2" else it }
+                        emptyList()
+                    }
                 }
 
                 json.has("server") && json.has("server_port") && json.getStr("type") in SING_BOX_PROXY_TYPES -> {
