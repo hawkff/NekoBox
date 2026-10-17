@@ -1813,8 +1813,10 @@ object RawUpdater : GroupUpdater() {
         "KeepaliveTimeout", "MaxHandshakeAttempts", "RandomTrailers", "DisableCookies",
     )
 
+    private val WORD_START = Regex("(?<=[a-z0-9])(?=[A-Z])")
+
     /** Mihomo's amnezia-wg-option name for a .conf key: HeaderProtectionKey is header-protection-key. */
-    private fun clashAmneziaKey(confKey: String) = confKey.replace(Regex("(?<=[a-z0-9])(?=[A-Z])"), "-").lowercase()
+    private fun clashAmneziaKey(confKey: String) = confKey.replace(WORD_START, "-").lowercase()
 
     /** The WireGuard node as an AmneziaWG profile with these amnezia-wg-option values. */
     private fun WireGuardBean.toAmneziaWG(options: Map<*, *>): AmneziaWGBean {

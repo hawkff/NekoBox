@@ -155,4 +155,23 @@ class SubscriptionRulesTest {
         assertEquals(0, panel.ruleCount)
         assertEquals(emptyList<String>(), panel.notes)
     }
+
+    @Test
+    fun aLargeClashListBecomesOneRuleInLinearTime() {
+        // Clash configs can carry tens of thousands of rules for one target.
+        val count = 100_000
+        val clash = List(count) { "DOMAIN-SUFFIX,site$it.example,PROXY" } + "IP-CIDR,10.0.0.0/8,DIRECT"
+        val start = System.nanoTime()
+        val profile = SubscriptionRules.fromClash(clash, null)
+        val elapsed = (System.nanoTime() - start) / 1_000_000
+        val rules = rules(profile)
+        assertEquals(listOf("PROXY", "DIRECT"), rules.map { it.name })
+        val domains = rules[0].domains.lines()
+        assertEquals(count, domains.size)
+        assertEquals(listOf("domain:site0.example", "domain:site99999.example"), listOf(domains.first(), domains.last()))
+        assertEquals("10.0.0.0/8", rules[1].ip)
+        // About 0.1 s on a build machine; joining the list again for every rule took over 6 s there.
+        // The bound leaves room for slower runners and still fails that.
+        assertTrue("$elapsed ms", elapsed < 3_000)
+    }
 }
