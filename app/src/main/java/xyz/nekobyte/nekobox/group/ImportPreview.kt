@@ -3,6 +3,7 @@ package xyz.nekobyte.nekobox.group
 import androidx.annotation.StringRes
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.database.RoutingProfiles
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 
 /** What a parse saw besides the nodes it returned. The parsers fill it entry by entry. */
@@ -15,6 +16,9 @@ class ImportReport {
 
     /** Source sections that this app never imports. */
     val dropped = linkedSetOf<ImportPreview.Section>()
+
+    /** The source's own routing rules (Xray `routing`, Clash `rules`) as a nameless rules-only profile. */
+    var routing: RoutingProfiles.Profile? = null
 }
 
 /** Profiles parsed from a source, with what the parse could not use. */

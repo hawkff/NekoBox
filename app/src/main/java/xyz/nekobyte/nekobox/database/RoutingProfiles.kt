@@ -50,7 +50,8 @@ object RoutingProfiles {
 
     /**
      * [source] marks who owns a profile: "" for the user's own, or a subscription tag for profiles
-     * delivered through the `routing` subscription key, so a provider only ever refreshes its own.
+     * a subscription delivered, through its `routing` key or the rules in its configs, so a provider
+     * only ever refreshes its own.
      * [notes] lists what an imported provider profile asked for that it does not apply; they are
      * reported on import and not stored.
      */
@@ -372,14 +373,14 @@ internal object ProviderRouting {
     }
 
     // Xray matches a bare domain value anywhere in the name; here a bare value is a suffix.
-    private fun domainEntry(value: String): String? = when {
+    internal fun domainEntry(value: String): String? = when {
         value.startsWith("geosite:") -> value.takeUnless { it.contains('@') || it.contains('!') }
         DOMAIN_PREFIXES.any { value.startsWith(it) } -> value
         value.contains(':') -> null
         else -> "keyword:$value"
     }
 
-    private fun ipEntry(value: String): String? = when {
+    internal fun ipEntry(value: String): String? = when {
         value.startsWith("geoip:") -> value.takeUnless { it.contains('!') }
         IP.matches(value) -> value
         else -> null

@@ -46,6 +46,7 @@ import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import xyz.nekobyte.nekobox.ui.BackupFormatV2
 import java.util.Base64
 
 @RunWith(RobolectricTestRunner::class)
@@ -584,6 +585,54 @@ class RawUpdaterTransactionTest {
             RawUpdater.updateFromContent(group, subscription, "happ://routing/off\n$nodes")
             assertEquals(app.getString(R.string.subscription_routing_off_ignored), subscription.importWarning)
             assertEquals(1, RoutingProfiles.list().size)
+        }
+    }
+
+    @Test
+    fun configRoutingRules_becomeTheGroupsInactiveProfileWhenNoHeaderSendsOne() = runTest {
+        withContext(Dispatchers.IO) {
+            DataStore.configurationStore.remove(Key.ROUTING_PROFILES)
+            DataStore.configurationStore.remove(Key.ROUTING_PROFILE_ACTIVE)
+            fun body(vararg rules: JSONObject) = JSONArray(
+                listOf("first" to "192.0.2.1", "second" to "192.0.2.22").map { (name, address) ->
+                    val server = JSONObject().put("address", address).put("port", 1080)
+                    JSONObject()
+                        .put("remarks", name)
+                        .put(
+                            "outbounds",
+                            JSONArray()
+                                .put(JSONObject().put("tag", "proxy").put("protocol", "socks").put("settings", JSONObject().put("servers", JSONArray().put(server))))
+                                .put(JSONObject().put("tag", "direct").put("protocol", "freedom")),
+                        )
+                        .put("routing", JSONObject().put("rules", JSONArray(rules.toList())))
+                },
+            ).toString()
+            val direct = JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", JSONArray(listOf("geosite:category-ru")))
+            val inbound = JSONObject().put("type", "field").put("outboundTag", "direct").put("inboundTag", JSONArray(listOf("socks-in")))
+            val everything = JSONObject().put("type", "field").put("outboundTag", "proxy").put("network", "tcp,udp")
+
+            RawUpdater.updateFromContent(group, subscription, body(direct, inbound, everything))
+            assertEquals(2, ProfileDatabase.proxyDao.countByGroup(group.id))
+            val stored = RoutingProfiles.list().single()
+            assertEquals(RoutingProfiles.subscriptionSource(group.id), stored.source)
+            assertEquals(group.displayName(), stored.name)
+            assertEquals(1, stored.ruleCount)
+            assertEquals(0L, RoutingProfiles.activeId)
+            assertEquals(app.getString(R.string.routing_profile_not_applied, group.displayName(), "inboundTag (1)"), subscription.importWarning)
+
+            // A routing header wins over the rules in the configs and refreshes the same profile.
+            val happ = JSONObject().put("Name", "Provider").put("BlockSites", JSONArray(listOf("geosite:category-ads-all")))
+            val header = Base64.getEncoder().encodeToString(happ.toString().toByteArray())
+            RawUpdater.updateFromContent(group, subscription, body(direct, everything), httpMeta = mapOf("routing" to header))
+            val refreshed = RoutingProfiles.list().single()
+            assertEquals("Provider", refreshed.name)
+            assertEquals(listOf("BlockSites"), BackupFormatV2.decodeRules(refreshed.content.getJSONArray("rules")).map { it.name })
+            assertEquals("", subscription.importWarning)
+
+            // Rules that only send everything through the proxy lose nothing and change no profile.
+            RawUpdater.updateFromContent(group, subscription, body(everything))
+            assertEquals("", subscription.importWarning)
+            assertEquals(listOf("Provider"), RoutingProfiles.list().map { it.name })
         }
     }
 

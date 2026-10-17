@@ -142,13 +142,6 @@ internal object XrayOutbound {
 
     private fun HttpUrl.link(scheme: String) = toString().replaceFirst("https://", "$scheme://")
 
-    /** A string or a list of strings, as Xray accepts for several fields. */
-    private fun JSONObject.strings(key: String): List<String> = when (val value = opt(key)) {
-        is JSONArray -> (0 until value.length()).map { value.get(it).toString() }
-        null, JSONObject.NULL -> emptyList()
-        else -> listOf(value.toString())
-    }.filter { it.isNotEmpty() }
-
     private fun security(stream: JSONObject) = stream.optString("security").ifEmpty { "none" }
 
     /** The transport and security of a stream as the query parameters of a share link. */
@@ -345,3 +338,10 @@ internal object XrayOutbound {
     /** A value for one line of a wg-quick config; a line break would add settings of its own. */
     private fun String.line() = also { require('\n' !in it && '\r' !in it) { "invalid WireGuard value" } }
 }
+
+/** A string or a list of strings, as Xray accepts for several fields. */
+internal fun JSONObject.strings(key: String): List<String> = when (val value = opt(key)) {
+    is JSONArray -> (0 until value.length()).map { value.get(it).toString() }
+    null, JSONObject.NULL -> emptyList()
+    else -> listOf(value.toString())
+}.filter { it.isNotEmpty() }
