@@ -199,18 +199,22 @@ class ShareConnectionActivity :
             name = getString(R.string.share_connection_link_name)
             initializeDefaultValues()
         }.toUri()
+        // The address takes the full width: next to the buttons it broke inside the port.
         return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
             addView(
                 TextView(context).apply {
                     text = "$address:$port\n$label"
                     setTextIsSelectable(true)
                 },
-                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
             )
-            addView(textButton(R.string.share_qr_nfc) { QRCodeDialog(link, "$address:$port").show(supportFragmentManager, null) })
-            addView(textButton(R.string.share_connection_copy_link) { copy(link) })
+            addView(
+                LinearLayout(context).apply {
+                    gravity = Gravity.END
+                    addView(textButton(R.string.share_qr_nfc) { QRCodeDialog(link, "$address:$port").show(supportFragmentManager, null) })
+                    addView(textButton(R.string.share_connection_copy_link) { copy(link) })
+                },
+            )
         }
     }
 

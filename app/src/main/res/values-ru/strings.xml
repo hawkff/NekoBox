@@ -698,7 +698,7 @@
     <string name="share_connection_addresses_summary">Прокси HTTP и SOCKS5 на одном порту, учётные данные ниже.</string>
     <string name="share_connection_no_address">Сетевой адрес не найден</string>
     <string name="share_connection_public">не адрес частной сети</string>
-    <string name="share_connection_copy_link">Скопировать ссылку</string>
+    <string name="share_connection_copy_link">Копировать ссылку</string>
     <string name="share_connection_link_name">Раздача NekoBox</string>
     <string name="share_connection_credentials">Учётные данные</string>
     <string name="share_connection_username">Имя пользователя</string>
@@ -787,7 +787,7 @@
     <string name="network_rule_connect_named">Подключиться с %s</string>
     <string name="network_rule_disconnect">Отключиться (доверенная сеть)</string>
     <string name="network_rule_ssid_permission">Без разрешения на местоположение Android скрывает имя Wi-Fi, поэтому это правило не сработает.</string>
-    <string name="routing_profiles">Профили маршрутизации</string>
+    <string name="routing_profiles">Профили маршрутов</string>
     <string name="routing_profile_save_current">Сохранить текущие как профиль</string>
     <string name="routing_profile_switch">Переключиться на этот профиль</string>
     <string name="routing_profile_rename">Переименовать профиль</string>
