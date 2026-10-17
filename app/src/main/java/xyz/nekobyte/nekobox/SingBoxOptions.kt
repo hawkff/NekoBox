@@ -1116,6 +1116,61 @@ class SingBoxOptions {
         @JvmField var exit_node_allow_lan_access: Boolean? = null
 
         @JvmField var only_tcp_443: Boolean? = null
+
+        @JvmField var amnezia_wg: AmneziaWGObfuscationOptions? = null
+    }
+
+    /** The AmneziaWG settings of a WireGuard device, as in the AmneziaWG outbound. */
+    class AmneziaWGObfuscationOptions : SingBoxOption() {
+        @JvmField var jc: Int? = null
+
+        @JvmField var jmin: Int? = null
+
+        @JvmField var jmax: Int? = null
+
+        @JvmField var s1: Int? = null
+
+        @JvmField var s2: Int? = null
+
+        @JvmField var s3: Int? = null
+
+        @JvmField var s4: Int? = null
+
+        @JvmField var h1: String? = null
+
+        @JvmField var h2: String? = null
+
+        @JvmField var h3: String? = null
+
+        @JvmField var h4: String? = null
+
+        @JvmField var i1: String? = null
+
+        @JvmField var i2: String? = null
+
+        @JvmField var i3: String? = null
+
+        @JvmField var i4: String? = null
+
+        @JvmField var i5: String? = null
+
+        @JvmField var header_protection_key: String? = null
+
+        @JvmField var content_padding_addition: String? = null
+
+        @JvmField var rekey_after_time: String? = null
+
+        @JvmField var rekey_timeout: String? = null
+
+        @JvmField var reject_after_time: String? = null
+
+        @JvmField var keepalive_timeout: String? = null
+
+        @JvmField var max_handshake_attempts: String? = null
+
+        @JvmField var random_trailers: Boolean? = null
+
+        @JvmField var disable_cookies: Boolean? = null
     }
 
     class Outbound_SSHOptions : Outbound() {

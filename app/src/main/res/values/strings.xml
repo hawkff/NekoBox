@@ -742,6 +742,9 @@
     <string name="tailscale_accept_routes">Use tailnet subnet routes</string>
     <string name="tailscale_accept_routes_sum">Reach subnets advertised by other nodes</string>
     <string name="tailscale_only_tcp_443">Always use DERP</string>
+    <string name="tailscale_amnezia_wg">AmneziaWG</string>
+    <string name="tailscale_amnezia_wg_sum">Paste the JSON that tailscale awg get prints on a node of this tailnet. Every node this one reaches needs the same settings. Empty keeps plain WireGuard.</string>
+    <string name="tailscale_amnezia_wg_invalid">Invalid AmneziaWG settings: %s</string>
     <string name="tailscale_only_tcp_443_sum">Relay all peer traffic over TCP 443 and send no UDP. Required for a chain in front of Tailscale, otherwise direct peer connections leave from this device.</string>
 
     <string name="cloudflare_wrap" translatable="false">Cloudflare Warp</string>

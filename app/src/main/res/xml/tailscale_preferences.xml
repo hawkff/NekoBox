@@ -27,6 +27,11 @@
             app:key="hostname"
             app:summary="@string/tailscale_hostname_sum"
             app:title="@string/tailscale_hostname" />
+        <EditTextPreference
+            app:icon="@drawable/ic_baseline_texture_24"
+            app:key="amneziaWG"
+            app:summary="@string/tailscale_amnezia_wg_sum"
+            app:title="@string/tailscale_amnezia_wg" />
         <Preference
             app:icon="@drawable/ic_baseline_refresh_24"
             app:key="resetIdentity"

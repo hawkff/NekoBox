@@ -39,6 +39,7 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.TailscaleProfileStore
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
+import xyz.nekobyte.nekobox.fmt.tailscale.TailscaleAmneziaWG
 import xyz.nekobyte.nekobox.fmt.tailscale.TailscaleBean
 import xyz.nekobyte.nekobox.fmt.tailscale.resetTailscaleIdentity
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
@@ -68,6 +69,7 @@ class TailscaleSettingsActivity :
     private val exitNodeAllowLanAccess = pbm.add(PreferenceBinding(Type.Bool, "exitNodeAllowLanAccess"))
     private val acceptRoutes = pbm.add(PreferenceBinding(Type.Bool, "acceptRoutes"))
     private val onlyTcp443 = pbm.add(PreferenceBinding(Type.Bool, "onlyTcp443"))
+    private val amneziaWG = pbm.add(PreferenceBinding(Type.Text, "amneziaWG"))
 
     // Peers come from the running service when it drives this profile (a node has one identity),
     // so the screen keeps a service connection like the share screen does.
@@ -211,6 +213,11 @@ class TailscaleSettingsActivity :
         }
 
         (authKey.preference as EditTextPreference).summaryProvider = PasswordSummaryProvider
+        amneziaWG.preference.setOnPreferenceChangeListener { _, value ->
+            runCatching { TailscaleAmneziaWG.parse(value as String) }.onFailure {
+                Toast.makeText(this@TailscaleSettingsActivity, getString(R.string.tailscale_amnezia_wg_invalid, it.readableMessage), Toast.LENGTH_LONG).show()
+            }.isSuccess
+        }
         findPreference<Preference>("exitNodePicker")!!.setOnPreferenceClickListener {
             pickExitNode()
             true
