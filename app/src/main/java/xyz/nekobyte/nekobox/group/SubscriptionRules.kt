@@ -23,6 +23,10 @@ internal object SubscriptionRules {
         val rules = mutableListOf<RuleEntity>()
         val notes = linkedMapOf<String, Int>()
 
+        // Entries that later rules add to the last one. Appending each to the rule itself copies the
+        // whole list again, so the time grows with the square of the list, as in large Clash configs.
+        private val pending = StringBuilder()
+
         fun note(reason: String, count: Int = 1) {
             notes[reason] = (notes[reason] ?: 0) + count
         }
@@ -32,10 +36,18 @@ internal object SubscriptionRules {
             val last = rules.lastOrNull()
             val kind = kind(rule)
             if (last != null && kind != null && kind(last) == kind && last.outbound == rule.outbound && last.name == rule.name) {
-                if (kind == "domains") last.domains += "\n" + rule.domains else last.ip += "\n" + rule.ip
+                pending.append('\n').append(if (kind == "domains") rule.domains else rule.ip)
                 return
             }
+            closeLast()
             rules += rule
+        }
+
+        private fun closeLast() {
+            val last = rules.lastOrNull() ?: return
+            if (pending.isEmpty()) return
+            if (kind(last) == "domains") last.domains += pending else last.ip += pending
+            pending.setLength(0)
         }
 
         private fun kind(rule: RuleEntity) = when {
@@ -46,6 +58,7 @@ internal object SubscriptionRules {
         }
 
         fun profile(): RoutingProfiles.Profile {
+            closeLast()
             val encoded = JSONArray()
             rules.forEachIndexed { index, rule ->
                 rule.userOrder = index + 1L

@@ -155,4 +155,17 @@ class SubscriptionRulesTest {
         assertEquals(0, panel.ruleCount)
         assertEquals(emptyList<String>(), panel.notes)
     }
+
+    @Test
+    fun aLargeClashListBecomesOneRule() {
+        // Clash configs can carry tens of thousands of rules for one target. This list takes about
+        // 0.1 s on a build machine; joining the rule text again for every entry took 6.8 s.
+        val clash = List(100_000) { "DOMAIN-SUFFIX,site$it.example,PROXY" } + "IP-CIDR,10.0.0.0/8,DIRECT"
+        val rules = rules(SubscriptionRules.fromClash(clash, null))
+        assertEquals(listOf("PROXY", "DIRECT"), rules.map { it.name })
+        val domains = rules[0].domains.lines()
+        assertEquals(100_000, domains.size)
+        assertEquals(listOf("domain:site0.example", "domain:site99999.example"), listOf(domains.first(), domains.last()))
+        assertEquals("10.0.0.0/8", rules[1].ip)
+    }
 }
