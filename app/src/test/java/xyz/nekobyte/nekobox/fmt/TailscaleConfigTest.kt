@@ -175,6 +175,9 @@ class TailscaleConfigTest {
             JSONObject(profile.toString()).put("S1", 20.9),
             JSONObject(profile.toString()).apply { remove("JMax") },
             JSONObject(profile.toString()).put("S4", 65535),
+            // More junk packets than one batch, or one larger than a UDP datagram.
+            JSONObject(profile.toString()).put("JC", 129),
+            JSONObject(profile.toString()).put("JMax", 65508),
         )) {
             val broken = add(node().apply { amneziaWG = bad.toString() })
             assertTrue(bad.toString(), runCatching { build(broken, "normal") }.isFailure)
