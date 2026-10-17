@@ -2145,7 +2145,8 @@ object RawUpdater : GroupUpdater() {
                                 proxies += XrayOutbound.parse(outbound, listOfNotNull(remarks, tag).joinToString(" "), outbounds, report)
                             } catch (_: Exception) {
                                 Logs.w("Xray outbound rejected")
-                                report.failed += type
+                                // Xray's hysteria protocol is Hysteria 2; "hysteria" here means the retired Hysteria 1.
+                                report.failed += if (type == "hysteria") "hysteria2" else type
                             }
 
                             else -> report.failed += type

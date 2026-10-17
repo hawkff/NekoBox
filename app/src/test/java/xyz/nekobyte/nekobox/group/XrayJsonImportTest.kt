@@ -151,6 +151,15 @@ class XrayJsonImportTest {
             // A proxy whose security the profile cannot hold would send its credentials in clear text.
             JSONObject().put("protocol", "http").put("settings", JSONObject().put("address", "192.0.2.3").put("port", 8443))
                 .put("streamSettings", JSONObject().put("security", "reality")),
+            // Certificate constraints are refused for every protocol, not only those with share-link checks.
+            JSONObject().put("protocol", "shadowsocks").put("settings", JSONObject().put("address", "192.0.2.5").put("port", 443)
+                .put("method", "aes-256-gcm").put("password", "p"))
+                .put("streamSettings", JSONObject().put("network", "ws").put("security", "tls")
+                    .put("tlsSettings", JSONObject().put("pinnedPeerCertSha256", "abc"))),
+            JSONObject().put("protocol", "hysteria").put("settings", JSONObject().put("address", "192.0.2.6").put("port", 443).put("version", 2))
+                .put("streamSettings", JSONObject().put("network", "hysteria").put("security", "tls")
+                    .put("hysteriaSettings", JSONObject().put("version", 2).put("auth", "a"))
+                    .put("tlsSettings", JSONObject().put("verifyPeerCertInNames", JSONArray().put("node.example")))),
         )
         for ((index, outbound) in refused.withIndex()) {
             val other = JSONObject().put("protocol", "vless").put("tag", "other").put("settings", JSONObject())
@@ -165,6 +174,25 @@ class XrayJsonImportTest {
         assertEquals("www.example.com", (parsed.proxies.single() as VMessBean).sni)
         assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(parsed).dropped)
         assertNull(parsed.report.failed.firstOrNull())
+        // A freedom outbound that redirects the connection cannot be left out.
+        val redirect = JSONObject().put("protocol", "freedom").put("tag", "fragment").put("settings", JSONObject().put("redirect", "203.0.113.1:443"))
+        assertTrue(RawUpdater.parseImport(config(vless(JSONObject(reality.toString()).put("sockopt", JSONObject().put("dialerProxy", "fragment"))), redirect)) == null)
+        // A node that does not import reports no dropped fragmentation.
+        val unsupported = vless(JSONObject().put("network", "grpc").put("security", "none").put("sockopt", JSONObject().put("dialerProxy", "fragment"))
+            .put("grpcSettings", JSONObject().put("serviceName", "s").put("authority", "cdn.example")))
+        val failed = RawUpdater.parseImport(config(unsupported, fragment, vless()))!!
+        assertTrue(ImportPreview.of(failed).dropped.isEmpty())
+    }
+
+    @Test
+    fun olderSplitHttpSettingsKeepTheirPath() = runTest {
+        val stream = JSONObject().put("network", "splithttp").put("security", "none")
+            .put("splithttpSettings", JSONObject().put("path", "/sh").put("host", "cdn.example").put("mode", "packet-up"))
+        val node = RawUpdater.parseImport(config(vless(stream)))!!.proxies.single() as VMessBean
+        assertEquals("xhttp", node.type)
+        assertEquals("/sh", node.path)
+        assertEquals("cdn.example", node.host)
+        assertEquals("packet-up", node.xhttpMode)
     }
 
     private companion object {

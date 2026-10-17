@@ -30,81 +30,92 @@ internal object XrayOutbound {
         require(outbound.optJSONObject("proxySettings") == null) { "unsupported proxySettings" }
         val settings = outbound.optJSONObject("settings") ?: JSONObject()
         val stream = outbound.optJSONObject("streamSettings") ?: JSONObject()
-        stream.optJSONObject("sockopt")?.optString("dialerProxy")?.takeIf { it.isNotEmpty() }?.let { tag ->
+        val fragmented = stream.optJSONObject("sockopt")?.optString("dialerProxy")?.takeIf { it.isNotEmpty() }?.let { tag ->
             // 3x-ui can send the connection through a local freedom outbound that fragments the TLS
             // ClientHello or adds UDP noise. Another proxy in front would be a chain, which this
             // import does not build.
             val target = outbounds.firstOrNull { it?.optString("tag") == tag }
             require(target?.optString("protocol") == "freedom") { "unsupported dialerProxy" }
-            report.dropped += ImportPreview.Section.FRAGMENT
+            // A freedom outbound that redirects or adds a PROXY header would change the connection itself.
+            val freedom = target!!.optJSONObject("settings") ?: JSONObject()
+            require(freedom.optString("redirect").isEmpty() && freedom.optInt("proxyProtocol") == 0) { "unsupported dialerProxy" }
+        } != null
+        if (security(stream) == "tls") {
+            // The core has no counterpart to a pinned certificate, checked names or a private CA,
+            // so the node would trust certificates its provider meant to refuse.
+            val tls = stream.optJSONObject("tlsSettings") ?: JSONObject()
+            require(tls.strings("pinnedPeerCertSha256").isEmpty()) { "unsupported pinned certificate" }
+            require(tls.strings("verifyPeerCertInNames").isEmpty()) { "unsupported checked names" }
+            require((tls.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
         }
-        return when (val protocol = outbound.getString("protocol")) {
-            "vless", "vmess" -> {
-                val (server, user) = server(settings, "vnext")
-                val link = address(server).username(user.text("id"))
-                if (protocol == "vless") {
-                    link.param("encryption", user.optString("encryption").ifEmpty { "none" }).param("flow", user.optString("flow"))
-                } else {
-                    // Only AEAD VMess; Xray-core no longer accepts a nonzero alterId.
-                    require(user.optInt("alterId") == 0) { "unsupported VMess alterId" }
-                    link.param("encryption", user.optString("security").ifEmpty { "auto" })
-                }
-                applyStream(link, stream)
-                parseV2Ray(link.fragment(name).build().link(protocol))
-            }
-
-            "trojan" -> {
-                val (server, user) = server(settings, "servers")
-                val link = address(server).username(user.text("password"))
-                applyStream(link, stream)
-                parseTrojan(link.fragment(name).build().link("trojan"))
-            }
-
-            "shadowsocks" -> shadowsocks(settings, stream, name)
-
-            "hysteria" -> hysteria(settings, stream, name)
-
-            "wireguard" -> wireGuard(settings, name)
-
-            "socks", "http" -> {
-                val (server, user) = server(settings, "servers")
-                require(stream.optString("network").ifEmpty { "tcp" } in setOf("tcp", "raw")) { "unsupported transport" }
-                val tls = when (security(stream)) {
-                    "none" -> false
-                    "tls" -> true
-                    else -> error("unsupported security")
-                }
-                if (protocol == "socks") {
-                    require(!tls) { "unsupported SOCKS over TLS" }
-                    SOCKSBean().apply {
-                        this.protocol = SOCKSBean.PROTOCOL_SOCKS5
-                        username = user.optString("user")
-                        password = user.optString("pass")
-                    }
-                } else {
-                    HttpBean().apply {
-                        username = user.optString("user")
-                        password = user.optString("pass")
-                        if (tls) {
-                            val tlsSettings = stream.optJSONObject("tlsSettings") ?: JSONObject()
-                            // As for the other protocols, a pinned certificate or a private CA is refused.
-                            require(tlsSettings.strings("pinnedPeerCertSha256").isEmpty()) { "unsupported pinned certificate" }
-                            require((tlsSettings.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
-                            require(tlsSettings.optString("echConfigList").isEmpty()) { "unsupported ECH" }
-                            security = "tls"
-                            sni = tlsSettings.optString("serverName")
-                            allowInsecure = tlsSettings.optBoolean("allowInsecure")
-                        }
-                    }
-                }.apply {
-                    serverAddress = server.text("address")
-                    serverPort = server.port()
-                    this.name = name
-                }
-            }
-
-            else -> error("unsupported protocol")
+        return parseProtocol(outbound, settings, stream, name).also {
+            if (fragmented) report.dropped += ImportPreview.Section.FRAGMENT
         }
+    }
+
+    private fun parseProtocol(outbound: JSONObject, settings: JSONObject, stream: JSONObject, name: String): AbstractBean = when (val protocol = outbound.getString("protocol")) {
+        "vless", "vmess" -> {
+            val (server, user) = server(settings, "vnext")
+            val link = address(server).username(user.text("id"))
+            if (protocol == "vless") {
+                link.param("encryption", user.optString("encryption").ifEmpty { "none" }).param("flow", user.optString("flow"))
+            } else {
+                // Only AEAD VMess; Xray-core no longer accepts a nonzero alterId.
+                require(user.optInt("alterId") == 0) { "unsupported VMess alterId" }
+                link.param("encryption", user.optString("security").ifEmpty { "auto" })
+            }
+            applyStream(link, stream)
+            parseV2Ray(link.fragment(name).build().link(protocol))
+        }
+
+        "trojan" -> {
+            val (server, user) = server(settings, "servers")
+            val link = address(server).username(user.text("password"))
+            applyStream(link, stream)
+            parseTrojan(link.fragment(name).build().link("trojan"))
+        }
+
+        "shadowsocks" -> shadowsocks(settings, stream, name)
+
+        "hysteria" -> hysteria(settings, stream, name)
+
+        "wireguard" -> wireGuard(settings, name)
+
+        "socks", "http" -> {
+            val (server, user) = server(settings, "servers")
+            require(stream.optString("network").ifEmpty { "tcp" } in setOf("tcp", "raw")) { "unsupported transport" }
+            val tls = when (security(stream)) {
+                "none" -> false
+                "tls" -> true
+                else -> error("unsupported security")
+            }
+            if (protocol == "socks") {
+                require(!tls) { "unsupported SOCKS over TLS" }
+                SOCKSBean().apply {
+                    this.protocol = SOCKSBean.PROTOCOL_SOCKS5
+                    username = user.optString("user")
+                    password = user.optString("pass")
+                }
+            } else {
+                HttpBean().apply {
+                    username = user.optString("user")
+                    password = user.optString("pass")
+                    if (tls) {
+                        val tlsSettings = stream.optJSONObject("tlsSettings") ?: JSONObject()
+                        require(tlsSettings.optString("echConfigList").isEmpty()) { "unsupported ECH" }
+                        security = "tls"
+                        sni = tlsSettings.optString("serverName")
+                        allowInsecure = tlsSettings.optBoolean("allowInsecure")
+                    }
+                }
+            }.apply {
+                serverAddress = server.text("address")
+                serverPort = server.port()
+                this.name = name
+            }
+        }
+
+        else -> error("unsupported protocol")
     }
 
     /**
@@ -179,7 +190,7 @@ internal object XrayOutbound {
             }
 
             "xhttp" -> {
-                val xhttp = stream.optJSONObject("xhttpSettings") ?: JSONObject()
+                val xhttp = stream.optJSONObject("xhttpSettings") ?: stream.optJSONObject("splithttpSettings") ?: JSONObject()
                 link.param("path", xhttp.optString("path"))
                 link.param("host", xhttp.optString("host"))
                 link.param("mode", xhttp.optString("mode"))
@@ -215,10 +226,6 @@ internal object XrayOutbound {
                 link.param("fp", tls.optString("fingerprint"))
                 if (tls.optBoolean("allowInsecure")) link.param("allowInsecure", "1")
                 link.param("ech", tls.optString("echConfigList"))
-                // The link parsers refuse a pinned certificate and checked names.
-                link.param("pcs", tls.strings("pinnedPeerCertSha256").joinToString(","))
-                link.param("vcn", tls.strings("verifyPeerCertInNames").joinToString(","))
-                require((tls.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
             }
 
             "reality" -> {
@@ -251,6 +258,8 @@ internal object XrayOutbound {
             val host = request.optJSONObject("headers")?.strings("Host")?.firstOrNull()
             link.param("plugin", listOfNotNull("obfs-local", "obfs=http", host?.let { "obfs-host=$it" }).joinToString(";"))
         } else {
+            // The plugin has no REALITY; the link parser would build such a node without it.
+            require(security(stream) in setOf("none", "tls")) { "unsupported shadowsocks security" }
             applyStream(link, stream)
         }
         return parseShadowsocks(link.fragment(name).build().link("ss"))
@@ -268,8 +277,6 @@ internal object XrayOutbound {
             .param("sni", tls.optString("serverName"))
             .param("alpn", tls.strings("alpn").joinToString(","))
             .param("ech", tls.optString("echConfigList"))
-            // The link parser refuses a pinned certificate.
-            .param("pinSHA256", tls.strings("pinnedPeerCertSha256").joinToString(","))
         if (tls.optBoolean("allowInsecure")) link.param("insecure", "1")
         var hopInterval: Int? = null
         val masks = stream.optJSONObject("finalmask")
