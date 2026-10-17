@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_enable_confirmation">Запустить VPN или прокси?</string>
+    <string name="shortcut_disable_confirmation">Остановить VPN или прокси?</string>
+    <string name="shortcut_toggle_confirmation">Разрешить этому ярлыку запускать, останавливать и переключать VPN или прокси?</string>
+</resources>
