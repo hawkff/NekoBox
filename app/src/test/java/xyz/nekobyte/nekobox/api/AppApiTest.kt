@@ -367,6 +367,20 @@ class AppApiTest {
     }
 
     @Test
+    fun apiSavesFollowTheWireGuardBoundsOfImportsAndTheEditor() {
+        val group = group()
+        val key = java.util.Base64.getEncoder().encodeToString(ByteArray(32) { 1 })
+        val configuration = params(
+            "name" to "awg", "serverAddress" to "192.0.2.1", "serverPort" to 51820, "localAddress" to "10.7.0.2/32",
+            "privateKey" to key, "peerPublicKey" to key, "jc" to 4, "jmin" to 40, "jmax" to 70,
+        )
+        val id = objectResult("profiles.create", params("groupId" to group, "type" to ProxyEntity.TYPE_AWG, "configuration" to configuration)).getLong("id")
+        error("invalid_parameters", "profiles.create", params("groupId" to group, "type" to ProxyEntity.TYPE_AWG, "configuration" to JSONObject(configuration.toString()).put("jc", 129)))
+        error("invalid_parameters", "profiles.update", params("id" to id, "configuration" to params("jmin" to 200)))
+        assertEquals(40, objectResult("profiles.get", params("id" to id, "includeSecrets" to true)).getJSONObject("configuration").getInt("jmin"))
+    }
+
+    @Test
     fun permissionsRemainReadableWithoutARunningVpn() {
         val permissions = objectResult("permissions.get")
         assertEquals(35, permissions.getInt("androidSdk"))
