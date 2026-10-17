@@ -11,24 +11,33 @@ import xyz.nekobyte.nekobox.utils.listByLineOrComma
 internal const val AMNEZIAWG_MAX_JUNK_PACKETS = 128
 internal const val AMNEZIAWG_MAX_PACKET_SIZE = 65507
 
-private val SIGNATURE_TAG = Regex("<([^>]*)>")
 private val SPACES = Regex("\\s+")
 
-/** Adds up an I1-I5 tag chain as the device sizes the packet; it takes the lengths as given, and a negative one crashes it. */
-internal fun amneziaSignatureFits(spec: String): Boolean {
+/**
+ * Whether the device builds the I1-I5 tag chain [spec]: it parses the tags as the AmneziaWG devices of the core
+ * and the Tailscale fork do, and adds up the packet size. The device takes lengths as given, and a negative one
+ * crashes it. d and ds carry the payload, which these packets do not have.
+ */
+internal fun amneziaSignatureValid(spec: String): Boolean {
     var size = 0
-    for (tag in SIGNATURE_TAG.findAll(spec)) {
-        val fields = tag.groupValues[1].trim().split(SPACES)
+    var rest = spec
+    while (true) {
+        val start = rest.indexOf('<')
+        if (start < 0) return true
+        val end = rest.indexOf('>', start)
+        if (end < 0) return false
+        val fields = rest.substring(start + 1, end).split(SPACES).filter { it.isNotEmpty() }
+        rest = rest.substring(end + 1)
         val argument = fields.getOrElse(1) { "" }
-        size += when (fields[0]) {
-            "b" -> argument.removePrefix("0x").length / 2
+        size += when (fields.firstOrNull()) {
+            "b" -> argument.removePrefix("0x").takeIf { hex -> hex.isNotEmpty() && hex.length % 2 == 0 && hex.all { it in '0'..'9' || it.lowercaseChar() in 'a'..'f' } }?.let { it.length / 2 } ?: return false
             "t" -> 4
             "r", "rc", "rd", "dz" -> argument.toIntOrNull()?.takeIf { it in 0..AMNEZIAWG_MAX_PACKET_SIZE } ?: return false
-            else -> 0
+            "d", "ds" -> 0
+            else -> return false
         }
         if (size > AMNEZIAWG_MAX_PACKET_SIZE) return false
     }
-    return true
 }
 
 fun buildSingBoxOutboundAmneziaWGBean(bean: AmneziaWGBean): SingBoxOptions.Outbound_AmneziaWGOptions = SingBoxOptions.Outbound_AmneziaWGOptions().apply {

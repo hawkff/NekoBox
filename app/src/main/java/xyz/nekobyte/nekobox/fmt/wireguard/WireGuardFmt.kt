@@ -9,7 +9,7 @@ import xyz.nekobyte.nekobox.fmt.KryoConverters
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_JUNK_PACKETS
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_PACKET_SIZE
 import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
-import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureFits
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureValid
 import xyz.nekobyte.nekobox.fmt.dnsServer
 import xyz.nekobyte.nekobox.fmt.parseHostsAddress
 import xyz.nekobyte.nekobox.fmt.parseHostsDomain
@@ -310,7 +310,8 @@ private fun AmneziaWGBean.checkAmneziaWGDevice(name: String, peers: List<SingBox
         require(listOf(s1, s2, s3, s4).all { (it ?: 0) >= 12 }) { string(R.string.amneziawg_header_protection_padding, name) }
     }
     // The device builds junk and I1-I5 packets from the values as given: too many junk packets crash it, and
-    // Jmin above Jmax or a negative length makes it crash or allocate without bound. The core refuses the same.
+    // Jmin above Jmax or a negative length makes it crash or allocate without bound. The core refuses the same,
+    // and the device refuses tags it cannot parse.
     val junkPackets = jc ?: 0
     require(junkPackets in 0..AMNEZIAWG_MAX_JUNK_PACKETS) { string(R.string.amneziawg_junk_count, name, AMNEZIAWG_MAX_JUNK_PACKETS) }
     if (junkPackets > 0) {
@@ -318,7 +319,7 @@ private fun AmneziaWGBean.checkAmneziaWGDevice(name: String, peers: List<SingBox
         require((jmin ?: 0) in 0..maxSize && maxSize <= AMNEZIAWG_MAX_PACKET_SIZE) { string(R.string.amneziawg_junk_size, name, AMNEZIAWG_MAX_PACKET_SIZE) }
     }
     listOf(i1, i2, i3, i4, i5).forEachIndexed { index, spec ->
-        require(spec.isNullOrEmpty() || amneziaSignatureFits(spec)) { string(R.string.amneziawg_signature_size, name, index + 1, AMNEZIAWG_MAX_PACKET_SIZE) }
+        require(spec.isNullOrEmpty() || amneziaSignatureValid(spec)) { string(R.string.amneziawg_signature_invalid, name, index + 1, AMNEZIAWG_MAX_PACKET_SIZE) }
     }
     val obfuscated = listOf(jc, jmin, jmax, s1, s2, s3, s4).any { (it ?: 0) != 0 } ||
         listOf(

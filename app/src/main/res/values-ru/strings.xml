@@ -950,6 +950,6 @@
     <string name="amneziawg_reserved_obfuscation">%1$s: зарезервированные байты нельзя сочетать с обфускацией AmneziaWG</string>
     <string name="amneziawg_junk_count">%1$s: Jc должен быть от 0 до %2$d</string>
     <string name="amneziawg_junk_size">%1$s: при мусорных пакетах Jmin не должен превышать Jmax, а Jmax должен быть не больше %2$d байт</string>
-    <string name="amneziawg_signature_size">%1$s: в I%2$d нужны целые длины, а пакет должен быть не больше %3$d байт</string>
+    <string name="amneziawg_signature_invalid">%1$s: в I%2$d нужны известные теги с правильными значениями, а пакет должен быть не больше %3$d байт</string>
     <string name="amneziawg_range_hint">Число или диапазон min-max. Должно совпадать с сервером.</string>
 </resources>

@@ -5,7 +5,7 @@ import org.json.JSONObject
 import xyz.nekobyte.nekobox.SingBoxOptions
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_JUNK_PACKETS
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_PACKET_SIZE
-import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureFits
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureValid
 
 /**
  * The AmneziaWG settings of a Tailscale node, in the JSON that `tailscale awg get` prints on
@@ -64,7 +64,7 @@ internal object TailscaleAmneziaWG {
 
                 in SIGNATURES -> (value as? String ?: error("$key is not text")).takeIf { it.isNotEmpty() }?.let {
                     require('\n' !in it && '\r' !in it) { "$key has a line break" }
-                    require(amneziaSignatureFits(it)) { "$key needs whole-number lengths and at most $AMNEZIAWG_MAX_PACKET_SIZE bytes" }
+                    require(amneziaSignatureValid(it)) { "$key needs known tags with valid values and at most $AMNEZIAWG_MAX_PACKET_SIZE bytes" }
                     SIGNATURES.getValue(key)(options, it)
                     set = true
                 }
