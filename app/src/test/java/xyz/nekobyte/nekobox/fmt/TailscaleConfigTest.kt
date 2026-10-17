@@ -166,6 +166,9 @@ class TailscaleConfigTest {
             JSONObject(profile.toString()).put("Transport", "quic"),
             JSONObject(profile.toString()).put("H1", "800000-100000"),
             JSONObject(profile.toString()).put("I2", "<r 4>\nprivate_key=00"),
+            // The device would crash building these packets or allocate without bound.
+            JSONObject(profile.toString()).put("I1", "<b 0xc7><r -5>"),
+            JSONObject(profile.toString()).put("I3", "<rc 40000><rd 40000>"),
             JSONObject(profile.toString()).put("HeaderProtectionKey", "short"),
             // A header left at its WireGuard default of 2 would overlap H1.
             JSONObject().put("H1", 2),

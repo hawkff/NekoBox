@@ -61,6 +61,7 @@ internal object TailscaleAmneziaWG {
 
                 in SIGNATURES -> (value as? String ?: error("$key is not text")).takeIf { it.isNotEmpty() }?.let {
                     require('\n' !in it && '\r' !in it) { "$key has a line break" }
+                    require(signatureFits(it)) { "$key needs whole-number lengths and at most $MAX_SIGNATURE_SIZE bytes" }
                     SIGNATURES.getValue(key)(options, it)
                     set = true
                 }
@@ -97,6 +98,28 @@ internal object TailscaleAmneziaWG {
             }
         }
         return options
+    }
+
+    // The device sends each I1-I5 packet as one UDP datagram over IPv4.
+    private const val MAX_SIGNATURE_SIZE = 65507
+    private val TAG = Regex("<([^>]*)>")
+    private val SPACES = Regex("\\s+")
+
+    /** Adds up the tag lengths as the device sizes the packet; it takes them as given, and a negative one crashes it. */
+    private fun signatureFits(spec: String): Boolean {
+        var size = 0
+        for (tag in TAG.findAll(spec)) {
+            val fields = tag.groupValues[1].trim().split(SPACES)
+            val argument = fields.getOrElse(1) { "" }
+            size += when (fields[0]) {
+                "b" -> argument.removePrefix("0x").length / 2
+                "t" -> 4
+                "r", "rc", "rd", "dz" -> argument.toIntOrNull()?.takeIf { it in 0..MAX_SIGNATURE_SIZE } ?: return false
+                else -> 0
+            }
+            if (size > MAX_SIGNATURE_SIZE) return false
+        }
+        return true
     }
 
     private fun integer(key: String, value: Any): Int {
