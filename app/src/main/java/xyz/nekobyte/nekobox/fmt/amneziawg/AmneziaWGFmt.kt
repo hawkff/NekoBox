@@ -42,4 +42,14 @@ fun buildSingBoxOutboundAmneziaWGBean(bean: AmneziaWGBean): SingBoxOptions.Outbo
     if (bean.i3!!.isNotBlank()) i3 = bean.i3
     if (bean.i4!!.isNotBlank()) i4 = bean.i4
     if (bean.i5!!.isNotBlank()) i5 = bean.i5
+    // AmneziaWG 3.1; blank values keep the device defaults.
+    header_protection_key = bean.headerProtectionKey?.takeIf { it.isNotBlank() }
+    content_padding_addition = bean.contentPaddingAddition?.takeIf { it.isNotBlank() }
+    rekey_after_time = bean.rekeyAfterTime?.takeIf { it.isNotBlank() }
+    rekey_timeout = bean.rekeyTimeout?.takeIf { it.isNotBlank() }
+    reject_after_time = bean.rejectAfterTime?.takeIf { it.isNotBlank() }
+    keepalive_timeout = bean.keepaliveTimeout?.takeIf { it.isNotBlank() }
+    max_handshake_attempts = bean.maxHandshakeAttempts?.takeIf { it.isNotBlank() }
+    random_trailers = bean.randomTrailers?.takeIf { it }
+    disable_cookies = bean.disableCookies?.takeIf { it }
 }

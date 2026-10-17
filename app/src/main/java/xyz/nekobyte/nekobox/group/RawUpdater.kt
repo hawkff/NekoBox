@@ -1411,7 +1411,8 @@ object RawUpdater : GroupUpdater() {
                                 // public-key and allowed-ips, and the top-level reserved and
                                 // persistent-keepalive apply to each peer. A node without a list has
                                 // one peer, which carries all traffic unless allowed-ips narrows it.
-                                require(proxy.clashOption("amnezia-wg-option") == null) { "unsupported AmneziaWG options" }
+                                // AmneziaWG is a WireGuard node with amnezia-wg-option.
+                                val amneziaOptions = proxy.clashOption("amnezia-wg-option")?.let { it as? Map<*, *> ?: error("invalid AmneziaWG options") }
                                 val keepalive = proxy.clashOption("persistent-keepalive")?.let {
                                     parseKeepalive(it.toString()) ?: error("invalid persistent-keepalive")
                                 } ?: 0
@@ -1468,7 +1469,7 @@ object RawUpdater : GroupUpdater() {
                                     initializeDefaultValues()
                                     checkWireGuardLimits()
                                 }
-                                proxies.add(bean)
+                                proxies.add(amneziaOptions?.let { bean.toAmneziaWG(it) } ?: bean)
                             }
 
                             "hysteria2" -> {
@@ -1790,13 +1791,52 @@ object RawUpdater : GroupUpdater() {
     }.applyDefaultValues()
 
     // AmneziaWG configs are WireGuard configs that also carry obfuscation keys in
-    // the [Interface] section (Jc/Jmin/Jmax, S1-S4, H1-H4, I1-I5).
-    private fun isAmneziaWGConf(iface: IniConfig.Section): Boolean = listOf(
-        "Jc", "Jmin", "Jmax",
-        "S1", "S2", "S3", "S4",
-        "H1", "H2", "H3", "H4",
-        "I1", "I2", "I3", "I4", "I5",
-    ).any { !iface[it].isNullOrBlank() }
+    // the [Interface] section (Jc/Jmin/Jmax, S1-S4, H1-H4, I1-I5 and the 3.1 keys).
+    private fun isAmneziaWGConf(iface: IniConfig.Section): Boolean = AMNEZIAWG_KEYS.any { !iface[it].isNullOrBlank() }
+
+    private val AMNEZIAWG_KEYS = listOf(
+        "Jc", "Jmin", "Jmax", "S1", "S2", "S3", "S4", "H1", "H2", "H3", "H4", "I1", "I2", "I3", "I4", "I5",
+        "HeaderProtectionKey", "ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout", "RejectAfterTime",
+        "KeepaliveTimeout", "MaxHandshakeAttempts", "RandomTrailers", "DisableCookies",
+    )
+
+    /** Mihomo's amnezia-wg-option name for a .conf key: HeaderProtectionKey is header-protection-key. */
+    private fun clashAmneziaKey(confKey: String) = confKey.replace(Regex("(?<=[a-z0-9])(?=[A-Z])"), "-").lowercase()
+
+    /** The WireGuard node as an AmneziaWG profile with these amnezia-wg-option values. */
+    private fun WireGuardBean.toAmneziaWG(options: Map<*, *>): AmneziaWGBean {
+        // The protocol version follows from the keys present. Anything else, such as AmneziaWG 1.5
+        // timed junk (j1-j3, itime), would be lost.
+        val unknown = options.keys.map { it.toString() } - AMNEZIAWG_KEYS.map(::clashAmneziaKey).toSet() - "version"
+        require(unknown.isEmpty()) { "unsupported AmneziaWG option" }
+        val wireGuard = this
+        return AmneziaWGBean().applyDefaultValues().apply {
+            name = wireGuard.name
+            serverAddress = wireGuard.serverAddress
+            serverPort = wireGuard.serverPort
+            localAddress = wireGuard.localAddress
+            privateKey = wireGuard.privateKey
+            peerPublicKey = wireGuard.peerPublicKey
+            peerPreSharedKey = wireGuard.peerPreSharedKey
+            mtu = wireGuard.mtu
+            reserved = wireGuard.reserved
+            allowedIPs = wireGuard.allowedIPs
+            persistentKeepalive = wireGuard.persistentKeepalive
+            extraPeers = wireGuard.extraPeers
+            importedDnsServers = wireGuard.importedDnsServers
+            importedDnsDomains = wireGuard.importedDnsDomains
+            serverPeerPosition = wireGuard.serverPeerPosition
+            readObfuscation { options[clashAmneziaKey(it)]?.toString() }
+            checkWireGuardLimits()
+        }
+    }
+
+    /** wg-quick's on/off, also true/false and 1/0. */
+    private fun confSwitch(value: String?): Boolean = when (value?.trim()?.lowercase()) {
+        null, "", "off", "false", "0" -> false
+        "on", "true", "1" -> true
+        else -> error("Invalid switch value")
+    }
 
     private fun parseAmneziaWG(iface: IniConfig.Section, conf: WireGuardConf) = AmneziaWGBean().applyDefaultValues().apply {
         localAddress = conf.localAddress
@@ -1812,24 +1852,37 @@ object RawUpdater : GroupUpdater() {
         serverPeerPosition = conf.serverPeerPosition
         importedDnsServers = conf.dns.first.joinToString("\n")
         importedDnsDomains = conf.dns.second.joinToString("\n")
-        // AmneziaWG obfuscation parameters.
-        jc = iface["Jc"]?.toIntOrNull() ?: 0
-        jmin = iface["Jmin"]?.toIntOrNull() ?: 0
-        jmax = iface["Jmax"]?.toIntOrNull() ?: 0
-        s1 = iface["S1"]?.toIntOrNull() ?: 0
-        s2 = iface["S2"]?.toIntOrNull() ?: 0
-        s3 = iface["S3"]?.toIntOrNull() ?: 0
-        s4 = iface["S4"]?.toIntOrNull() ?: 0
-        h1 = iface["H1"] ?: ""
-        h2 = iface["H2"] ?: ""
-        h3 = iface["H3"] ?: ""
-        h4 = iface["H4"] ?: ""
-        i1 = iface["I1"] ?: ""
-        i2 = iface["I2"] ?: ""
-        i3 = iface["I3"] ?: ""
-        i4 = iface["I4"] ?: ""
-        i5 = iface["I5"] ?: ""
+        readObfuscation { iface[it] }
     }.applyDefaultValues()
+
+    /** The obfuscation parameters, read by their .conf key names. */
+    private fun AmneziaWGBean.readObfuscation(value: (String) -> String?) {
+        jc = value("Jc")?.toIntOrNull() ?: 0
+        jmin = value("Jmin")?.toIntOrNull() ?: 0
+        jmax = value("Jmax")?.toIntOrNull() ?: 0
+        s1 = value("S1")?.toIntOrNull() ?: 0
+        s2 = value("S2")?.toIntOrNull() ?: 0
+        s3 = value("S3")?.toIntOrNull() ?: 0
+        s4 = value("S4")?.toIntOrNull() ?: 0
+        h1 = value("H1") ?: ""
+        h2 = value("H2") ?: ""
+        h3 = value("H3") ?: ""
+        h4 = value("H4") ?: ""
+        i1 = value("I1") ?: ""
+        i2 = value("I2") ?: ""
+        i3 = value("I3") ?: ""
+        i4 = value("I4") ?: ""
+        i5 = value("I5") ?: ""
+        headerProtectionKey = value("HeaderProtectionKey")?.trim() ?: ""
+        contentPaddingAddition = value("ContentPaddingAddition")?.trim() ?: ""
+        rekeyAfterTime = value("RekeyAfterTime")?.trim() ?: ""
+        rekeyTimeout = value("RekeyTimeout")?.trim() ?: ""
+        rejectAfterTime = value("RejectAfterTime")?.trim() ?: ""
+        keepaliveTimeout = value("KeepaliveTimeout")?.trim() ?: ""
+        maxHandshakeAttempts = value("MaxHandshakeAttempts")?.trim() ?: ""
+        randomTrailers = confSwitch(value("RandomTrailers"))
+        disableCookies = confSwitch(value("DisableCookies"))
+    }
 
     /** Mihomo xhttp-opts string options, kept as sing-box XHTTP extra fields. */
     private val CLASH_XHTTP_STRING_KEYS = listOf(

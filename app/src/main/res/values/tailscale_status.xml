@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="tailscale_status_title">Tailscale status</string>
+    <string name="tailscale_add_node">Add Tailscale node</string>
+    <string name="tailscale_node_status">Status</string>
     <string name="tailscale_status_entry">Status, sign-in and peer diagnostics for the saved profile. Unsaved edits are not used.</string>
     <string name="tailscale_status_connecting">Connecting to the service…</string>
     <string name="tailscale_status_stopped">This saved node is not running. Opening this screen does not start it.</string>

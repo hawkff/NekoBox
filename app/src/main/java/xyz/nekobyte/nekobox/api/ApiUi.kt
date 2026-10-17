@@ -23,6 +23,7 @@ internal object ApiUi {
         "profiles" to R.id.nav_configuration,
         "groups" to R.id.nav_group,
         "routes" to R.id.nav_route,
+        "tailscale" to R.id.nav_tailscale,
         "settings" to R.id.nav_settings,
         "connections" to R.id.nav_connections,
         "tools" to R.id.nav_tools,

@@ -53,6 +53,9 @@ abstract class StandardV2RayBean : AbstractBean() {
 
     @JvmField var kcpCwndMultiplier: Int? = null
 
+    // The packet checksum of mKCP before Xray-core v26.2; newer servers send raw segments.
+    @JvmField var kcpLegacy: Boolean? = null
+
     @JvmField var enableECH: Boolean? = null
 
     @JvmField var echConfig: String? = null
@@ -116,10 +119,13 @@ abstract class StandardV2RayBean : AbstractBean() {
         xhttpExtra = xhttpExtra?.takeIf { it.isNotBlank() } ?: ""
         mKcpSeed = mKcpSeed?.takeIf { it.isNotBlank() } ?: ""
         headerType = headerType?.takeIf { it.isNotBlank() } ?: "none"
+        kcpLegacy = kcpLegacy ?: false
     }
 
     override fun serialize(output: ByteBufferOutput) {
-        output.writeInt(10)
+        // Version 11 only for the legacy mKCP flag, so other stored profiles keep their bytes.
+        val version = if (type == "kcp" && kcpLegacy == true) 11 else 10
+        output.writeInt(version)
         super.serialize(output)
         output.writeString(uuid)
         output.writeString(encryption)
@@ -154,6 +160,7 @@ abstract class StandardV2RayBean : AbstractBean() {
                 output.writeInt(kcpMtu ?: 0)
                 output.writeInt(kcpTti ?: 0)
                 output.writeInt(kcpCwndMultiplier ?: 0)
+                if (version >= 11) output.writeBoolean(kcpLegacy == true)
             }
         }
         output.writeString(security)
@@ -224,6 +231,7 @@ abstract class StandardV2RayBean : AbstractBean() {
                     kcpMtu = input.readInt().takeUnless { it == 0 }
                     kcpTti = input.readInt().takeUnless { it == 0 }
                     if (version >= 10) kcpCwndMultiplier = input.readInt().takeUnless { it == 0 }
+                    if (version >= 11) kcpLegacy = input.readBoolean()
                 }
             }
         }

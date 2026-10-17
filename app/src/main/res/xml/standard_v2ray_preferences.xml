@@ -107,6 +107,10 @@
             app:key="kcpTti"
             app:title="@string/kcp_tti"
             app:useSimpleSummaryProvider="true" />
+        <SwitchPreference
+            app:key="kcpLegacy"
+            app:summary="@string/kcp_legacy_sum"
+            app:title="@string/kcp_legacy" />
         <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:entries="@array/transport_layer_encryption_value"
             app:entryValues="@array/transport_layer_encryption_value"

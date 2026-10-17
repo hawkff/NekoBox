@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
@@ -356,6 +357,37 @@ class RawUpdaterParseTest {
         assertEquals("/u", upgrade.path)
         assertEquals("cdn.example", upgrade.host)
         assertEquals(listOf("vmess", "vless", "vless", "vless", "trojan"), ImportPreview.of(parsed).failed)
+    }
+
+    @Test
+    fun clashAmneziaWgOptionsBecomeAnAmneziaWgProfile() = runTest {
+        val key = "yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk="
+        val node = "type: wireguard, server: 192.0.2.1, port: 20083, ip: 10.8.3.2, private-key: '$key', public-key: '$key', dns: [1.1.1.1]"
+        val yaml = """
+            proxies:
+              - {name: awg31, $node, amnezia-wg-option: {jc: 4, jmin: 40, jmax: 70, s1: 50, s2: 90, s3: 20, s4: 16, h1: '1234567', i1: '<r 16>', header-protection-key: '$key', content-padding-addition: 8-24, rekey-after-time: 110-130, random-trailers: true, version: 3}}
+              - {name: plain, $node}
+              - {name: timed-junk, $node, amnezia-wg-option: {jc: 4, j1: '<r 2>', itime: 60}}
+        """.trimIndent()
+        val parsed = RawUpdater.parseImport(yaml)!!
+        assertEquals(listOf("awg31", "plain"), parsed.proxies.map { it.displayName() })
+        assertEquals(listOf("wireguard"), ImportPreview.of(parsed).failed)
+        val awg = parsed.proxies[0] as AmneziaWGBean
+        assertEquals("192.0.2.1", awg.serverAddress)
+        assertEquals(20083, awg.serverPort)
+        assertEquals("10.8.3.2/32", awg.localAddress)
+        assertEquals("1.1.1.1", awg.importedDnsServers)
+        assertEquals(4, awg.jc)
+        assertEquals(16, awg.s4)
+        assertEquals("1234567", awg.h1)
+        assertEquals("<r 16>", awg.i1)
+        assertEquals(key, awg.headerProtectionKey)
+        assertEquals("8-24", awg.contentPaddingAddition)
+        assertEquals("110-130", awg.rekeyAfterTime)
+        assertTrue(awg.randomTrailers!!)
+        assertTrue(parsed.proxies[1] is WireGuardBean)
+        // The device refuses reserved bytes together with obfuscation.
+        assertTrue(RawUpdater.parseRaw("proxies:\n  - {name: reserved, $node, reserved: [1, 2, 3], amnezia-wg-option: {jc: 4}}").isNullOrEmpty())
     }
 
     @Test

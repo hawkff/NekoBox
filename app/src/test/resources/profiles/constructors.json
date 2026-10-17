@@ -139,7 +139,16 @@
       "serverPort": null,
       "name": null,
       "customOutboundJson": null,
-      "customConfigJson": null
+      "customConfigJson": null,
+      "headerProtectionKey": null,
+      "contentPaddingAddition": null,
+      "rekeyAfterTime": null,
+      "rekeyTimeout": null,
+      "rejectAfterTime": null,
+      "keepaliveTimeout": null,
+      "maxHandshakeAttempts": null,
+      "randomTrailers": null,
+      "disableCookies": null
     },
     "defaults": {
       "localAddress": "",
@@ -177,7 +186,16 @@
       "serverPort": 1080,
       "name": "",
       "customOutboundJson": "",
-      "customConfigJson": ""
+      "customConfigJson": "",
+      "headerProtectionKey": "",
+      "contentPaddingAddition": "",
+      "rekeyAfterTime": "",
+      "rekeyTimeout": "",
+      "rejectAfterTime": "",
+      "keepaliveTimeout": "",
+      "maxHandshakeAttempts": "",
+      "randomTrailers": false,
+      "disableCookies": false
     },
     "fields": {
       "localAddress": "java.lang.String",
@@ -217,7 +235,16 @@
       "customOutboundJson": "java.lang.String",
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
-      "finalPort": "int"
+      "finalPort": "int",
+      "headerProtectionKey": "java.lang.String",
+      "contentPaddingAddition": "java.lang.String",
+      "rekeyAfterTime": "java.lang.String",
+      "rekeyTimeout": "java.lang.String",
+      "rejectAfterTime": "java.lang.String",
+      "keepaliveTimeout": "java.lang.String",
+      "maxHandshakeAttempts": "java.lang.String",
+      "randomTrailers": "java.lang.Boolean",
+      "disableCookies": "java.lang.Boolean"
     }
   },
   {
@@ -265,7 +292,8 @@
       "serverPort": null,
       "name": null,
       "customOutboundJson": null,
-      "customConfigJson": null
+      "customConfigJson": null,
+      "kcpLegacy": null
     },
     "defaults": {
       "username": "",
@@ -310,7 +338,8 @@
       "serverPort": 1080,
       "name": "",
       "customOutboundJson": "",
-      "customConfigJson": ""
+      "customConfigJson": "",
+      "kcpLegacy": false
     },
     "fields": {
       "username": "java.lang.String",
@@ -357,7 +386,8 @@
       "customOutboundJson": "java.lang.String",
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
-      "finalPort": "int"
+      "finalPort": "int",
+      "kcpLegacy": "java.lang.Boolean"
     }
   },
   {
@@ -1028,7 +1058,8 @@
       "serverPort": null,
       "name": null,
       "customOutboundJson": null,
-      "customConfigJson": null
+      "customConfigJson": null,
+      "kcpLegacy": null
     },
     "defaults": {
       "password": "",
@@ -1072,7 +1103,8 @@
       "serverPort": 1080,
       "name": "",
       "customOutboundJson": "",
-      "customConfigJson": ""
+      "customConfigJson": "",
+      "kcpLegacy": false
     },
     "fields": {
       "password": "java.lang.String",
@@ -1118,7 +1150,8 @@
       "customOutboundJson": "java.lang.String",
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
-      "finalPort": "int"
+      "finalPort": "int",
+      "kcpLegacy": "java.lang.Boolean"
     }
   },
   {
@@ -1283,7 +1316,8 @@
       "serverPort": null,
       "name": null,
       "customOutboundJson": null,
-      "customConfigJson": null
+      "customConfigJson": null,
+      "kcpLegacy": null
     },
     "defaults": {
       "alterId": 0,
@@ -1327,7 +1361,8 @@
       "serverPort": 1080,
       "name": "",
       "customOutboundJson": "",
-      "customConfigJson": ""
+      "customConfigJson": "",
+      "kcpLegacy": false
     },
     "fields": {
       "alterId": "java.lang.Integer",
@@ -1373,7 +1408,8 @@
       "customOutboundJson": "java.lang.String",
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
-      "finalPort": "int"
+      "finalPort": "int",
+      "kcpLegacy": "java.lang.Boolean"
     }
   },
   {
@@ -1577,7 +1613,8 @@
       "serverPort": null,
       "name": null,
       "customOutboundJson": null,
-      "customConfigJson": null
+      "customConfigJson": null,
+      "kcpLegacy": null
     },
     "defaults": {
       "version": 3,
@@ -1622,7 +1659,8 @@
       "serverPort": 1080,
       "name": "",
       "customOutboundJson": "",
-      "customConfigJson": ""
+      "customConfigJson": "",
+      "kcpLegacy": false
     },
     "fields": {
       "version": "java.lang.Integer",
@@ -1669,7 +1707,8 @@
       "customOutboundJson": "java.lang.String",
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
-      "finalPort": "int"
+      "finalPort": "int",
+      "kcpLegacy": "java.lang.Boolean"
     }
   }
 ]

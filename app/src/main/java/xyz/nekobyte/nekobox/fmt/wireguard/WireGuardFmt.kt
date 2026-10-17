@@ -297,6 +297,23 @@ internal fun AbstractBean.checkWireGuardLimits() {
             string(R.string.wireguard_too_many_dns_entries, name, MAX_WIREGUARD_DNS_ENTRIES)
         }
     }
+    if (this is AmneziaWGBean) checkAmneziaWGDevice(name, peers)
+}
+
+/** Settings the AmneziaWG device refuses when it starts. */
+private fun AmneziaWGBean.checkAmneziaWGDevice(name: String, peers: List<SingBoxOptions.WireGuardPeer>) {
+    // Header protection takes its 12-byte nonce from the junk padding of every packet type.
+    if (!headerProtectionKey.isNullOrBlank()) {
+        require(listOf(s1, s2, s3, s4).all { (it ?: 0) >= 12 }) { string(R.string.amneziawg_header_protection_padding, name) }
+    }
+    val obfuscated = listOf(jc, jmin, jmax, s1, s2, s3, s4).any { (it ?: 0) != 0 } ||
+        listOf(
+            h1, h2, h3, h4, i1, i2, i3, i4, i5, headerProtectionKey, contentPaddingAddition, rekeyAfterTime, rekeyTimeout,
+            rejectAfterTime, keepaliveTimeout, maxHandshakeAttempts,
+        ).any { !it.isNullOrBlank() } ||
+        randomTrailers == true || disableCookies == true
+    val reserved = peers.any { peer -> peer.reserved?.let { Util.b64Decode(it).any { byte -> byte != 0.toByte() } } == true }
+    require(!obfuscated || !reserved) { string(R.string.amneziawg_reserved_obfuscation, name) }
 }
 
 private fun prefixContains(prefix: String, address: String): Boolean {

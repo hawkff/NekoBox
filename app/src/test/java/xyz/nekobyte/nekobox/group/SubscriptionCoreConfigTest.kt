@@ -1,8 +1,10 @@
 package xyz.nekobyte.nekobox.group
 
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,7 +15,9 @@ import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.buildConfig
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStreamSettings
+import xyz.nekobyte.nekobox.ktx.Logs
 import java.io.File
+import java.net.URLEncoder
 
 /**
  * Builds configurations from imported subscription nodes the way the app does. The files written to
@@ -22,6 +26,19 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class SubscriptionCoreConfigTest {
+
+    private lateinit var originalLogSink: (String) -> Unit
+
+    @Before
+    fun setUp() {
+        originalLogSink = Logs.sink
+        Logs.sink = {}
+    }
+
+    @After
+    fun tearDown() {
+        Logs.sink = originalLogSink
+    }
 
     @Test
     fun clashXhttpNodesBuildConfigsWithTheCoreSchemaTypes() = runTest {
@@ -62,5 +79,25 @@ class SubscriptionCoreConfigTest {
 
         val config = ConfigBuilderTestEnv.io { buildConfig(ProxyEntity(id = 1L).putBean(bean), forTest = true).config }
         File("build/generated-core-configs/subscriptions").apply { mkdirs() }.resolve("clash-xhttp.json").writeText(config)
+    }
+
+    @Test
+    fun mkcpAndAmneziaWg31NodesBuildConfigsTheCoreLoads() = runTest {
+        ConfigBuilderTestEnv.reset()
+        val fm = """{"udp":[{"type":"mkcp-legacy","settings":{"header":"","value":""}},{"type":"mkcp-legacy","settings":{"header":"dtls","value":""}}]}"""
+        val key = "yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk="
+        val awg = "jc: 4, jmin: 40, jmax: 70, s1: 50, s2: 90, s3: 20, s4: 16, h1: '1234567', h2: '623456789', h3: '1234567890', h4: '1934567890', " +
+            "header-protection-key: '$key', content-padding-addition: 8-24, rekey-after-time: 110-130, reject-after-time: 170-200, random-trailers: true"
+        val nodes = RawUpdater.parseRaw(
+            "vless://00000000-0000-4000-8000-000000000001@192.0.2.1:20026?type=kcp&security=none&encryption=none&mtu=1350&tti=20&fm=" +
+                URLEncoder.encode(fm, "UTF-8") + "#kcp",
+        )!! + RawUpdater.parseRaw(
+            "proxies:\n  - {name: awg31, type: wireguard, server: 192.0.2.2, port: 20083, ip: 10.8.3.2, private-key: '$key', public-key: '$key', amnezia-wg-option: {$awg}}",
+        )!!
+        assertEquals(listOf("kcp", "awg31"), nodes.map { it.name })
+        for (bean in nodes) {
+            val config = ConfigBuilderTestEnv.io { buildConfig(ProxyEntity(id = 1L).putBean(bean), forTest = true).config }
+            File("build/generated-core-configs/subscriptions").apply { mkdirs() }.resolve("${bean.name}.json").writeText(config)
+        }
     }
 }

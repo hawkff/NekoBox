@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.SingBoxOptions.*
 import xyz.nekobyte.nekobox.database.DataStore
@@ -45,6 +46,7 @@ data class VmessQRCode(
     var ech: String = "",
     var mode: String? = null,
     var extra: JsonElement? = null,
+    var fm: String? = null,
 )
 
 // Xray `echConfigList`: a base64 ECH config list, or a DoH URL (optionally `domain+url`) the
@@ -90,12 +92,75 @@ private fun decodeLinkComponent(value: String) = runCatching { URLDecoder.decode
  */
 internal fun requireSupportedLinkOptions(link: String) {
     val query = link.substringBefore('#').substringAfter('?', "")
-    for (parameter in query.split('&')) {
-        val name = decodeLinkComponent(parameter.substringBefore('='))
-        if (name in UNSUPPORTED_LINK_OPTIONS && decodeLinkComponent(parameter.substringAfter('=', "")).isNotBlank()) {
-            throw UnsupportedShareLinkException("unsupported $name")
+    val parameters = query.split('&').map { decodeLinkComponent(it.substringBefore('=')) to decodeLinkComponent(it.substringAfter('=', "")) }
+    val kcp = parameters.any { (name, value) -> name == "type" && value == "kcp" }
+    for ((name, value) in parameters) {
+        if (name !in UNSUPPORTED_LINK_OPTIONS || value.isBlank()) continue
+        // mKCP's own packet masks are the one Finalmask part the transport carries.
+        if (name == "fm" && kcp && parseKcpFinalMask(value) != null) continue
+        throw UnsupportedShareLinkException("unsupported $name")
+    }
+}
+
+/** The mKCP settings an Xray Finalmask holds: a seed or the legacy checksum, and a packet header. */
+internal class KcpMasks(val seed: String, val headerType: String, val legacy: Boolean)
+
+private val KCP_MASK_HEADERS = mapOf(
+    "dns" to "dns",
+    "dtls" to "dtls",
+    "srtp" to "srtp",
+    "utp" to "utp",
+    "wechat" to "wechat-video",
+    "wireguard" to "wireguard",
+)
+
+/**
+ * Reads a Finalmask that holds only mkcp-legacy masks in the order the core applies them: the
+ * seed's cipher or the legacy checksum first, then a header around it. Returns null for any other
+ * mask, order or DNS query name, which the core cannot reproduce.
+ */
+internal fun parseKcpFinalMask(fm: String): KcpMasks? {
+    val json = runCatching { JSONObject(fm) }.getOrNull() ?: return null
+    if (json.keys().asSequence().any { it != "udp" }) return null
+    val masks = json.optJSONArray("udp") ?: return null
+    var seed = ""
+    var header = ""
+    var legacy = false
+    for (index in 0 until masks.length()) {
+        val mask = masks.optJSONObject(index) ?: return null
+        if (mask.optString("type") != "mkcp-legacy") return null
+        val settings = mask.optJSONObject("settings") ?: JSONObject()
+        val name = settings.optString("header")
+        val value = settings.optString("value")
+        if (name.isEmpty()) {
+            if (header.isNotEmpty() || seed.isNotEmpty() || legacy) return null
+            if (value.isEmpty()) legacy = true else seed = value
+        } else {
+            if (header.isNotEmpty()) return null
+            header = KCP_MASK_HEADERS[name.lowercase()] ?: return null
+            if (header == "dns" && value.isNotEmpty() && value != "www.baidu.com") return null
         }
     }
+    return KcpMasks(seed, header, legacy)
+}
+
+/** The Finalmask for this profile's mKCP settings when its legacy checksum needs one, else null. */
+internal fun StandardV2RayBean.kcpFinalMask(): String? {
+    if (kcpLegacy != true || !mKcpSeed.isNullOrBlank()) return null
+    val masks = JSONArray().put(JSONObject().put("type", "mkcp-legacy").put("settings", JSONObject().put("header", "").put("value", "")))
+    KCP_MASK_HEADERS.entries.firstOrNull { it.value == headerType }?.let { (name, _) ->
+        masks.put(JSONObject().put("type", "mkcp-legacy").put("settings", JSONObject().put("header", name).put("value", "")))
+    }
+    return JSONObject().put("udp", masks).toString()
+}
+
+private fun StandardV2RayBean.applyKcpFinalMask(fm: String?) {
+    if (fm.isNullOrBlank()) return
+    // As in 3x-ui, the masks win over the separate seed and headerType fields.
+    val masks = parseKcpFinalMask(fm) ?: error("unsupported fm")
+    mKcpSeed = masks.seed
+    headerType = masks.headerType.ifEmpty { "none" }
+    kcpLegacy = masks.legacy
 }
 
 fun parseV2Ray(link: String): StandardV2RayBean {
@@ -311,6 +376,7 @@ fun StandardV2RayBean.parseDuckSoft(url: HttpUrl) {
             url.queryParameter("cwnd")?.let {
                 kcpCwndMultiplier = it.toIntOrNull()
             }
+            applyKcpFinalMask(url.queryParameter("fm"))
         }
 
         "ws" -> {
@@ -454,7 +520,9 @@ fun parseV2RayN(link: String): VMessBean {
     val options = runCatching { JSONObject(result) }.getOrNull()
     for (name in UNSUPPORTED_LINK_OPTIONS) {
         val value = options?.takeUnless { it.isNull(name) }?.opt(name)?.toString()
-        if (!value.isNullOrBlank()) throw UnsupportedShareLinkException("unsupported $name")
+        if (value.isNullOrBlank()) continue
+        if (name == "fm" && options.optString("net") == "kcp" && parseKcpFinalMask(value) != null) continue
+        throw UnsupportedShareLinkException("unsupported $name")
     }
     val vmessQRCode = Gson().fromJson(result, VmessQRCode::class.java)
 
@@ -496,6 +564,17 @@ fun parseV2RayN(link: String): VMessBean {
             if (headerType == "http") {
                 bean.type = "http"
             }
+        }
+
+        // 3x-ui writes the mKCP header as type and the seed as path.
+        "kcp" -> {
+            if (!headerType.isNullOrBlank()) {
+                if (headerType !in supportedKcpHeaderType) throw UnsupportedShareLinkException("unsupported headerType")
+                bean.headerType = headerType
+            }
+            bean.mKcpSeed = bean.path
+            bean.path = ""
+            bean.applyKcpFinalMask(options?.takeUnless { it.isNull("fm") }?.optString("fm"))
         }
     }
     // Gson stores an explicit JSON null despite the declared type.
@@ -576,6 +655,12 @@ fun VMessBean.toV2rayN(): String {
                     type = "http"
                     net = "tcp"
                 }
+            }
+
+            "kcp" -> {
+                if (bean.headerType!!.isNotBlank() && bean.headerType != "none") type = bean.headerType!!
+                path = bean.mKcpSeed!!
+                fm = bean.kcpFinalMask()
             }
         }
 
@@ -659,6 +744,7 @@ fun StandardV2RayBean.toUriVMessVLESSTrojan(isTrojan: Boolean): String {
             if (kcpCwndMultiplier != null && kcpCwndMultiplier!! > 0) {
                 builder.addQueryParameter("cwnd", kcpCwndMultiplier.toString())
             }
+            kcpFinalMask()?.let { builder.addQueryParameter("fm", it) }
         }
 
         "xhttp", "splithttp" -> {
@@ -777,6 +863,9 @@ fun buildSingBoxOutboundStreamSettings(bean: StandardV2RayBean): V2RayTransportO
                 header_type = bean.headerType.takeIf { it!!.isNotBlank() } ?: "none"
                 if (bean.mKcpSeed!!.isNotBlank()) {
                     seed = bean.mKcpSeed
+                } else if (bean.kcpLegacy == true) {
+                    // A seed replaces the checksum, so share links carry only one of them.
+                    legacy = true
                 }
             }
         }

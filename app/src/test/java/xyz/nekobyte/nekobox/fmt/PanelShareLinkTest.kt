@@ -179,6 +179,123 @@ class PanelShareLinkTest {
     }
 
     @Test
+    fun kcpLinks_followXrayMasks() = runTest {
+        suspend fun vless(query: String) = parseProxies("vless://$UUID@node.example:20015?type=kcp&security=none&encryption=none&$query#kcp").single() as VMessBean
+        fun fm(vararg masks: Pair<String, String>) = encode(
+            JSONObject().put(
+                "udp",
+                org.json.JSONArray(masks.map { (header, value) -> JSONObject().put("type", "mkcp-legacy").put("settings", JSONObject().put("header", header).put("value", value)) }),
+            ).toString(),
+        )
+
+        // Without masks the core sends raw segments, as Xray-core v26.2 and later expect.
+        val raw = vless("mtu=1350&tti=20")
+        assertFalse(raw.kcpLegacy!!)
+        assertEquals("", raw.mKcpSeed)
+        val seeded = vless("seed=s&headerType=wechat-video")
+        assertEquals("s", seeded.mKcpSeed)
+        assertEquals("wechat-video", seeded.headerType)
+
+        // The masks in fm win over seed and headerType, as in 3x-ui.
+        val legacy = vless("headerType=srtp&fm=" + fm("" to "", "dtls" to ""))
+        assertTrue(legacy.kcpLegacy!!)
+        assertEquals("dtls", legacy.headerType)
+        val masked = vless("fm=" + fm("" to "k", "wechat" to ""))
+        assertEquals("k", masked.mKcpSeed)
+        assertEquals("wechat-video", masked.headerType)
+        assertFalse(masked.kcpLegacy!!)
+
+        // Masks the core cannot apply, or fm on another transport, refuse the link.
+        for (query in listOf(
+            "fm=" + fm("dtls" to "", "" to "k"),
+            "fm=" + fm("" to "", "" to "k"),
+            "fm=" + fm("dns" to "other.example"),
+            "fm=" + encode("""{"udp":[{"type":"noise"}]}"""),
+        )) {
+            assertTrue(query, parseProxies("vless://$UUID@node.example:20015?type=kcp&security=none&$query").isEmpty())
+        }
+        assertTrue(parseProxies("vless://$UUID@node.example:443?type=tcp&security=none&fm=" + fm("" to "")).isEmpty())
+
+        // The legacy checksum survives a share and an import; the builder passes it to the core.
+        val again = parseProxies(legacy.toUriVMessVLESSTrojan(false)).single() as VMessBean
+        assertTrue(again.kcpLegacy!!)
+        assertEquals("dtls", again.headerType)
+        val transport = xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStreamSettings(legacy.applyDefaultValues()) as xyz.nekobyte.nekobox.SingBoxOptions.V2RayTransportOptions_KCPOptions
+        assertEquals(true, transport.legacy)
+        assertEquals("dtls", transport.header_type)
+        assertNull((xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStreamSettings(raw.applyDefaultValues()) as xyz.nekobyte.nekobox.SingBoxOptions.V2RayTransportOptions_KCPOptions).legacy)
+        // A seed replaces the checksum, as in Xray.
+        masked.kcpLegacy = true
+        val seededTransport = xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStreamSettings(masked.applyDefaultValues()) as xyz.nekobyte.nekobox.SingBoxOptions.V2RayTransportOptions_KCPOptions
+        assertEquals("k", seededTransport.seed)
+        assertNull(seededTransport.legacy)
+
+        // Only a legacy mKCP profile writes the newer bytes; other profiles keep theirs.
+        assertEquals(10, KryoConverters.serialize(raw.applyDefaultValues())[0].toInt())
+        assertEquals(11, KryoConverters.serialize(legacy.applyDefaultValues())[0].toInt())
+        assertTrue(KryoConverters.deserialize(VMessBean(), KryoConverters.serialize(legacy)).kcpLegacy!!)
+    }
+
+    @Test
+    fun vmessKcp_readsHeaderAndSeedFromTypeAndPath() {
+        fun vmess(json: JSONObject) = parseV2RayN("vmess://" + Base64.getEncoder().encodeToString(json.toString().toByteArray())).applyDefaultValues()
+        val json = JSONObject().put("v", "2").put("ps", "kcp").put("add", "node.example").put("port", 20038).put("id", UUID)
+            .put("net", "kcp").put("type", "utp").put("path", "seed-1").put("tls", "none")
+        val bean = vmess(json)
+        assertEquals("utp", bean.headerType)
+        assertEquals("seed-1", bean.mKcpSeed)
+        assertEquals("", bean.path)
+        val legacy = vmess(json.put("type", "none").put("path", "").put("fm", """{"udp":[{"type":"mkcp-legacy","settings":{"header":"","value":""}}]}"""))
+        assertTrue(legacy.kcpLegacy!!)
+        assertTrue(parseV2RayN((legacy as VMessBean).toUriVMessVLESSTrojan(false)).kcpLegacy!!)
+    }
+
+    @Test
+    fun amneziaWg31Conf_keepsTheNewKeys() = runTest {
+        val conf = """
+            [Interface]
+            PrivateKey = $PRIVATE_KEY
+            Address = 10.8.3.2/32
+            Jc = 4
+            S1 = 15
+            S2 = 18
+            S3 = 20
+            S4 = 16
+            H1 = 1234567
+            HeaderProtectionKey = $PRESHARED_KEY
+            ContentPaddingAddition = 8-24
+            RekeyAfterTime = 110-130
+            RejectAfterTime = 170-200
+            RandomTrailers = on
+
+            [Peer]
+            PublicKey = $PUBLIC_KEY
+            AllowedIPs = 0.0.0.0/0
+            Endpoint = 198.51.100.7:20083
+        """.trimIndent()
+        fun link(text: String) = "vpn://" + Base64.getUrlEncoder().withoutPadding().encodeToString(text.toByteArray())
+        val bean = parseProxies(link(conf)).single() as AmneziaWGBean
+        assertEquals(PRESHARED_KEY, bean.headerProtectionKey)
+        // The device needs S1 to S4 of at least 12 bytes for the header protection nonce.
+        assertTrue(parseProxies(link(conf.replace("S1 = 15\n", ""))).isEmpty())
+        assertEquals("8-24", bean.contentPaddingAddition)
+        assertEquals("110-130", bean.rekeyAfterTime)
+        assertEquals("170-200", bean.rejectAfterTime)
+        assertTrue(bean.randomTrailers!!)
+        assertFalse(bean.disableCookies!!)
+
+        val copy = KryoConverters.deserialize(AmneziaWGBean(), KryoConverters.serialize(bean))
+        assertEquals(2, KryoConverters.serialize(bean)[0].toInt())
+        assertEquals(PRESHARED_KEY, copy.headerProtectionKey)
+        assertTrue(copy.randomTrailers!!)
+        val outbound = xyz.nekobyte.nekobox.fmt.amneziawg.buildSingBoxOutboundAmneziaWGBean(bean)
+        assertEquals(PRESHARED_KEY, outbound.header_protection_key)
+        assertEquals("110-130", outbound.rekey_after_time)
+        assertEquals(true, outbound.random_trailers)
+        assertNull(outbound.disable_cookies)
+    }
+
+    @Test
     fun subscriptionUserinfo_zeroExpiryMeansUnlimited() {
         val bean = SubscriptionBean().applyDefaultValues()
         bean.subscriptionUserinfo = "upload=1; download=2; total=0; expire=0"
