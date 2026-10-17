@@ -105,9 +105,10 @@ class ImportPreviewTest {
         """.trimIndent()
         val preview = preview(text)
         assertEquals(2, preview.acceptedCount)
-        // naive and tor are not imported; a Shadowsocks object without an endpoint, an Xray outbound and a number are not nodes this app reads.
+        // naive and tor are not imported; a Shadowsocks object without an endpoint, a VLESS outbound without a server and a number
+        // cannot become nodes.
         assertEquals(5, preview.unparsedCount)
-        assertEquals(setOf("naive", "tor", "Shadowsocks", null), preview.failed.toSet())
+        assertEquals(setOf("naive", "tor", "Shadowsocks", "vless", null), preview.failed.toSet())
     }
 
     @Test
