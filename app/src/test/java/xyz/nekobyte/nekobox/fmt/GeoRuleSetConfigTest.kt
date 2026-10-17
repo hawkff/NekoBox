@@ -15,6 +15,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import java.io.File
+import java.util.Locale
 
 /** The rules the app creates on first start use geosite: and geoip: rule sets that the core must find in the bundled databases. */
 @RunWith(RobolectricTestRunner::class)
@@ -33,10 +34,16 @@ class GeoRuleSetConfigTest {
             ProxyEntity(groupId = ProfileDatabase.groupDao.createGroup(ProxyGroup())).putBean(node).also { it.id = ProfileDatabase.proxyDao.addProxy(it) }
         }
         // Outside China the defaults bypass China, Iran and Russia; all of them are switched on here.
-        ConfigBuilderTestEnv.io {
-            DataStore.rulesFirstCreate = false
-            val rules = runBlocking { ProfileManager.getRules() }
-            ProfileDatabase.rulesDao.updateRules(rules.map { it.copy(enabled = true) })
+        val locale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+        try {
+            ConfigBuilderTestEnv.io {
+                DataStore.rulesFirstCreate = false
+                val rules = runBlocking { ProfileManager.getRules() }
+                ProfileDatabase.rulesDao.updateRules(rules.map { it.copy(enabled = true) })
+            }
+        } finally {
+            Locale.setDefault(locale)
         }
         val config = ConfigBuilderTestEnv.io { buildConfig(profile, forExport = true) }.config
         File("build/generated-core-configs/routing").apply { mkdirs() }.resolve("defaults.json").writeText(config)
@@ -52,6 +59,6 @@ class GeoRuleSetConfigTest {
             "geoip:ru",
         )
         assertEquals(expected.sorted(), paths.keys.sorted())
-        assertEquals(paths.keys, paths.values.toSet())
+        paths.forEach { (tag, path) -> assertEquals(tag, path) }
     }
 }

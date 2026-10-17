@@ -40,7 +40,7 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 		}
 	}
 	externalAssetsPath = unpacked
-	count := 0
+	count, routing := 0, 0
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -49,6 +49,9 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 			return nil
 		}
 		count++
+		if filepath.Base(filepath.Dir(path)) == "routing" {
+			routing++
+		}
 		t.Run(filepath.Base(path), func(t *testing.T) {
 			// Endpoints create their state directories relative to the working directory.
 			t.Chdir(t.TempDir())
@@ -175,6 +178,9 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 	}
 	if count == 0 {
 		t.Fatal("no generated configurations")
+	}
+	if routing == 0 {
+		t.Fatal("no generated routing configurations")
 	}
 	t.Logf("validated %d application configurations", count)
 }
