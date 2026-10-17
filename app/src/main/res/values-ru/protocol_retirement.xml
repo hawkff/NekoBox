@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hysteria1_unsupported">Hysteria 1 (не поддерживается)</string>
+    <string name="hysteria1_retired">Hysteria 1 больше не поддерживается. Сохранённый профиль можно экспортировать. Попросите у провайдера профиль Hysteria 2.</string>
+    <string name="subscription_kept_hysteria1">Оставлены для экспорта профили Hysteria 1, которые больше не поддерживаются: %d.</string>
+</resources>

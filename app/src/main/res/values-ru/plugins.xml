@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_contract_required">Установите плагин, собранный для этой версии NekoBox. Плагины со старым интерфейсом не поддерживаются.</string>
+</resources>

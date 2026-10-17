@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subscription_format">Формат подписки</string>
+    <string name="subscription_format_default">Стандартный NekoBox (предпочитает Clash/Mihomo)</string>
+    <string name="subscription_format_auto">Авто: найти рабочий формат и оставить его</string>
+    <string name="subscription_format_links">Ссылки / Base64</string>
+    <string name="subscription_format_singbox">Исходящие sing-box</string>
+    <string name="subscription_format_note">Запросы формата</string>
+    <string name="subscription_format_summary">Провайдеры выбирают формат по User-Agent. В режиме «Авто» приложение запрашивает формат, из которого получены текущие профили, и пробует другие, только когда он перестаёт работать. Подписка без профилей сначала запрашивает ту же ссылку в каждом формате, не больше трёх раз, и оставляет формат, из которого приложение импортировало больше всего профилей. Сохранённые профили, которым не соответствует другой формат или User-Agent, заменяются только с вашего согласия. Свой User-Agent заменяет запросы формата, и провайдер может их игнорировать. Настройки DNS и группы прокси не импортируются. Правила маршрутизации провайдера становятся профилем маршрутизации, который остаётся выключенным, пока вы не переключитесь на него.</string>
+    <string name="subscription_import_warning_title">Последнее обновление</string>
+    <string name="subscription_import_failed">Импортировано профилей: %1$d. Не удалось импортировать записей: %2$d (%3$s).</string>
+    <string name="subscription_import_unknown_entry">нераспознанные</string>
+    <string name="subscription_import_dropped">Не используется этим приложением: %s.</string>
+    <string name="subscription_kept_referenced">Оставлены профили, которых больше нет у провайдера, но которые выбраны или используются в правилах, цепочках или группах: %d.</string>
+    <string name="subscription_kept_partial">Оставлены профили, которых больше нет у провайдера, потому что часть записей не удалось импортировать: %d.</string>
+    <string name="subscription_served_by_backup">Основная ссылка не сработала, это обновление получено по резервной ссылке.</string>
+    <string name="subscription_routing_off_ignored">Провайдер попросил выключить маршрутизацию. Маршрутизация не изменена.</string>
+    <string name="subscription_routing_rejected">Провайдер прислал профиль маршрутизации, который не удалось прочитать.</string>
+    <string name="subscription_routing_rules_not_imported">Правила маршрутизации из подписки не импортированы: %s.</string>
+    <string name="subscription_representation_raw">исходящие sing-box</string>
+    <string name="subscription_representation_native">ссылки или узлы Clash/Mihomo</string>
+    <string name="subscription_representation_question">Теперь провайдер описывает профили как %2$s, затронуто профилей: %1$d. Если применить обновление, они удалятся, а вместо них появятся новые профили без истории трафика и своих настроек. Профили, которые выбраны или используются в правилах, цепочках или группах, останутся. Применить обновление?</string>
+    <string name="subscription_representation_kept">Теперь провайдер описывает профили как %2$s, затронуто профилей: %1$d. Текущие профили сохранены. Чтобы решить, заменять ли их, обновите эту группу вручную.</string>
+    <string name="subscription_request_changed_question">Это обновление запрошено иначе, чем сохранённые профили (другой формат, User-Agent или источник). Профилей, не совпадающих с его узлами: %1$d. Если применить обновление, эти профили удалятся, а вместо них появятся новые без истории трафика и своих настроек. Профили, которые выбраны или используются в правилах, цепочках или группах, останутся. Применить обновление?</string>
+    <string name="subscription_request_changed_kept">Это обновление запрошено иначе, чем сохранённые профили (другой формат, User-Agent или источник). Профилей, не совпадающих с его узлами: %1$d. Текущие профили сохранены. Чтобы решить, заменять ли их, обновите эту группу вручную.</string>
+    <string name="subscription_peer_layout_question">Это обновление объединяет пиры WireGuard в меньшее число профилей. Если применить его, удалятся профили без соответствия вместе с историей трафика и своими настройками: %1$d. Выбранные профили и профили, которые используются в правилах, цепочках или группах, останутся. Применить обновление?</string>
+    <string name="subscription_peer_layout_kept">Это обновление объединяет пиры WireGuard в меньшее число профилей. Профили без соответствия сохранены: %1$d. Чтобы решить, заменять ли их, обновите эту группу вручную.</string>
+    <string name="subscription_no_compatible_format">В подписке нет совместимых профилей. Запросите ссылки, узлы Clash/Mihomo или исходящие sing-box. Существующие профили сохранены.</string>
+    <string name="subscription_backup_links">Резервные ссылки</string>
+    <string name="subscription_backup_links_summary">Ссылки HTTPS по одной в строке. Приложение пробует их по порядку, если основная ссылка не работает. Не больше %d.</string>
+    <string name="subscription_backup_links_invalid">Укажите не больше %d URL https, по одному в строке.</string>
+    <string name="subscription_offered_link">Провайдер предлагает новую ссылку</string>
+    <string name="subscription_offered_backup_link">Провайдер предлагает резервную ссылку</string>
+    <string name="subscription_offer_message">Использовать %1$s? Обновления будут отправлять на %2$s учётные данные этой подписки и, если это включено, ID устройства. Сохраните группу, чтобы применить.</string>
+    <string name="subscription_offer_accept">Использовать ссылку</string>
+    <string name="routing_profile_not_applied">Профиль маршрутизации «%1$s» импортирован без: %2$s. DNS и другие настройки не изменены, профиль не активирован.</string>
+</resources>
