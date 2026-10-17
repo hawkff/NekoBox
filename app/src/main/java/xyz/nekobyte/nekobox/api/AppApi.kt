@@ -26,9 +26,11 @@ import xyz.nekobyte.nekobox.fmt.hysteria.isHysteria1
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.isUsableChainHop
 import xyz.nekobyte.nekobox.fmt.tailscale.profilesForBackup
+import xyz.nekobyte.nekobox.fmt.wireguard.checkWireGuardLimits
 import xyz.nekobyte.nekobox.group.GroupUpdater
 import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.ktx.readTextBounded
+import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ui.BackupFormatV2
 import xyz.nekobyte.nekobox.ui.BackupRestoreOperations
 import xyz.nekobyte.nekobox.ui.DatabaseBackupRestoreOperations
@@ -843,6 +845,8 @@ internal class AppApi(private val context: Context, private val runtime: ApiRunt
             }
             ids.forEach(::check)
         }
+        // The WireGuard and AmneziaWG bounds that imports and the editor apply, so the API stores nothing they refuse.
+        runCatching { bean.checkWireGuardLimits() }.exceptionOrNull()?.let { reject("invalid_parameters", it.readableMessage) }
         // Exercise the persisted format before accepting a bean, without starting a core.
         KryoConverters.serialize(bean)
     }

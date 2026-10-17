@@ -3,6 +3,9 @@ package xyz.nekobyte.nekobox.fmt.tailscale
 import android.util.Base64
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.SingBoxOptions
+import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_JUNK_PACKETS
+import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_PACKET_SIZE
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureValid
 
 /**
  * The AmneziaWG settings of a Tailscale node, in the JSON that `tailscale awg get` prints on
@@ -61,7 +64,7 @@ internal object TailscaleAmneziaWG {
 
                 in SIGNATURES -> (value as? String ?: error("$key is not text")).takeIf { it.isNotEmpty() }?.let {
                     require('\n' !in it && '\r' !in it) { "$key has a line break" }
-                    require(signatureFits(it)) { "$key needs whole-number lengths and at most $MAX_SIGNATURE_SIZE bytes" }
+                    require(amneziaSignatureValid(it)) { "$key needs known tags with valid values and at most $AMNEZIAWG_MAX_PACKET_SIZE bytes" }
                     SIGNATURES.getValue(key)(options, it)
                     set = true
                 }
@@ -86,9 +89,8 @@ internal object TailscaleAmneziaWG {
             "S1 to S4 must be at least 12 with a header protection key"
         }
         require((options.jmin ?: 0) <= (options.jmax ?: 0)) { "JMin is greater than JMax" }
-        // The device sends at most one batch of 128 junk packets, each one UDP datagram.
-        require((options.jc ?: 0) <= 128) { "JC is greater than 128" }
-        require((options.jmax ?: 0) <= MAX_SIGNATURE_SIZE) { "JMax is larger than $MAX_SIGNATURE_SIZE bytes" }
+        require((options.jc ?: 0) <= AMNEZIAWG_MAX_JUNK_PACKETS) { "JC is greater than $AMNEZIAWG_MAX_JUNK_PACKETS" }
+        require((options.jmax ?: 0) <= AMNEZIAWG_MAX_PACKET_SIZE) { "JMax is larger than $AMNEZIAWG_MAX_PACKET_SIZE bytes" }
         // As the device checks: the paddings fit its packet buffer and the message types stay apart.
         val limits = listOf(options.s1 to 65535 - 148, options.s2 to 65535 - 92, options.s3 to 65535 - 64, options.s4 to 65535 - 40)
         require(limits.all { (value, max) -> (value ?: 0) <= max }) { "S1 to S4 exceed the packet size" }
@@ -101,28 +103,6 @@ internal object TailscaleAmneziaWG {
             }
         }
         return options
-    }
-
-    // The device sends each I1-I5 packet as one UDP datagram over IPv4.
-    private const val MAX_SIGNATURE_SIZE = 65507
-    private val TAG = Regex("<([^>]*)>")
-    private val SPACES = Regex("\\s+")
-
-    /** Adds up the tag lengths as the device sizes the packet; it takes them as given, and a negative one crashes it. */
-    private fun signatureFits(spec: String): Boolean {
-        var size = 0
-        for (tag in TAG.findAll(spec)) {
-            val fields = tag.groupValues[1].trim().split(SPACES)
-            val argument = fields.getOrElse(1) { "" }
-            size += when (fields[0]) {
-                "b" -> argument.removePrefix("0x").length / 2
-                "t" -> 4
-                "r", "rc", "rd", "dz" -> argument.toIntOrNull()?.takeIf { it in 0..MAX_SIGNATURE_SIZE } ?: return false
-                else -> 0
-            }
-            if (size > MAX_SIGNATURE_SIZE) return false
-        }
-        return true
     }
 
     private fun integer(key: String, value: Any): Int {
