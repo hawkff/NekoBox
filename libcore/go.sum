@@ -90,6 +90,10 @@ github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8
 github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
 github.com/hawkff/sing-vmess v0.2.8-mod.3 h1:VTTD+bfT5BvtvfMTb0g08mdLI9mljm4W6kkMmU4Lckc=
 github.com/hawkff/sing-vmess v0.2.8-mod.3/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
+github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261017014144-a62453cd1d3f h1:ZQ5236ElZqCK55c4PJmC4/j3Ih3uf+LPZOIIpESJsZA=
+github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261017014144-a62453cd1d3f/go.mod h1:WLUSOPmTcf7VN9gLCe01qUSIvD+/cKC177neENyZPkI=
+github.com/hawkff/wireguard-go v0.0.8-0.20261017033643-bae70cebfb2d h1:mLtmKmQyJd4FUU7D+NxUCJXGAC/fwAcWH46ZngE3Q9s=
+github.com/hawkff/wireguard-go v0.0.8-0.20261017033643-bae70cebfb2d/go.mod h1:er10sELpmzLXq7S7Pbc1Zsbyapcr+/gxNAHKTo6fzVA=
 github.com/hdevalence/ed25519consensus v0.2.0 h1:37ICyZqdyj0lAZ8P4D1d1id3HqbbG1N3iBb1Tb4rdcU=
 github.com/hdevalence/ed25519consensus v0.2.0/go.mod h1:w3BHWjwJbFU29IRHL1Iqkw3sus+7FctEyM4RqDxYNzo=
 github.com/huin/goupnp v1.3.0 h1:UvLUlWDNpoUdYzb2TCn+MuTWtcjXKSza2n6CBdQ0xXc=
@@ -199,10 +203,6 @@ github.com/sagernet/sing-usbip v0.0.0-20260817040617-28bd42667eca h1:5wA+IE0Fq1C
 github.com/sagernet/sing-usbip v0.0.0-20260817040617-28bd42667eca/go.mod h1:ADAZZU85MnM91XNhd2TdZRTaIbA7RjTZuQ1KCHcUbNg=
 github.com/sagernet/smux v1.5.50-sing-box-mod.1 h1:XkJcivBC9V4wBjiGXIXZ229aZCU1hzcbp6kSkkyQ478=
 github.com/sagernet/smux v1.5.50-sing-box-mod.1/go.mod h1:NjhsCEWedJm7eFLyhuBgIEzwfhRmytrUoiLluxs5Sk8=
-github.com/sagernet/tailscale v1.102.1-sing-box-1.14-mod.5 h1:mGLWVgj2Pl2NlgE1+sEUIDIMB42JdWEPwYmxTnVWg44=
-github.com/sagernet/tailscale v1.102.1-sing-box-1.14-mod.5/go.mod h1:WLUSOPmTcf7VN9gLCe01qUSIvD+/cKC177neENyZPkI=
-github.com/sagernet/wireguard-go v0.0.8-0.20260929150556-6731c7387c81 h1:VsrjoaljEz7jQ1LWbrNyf/scQSQIkVVp7v4nSDrPJ+I=
-github.com/sagernet/wireguard-go v0.0.8-0.20260929150556-6731c7387c81/go.mod h1:er10sELpmzLXq7S7Pbc1Zsbyapcr+/gxNAHKTo6fzVA=
 github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854 h1:6uUiZcDRnZSAegryaUGwPC/Fj13JSHwiTftrXhMmYOc=
 github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854/go.mod h1:LtfoSK3+NG57tvnVEHgcuBW9ujgE8enPSgzgwStwCAA=
 github.com/sirupsen/logrus v1.9.4 h1:TsZE7l11zFCLZnZ+teH4Umoq5BhEIfIzfRDZ1Uzql2w=

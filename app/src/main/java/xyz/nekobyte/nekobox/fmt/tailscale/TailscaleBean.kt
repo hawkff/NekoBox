@@ -32,6 +32,10 @@ class TailscaleBean : AbstractBean() {
     @JvmField
     var onlyTcp443: Boolean? = null
 
+    // The AmneziaWG settings as `tailscale awg get` prints them; empty keeps plain WireGuard.
+    @JvmField
+    var amneziaWG: String? = null
+
     override fun initializeDefaultValues() {
         super.initializeDefaultValues()
         authKey = authKey ?: ""
@@ -41,6 +45,7 @@ class TailscaleBean : AbstractBean() {
         exitNodeAllowLanAccess = exitNodeAllowLanAccess ?: false
         acceptRoutes = acceptRoutes ?: false
         onlyTcp443 = onlyTcp443 ?: false
+        amneziaWG = amneziaWG ?: ""
     }
 
     override fun displayAddress(): String {
@@ -49,7 +54,9 @@ class TailscaleBean : AbstractBean() {
     }
 
     override fun serialize(output: ByteBufferOutput) {
-        output.writeInt(0)
+        // Version 1 only with AmneziaWG settings, so other profiles keep their bytes.
+        val version = if (amneziaWG.isNullOrEmpty()) 0 else 1
+        output.writeInt(version)
         super.serialize(output)
         output.writeString(authKey)
         output.writeString(controlUrl)
@@ -58,6 +65,7 @@ class TailscaleBean : AbstractBean() {
         output.writeBoolean(exitNodeAllowLanAccess!!)
         output.writeBoolean(acceptRoutes!!)
         output.writeBoolean(onlyTcp443!!)
+        if (version >= 1) output.writeString(amneziaWG)
     }
 
     override fun deserialize(input: ByteBufferInput) {
@@ -70,6 +78,7 @@ class TailscaleBean : AbstractBean() {
         exitNodeAllowLanAccess = input.readBoolean()
         acceptRoutes = input.readBoolean()
         onlyTcp443 = input.readBoolean()
+        if (version >= 1) amneziaWG = input.readString()
     }
 
     override fun canICMPing(): Boolean = false

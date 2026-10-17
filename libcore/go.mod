@@ -143,4 +143,9 @@ replace github.com/dyhkwong/sing-juicity => github.com/exclavenetwork/sing-juici
 
 replace github.com/reF1nd/sing-snell => github.com/reF1nd/sing-snell-reF1nd v0.0.8
 
+// AmneziaWG for Tailscale nodes, as in the sing-box fork.
+replace github.com/sagernet/wireguard-go => github.com/hawkff/wireguard-go v0.0.8-0.20261017033643-bae70cebfb2d
+
+replace github.com/sagernet/tailscale => github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261017014144-a62453cd1d3f
+
 tool github.com/sagernet/gomobile/cmd/gobind

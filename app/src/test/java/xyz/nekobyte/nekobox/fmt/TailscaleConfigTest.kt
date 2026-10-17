@@ -127,6 +127,58 @@ class TailscaleConfigTest {
     }
 
     @Test
+    fun amneziaWgProfileFromTailscaleAwgGet() {
+        ConfigBuilderTestEnv.reset()
+        // As `tailscale awg get` prints it: Go field names, ranges as {min, max}, a hex key.
+        val profile = JSONObject()
+            .put("JC", 4).put("JMin", 40).put("JMax", 70).put("S1", 20).put("S2", 30).put("S3", 20).put("S4", 16)
+            .put("H1", JSONObject().put("min", 100000).put("max", 800000)).put("H2", 1000000).put("H3", "10000000-80000000")
+            .put("H4", JSONObject().put("min", 0).put("max", 0))
+            .put("I1", "<b 0xc700000001><r 16>").put("HeaderProtectionKey", "07".repeat(32))
+            .put("ContentPaddingAddition", JSONObject().put("min", 8).put("max", 24)).put("RandomTrailers", true).put("DisableCookies", false)
+        val node = add(node().apply { amneziaWG = profile.toString() })
+        val config = JSONObject(build(node, "normal").config)
+        val awg = config.objects("endpoints").single().getJSONObject("amnezia_wg")
+        assertEquals(4, awg.getInt("jc"))
+        assertEquals(16, awg.getInt("s4"))
+        assertEquals("100000-800000", awg.getString("h1"))
+        assertEquals("1000000", awg.getString("h2"))
+        assertEquals("10000000-80000000", awg.getString("h3"))
+        assertFalse(awg.has("h4"))
+        assertEquals("<b 0xc700000001><r 16>", awg.getString("i1"))
+        assertEquals(android.util.Base64.encodeToString(ByteArray(32) { 7 }, android.util.Base64.NO_WRAP), awg.getString("header_protection_key"))
+        assertEquals("8-24", awg.getString("content_padding_addition"))
+        assertTrue(awg.getBoolean("random_trailers"))
+        assertFalse(awg.has("disable_cookies"))
+        val directory = File("build/generated-core-configs/tailscale-awg").apply { mkdirs() }
+        directory.resolve("awg31.json").writeText(build(node, "test").config)
+
+        // Only nodes with settings use the newer storage version.
+        val bean = node.requireBean() as TailscaleBean
+        assertEquals(1, KryoConverters.serialize(bean)[0].toInt())
+        assertEquals(profile.toString(), KryoConverters.deserialize(TailscaleBean(), KryoConverters.serialize(bean)).amneziaWG)
+        assertEquals(0, KryoConverters.serialize(node().apply { initializeDefaultValues() })[0].toInt())
+        assertFalse(JSONObject(build(add(node()), "normal").config).objects("endpoints").single().has("amnezia_wg"))
+
+        // Settings the device would refuse, or that the app cannot read, refuse the profile.
+        for (bad in listOf(
+            JSONObject(profile.toString()).put("S1", 8),
+            JSONObject(profile.toString()).put("Transport", "quic"),
+            JSONObject(profile.toString()).put("H1", "800000-100000"),
+            JSONObject(profile.toString()).put("I2", "<r 4>\nprivate_key=00"),
+            JSONObject(profile.toString()).put("HeaderProtectionKey", "short"),
+            // A header left at its WireGuard default of 2 would overlap H1.
+            JSONObject().put("H1", 2),
+            JSONObject(profile.toString()).put("S1", 20.9),
+            JSONObject(profile.toString()).apply { remove("JMax") },
+            JSONObject(profile.toString()).put("S4", 65535),
+        )) {
+            val broken = add(node().apply { amneziaWG = bad.toString() })
+            assertTrue(bad.toString(), runCatching { build(broken, "normal") }.isFailure)
+        }
+    }
+
+    @Test
     fun tailscaleLandingHopIsTheDefaultNotItsUnderlay() {
         ConfigBuilderTestEnv.reset()
         val node = add(node())

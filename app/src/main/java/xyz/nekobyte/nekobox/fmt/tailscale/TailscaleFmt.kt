@@ -224,4 +224,5 @@ fun buildSingBoxEndpointTailscaleBean(bean: TailscaleBean, profileId: Long): Sin
     }
     if (bean.acceptRoutes == true) accept_routes = true
     if (bean.onlyTcp443 == true) only_tcp_443 = true
+    amnezia_wg = TailscaleAmneziaWG.parse(bean.amneziaWG)
 }
