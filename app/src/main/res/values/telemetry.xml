@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="help_to_improve">Help improve the app</string>
-    <string name="help_to_improve_summary">Send app opens, connection results and startup times to PostHog, and crash and error reports to Sentry when configured. Profiles, traffic contents and logs are not sent. Both services see your IP address.</string>
+    <string name="help_to_improve_summary">When configured, PostHog receives app opens, connection results and startup times, and Sentry receives crash and error reports. Profiles, traffic contents and logs are not sent. These services see your IP address. Turn this off to stop reporting.</string>
 </resources>

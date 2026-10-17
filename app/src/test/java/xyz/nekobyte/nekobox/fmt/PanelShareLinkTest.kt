@@ -224,6 +224,11 @@ class PanelShareLinkTest {
         assertEquals(true, transport.legacy)
         assertEquals("dtls", transport.header_type)
         assertNull((xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStreamSettings(raw.applyDefaultValues()) as xyz.nekobyte.nekobox.SingBoxOptions.V2RayTransportOptions_KCPOptions).legacy)
+        // A seed replaces the checksum, as in Xray.
+        masked.kcpLegacy = true
+        val seededTransport = xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStreamSettings(masked.applyDefaultValues()) as xyz.nekobyte.nekobox.SingBoxOptions.V2RayTransportOptions_KCPOptions
+        assertEquals("k", seededTransport.seed)
+        assertNull(seededTransport.legacy)
 
         // Only a legacy mKCP profile writes the newer bytes; other profiles keep theirs.
         assertEquals(10, KryoConverters.serialize(raw.applyDefaultValues())[0].toInt())
@@ -252,6 +257,8 @@ class PanelShareLinkTest {
             PrivateKey = $PRIVATE_KEY
             Address = 10.8.3.2/32
             Jc = 4
+            S1 = 15
+            S2 = 18
             S3 = 20
             S4 = 16
             H1 = 1234567
@@ -266,8 +273,11 @@ class PanelShareLinkTest {
             AllowedIPs = 0.0.0.0/0
             Endpoint = 198.51.100.7:20083
         """.trimIndent()
-        val bean = parseProxies("vpn://" + Base64.getUrlEncoder().withoutPadding().encodeToString(conf.toByteArray())).single() as AmneziaWGBean
+        fun link(text: String) = "vpn://" + Base64.getUrlEncoder().withoutPadding().encodeToString(text.toByteArray())
+        val bean = parseProxies(link(conf)).single() as AmneziaWGBean
         assertEquals(PRESHARED_KEY, bean.headerProtectionKey)
+        // The device needs S1 to S4 of at least 12 bytes for the header protection nonce.
+        assertTrue(parseProxies(link(conf.replace("S1 = 15\n", ""))).isEmpty())
         assertEquals("8-24", bean.contentPaddingAddition)
         assertEquals("110-130", bean.rekeyAfterTime)
         assertEquals("170-200", bean.rejectAfterTime)

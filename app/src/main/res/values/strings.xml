@@ -970,6 +970,8 @@
     <string name="amneziawg_max_handshake_attempts">Handshake attempts</string>
     <string name="amneziawg_random_trailers">Random trailers</string>
     <string name="amneziawg_disable_cookies">Disable cookies</string>
+    <string name="amneziawg_header_protection_padding">%1$s: header protection needs S1 to S4 of at least 12</string>
+    <string name="amneziawg_reserved_obfuscation">%1$s: reserved bytes cannot be combined with AmneziaWG obfuscation</string>
     <string name="amneziawg_range_hint">A number or a min-max range. Must match the server.</string>
 
 </resources>

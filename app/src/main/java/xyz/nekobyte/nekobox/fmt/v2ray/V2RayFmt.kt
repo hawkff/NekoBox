@@ -863,8 +863,10 @@ fun buildSingBoxOutboundStreamSettings(bean: StandardV2RayBean): V2RayTransportO
                 header_type = bean.headerType.takeIf { it!!.isNotBlank() } ?: "none"
                 if (bean.mKcpSeed!!.isNotBlank()) {
                     seed = bean.mKcpSeed
+                } else if (bean.kcpLegacy == true) {
+                    // A seed replaces the checksum, so share links carry only one of them.
+                    legacy = true
                 }
-                if (bean.kcpLegacy == true) legacy = true
             }
         }
 

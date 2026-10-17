@@ -386,6 +386,8 @@ class RawUpdaterParseTest {
         assertEquals("110-130", awg.rekeyAfterTime)
         assertTrue(awg.randomTrailers!!)
         assertTrue(parsed.proxies[1] is WireGuardBean)
+        // The device refuses reserved bytes together with obfuscation.
+        assertTrue(RawUpdater.parseRaw("proxies:\n  - {name: reserved, $node, reserved: [1, 2, 3], amnezia-wg-option: {jc: 4}}").isNullOrEmpty())
     }
 
     @Test

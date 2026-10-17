@@ -4,15 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.ui.profile.TailscaleSettingsActivity
@@ -32,13 +35,16 @@ class TailscaleFragment : ToolbarFragment(R.layout.layout_config_settings) {
 
     class NodesFragment : PreferenceFragmentCompat() {
 
+        private var loading: Job? = null
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             preferenceScreen = preferenceManager.createPreferenceScreen(requireContext())
         }
 
         override fun onResume() {
             super.onResume()
-            lifecycleScope.launch {
+            loading?.cancel()
+            loading = lifecycleScope.launch {
                 val (nodes, subscriptions) = withContext(Dispatchers.IO) {
                     val nodes = ProfileDatabase.proxyDao.run { getEntities(getIdsByType(ProxyEntity.TYPE_TAILSCALE)) }
                     nodes to ProfileDatabase.groupDao.subscriptions().map { it.id }.toSet()
@@ -61,7 +67,17 @@ class TailscaleFragment : ToolbarFragment(R.layout.layout_config_settings) {
                         Intent(it, TailscaleStatusActivity::class.java).putExtra(TailscaleStatusActivity.EXTRA_PROFILE_ID, node.id)
                     },
                 )
-                category.addPreference(row(R.string.settings, null) { node.settingIntent(it, node.groupId in subscriptions) })
+                category.addPreference(
+                    row(R.string.settings, null) {
+                        // As in the profile list, the running profile cannot be edited or deleted.
+                        if (DataStore.serviceState.started && DataStore.currentProfile == node.id) {
+                            Toast.makeText(it, R.string.tailscale_node_in_use, Toast.LENGTH_SHORT).show()
+                            null
+                        } else {
+                            node.settingIntent(it, node.groupId in subscriptions)
+                        }
+                    },
+                )
             }
             preferenceScreen.addPreference(row(R.string.tailscale_add_node, null) { Intent(it, TailscaleSettingsActivity::class.java) })
         }
