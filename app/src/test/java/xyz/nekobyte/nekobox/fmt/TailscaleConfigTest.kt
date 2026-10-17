@@ -182,6 +182,12 @@ class TailscaleConfigTest {
             val broken = add(node().apply { amneziaWG = bad.toString() })
             assertTrue(bad.toString(), runCatching { build(broken, "normal") }.isFailure)
         }
+        // One full batch of datagram-sized junk packets still works.
+        val limits = JSONObject(profile.toString()).put("JC", 128).put("JMax", 65507)
+        val atLimits = JSONObject(build(add(node().apply { amneziaWG = limits.toString() }), "normal").config)
+            .objects("endpoints").single().getJSONObject("amnezia_wg")
+        assertEquals(128, atLimits.getInt("jc"))
+        assertEquals(65507, atLimits.getInt("jmax"))
     }
 
     @Test
