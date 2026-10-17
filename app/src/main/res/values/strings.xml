@@ -713,7 +713,7 @@
     <string name="tailscale_control_url">Control URL</string>
     <string name="tailscale_control_url_sum">Leave empty for Tailscale; set for Headscale or another coordination server.</string>
     <string name="tailscale_hostname">Machine name</string>
-    <string name="tailscale_hostname_sum">Name of this device in the tailnet</string>
+    <string name="tailscale_hostname_sum">Name of this device in the tailnet. Without one, the node gets two random words, which change only when you reset its identity.</string>
     <string name="tailscale_reset_identity">Reset identity</string>
     <string name="tailscale_reset_identity_sum">Delete the node key and login state. The next start registers a new machine. Stop the service first.</string>
     <string name="tailscale_reset_identity_done">Tailscale identity removed</string>

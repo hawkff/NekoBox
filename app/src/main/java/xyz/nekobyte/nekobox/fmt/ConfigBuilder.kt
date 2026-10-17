@@ -800,7 +800,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         is TailscaleBean -> {
                             chainTailscaleEndpoints[proxyEntity.id] =
                                 ConfigBuildResult.TailscaleEndpoint(tagOut, bean.exitNode!!.isNotBlank())
-                            buildSingBoxEndpointTailscaleBean(bean, proxyEntity.id)
+                            buildSingBoxEndpointTailscaleBean(bean, proxyEntity.id, proxyEntity.uuid)
                         }
 
                         else -> throw IllegalStateException("can't reach")

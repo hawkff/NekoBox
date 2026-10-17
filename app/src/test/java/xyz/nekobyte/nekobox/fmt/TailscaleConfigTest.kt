@@ -4,6 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,6 +19,7 @@ import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.tailscale.TailscaleBean
+import xyz.nekobyte.nekobox.fmt.tailscale.TailscaleNames
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -124,6 +126,24 @@ class TailscaleConfigTest {
             assertTrue(regular.objects("endpoints").isEmpty())
             assertMagicDns(regular, mode == "test")
         }
+    }
+
+    @Test
+    fun unnamedNodesGetTwoRandomWordsThatFollowTheIdentity() {
+        ConfigBuilderTestEnv.reset()
+        fun machineName(profile: ProxyEntity) = JSONObject(build(profile, "normal").config).objects("endpoints").single().getString("hostname")
+        val unnamed = add(node())
+        val name = machineName(unnamed)
+        assertTrue(name, Regex("[a-z]+-[a-z]+").matches(name))
+        assertEquals(name, machineName(unnamed))
+        // Resetting the identity gives the node a new marker, and with it new words.
+        val reset = ConfigBuilderTestEnv.io {
+            ProfileDatabase.proxyDao.setTailscaleMarker(unnamed.id, "second identity")
+            ProfileDatabase.proxyDao.getById(unnamed.id)!!
+        }
+        assertEquals(TailscaleNames.of("second identity"), machineName(reset))
+        assertNotEquals(TailscaleNames.of("first identity"), TailscaleNames.of("second identity"))
+        assertEquals("phone", machineName(add(node().apply { hostname = "phone" })))
     }
 
     @Test
