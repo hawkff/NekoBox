@@ -212,12 +212,14 @@ fun pruneTailscaleState(keep: Set<Long>? = null, profileIds: Collection<Long>? =
     }
 }
 
-fun buildSingBoxEndpointTailscaleBean(bean: TailscaleBean, profileId: Long): SingBoxOptions.Endpoint_TailscaleOptions = SingBoxOptions.Endpoint_TailscaleOptions().apply {
+// identity is the node's marker; nodes without one are named after the profile id until a reset.
+fun buildSingBoxEndpointTailscaleBean(bean: TailscaleBean, profileId: Long, identity: String): SingBoxOptions.Endpoint_TailscaleOptions = SingBoxOptions.Endpoint_TailscaleOptions().apply {
     type = "tailscale"
     state_directory = tailscaleStateDirectory(profileId)
     if (bean.authKey!!.isNotBlank()) auth_key = bean.authKey
     if (bean.controlUrl!!.isNotBlank()) control_url = bean.controlUrl
-    if (bean.hostname!!.isNotBlank()) hostname = bean.hostname
+    // Without a name the core would send the Android hostname, localhost.
+    hostname = bean.hostname!!.ifBlank { TailscaleNames.of(identity.ifBlank { "profile-$profileId" }) }
     if (bean.exitNode!!.isNotBlank()) {
         exit_node = bean.exitNode
         if (bean.exitNodeAllowLanAccess == true) exit_node_allow_lan_access = true
