@@ -919,8 +919,11 @@ object RawUpdater : GroupUpdater() {
         "rule-providers" to ImportPreview.Section.RULE_PROVIDERS,
         "dns" to ImportPreview.Section.DNS,
     )
+
+    // Sections of sing-box and Xray configs; Xray calls its rules routing.
     private val SING_BOX_SECTIONS = mapOf(
         "route" to ImportPreview.Section.RULES,
+        "routing" to ImportPreview.Section.RULES,
         "dns" to ImportPreview.Section.DNS,
         "inbounds" to ImportPreview.Section.INBOUNDS,
     )
@@ -2118,9 +2121,12 @@ object RawUpdater : GroupUpdater() {
 
                 json.has("outbounds") -> {
                     for ((key, section) in SING_BOX_SECTIONS) if (json.has(key)) report.dropped += section
-                    val outbounds = json.optJSONArray("outbounds") ?: JSONArray()
-                    for (index in 0 until outbounds.length()) {
-                        val outbound = outbounds.opt(index) as? JSONObject
+                    val array = json.optJSONArray("outbounds") ?: JSONArray()
+                    val outbounds = (0 until array.length()).map { array.opt(it) as? JSONObject }
+                    // An Xray config names its server in remarks; with several, each also keeps its tag.
+                    val remarks = json.getStr("remarks")
+                    val xrayProxies = outbounds.count { it?.getStr("type") == null && it?.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS }
+                    for (outbound in outbounds) {
                         val type = outbound?.getStr("type") ?: outbound?.getStr("protocol")
                         when {
                             outbound == null -> report.failed += null
@@ -2134,10 +2140,23 @@ object RawUpdater : GroupUpdater() {
                                 name = outbound.getStr("tag")
                             }
 
+                            outbound.getStr("type") == null && type in XrayOutbound.PROXY_PROTOCOLS -> try {
+                                val tag = outbound.getStr("tag")?.takeIf { remarks == null || xrayProxies > 1 }
+                                proxies += XrayOutbound.parse(outbound, listOfNotNull(remarks, tag).joinToString(" "), outbounds, report)
+                            } catch (_: Exception) {
+                                Logs.w("Xray outbound rejected")
+                                report.failed += type
+                            }
+
                             else -> report.failed += type
                         }
                     }
                     return proxies
+                }
+
+                // A single Xray outbound.
+                json.getStr("type") == null && json.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS -> {
+                    return listOf(XrayOutbound.parse(json, json.getStr("tag").orEmpty(), emptyList(), report))
                 }
 
                 json.has("server") && json.has("server_port") && json.getStr("type") in SING_BOX_PROXY_TYPES -> {

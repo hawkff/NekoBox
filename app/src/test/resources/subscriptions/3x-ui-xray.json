@@ -1,0 +1,4223 @@
+[
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "realitySettings": {
+      "fingerprint": "chrome",
+      "mldsa65Verify": "",
+      "publicKey": "dGVzdC1yZWFsaXR5LXB1YmxpYy1rZXktZm9yLXRlc3Rz",
+      "serverName": "www.microsoft.com",
+      "shortId": "0123456789abcdef",
+      "show": false,
+      "spiderX": "/spider"
+     },
+     "security": "reality",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20001
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-tcp-reality-vision-nb-main",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "tls",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     },
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20002
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-tcp-tls-vision",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20004"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20004
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-ws-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "grpcSettings": {
+      "authority": "",
+      "multiMode": false,
+      "serviceName": "grpc20005"
+     },
+     "network": "grpc",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20005
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-grpc-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "httpupgradeSettings": {
+      "headers": {},
+      "host": "",
+      "path": "/hu20006"
+     },
+     "network": "httpupgrade",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20006
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-httpupgrade-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "xhttp",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "xhttpSettings": {
+      "headers": {},
+      "host": "",
+      "mode": "auto",
+      "path": "/xh20007",
+      "xPaddingBytes": "100-1000"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20007
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-xhttp-tls-auto",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "xhttp",
+     "realitySettings": {
+      "fingerprint": "chrome",
+      "mldsa65Verify": "",
+      "publicKey": "dGVzdC1yZWFsaXR5LXB1YmxpYy1rZXktZm9yLXRlc3Rz",
+      "serverName": "www.microsoft.com",
+      "shortId": "0123456789abcdef",
+      "show": false,
+      "spiderX": "/spider"
+     },
+     "security": "reality",
+     "xhttpSettings": {
+      "headers": {},
+      "host": "",
+      "mode": "auto",
+      "path": "/xh20010",
+      "xPaddingBytes": "100-1000"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20010
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-xhttp-reality",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "grpcSettings": {
+      "authority": "",
+      "multiMode": false,
+      "serviceName": "grpc20011"
+     },
+     "network": "grpc",
+     "realitySettings": {
+      "fingerprint": "chrome",
+      "mldsa65Verify": "",
+      "publicKey": "dGVzdC1yZWFsaXR5LXB1YmxpYy1rZXktZm9yLXRlc3Rz",
+      "serverName": "www.microsoft.com",
+      "shortId": "0123456789abcdef",
+      "show": false,
+      "spiderX": "/spider"
+     },
+     "security": "reality"
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20011
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-grpc-reality",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "none",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20012
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-tcp-none",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "none",
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20013"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20013
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-ws-none",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "none",
+     "tcpSettings": {
+      "header": {
+       "request": {
+        "headers": {
+         "Host": [
+          "www.example.com"
+         ]
+        },
+        "method": "GET",
+        "path": [
+         "/obfs"
+        ],
+        "version": "1.1"
+       },
+       "response": {
+        "headers": {},
+        "reason": "OK",
+        "status": "200",
+        "version": "1.1"
+       },
+       "type": "http"
+      }
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20014
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-tcphttp-none",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "kcpSettings": {
+      "congestion": false,
+      "downlinkCapacity": 20,
+      "mtu": 1350,
+      "readBufferSize": 1,
+      "tti": 20,
+      "uplinkCapacity": 5,
+      "writeBufferSize": 1
+     },
+     "network": "kcp",
+     "security": "none"
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20015
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-kcp-none",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "none",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "mlkem768x25519plus.native.0rtt.dGVzdC1rZXktZm9yLXZsZXNzLWVuY3J5cHRpb24",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20016
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vlessenc-mlkem-tcp-vision",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20019"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "mlkem768x25519plus.native.0rtt.dGVzdC1rZXktZm9yLXZsZXNzLWVuY3J5cHRpb24",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20019
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vlessenc-mlkem-ws-tls-vision",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "xhttp",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "xhttpSettings": {
+      "headers": {},
+      "host": "",
+      "mode": "auto",
+      "path": "/xh20020",
+      "xPaddingBytes": "100-1000"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "mlkem768x25519plus.native.0rtt.dGVzdC1rZXktZm9yLXZsZXNzLWVuY3J5cHRpb24",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20020
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vlessenc-x25519-xhttp-tls-vision",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "grpcSettings": {
+      "authority": "",
+      "multiMode": false,
+      "serviceName": "grpc20021"
+     },
+     "network": "grpc",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "mlkem768x25519plus.native.0rtt.dGVzdC1rZXktZm9yLXZsZXNzLWVuY3J5cHRpb24",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20021
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vlessenc-x25519-grpc-tls-vision",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "realitySettings": {
+      "fingerprint": "chrome",
+      "mldsa65Verify": "",
+      "publicKey": "dGVzdC1yZWFsaXR5LXB1YmxpYy1rZXktZm9yLXRlc3Rz",
+      "serverName": "www.microsoft.com",
+      "shortId": "0123456789abcdef",
+      "show": false,
+      "spiderX": "/spider"
+     },
+     "security": "reality",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "mlkem768x25519plus.native.0rtt.dGVzdC1rZXktZm9yLXZsZXNzLWVuY3J5cHRpb24",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20022
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vlessenc-mlkem-tcp-reality-vision",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "none",
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20023"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "mlkem768x25519plus.native.0rtt.dGVzdC1rZXktZm9yLXZsZXNzLWVuY3J5cHRpb24",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20023
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vlessenc-x25519-ws-none",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "trojan",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "tls",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     },
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20040
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "trojan-tcp-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "trojan",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "realitySettings": {
+      "fingerprint": "chrome",
+      "mldsa65Verify": "",
+      "publicKey": "dGVzdC1yZWFsaXR5LXB1YmxpYy1rZXktZm9yLXRlc3Rz",
+      "serverName": "www.microsoft.com",
+      "shortId": "0123456789abcdef",
+      "show": false,
+      "spiderX": "/spider"
+     },
+     "security": "reality",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20041
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "trojan-tcp-reality",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "trojan",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20042"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20042
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "trojan-ws-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "trojan",
+    "tag": "proxy",
+    "streamSettings": {
+     "grpcSettings": {
+      "authority": "",
+      "multiMode": false,
+      "serviceName": "grpc20043"
+     },
+     "network": "grpc",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20043
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "trojan-grpc-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "trojan",
+    "tag": "proxy",
+    "streamSettings": {
+     "httpupgradeSettings": {
+      "headers": {},
+      "host": "",
+      "path": "/hu20044"
+     },
+     "network": "httpupgrade",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20044
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "trojan-httpupgrade-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "trojan",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "xhttp",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "xhttpSettings": {
+      "headers": {},
+      "host": "",
+      "mode": "auto",
+      "path": "/xh20045",
+      "xPaddingBytes": "100-1000"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20045
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "trojan-xhttp-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "shadowsocks",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "none",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "method": "aes-128-gcm",
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20050
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "ss-aes128gcm",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "shadowsocks",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "none",
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20056"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "method": "aes-256-gcm",
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20056
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "ss-aes256gcm-ws",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "shadowsocks",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "ws",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "http/1.1"
+      ],
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     },
+     "wsSettings": {
+      "headers": {},
+      "heartbeatPeriod": 0,
+      "host": "",
+      "path": "/ws20057"
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "method": "aes-256-gcm",
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20057
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "ss-aes256gcm-ws-tls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "shadowsocks",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "none",
+     "tcpSettings": {
+      "header": {
+       "request": {
+        "headers": {
+         "Host": [
+          "www.example.com"
+         ]
+        },
+        "method": "GET",
+        "path": [
+         "/"
+        ],
+        "version": "1.1"
+       },
+       "response": {
+        "headers": {},
+        "reason": "OK",
+        "status": "200",
+        "version": "1.1"
+       },
+       "type": "http"
+      }
+     }
+    },
+    "settings": {
+     "servers": [
+      {
+       "address": "node.example",
+       "level": 8,
+       "method": "aes-256-gcm",
+       "password": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+       "port": 20058
+      }
+     ]
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "ss-aes256gcm-tcphttp",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "hysteria",
+    "tag": "proxy",
+    "streamSettings": {
+     "hysteriaSettings": {
+      "auth": "hysteria-auth",
+      "udpIdleTimeout": 60,
+      "version": 2
+     },
+     "network": "hysteria",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h3"
+      ],
+      "fingerprint": "",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "port": 20060,
+     "version": 2
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "hy2",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "hysteria",
+    "tag": "proxy",
+    "streamSettings": {
+     "finalmask": {
+      "udp": [
+       {
+        "settings": {
+         "password": "salamander-password"
+        },
+        "type": "salamander"
+       }
+      ]
+     },
+     "hysteriaSettings": {
+      "auth": "hysteria-auth",
+      "udpIdleTimeout": 60,
+      "version": 2
+     },
+     "network": "hysteria",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h3"
+      ],
+      "fingerprint": "",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "port": 20061,
+     "version": 2
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "hy2-salamander",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "hysteria",
+    "tag": "proxy",
+    "streamSettings": {
+     "finalmask": {
+      "udp": [
+       {
+        "settings": {
+         "packetSize": "512-1200",
+         "password": "salamander-password"
+        },
+        "type": "salamander"
+       }
+      ]
+     },
+     "hysteriaSettings": {
+      "auth": "hysteria-auth",
+      "udpIdleTimeout": 60,
+      "version": 2
+     },
+     "network": "hysteria",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h3"
+      ],
+      "fingerprint": "",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "port": 20062,
+     "version": 2
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "hy2-gecko",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "hysteria",
+    "tag": "proxy",
+    "streamSettings": {
+     "finalmask": {
+      "udp": [
+       {
+        "settings": {
+         "interval": "30",
+         "mode": "intervalRemote",
+         "remotePorts": "20100-20110"
+        },
+        "type": "udphop"
+       }
+      ]
+     },
+     "hysteriaSettings": {
+      "auth": "hysteria-auth",
+      "udpIdleTimeout": 60,
+      "version": 2
+     },
+     "network": "hysteria",
+     "security": "tls",
+     "tlsSettings": {
+      "alpn": [
+       "h3"
+      ],
+      "fingerprint": "",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "port": 20063,
+     "version": 2
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "hy2-porthop",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "network": "tcp",
+     "security": "tls",
+     "tcpSettings": {
+      "header": {
+       "type": "none"
+      }
+     },
+     "tlsSettings": {
+      "alpn": [
+       "h2",
+       "http/1.1"
+      ],
+      "echConfigList": "AEX+DQBBDQAgACCKB1Q4ZLb1MWv9S0XyWK8nZ9A8d0x2Yy5lBr0E3S9hCgAEAAEAAQASY2xvdWRmbGFyZS1lY2guY29tAAA=",
+      "fingerprint": "chrome",
+      "serverName": "node.example"
+     }
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "flow": "xtls-rprx-vision",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20025
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-tcp-tls-ech",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+     "finalmask": {
+      "udp": [
+       {
+        "settings": {
+         "header": "",
+         "value": ""
+        },
+        "type": "mkcp-legacy"
+       },
+       {
+        "settings": {
+         "header": "dtls",
+         "value": ""
+        },
+        "type": "mkcp-legacy"
+       }
+      ]
+     },
+     "kcpSettings": {
+      "congestion": false,
+      "downlinkCapacity": 20,
+      "mtu": 1350,
+      "readBufferSize": 1,
+      "tti": 20,
+      "uplinkCapacity": 5,
+      "writeBufferSize": 1
+     },
+     "network": "kcp",
+     "security": "none"
+    },
+    "settings": {
+     "address": "node.example",
+     "encryption": "none",
+     "id": "00000000-0000-4000-8000-000000000001",
+     "level": 8,
+     "port": 20026
+    }
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "vless-kcp-legacy-dtls",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ },
+ {
+  "dns": {
+   "queryStrategy": "UseIP",
+   "servers": [
+    {
+     "address": "8.8.8.8",
+     "skipFallback": false
+    }
+   ],
+   "tag": "dns_out"
+  },
+  "inbounds": [
+   {
+    "listen": "127.0.0.1",
+    "port": 10808,
+    "protocol": "socks",
+    "settings": {
+     "auth": "noauth",
+     "udp": true,
+     "userLevel": 8
+    },
+    "sniffing": {
+     "destOverride": [
+      "http",
+      "tls",
+      "quic",
+      "fakedns"
+     ],
+     "enabled": true
+    },
+    "tag": "mixed"
+   },
+   {
+    "listen": "127.0.0.1",
+    "port": 10809,
+    "protocol": "http",
+    "settings": {
+     "userLevel": 8
+    },
+    "tag": "http"
+   }
+  ],
+  "log": {
+   "loglevel": "warning"
+  },
+  "outbounds": [
+   {
+    "protocol": "wireguard",
+    "settings": {
+     "address": [
+      "10.0.0.2/32"
+     ],
+     "mtu": 1420,
+     "peers": [
+      {
+       "allowedIPs": [
+        "0.0.0.0/0",
+        "::/0"
+       ],
+       "endpoint": "node.example:20080",
+       "publicKey": "xTIBA5rboUvnH4htodjb6e697QjLERt1NAB4mZqp8Dg="
+      }
+     ],
+     "secretKey": "yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk="
+    },
+    "tag": "proxy"
+   },
+   {
+    "protocol": "freedom",
+    "settings": {
+     "noises": [],
+     "redirect": ""
+    },
+    "tag": "direct"
+   },
+   {
+    "protocol": "blackhole",
+    "settings": {
+     "response": {
+      "type": "http"
+     }
+    },
+    "tag": "block"
+   }
+  ],
+  "policy": {
+   "levels": {
+    "8": {
+     "connIdle": 300,
+     "downlinkOnly": 1,
+     "handshake": 4,
+     "uplinkOnly": 1
+    }
+   },
+   "system": {
+    "statsOutboundDownlink": true,
+    "statsOutboundUplink": true
+   }
+  },
+  "remarks": "wireguard-nb-wg",
+  "routing": {
+   "domainStrategy": "AsIs",
+   "rules": [
+    {
+     "network": "tcp,udp",
+     "outboundTag": "proxy",
+     "type": "field"
+    }
+   ]
+  },
+  "stats": {}
+ }
+]

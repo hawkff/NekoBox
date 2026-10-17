@@ -426,6 +426,7 @@
     <string name="import_section_rule_providers">rule providers</string>
     <string name="import_section_dns">DNS settings</string>
     <string name="import_section_inbounds">inbounds</string>
+    <string name="import_section_fragment">TLS fragmentation and UDP noise</string>
     <!-- connection diagnostics -->
     <string name="menu_connections">Connections</string>
     <string name="connections_show_closed">Show closed connections</string>

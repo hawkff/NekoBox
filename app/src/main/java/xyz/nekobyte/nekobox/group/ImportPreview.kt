@@ -43,6 +43,7 @@ data class ImportPreview(
         RULE_PROVIDERS(R.string.import_section_rule_providers),
         DNS(R.string.import_section_dns),
         INBOUNDS(R.string.import_section_inbounds),
+        FRAGMENT(R.string.import_section_fragment),
     }
 
     val acceptedCount get() = accepted.values.sum()
