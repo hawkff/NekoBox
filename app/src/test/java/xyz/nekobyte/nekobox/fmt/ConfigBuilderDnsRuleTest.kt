@@ -167,7 +167,7 @@ class ConfigBuilderDnsRuleTest {
         assertEquals(listOf("exact.example"), values(dns.getJSONArray("domain")))
         assertEquals(listOf("suffix.example"), values(dns.getJSONArray("domain_suffix")))
         assertEquals(listOf("match"), values(dns.getJSONArray("domain_keyword")))
-        assertEquals(listOf("^test\\."), values(dns.getJSONArray("domain_regex")))
+        assertEquals(listOf("(?i)^test\\."), values(dns.getJSONArray("domain_regex")))
         val route = objects(root.getJSONObject("route").getJSONArray("rules")).single { it.has("user_id") }
         assertEquals(listOf("geosite:cn", "geoip:cn", siteTag, ipTag), values(route.getJSONArray("rule_set")))
         assertEquals(listOf("192.0.2.0/24"), values(route.getJSONArray("ip_cidr")))

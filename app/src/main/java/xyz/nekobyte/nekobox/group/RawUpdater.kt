@@ -481,20 +481,29 @@ object RawUpdater : GroupUpdater() {
         // translated now so a rejected one is reported, and stored after the profiles commit.
         val routingValue = meta["routing"]
             ?: content.body.lineSequence().map { it.trim() }.firstOrNull { RoutingProfiles.isRoutingLink(it) }
+        // Without one, the routing rules in the configs themselves become the profile.
+        val bodyRouting = parsed.report.routing.takeIf { routingValue == null }
         val routing = routingValue?.let {
             runCatching { RoutingProfiles.parse(it, RoutingProfiles.subscriptionSource(proxyGroup.id)) }.getOrNull()
+        } ?: bodyRouting?.takeIf { it.ruleCount > 0 }?.let {
+            RoutingProfiles.Profile(0L, proxyGroup.displayName(), it.content, RoutingProfiles.subscriptionSource(proxyGroup.id), it.notes)
         }
-        val routingNote = routingValue?.let { value ->
-            when {
-                routing != null -> routing.notes.takeIf { it.isNotEmpty() }?.let {
-                    app.getString(R.string.routing_profile_not_applied, routing.name, it.joinToString(", "))
-                }
-
-                RoutingProfiles.isDisableRequest(value) -> app.getString(R.string.subscription_routing_off_ignored)
-
-                else -> app.getString(R.string.subscription_routing_rejected)
+        val routingNote = when {
+            routing != null -> routing.notes.takeIf { it.isNotEmpty() }?.let {
+                app.getString(R.string.routing_profile_not_applied, routing.name, it.joinToString(", "))
             }
+
+            routingValue == null -> bodyRouting?.notes?.takeIf { it.isNotEmpty() }?.let {
+                app.getString(R.string.subscription_routing_rules_not_imported, it.joinToString(", "))
+            }
+
+            RoutingProfiles.isDisableRequest(routingValue) -> app.getString(R.string.subscription_routing_off_ignored)
+
+            else -> app.getString(R.string.subscription_routing_rejected)
         }
+        // The configs' routing rules became a profile, are reported above, or only send everything through the proxy.
+        val rulesKept = routing != null || bodyRouting != null
+        val dropped = preview.dropped.filterNot { it == ImportPreview.Section.RULES && rulesKept }
 
         // Replacement and backup URLs a provider proposes wait for the user's approval.
         val link = subscription.link.orEmpty()
@@ -659,8 +668,8 @@ object RawUpdater : GroupUpdater() {
         val importWarning = listOfNotNull(
             app.getString(R.string.subscription_import_failed, preview.acceptedCount, preview.unparsedCount, failedEntries)
                 .takeIf { partial },
-            app.getString(R.string.subscription_import_dropped, preview.dropped.joinToString(", ") { app.getString(it.title) })
-                .takeIf { preview.behaviorDiffers },
+            app.getString(R.string.subscription_import_dropped, dropped.joinToString(", ") { app.getString(it.title) })
+                .takeIf { dropped.isNotEmpty() },
             app.getString(R.string.subscription_kept_referenced, keptReferenced).takeIf { keptReferenced > 0 },
             app.getString(R.string.subscription_kept_partial, keptPartial).takeIf { keptPartial > 0 },
             app.getString(R.string.subscription_kept_hysteria1, keptRetired).takeIf { keptRetired > 0 },
@@ -964,6 +973,7 @@ object RawUpdater : GroupUpdater() {
                 val yaml = Yaml(SafeConstructor(loaderOptions)).load<Any?>(text) as? Map<String, Any?>
                     ?: error(app.getString(R.string.no_proxies_found_in_file))
                 for ((key, section) in CLASH_SECTIONS) if (yaml.containsKey(key)) report.dropped += section
+                (yaml["rules"] as? List<*>)?.let { report.routing = SubscriptionRules.fromClash(it, yaml["proxy-groups"] as? List<*>) }
 
                 val globalClientFingerprint = yaml["global-client-fingerprint"]?.toString() ?: ""
 
@@ -2126,6 +2136,8 @@ object RawUpdater : GroupUpdater() {
                     // An Xray config names its server in remarks; with several, each also keeps its tag.
                     val remarks = json.getStr("remarks")
                     val xrayProxies = outbounds.count { it?.getStr("type") == null && it?.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS }
+                    // shortcut: only the first config's routing is read, since panels give every config the same; read each if a provider varies them.
+                    if (xrayProxies > 0 && report.routing == null) json.optJSONObject("routing")?.let { report.routing = SubscriptionRules.fromXray(it, outbounds) }
                     for (outbound in outbounds) {
                         val type = outbound?.getStr("type") ?: outbound?.getStr("protocol")
                         when {
