@@ -529,6 +529,49 @@ class WireGuardConfigTest {
     }
 
     @Test
+    fun amneziaWgJunkTheDeviceCannotBuildFailsTheBuild() {
+        fun awg(name: String, block: AmneziaWGBean.() -> Unit) = add(
+            AmneziaWGBean().apply {
+                this.name = name
+                serverAddress = "192.0.2.22"
+                serverPort = 51820
+                localAddress = "10.7.0.4/32"
+                privateKey = key
+                peerPublicKey = key
+                initializeDefaultValues()
+                block()
+            },
+        )
+        assertTrue(failure(awg("too-many-junk") { jc = 129 }).contains("Jc must be between 0 and 128"))
+        for ((name, min, max) in listOf(Triple("min-above-max", 200, 100), Triple("junk-above-datagram", 10, 65508), Triple("negative-junk", -1, 70))) {
+            val profile = awg(name) {
+                jc = 4
+                jmin = min
+                jmax = max
+            }
+            assertTrue(name, failure(profile).contains("Jmin must not exceed Jmax"))
+        }
+        assertTrue(failure(awg("negative-signature") { i1 = "<b 0xc7><r -5>" }).contains("I1 needs whole-number lengths"))
+        assertTrue(failure(awg("oversized-signature") { i3 = "<rc 40000><rd 40000>" }).contains("I3 needs whole-number lengths"))
+
+        // A full batch of datagram-sized junk packets still runs, and the core accepts it too.
+        val limits = awg("awg-limits") {
+            jc = 128
+            jmax = 65507
+        }
+        val outbound = outbound(save("awg-limits", build(limits)), "awg-limits")
+        assertEquals(128, outbound.getInt("jc"))
+        assertEquals(65507, outbound.getInt("jmax"))
+        // Without junk packets the device ignores Jmin and Jmax.
+        build(
+            awg("no-junk") {
+                jmin = 200
+                jmax = 100
+            },
+        )
+    }
+
+    @Test
     fun urlTestsIgnoreProfileDns() {
         val profile = add(
             wg("probe") {

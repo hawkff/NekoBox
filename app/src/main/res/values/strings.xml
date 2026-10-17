@@ -976,6 +976,9 @@
     <string name="amneziawg_disable_cookies">Disable cookies</string>
     <string name="amneziawg_header_protection_padding">%1$s: header protection needs S1 to S4 of at least 12</string>
     <string name="amneziawg_reserved_obfuscation">%1$s: reserved bytes cannot be combined with AmneziaWG obfuscation</string>
+    <string name="amneziawg_junk_count">%1$s: Jc must be between 0 and %2$d</string>
+    <string name="amneziawg_junk_size">%1$s: with junk packets, Jmin must not exceed Jmax, and Jmax must be at most %2$d bytes</string>
+    <string name="amneziawg_signature_size">%1$s: I%2$d needs whole-number lengths and at most %3$d bytes</string>
     <string name="amneziawg_range_hint">A number or a min-max range. Must match the server.</string>
 
 </resources>

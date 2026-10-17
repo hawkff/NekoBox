@@ -7,6 +7,30 @@ import xyz.nekobyte.nekobox.fmt.wireguard.genReserved
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardSettings
 import xyz.nekobyte.nekobox.utils.listByLineOrComma
 
+// The device sends at most one batch of 128 junk packets, and each junk and I1-I5 packet as one UDP datagram over IPv4.
+internal const val AMNEZIAWG_MAX_JUNK_PACKETS = 128
+internal const val AMNEZIAWG_MAX_PACKET_SIZE = 65507
+
+private val SIGNATURE_TAG = Regex("<([^>]*)>")
+private val SPACES = Regex("\\s+")
+
+/** Adds up an I1-I5 tag chain as the device sizes the packet; it takes the lengths as given, and a negative one crashes it. */
+internal fun amneziaSignatureFits(spec: String): Boolean {
+    var size = 0
+    for (tag in SIGNATURE_TAG.findAll(spec)) {
+        val fields = tag.groupValues[1].trim().split(SPACES)
+        val argument = fields.getOrElse(1) { "" }
+        size += when (fields[0]) {
+            "b" -> argument.removePrefix("0x").length / 2
+            "t" -> 4
+            "r", "rc", "rd", "dz" -> argument.toIntOrNull()?.takeIf { it in 0..AMNEZIAWG_MAX_PACKET_SIZE } ?: return false
+            else -> 0
+        }
+        if (size > AMNEZIAWG_MAX_PACKET_SIZE) return false
+    }
+    return true
+}
+
 fun buildSingBoxOutboundAmneziaWGBean(bean: AmneziaWGBean): SingBoxOptions.Outbound_AmneziaWGOptions = SingBoxOptions.Outbound_AmneziaWGOptions().apply {
     bean.checkWireGuardLimits()
     type = "amneziawg"
