@@ -94,7 +94,7 @@ dependencies {
     // ZXing generates QR codes; ML Kit only scans them.
     implementation("com.google.zxing:core:3.5.4")
 
-    implementation(platform("io.github.rosemoe:editor-bom:0.24.6"))
+    implementation(platform("io.github.rosemoe:editor-bom:0.24.7"))
     implementation("io.github.rosemoe:editor")
     implementation("io.github.rosemoe:language-textmate")
     // TextMate exposes JDT nullability annotations in its public signatures.
