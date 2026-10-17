@@ -13,6 +13,7 @@ import (
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/adapter/certificate"
 	"github.com/sagernet/sing-box/option"
+	M "github.com/sagernet/sing/common/metadata"
 	"github.com/sagernet/sing/service"
 )
 
@@ -27,7 +28,19 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	count := 0
+	// geoip: and geosite: rule sets read the databases the app unpacks from its assets.
+	assets := os.Getenv("NEKOBOX_ASSETS_DIR")
+	if assets == "" {
+		assets = filepath.Join("..", "app", "src", "main", "assets", "sing-box")
+	}
+	unpacked := t.TempDir()
+	for _, name := range []string{geoipDat, geositeDat} {
+		if err := Unxz(filepath.Join(assets, name+".xz"), filepath.Join(unpacked, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	externalAssetsPath = unpacked
+	count, routing := 0, 0
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -36,6 +49,9 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 			return nil
 		}
 		count++
+		if filepath.Base(filepath.Dir(path)) == "routing" {
+			routing++
+		}
 		t.Run(filepath.Base(path), func(t *testing.T) {
 			// Endpoints create their state directories relative to the working directory.
 			t.Chdir(t.TempDir())
@@ -83,6 +99,23 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 				}
 				if actual := defaultOutbound.Tag(); actual != expectedTag {
 					t.Fatalf("default outbound = %q, want %q", actual, expectedTag)
+				}
+			}
+			if filepath.Base(filepath.Dir(path)) == "routing" {
+				// The rule sets come from the real databases, not empty placeholders.
+				router := service.FromContext[adapter.Router](ctx)
+				for tag, metadata := range map[string]*adapter.InboundContext{
+					"geosite:category-ads-all": {Domain: "doubleclick.net"},
+					"geoip:ru":                 {Destination: M.ParseSocksaddrHostPort("77.88.8.8", 53)},
+				} {
+					ruleSet, loaded := router.RuleSet(tag)
+					if !loaded {
+						t.Fatalf("missing rule-set %s", tag)
+					}
+					metadata.ResetRuleCache()
+					if !ruleSet.Match(metadata) {
+						t.Fatalf("rule-set %s does not match %v", tag, metadata)
+					}
 				}
 			}
 			if filepath.Base(filepath.Dir(path)) != "dns" || filepath.Base(path) == "probe.json" {
@@ -145,6 +178,9 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 	}
 	if count == 0 {
 		t.Fatal("no generated configurations")
+	}
+	if routing == 0 {
+		t.Fatal("no generated routing configurations")
 	}
 	t.Logf("validated %d application configurations", count)
 }
