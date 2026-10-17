@@ -332,7 +332,8 @@ object ProfileManager {
                 createRule(
                     RuleEntity(
                         name = app.getString(R.string.route_bypass_domain, displayCountry),
-                        domains = "geosite:$country",
+                        // The bundled geosite.db names the Iranian and Russian lists category-ir and category-ru.
+                        domains = "geosite:" + if (country == "cn") country else "category-$country",
                         outbound = -1,
                     ),
                     false,
