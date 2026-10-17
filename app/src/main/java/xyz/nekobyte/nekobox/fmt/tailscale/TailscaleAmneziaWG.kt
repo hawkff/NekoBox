@@ -86,6 +86,9 @@ internal object TailscaleAmneziaWG {
             "S1 to S4 must be at least 12 with a header protection key"
         }
         require((options.jmin ?: 0) <= (options.jmax ?: 0)) { "JMin is greater than JMax" }
+        // The device sends at most one batch of 128 junk packets, each one UDP datagram.
+        require((options.jc ?: 0) <= 128) { "JC is greater than 128" }
+        require((options.jmax ?: 0) <= MAX_SIGNATURE_SIZE) { "JMax is larger than $MAX_SIGNATURE_SIZE bytes" }
         // As the device checks: the paddings fit its packet buffer and the message types stay apart.
         val limits = listOf(options.s1 to 65535 - 148, options.s2 to 65535 - 92, options.s3 to 65535 - 64, options.s4 to 65535 - 40)
         require(limits.all { (value, max) -> (value ?: 0) <= max }) { "S1 to S4 exceed the packet size" }

@@ -175,10 +175,19 @@ class TailscaleConfigTest {
             JSONObject(profile.toString()).put("S1", 20.9),
             JSONObject(profile.toString()).apply { remove("JMax") },
             JSONObject(profile.toString()).put("S4", 65535),
+            // More junk packets than one batch, or one larger than a UDP datagram.
+            JSONObject(profile.toString()).put("JC", 129),
+            JSONObject(profile.toString()).put("JMax", 65508),
         )) {
             val broken = add(node().apply { amneziaWG = bad.toString() })
             assertTrue(bad.toString(), runCatching { build(broken, "normal") }.isFailure)
         }
+        // One full batch of datagram-sized junk packets still works.
+        val limits = JSONObject(profile.toString()).put("JC", 128).put("JMax", 65507)
+        val atLimits = JSONObject(build(add(node().apply { amneziaWG = limits.toString() }), "normal").config)
+            .objects("endpoints").single().getJSONObject("amnezia_wg")
+        assertEquals(128, atLimits.getInt("jc"))
+        assertEquals(65507, atLimits.getInt("jmax"))
     }
 
     @Test
