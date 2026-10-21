@@ -43,6 +43,15 @@
     <string name="group_create_subscription">Create subscription</string>
     <string name="update_all_subscription">Update all subscriptions</string>
     <string name="group_edit">Edit group</string>
+    <string name="favorites">Favorites</string>
+    <string name="favorite_add">Add to favorites</string>
+    <string name="favorite_remove">Remove from favorites</string>
+    <string name="all_groups">All groups</string>
+    <string name="search_no_results">No profiles match</string>
+    <plurals name="group_profiles">
+        <item quantity="one">%d profile</item>
+        <item quantity="other">%d profiles</item>
+    </plurals>
     <string name="group_edit_subscription">Edit subscription</string>
     <string name="layout">Layout</string>
     <string name="layout_single_column">Single column</string>

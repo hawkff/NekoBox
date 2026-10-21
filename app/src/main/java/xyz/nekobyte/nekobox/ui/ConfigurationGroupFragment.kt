@@ -69,6 +69,9 @@ private data class ProfileListSubmission(
     val scrollIndex: Int = -1,
 )
 
+/** The pager tab of profiles pinned from any group. It is not a group: it never becomes the selected group. */
+internal const val FAVORITES_GROUP_ID = -2L
+
 class ConfigurationGroupFragment : Fragment() {
 
     lateinit var proxyGroup: ProxyGroup
@@ -78,6 +81,20 @@ class ConfigurationGroupFragment : Fragment() {
 
     var undoManager: UndoSnackbarManager<ProxyEntity>? = null
     var adapter: ConfigurationAdapter? = null
+
+    private val isFavorites get() = proxyGroup.id == FAVORITES_GROUP_ID
+
+    // Favorites mixes groups, so each profile opens for editing as its own group allows.
+    @Volatile
+    private var subscriptionGroupIds = emptySet<Long>()
+
+    // A profile to show once the list has loaded, such as a search result in a group opened for it.
+    private var pendingScrollId = 0L
+
+    fun scrollToProfile(profileId: Long) {
+        val index = adapter?.configurationIdList?.indexOf(profileId) ?: -1
+        if (index >= 0) configurationListView.scrollTo(index, true) else pendingScrollId = profileId
+    }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -513,7 +530,11 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         private fun scrollAfterSubmission(submission: ProfileListSubmission) {
-            if (submission.scrollIndex >= 0) {
+            val pending = submission.ids.indexOf(pendingScrollId).takeIf { pendingScrollId != 0L && it >= 0 }
+            if (pending != null) {
+                pendingScrollId = 0L
+                configurationListView.scrollTo(pending, true)
+            } else if (submission.scrollIndex >= 0) {
                 configurationListView.scrollTo(submission.scrollIndex, true)
             }
         }
@@ -556,6 +577,7 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         fun canDrag() = !disposed &&
+            !isFavorites &&
             filterQuery.isEmpty() &&
             !filterPending &&
             !masterUpdatePending &&
@@ -805,6 +827,14 @@ class ConfigurationGroupFragment : Fragment() {
         override fun commit(actions: List<Pair<Int, ProxyEntity>>) {
             val profiles = actions.map { it.second }
             val profileIds = profiles.map { it.id }
+            if (isFavorites) {
+                // Removing from Favorites unpins the profile; it stays in its group.
+                runOnDefaultDispatcher {
+                    DataStore.updateFavoriteProfiles { it - profileIds.toSet() }
+                    GroupManager.postReload(FAVORITES_GROUP_ID)
+                }
+                return
+            }
             runOnDefaultDispatcher {
                 try {
                     for (entity in profiles) {
@@ -830,9 +860,10 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) {
-            if (profile.groupId != proxyGroup.id) return
+            if (profile.groupId != proxyGroup.id && !isFavorites) return
             onMainDispatcher {
                 if (disposed || profile.id in pendingRemovalIds) return@onMainDispatcher
+                if (isFavorites && profile.id !in masterProfiles) return@onMainDispatcher
                 reloadGeneration.incrementAndGet()
                 val oldProfile = masterProfiles[profile.id] ?: configurationList[profile.id]
                 if (noTraffic && oldProfile != null) {
@@ -926,7 +957,7 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         override suspend fun onRemoved(groupId: Long, profileId: Long) {
-            if (groupId != proxyGroup.id) return
+            if (groupId != proxyGroup.id && !isFavorites) return
             onMainDispatcher {
                 if (disposed) return@onMainDispatcher
                 reloadGeneration.incrementAndGet()
@@ -941,13 +972,16 @@ class ConfigurationGroupFragment : Fragment() {
         override suspend fun groupAdd(group: ProxyGroup) = Unit
         override suspend fun groupRemoved(groupId: Long) = Unit
 
+        // Favorites shows profiles of every group, so any group's update can change it.
         override suspend fun groupUpdated(group: ProxyGroup) {
+            if (isFavorites) return reloadProfiles()
             if (group.id != proxyGroup.id) return
             onMainDispatcher { proxyGroup = group }
             reloadProfiles()
         }
 
         override suspend fun groupUpdated(groupId: Long) {
+            if (isFavorites) return reloadProfiles()
             if (groupId != proxyGroup.id) return
             val group = ProfileDatabase.groupDao.getById(groupId) ?: return
             onMainDispatcher { proxyGroup = group }
@@ -959,7 +993,13 @@ class ConfigurationGroupFragment : Fragment() {
             val groupId = proxyGroup.id
             val order = proxyGroup.order
             val (newProfiles, newProfileIds, baseStamps) = onDefaultDispatcher {
-                var profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
+                var profiles = if (isFavorites) {
+                    val ids = DataStore.favoriteProfiles
+                    subscriptionGroupIds = ProfileDatabase.groupDao.subscriptions().mapTo(HashSet()) { it.id }
+                    ProfileDatabase.proxyDao.getEntities(ids).sortedBy { ids.indexOf(it.id) }
+                } else {
+                    ProfileDatabase.proxyDao.getByGroup(groupId)
+                }
                 profiles = when (order) {
                     GroupOrder.BY_NAME -> profiles.sortedBy { it.displayName() }
 
@@ -1019,6 +1059,9 @@ class ConfigurationGroupFragment : Fragment() {
             val profile = adapter?.profileById(profileId) ?: return
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
+            popup.menu.findItem(R.id.action_favorite)?.setTitle(
+                if (profileId in DataStore.favoriteProfiles) R.string.favorite_remove else R.string.favorite_add,
+            )
 
             when {
                 !profile.haveStandardLink() -> {
@@ -1080,13 +1123,14 @@ class ConfigurationGroupFragment : Fragment() {
             val host = parentFragment as? ConfigurationFragment ?: return
             if (host.isRunningProfile(profileId)) return
             val profile = adapter?.profileById(profileId) ?: return
-            val intent = profile.settingIntent(anchor.context, proxyGroup.type == GroupType.SUBSCRIPTION) ?: return
+            val subscription = if (isFavorites) profile.groupId in subscriptionGroupIds else proxyGroup.type == GroupType.SUBSCRIPTION
+            val intent = profile.settingIntent(anchor.context, subscription) ?: return
             anchor.context.startActivity(intent)
         }
 
         private fun performRemove(profileId: Long) {
             val host = parentFragment as? ConfigurationFragment ?: return
-            if (select || host.isRunningProfile(profileId)) return
+            if (select || (!isFavorites && host.isRunningProfile(profileId))) return
             val manager = undoManager ?: return
             val removed = adapter?.removeById(profileId) ?: return
             manager.remove(removed)
@@ -1094,8 +1138,8 @@ class ConfigurationGroupFragment : Fragment() {
 
         private fun requestRemove(profileId: Long) {
             val host = parentFragment as? ConfigurationFragment ?: return
-            if (select || host.isRunningProfile(profileId)) return
-            if (DataStore.confirmProfileDelete) {
+            if (select || (!isFavorites && host.isRunningProfile(profileId))) return
+            if (DataStore.confirmProfileDelete && !isFavorites) {
                 AlertDialog.Builder(requireContext())
                     .setTitle(R.string.delete_confirm_prompt)
                     .setPositiveButton(R.string.yes) { _, _ -> performRemove(profileId) }
@@ -1315,6 +1359,11 @@ class ConfigurationGroupFragment : Fragment() {
             try {
                 val name = profile.displayName().orEmpty()
                 when (item.itemId) {
+                    R.id.action_favorite -> runOnDefaultDispatcher {
+                        DataStore.updateFavoriteProfiles { if (profileId in it) it - profileId else it + profileId }
+                        GroupManager.postReload(FAVORITES_GROUP_ID)
+                    }
+
                     R.id.action_standard_qr -> showCode(profile.toStdLink(), name)
 
                     R.id.action_standard_clipboard -> export(profile.toStdLink())
