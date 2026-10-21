@@ -1,5 +1,7 @@
 package xyz.nekobyte.nekobox.utils
 
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.SystemClock
 import androidx.preference.PreferenceDataStore
@@ -12,6 +14,7 @@ import com.posthog.PostHogInterface
 import com.posthog.internal.PostHogMemoryPreferences
 import io.sentry.Sentry
 import io.sentry.SentryEvent
+import io.sentry.SentryLevel
 import io.sentry.UncaughtExceptionHandlerIntegration
 import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
@@ -25,25 +28,147 @@ import okhttp3.OkHttpClient
 import xyz.nekobyte.nekobox.BuildConfig
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
+import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
+import xyz.nekobyte.nekobox.group.ImportFormat
+import xyz.nekobyte.nekobox.group.ImportPreview
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
 import java.io.File
 import java.io.IOException
+import java.io.RandomAccessFile
 import java.util.UUID
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal enum class ConnectionOutcome { CONNECTED, NO_PROFILE, DNS_ERROR, PLUGIN_MISSING, PREPARE_ERROR, START_ERROR, PROCESS_EXIT }
-internal enum class DiagnosticOperation { SERVICE_PREPARE, SERVICE_START, SERVICE_RELOAD, EXTERNAL_PROCESS }
+internal enum class DiagnosticOperation { SERVICE_PREPARE, SERVICE_START, SERVICE_RELOAD, EXTERNAL_PROCESS, CORE_PANIC }
 
-internal class ConnectionAttempt(private val report: (ConnectionOutcome, Long) -> Unit = Telemetry::connectionResult) {
+/** The kind of a failed start, read from its messages on the device. Only the kind is reported. */
+internal enum class FailureCategory { INVALID_SETTINGS, TLS, DNS, TIMEOUT, REFUSED, PORT_IN_USE, PERMISSION, OTHER }
+
+internal fun failureCategory(error: Throwable): FailureCategory {
+    val text = generateSequence(error) { it.cause }.take(8).mapNotNull { it.message }.joinToString("\n").lowercase()
+    fun has(vararg words: String) = words.any { it in text }
+    return when {
+        has("address already in use") -> FailureCategory.PORT_IN_USE
+        has("permission denied", "operation not permitted") -> FailureCategory.PERMISSION
+        has("x509", "certificate", "tls:", "handshake") -> FailureCategory.TLS
+        has("no such host", "lookup ", "dns") -> FailureCategory.DNS
+        has("timeout", "timed out", "deadline exceeded") -> FailureCategory.TIMEOUT
+        has("connection refused") -> FailureCategory.REFUSED
+        has("invalid", "initialize outbound", "initialize endpoint", "parse", "unknown field", "missing", "required", "unsupported") -> FailureCategory.INVALID_SETTINGS
+        else -> FailureCategory.OTHER
+    }
+}
+
+/** Protocol, transport and security of a profile as fixed names; never its server, credentials or name. */
+internal data class ProfileKind(val protocol: String, val transport: String? = null, val security: String? = null)
+
+private val PROTOCOL_NAMES = mapOf(
+    ProxyEntity.TYPE_SOCKS to "socks", ProxyEntity.TYPE_HTTP to "http", ProxyEntity.TYPE_SS to "shadowsocks",
+    ProxyEntity.TYPE_SSR to "shadowsocksr", ProxyEntity.TYPE_VMESS to "vmess", ProxyEntity.TYPE_TROJAN to "trojan",
+    ProxyEntity.TYPE_MIERU to "mieru", ProxyEntity.TYPE_NAIVE to "naive", ProxyEntity.TYPE_HYSTERIA to "hysteria2",
+    ProxyEntity.TYPE_SSH to "ssh", ProxyEntity.TYPE_WG to "wireguard", ProxyEntity.TYPE_TUIC to "tuic",
+    ProxyEntity.TYPE_JUICITY to "juicity", ProxyEntity.TYPE_SHADOWTLS to "shadowtls", ProxyEntity.TYPE_ANYTLS to "anytls",
+    ProxyEntity.TYPE_CHAIN to "chain", ProxyEntity.TYPE_CONFIG to "custom", ProxyEntity.TYPE_SNELL to "snell",
+    ProxyEntity.TYPE_AWG to "amneziawg", ProxyEntity.TYPE_TAILSCALE to "tailscale",
+)
+internal val REPORTED_PROTOCOLS = PROTOCOL_NAMES.values.toSet() + setOf("vless", "other")
+internal val REPORTED_TRANSPORTS = setOf("tcp", "ws", "grpc", "http", "httpupgrade", "xhttp", "splithttp", "kcp", "quic")
+internal val REPORTED_SECURITIES = setOf("none", "tls", "reality")
+internal val COUNT_BUCKETS = listOf("0", "1-9", "10-99", "100+")
+
+internal fun profileKind(profile: ProxyEntity): ProfileKind {
+    val v2ray = runCatching { profile.requireBean() }.getOrNull() as? StandardV2RayBean
+    val protocol = if (v2ray?.isVLESS == true) "vless" else PROTOCOL_NAMES[profile.type] ?: "other"
+    return ProfileKind(
+        protocol,
+        v2ray?.type?.ifBlank { "tcp" }?.takeIf { it in REPORTED_TRANSPORTS },
+        v2ray?.security?.ifBlank { "none" }?.takeIf { it in REPORTED_SECURITIES },
+    )
+}
+
+internal fun countBucket(count: Int) = when {
+    count <= 0 -> "0"
+    count < 10 -> "1-9"
+    count < 100 -> "10-99"
+    else -> "100+"
+}
+
+internal data class ConnectionReport(val outcome: ConnectionOutcome, val durationMillis: Long, val kind: ProfileKind?, val category: FailureCategory?)
+
+internal class ConnectionAttempt(private val report: (ConnectionReport) -> Unit = Telemetry::connectionResult) {
     private val startedAt = SystemClock.elapsedRealtime()
     private val completed = AtomicBoolean(false)
 
-    fun complete(outcome: ConnectionOutcome) {
-        if (completed.compareAndSet(false, true)) report(outcome, SystemClock.elapsedRealtime() - startedAt)
+    // Set once the profile is known; preparation can fail before that.
+    @Volatile
+    var kind: ProfileKind? = null
+
+    fun complete(outcome: ConnectionOutcome, error: Throwable? = null) {
+        if (completed.compareAndSet(false, true)) {
+            report(ConnectionReport(outcome, SystemClock.elapsedRealtime() - startedAt, kind, error?.let(::failureCategory)))
+        }
+    }
+}
+
+/** The file the core writes its fatal panics to, under the cache directory; see InitCore in libcore. */
+internal const val CORE_CRASH_FILE = "core-crash.txt"
+
+private val DIGITS = Regex("[0-9]+")
+
+/** The panic in a Go crash dump as a Sentry event: its kind and the crashing goroutine's frames, without values. */
+internal fun corePanicEvent(dump: String): SentryEvent? {
+    val lines = dump.lines()
+    val start = lines.indexOfFirst { it.startsWith("panic: ") || it.startsWith("fatal error: ") }.takeIf { it >= 0 } ?: return null
+    val message = lines[start].substringAfter(": ")
+    val kind = when {
+        lines[start].startsWith("fatal error: ") -> "fatal error: " + message.replace(DIGITS, "N")
+
+        message.startsWith("runtime error: ") -> message.substringBefore('[').replace(DIGITS, "N").trim()
+
+        // Other panic values are arbitrary text, which may hold data.
+        else -> "panic"
+    }
+    val goroutine = (start until lines.size).firstOrNull { lines[it].startsWith("goroutine ") } ?: return null
+    val frames = mutableListOf<SentryStackFrame>()
+    var index = goroutine + 1
+    while (index + 1 < lines.size && lines[index].isNotBlank() && frames.size < 64) {
+        // "pkg/path.(*Type).Method(0x1, 0x2)" over "\t/path/file.go:123 +0x45"; the arguments are values and stay out.
+        val function = lines[index].removePrefix("created by ").substringBefore(" in goroutine").let { name ->
+            if (name.endsWith(")")) name.substringBeforeLast('(') else name
+        }
+        val location = lines[index + 1].trim().substringBefore(" +")
+        val dot = function.indexOf('.', function.lastIndexOf('/') + 1)
+        frames += SentryStackFrame().apply {
+            module = if (dot > 0) function.substring(0, dot) else function
+            this.function = if (dot > 0) function.substring(dot + 1) else function
+            filename = location.substringBeforeLast(':').substringAfterLast('/')
+            lineno = location.substringAfterLast(':').toIntOrNull()
+            isInApp = function.startsWith("libcore") || function.startsWith("github.com/sagernet/sing-box")
+        }
+        index += 2
+    }
+    if (frames.isEmpty()) return null
+    return SentryEvent().apply {
+        level = SentryLevel.FATAL
+        setTag("operation", DiagnosticOperation.CORE_PANIC.name.lowercase())
+        exceptions = listOf(
+            SentryException().apply {
+                type = kind
+                module = "libcore"
+                mechanism = Mechanism().apply {
+                    isHandled = false
+                    type = "go_panic"
+                }
+                // Sentry lists the outermost frame first; Go prints the crashing frame first.
+                stacktrace = SentryStackTrace(frames.reversed())
+            },
+        )
     }
 }
 
@@ -54,7 +179,32 @@ internal fun diagnosticDue(previous: Long?, now: Long) = previous == null || now
 internal fun diagnosticAllowed(generation: AtomicBoolean, current: AtomicBoolean, enabled: Boolean) = generation === current && generation.get() && enabled
 
 object Telemetry : OnPreferenceDataStoreChangeListener {
-    private val worker by lazy { Executors.newSingleThreadExecutor { Thread(it, "Telemetry").apply { isDaemon = true } } }
+    private val worker by lazy { Executors.newSingleThreadScheduledExecutor { Thread(it, "Telemetry").apply { isDaemon = true } } }
+
+    // Reports leave only through a VPN: sent outside one, their hosts would tell anyone watching the
+    // network that this app runs. Error reports wait here, on the worker, for a connection; none survive the process.
+    private val held = ArrayDeque<() -> Unit>()
+    private const val MAX_HELD = 5
+
+    internal fun tunnelUp(): Boolean = runCatching {
+        val connectivity = app.getSystemService(ConnectivityManager::class.java)
+        connectivity.getNetworkCapabilities(connectivity.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+    }.getOrDefault(false)
+
+    private fun sendOrHold(send: () -> Unit) {
+        if (tunnelUp()) {
+            send()
+        } else if (held.size < MAX_HELD) {
+            held.addLast(send)
+        }
+    }
+
+    // The VPN becomes the default network shortly after the core starts.
+    private fun flushHeldSoon() {
+        for (delay in listOf(5L, 60L)) {
+            worker.schedule(Runnable { diagnostic { while (held.isNotEmpty() && tunnelUp()) held.removeFirst()() } }, delay, TimeUnit.SECONDS)
+        }
+    }
 
     @Volatile
     private var consent = AtomicBoolean(false)
@@ -66,10 +216,35 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
     private val analyticsCache by lazy { File(app.cacheDir, if (mainProcess) "telemetry-posthog" else "telemetry-posthog-service") }
     private val lastFailureReport = mutableMapOf<DiagnosticOperation, Long>()
 
-    internal fun connectionResult(outcome: ConnectionOutcome, durationMillis: Long) = diagnostic {
+    internal fun connectionResult(report: ConnectionReport) = diagnostic {
         analytics?.capture(
             "connection_result",
-            properties = mapOf("outcome" to outcome.name.lowercase(), "duration_ms" to durationMillis.coerceIn(0, MAX_CONNECTION_DURATION_MS)),
+            properties = buildMap {
+                put("outcome", report.outcome.name.lowercase())
+                put("duration_ms", report.durationMillis.coerceIn(0, MAX_CONNECTION_DURATION_MS))
+                report.kind?.let { kind ->
+                    put("protocol", kind.protocol)
+                    kind.transport?.let { put("transport", it) }
+                    kind.security?.let { put("security", it) }
+                }
+                report.category?.let { put("category", it.name.lowercase()) }
+            },
+        )
+        if (report.outcome == ConnectionOutcome.CONNECTED) flushHeldSoon()
+    }
+
+    internal fun importOutcome(format: ImportFormat?, preview: ImportPreview) = diagnostic {
+        analytics?.capture(
+            "subscription_import",
+            properties = buildMap {
+                put("format", format?.name?.lowercase() ?: "unknown")
+                put("accepted", countBucket(preview.acceptedCount))
+                put("refused", countBucket(preview.unparsedCount))
+                // Protocol names come from the subscription; anything not on the list is "unknown".
+                val refused = preview.failed.map { it?.lowercase()?.takeIf { name -> name in REPORTED_PROTOCOLS } ?: "unknown" }.toSortedSet()
+                if (refused.isNotEmpty()) put("refused_protocols", refused.joinToString(","))
+                if (preview.dropped.isNotEmpty()) put("dropped_sections", preview.dropped.map { it.name.lowercase() }.sorted().joinToString(","))
+            },
         )
     }
 
@@ -83,9 +258,13 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
             val now = SystemClock.elapsedRealtime()
             if (!diagnosticDue(lastFailureReport[operation], now)) return@diagnostic
             lastFailureReport[operation] = now
-            Sentry.withScope { scope ->
-                scope.setTag("operation", operation.name.lowercase())
-                Sentry.captureException(error)
+            val category = failureCategory(error).name.lowercase()
+            sendOrHold {
+                Sentry.withScope { scope ->
+                    scope.setTag("operation", operation.name.lowercase())
+                    scope.setTag("category", category)
+                    Sentry.captureException(error)
+                }
             }
         }
     }
@@ -124,6 +303,17 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
             },
         )
         onPreferenceDataStoreChanged(DataStore.configurationStore, Key.HELP_TO_IMPROVE)
+        // The core runs in the service process and leaves its last panic there.
+        if (!isMainProcess) worker.execute { reportCoreCrash() }
+    }
+
+    private fun reportCoreCrash() {
+        val file = File(app.cacheDir, CORE_CRASH_FILE)
+        val dump = runCatching { file.readText() }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        // The core keeps the file open for appending, so it is emptied, not deleted.
+        runCatching { RandomAccessFile(file, "rw").use { it.setLength(0) } }
+        val event = corePanicEvent(dump) ?: return
+        diagnostic { sendOrHold { Sentry.captureEvent(event) } }
     }
 
     override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
@@ -143,10 +333,12 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
         val permission = AtomicBoolean(true)
         consent = permission
         val allowed = { permission.get() && runCatching { DataStore.helpToImprove }.getOrDefault(false) }
+        val sendable = { allowed() && tunnelUp() }
 
         if (BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank()) {
             try {
-                analyticsHttp = telemetryHttpClient(allowed)
+                // A failed upload keeps its events queued for a later try.
+                analyticsHttp = telemetryHttpClient(sendable)
                 analytics = setupPostHog(analytics, postHogConfig(BuildConfig.POSTHOG_PROJECT_TOKEN, BuildConfig.POSTHOG_HOST, analyticsCache, analyticsHttp!!, allowed))
                 if (mainProcess) analytics?.capture("app_opened")
             } catch (_: Exception) {
@@ -157,7 +349,7 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
             try {
                 // Sentry swallows configuration callback errors, so validate before entering it.
                 require(BuildConfig.SENTRY_DSN.toHttpUrlOrNull()?.isHttps == true)
-                SentryAndroid.init(app) { options -> sentryOptions(BuildConfig.SENTRY_DSN, options, allowed) }
+                SentryAndroid.init(app) { options -> sentryOptions(BuildConfig.SENTRY_DSN, options, transport = sendable, allowed = allowed) }
             } catch (_: Exception) {
                 Logs.w("Sentry initialization failed")
             }
@@ -166,6 +358,7 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
 
     private fun stop() {
         consent.set(false)
+        held.clear()
         analyticsHttp?.dispatcher?.cancelAll()
         analytics?.optOut()
         analytics?.close()
@@ -214,11 +407,35 @@ internal fun postHogConfig(token: String, host: String, cache: File, client: OkH
                         "app_opened", "connection_interrupted" -> emptyMap()
 
                         "connection_result" -> {
-                            val outcome = event.properties?.get("outcome") as? String ?: return@runCatching null
+                            val properties = event.properties.orEmpty()
+                            val outcome = properties["outcome"] as? String ?: return@runCatching null
                             if (ConnectionOutcome.entries.none { it.name.lowercase() == outcome }) return@runCatching null
-                            val duration = (event.properties?.get("duration_ms") as? Long)
+                            val duration = (properties["duration_ms"] as? Long)
                                 ?.takeIf { it in 0..MAX_CONNECTION_DURATION_MS } ?: return@runCatching null
-                            mapOf("outcome" to outcome, "duration_ms" to duration)
+                            val optional = mapOf(
+                                "protocol" to REPORTED_PROTOCOLS,
+                                "transport" to REPORTED_TRANSPORTS,
+                                "security" to REPORTED_SECURITIES,
+                                "category" to FailureCategory.entries.map { it.name.lowercase() }.toSet(),
+                            )
+                            val extra = optional.keys.filter { it in properties }.associateWith { properties[it] as? String }
+                            if (extra.any { (key, value) -> value == null || value !in optional.getValue(key) }) return@runCatching null
+                            mapOf("outcome" to outcome, "duration_ms" to duration) + extra.mapValues { it.value!! }
+                        }
+
+                        "subscription_import" -> {
+                            val properties = event.properties.orEmpty()
+                            val format = properties["format"] as? String ?: return@runCatching null
+                            if (format != "unknown" && ImportFormat.entries.none { it.name.lowercase() == format }) return@runCatching null
+                            val accepted = (properties["accepted"] as? String)?.takeIf { it in COUNT_BUCKETS } ?: return@runCatching null
+                            val refused = (properties["refused"] as? String)?.takeIf { it in COUNT_BUCKETS } ?: return@runCatching null
+                            val protocols = properties["refused_protocols"] as? String
+                            val sections = properties["dropped_sections"] as? String
+                            val sectionNames = ImportPreview.Section.entries.map { it.name.lowercase() }.toSet()
+                            if (protocols?.split(',')?.all { it in REPORTED_PROTOCOLS || it == "unknown" } == false) return@runCatching null
+                            if (sections?.split(',')?.all { it in sectionNames } == false) return@runCatching null
+                            mapOf("format" to format, "accepted" to accepted, "refused" to refused) +
+                                listOfNotNull(protocols?.let { "refused_protocols" to it }, sections?.let { "dropped_sections" to it })
                         }
 
                         else -> return@runCatching null
@@ -245,7 +462,12 @@ internal fun postHogConfig(token: String, host: String, cache: File, client: OkH
     }
 }
 
-internal fun sentryOptions(dsn: String, options: SentryAndroidOptions = SentryAndroidOptions(), allowed: () -> Boolean): SentryAndroidOptions {
+internal fun sentryOptions(
+    dsn: String,
+    options: SentryAndroidOptions = SentryAndroidOptions(),
+    transport: (() -> Boolean)? = null,
+    allowed: () -> Boolean,
+): SentryAndroidOptions {
     require(dsn.toHttpUrlOrNull()?.isHttps == true) { "Sentry requires an HTTPS DSN" }
     return options.apply {
         this.dsn = dsn
@@ -279,7 +501,7 @@ internal fun sentryOptions(dsn: String, options: SentryAndroidOptions = SentryAn
         cacheDirPath = null
         flushTimeoutMillis = 1500
         shutdownTimeoutMillis = 0
-        setTransportGate { allowed() }
+        setTransportGate { (transport ?: allowed)() }
         setBeforeSend { event, _ ->
             runCatching { if (allowed()) sanitizedCrashEvent(event) else null }.getOrNull()
         }
@@ -295,10 +517,12 @@ internal fun sanitizedCrashEvent(event: SentryEvent): SentryEvent? {
         level = event.level
         release = event.release
         environment = event.environment
-        platform = "java"
+        val operation = event.getTag("operation")?.takeIf { value -> DiagnosticOperation.entries.any { it.name.lowercase() == value } }
+        platform = if (operation == DiagnosticOperation.CORE_PANIC.name.lowercase()) "go" else "java"
         setTag("android_api", Build.VERSION.SDK_INT.toString())
-        event.getTag("operation")?.takeIf { value -> DiagnosticOperation.entries.any { it.name.lowercase() == value } }
-            ?.let { setTag("operation", it) }
+        operation?.let { setTag("operation", it) }
+        event.getTag("category")?.takeIf { value -> FailureCategory.entries.any { it.name.lowercase() == value } }
+            ?.let { setTag("category", it) }
         this.exceptions = exceptions.map { exception ->
             SentryException().apply {
                 type = exception.type

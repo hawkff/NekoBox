@@ -19,7 +19,12 @@ class ImportReport {
 
     /** The source's own routing rules (Xray `routing`, Clash `rules`) as a nameless rules-only profile. */
     var routing: RoutingProfiles.Profile? = null
+
+    /** The format the parser recognized. */
+    var format: ImportFormat? = null
 }
+
+enum class ImportFormat { LINKS, CLASH, SING_BOX, XRAY_JSON, WIREGUARD }
 
 /** Profiles parsed from a source, with what the parse could not use. */
 class ParsedContent(val proxies: List<AbstractBean>, val report: ImportReport)

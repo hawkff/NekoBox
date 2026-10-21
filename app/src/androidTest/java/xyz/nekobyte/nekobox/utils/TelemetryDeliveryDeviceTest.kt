@@ -24,7 +24,7 @@ class TelemetryDeliveryDeviceTest {
         while (!Sentry.isEnabled() && SystemClock.elapsedRealtime() < deadline) Thread.sleep(50)
         assertTrue("Sentry initialization did not complete", Sentry.isEnabled())
 
-        repeat(3) { Telemetry.connectionResult(ConnectionOutcome.CONNECTED, 271L + it) }
+        repeat(3) { Telemetry.connectionResult(ConnectionReport(ConnectionOutcome.CONNECTED, 271L + it, ProfileKind("vless", "ws", "tls"), null)) }
         Telemetry.connectionInterrupted()
         var eventId = SentryId.EMPTY_ID
         Sentry.withScope { scope ->

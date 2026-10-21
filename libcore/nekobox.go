@@ -71,6 +71,16 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	if err := setupLog(int(maxLogSizeKb)*1024, filepath.Join(cachePath, "neko.log"), isBgProcess); err != nil {
 		log.Println("open log:", err)
 	}
+	// A fatal panic of the core also goes to core-crash.txt, which the app reports on the next start.
+	// SetCrashOutput keeps its own descriptor, so the file can be closed here.
+	if isBgProcess {
+		if f, err := os.OpenFile(filepath.Join(cachePath, "core-crash.txt"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600); err == nil {
+			if err := debug.SetCrashOutput(f, debug.CrashOptions{}); err != nil {
+				log.Println("crash output:", err)
+			}
+			f.Close()
+		}
+	}
 
 	// nekoutils
 	nekoutils.Selector_OnProxySelected = appPlatform.Selector_OnProxySelected

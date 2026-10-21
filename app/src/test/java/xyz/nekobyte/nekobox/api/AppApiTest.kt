@@ -270,18 +270,21 @@ class AppApiTest {
     }
 
     @Test
-    fun reportingOptOutRemainsTypedAndPersistsAcrossApiHandlers() {
+    fun reportingConsentRemainsTypedAndPersistsAcrossApiHandlers() {
         val setting = objectResult("settings.describe").getJSONObject(Key.HELP_TO_IMPROVE)
         assertEquals("boolean", setting.getString("type"))
-        assertTrue(setting.getBoolean("default"))
-        assertTrue(objectResult("settings.get").getBoolean(Key.HELP_TO_IMPROVE))
+        // Reporting stays off until the user answers.
+        assertFalse(setting.getBoolean("default"))
+        assertFalse(objectResult("settings.get").getBoolean(Key.HELP_TO_IMPROVE))
+        assertFalse(DataStore.helpToImproveAnswered)
 
         DataStore.serviceState = BaseService.State.Connected
-        objectResult("settings.set", params("values" to params(Key.HELP_TO_IMPROVE to false)))
-        assertFalse(DataStore.helpToImprove)
-        error("invalid_parameters", "settings.set", params("values" to params(Key.HELP_TO_IMPROVE to "true")))
+        objectResult("settings.set", params("values" to params(Key.HELP_TO_IMPROVE to true)))
+        assertTrue(DataStore.helpToImprove)
+        assertTrue(DataStore.helpToImproveAnswered)
+        error("invalid_parameters", "settings.set", params("values" to params(Key.HELP_TO_IMPROVE to "false")))
         api = AppApi(RuntimeEnvironment.getApplication(), runtime)
-        assertFalse(objectResult("settings.get").getBoolean(Key.HELP_TO_IMPROVE))
+        assertTrue(objectResult("settings.get").getBoolean(Key.HELP_TO_IMPROVE))
         assertEquals(BaseService.State.Connected, DataStore.serviceState)
     }
 

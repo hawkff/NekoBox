@@ -53,6 +53,7 @@ import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSBean
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 import xyz.nekobyte.nekobox.ui.BackupFormatV2
+import xyz.nekobyte.nekobox.utils.Telemetry
 import xyz.nekobyte.nekobox.utils.Util
 import java.nio.ByteBuffer
 
@@ -474,6 +475,7 @@ object RawUpdater : GroupUpdater() {
         val parsed = parseContent(content.body) ?: error(app.getString(R.string.no_proxies_found_in_subscription))
         var proxies = parsed.proxies
         val preview = ImportPreview.of(parsed)
+        Telemetry.importOutcome(parsed.report.format, preview)
         // Entries that could not be imported may be the nodes some stored profiles came from.
         val partial = preview.unparsedCount > 0
 
@@ -946,6 +948,7 @@ object RawUpdater : GroupUpdater() {
 
         if (text.contains("proxies:") || CLASH_JSON_PROXIES.containsMatchIn(text)) {
             // clash & meta
+            report.format = ImportFormat.CLASH
 
             try {
                 // Parse untrusted subscription YAML safely.
@@ -1627,6 +1630,7 @@ object RawUpdater : GroupUpdater() {
             }
         } else if (text.contains("[Interface]", ignoreCase = true)) {
             // A WireGuard config that cannot be imported as written fails with the reason.
+            report.format = ImportFormat.WIREGUARD
             proxies.addAll(
                 parseWireGuardConf(text).onEach {
                     if (fileName.isNotBlank()) it.name = fileName.removeSuffix(".conf")
@@ -1648,6 +1652,7 @@ object RawUpdater : GroupUpdater() {
         }
 
         try {
+            report.format = ImportFormat.LINKS
             return parseProxies(text, report).takeIf { it.isNotEmpty() } ?: error("Not found")
         } catch (e: SubscriptionFoundException) {
             throw e
@@ -2138,6 +2143,7 @@ object RawUpdater : GroupUpdater() {
                     // An Xray config names its server in remarks; with several, each also keeps its tag.
                     val remarks = json.getStr("remarks")
                     val xrayProxies = outbounds.count { it?.getStr("type") == null && it?.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS }
+                    report.format = if (xrayProxies > 0) ImportFormat.XRAY_JSON else ImportFormat.SING_BOX
                     // shortcut: only the first config's routing is read, since panels give every config the same; read each if a provider varies them.
                     if (xrayProxies > 0 && report.routing == null) json.optJSONObject("routing")?.let { report.routing = SubscriptionRules.fromXray(it, outbounds) }
                     for (outbound in outbounds) {
@@ -2171,6 +2177,7 @@ object RawUpdater : GroupUpdater() {
 
                 // A single Xray outbound.
                 json.getStr("type") == null && json.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS -> {
+                    report.format = ImportFormat.XRAY_JSON
                     return try {
                         listOf(XrayOutbound.parse(json, json.getStr("tag").orEmpty(), emptyList(), report))
                     } catch (_: Exception) {
@@ -2181,6 +2188,7 @@ object RawUpdater : GroupUpdater() {
                 }
 
                 json.has("server") && json.has("server_port") && json.getStr("type") in SING_BOX_PROXY_TYPES -> {
+                    report.format = ImportFormat.SING_BOX
                     return listOf(
                         ConfigBean().applyDefaultValues().apply {
                             type = 1

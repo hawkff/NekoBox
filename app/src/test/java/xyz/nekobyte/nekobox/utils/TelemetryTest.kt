@@ -53,7 +53,7 @@ class TelemetryTest {
     private val analyticsCache get() = RuntimeEnvironment.getApplication().cacheDir.resolve("telemetry-posthog")
 
     @Test
-    fun switchDefaultsOnAndPersistsOptOutAcrossInflation() {
+    fun switchDefaultsOffAndPersistsTheChoiceAcrossInflation() {
         val context = RuntimeEnvironment.getApplication()
         val db = Room.inMemoryDatabaseBuilder(context, PublicDatabase::class.java).allowMainThreadQueries().build()
         try {
@@ -63,12 +63,12 @@ class TelemetryTest {
                 val screen = manager.inflateFromResource(context, R.xml.global_preferences, null)
                 return requireNotNull(screen.findPreference(Key.HELP_TO_IMPROVE))
             }
-            assertTrue(preference().isChecked)
-            preference().isChecked = false
-            assertFalse(store.getBoolean(Key.HELP_TO_IMPROVE, true))
             assertFalse(preference().isChecked)
             preference().isChecked = true
+            assertTrue(store.getBoolean(Key.HELP_TO_IMPROVE, false))
             assertTrue(preference().isChecked)
+            preference().isChecked = false
+            assertFalse(preference().isChecked)
         } finally {
             db.close()
         }
@@ -129,6 +129,78 @@ class TelemetryTest {
     }
 
     @Test
+    fun connectionResultsCarryOnlyListedProtocolsAndFailureKinds() {
+        val filter = postHogConfig("phc_example", "https://example.com", analyticsCache, telemetryHttpClient { true }) { true }.beforeSendList.single()
+        val base = mapOf<String, Any>("outcome" to "start_error", "duration_ms" to 10L)
+        val listed = base + mapOf("protocol" to "vless", "transport" to "ws", "security" to "reality", "category" to "invalid_settings", "server" to "192.0.2.1")
+        val safe = requireNotNull(filter.run(PostHogEvent("connection_result", "session", listed.toMutableMap())))
+        assertEquals("vless", safe.properties?.get("protocol"))
+        assertEquals("reality", safe.properties?.get("security"))
+        assertEquals("invalid_settings", safe.properties?.get("category"))
+        assertNull(safe.properties?.get("server"))
+        for ((key, value) in listOf("protocol" to "my-server", "transport" to "private", "security" to "x", "category" to "message text", "protocol" to 5)) {
+            assertNull(key, filter.run(PostHogEvent("connection_result", "session", (base + (key to value)).toMutableMap())))
+        }
+    }
+
+    @Test
+    fun importOutcomesCarryBucketsAndListedNamesOnly() {
+        val filter = postHogConfig("phc_example", "https://example.com", analyticsCache, telemetryHttpClient { true }) { true }.beforeSendList.single()
+        val listed = mapOf<String, Any>(
+            "format" to "clash",
+            "accepted" to "10-99",
+            "refused" to "1-9",
+            "refused_protocols" to "hysteria2,unknown",
+            "dropped_sections" to "dns,rules",
+        )
+        val safe = requireNotNull(filter.run(PostHogEvent("subscription_import", "session", listed.toMutableMap())))
+        assertEquals("hysteria2,unknown", safe.properties?.get("refused_protocols"))
+        assertEquals("dns,rules", safe.properties?.get("dropped_sections"))
+        for ((key, value) in listOf("format" to "provider-yaml", "accepted" to "57", "refused_protocols" to "vless,provider-secret", "dropped_sections" to "dns,custom")) {
+            assertNull(key, filter.run(PostHogEvent("subscription_import", "session", (listed + (key to value)).toMutableMap())))
+        }
+        assertEquals(listOf("0", "1-9", "1-9", "10-99", "100+"), listOf(0, 1, 9, 10, 100).map(::countBucket))
+    }
+
+    @Test
+    fun failuresAreSortedIntoFixedKindsOnTheDevice() {
+        assertEquals(
+            FailureCategory.INVALID_SETTINGS,
+            failureCategory(Exception("create service: initialize outbound[0]: invalid AmneziaWG jc: at most 128 junk packets")),
+        )
+        assertEquals(FailureCategory.PORT_IN_USE, failureCategory(Exception("listen tcp 127.0.0.1:2080: bind: address already in use")))
+        assertEquals(FailureCategory.TLS, failureCategory(Exception("outer", Exception("x509: certificate signed by unknown authority"))))
+        assertEquals(FailureCategory.OTHER, failureCategory(Exception("something else")))
+    }
+
+    @Test
+    fun coreCrashesKeepTheGoStackWithoutValues() {
+        val dump = listOf(
+            "panic: runtime error: index out of range [5] with length 3",
+            "",
+            "goroutine 42 [running]:",
+            "github.com/amnezia-vpn/amneziawg-go/v3/device.(*Device).RoutineReadFromTUN(0xc0001a2000)",
+            "\t/root/go/pkg/mod/github.com/amnezia-vpn/amneziawg-go/v3@v3.1/device/send.go:345 +0x1a5",
+            "created by github.com/amnezia-vpn/amneziawg-go/v3/device.NewDevice in goroutine 1",
+            "\t/root/go/pkg/mod/github.com/amnezia-vpn/amneziawg-go/v3@v3.1/device/device.go:400 +0x3c",
+        ).joinToString("\n")
+        val exception = requireNotNull(corePanicEvent(dump)).exceptions!!.single()
+        assertEquals("runtime error: index out of range", exception.type)
+        val frames = exception.stacktrace!!.frames!!
+        assertEquals(listOf("NewDevice", "(*Device).RoutineReadFromTUN"), frames.map { it.function })
+        assertEquals("github.com/amnezia-vpn/amneziawg-go/v3/device", frames.last().module)
+        assertEquals(listOf("device.go", "send.go"), frames.map { it.filename })
+        assertEquals(listOf(400, 345), frames.map { it.lineno })
+        val sanitized = requireNotNull(sanitizedCrashEvent(requireNotNull(corePanicEvent(dump))))
+        assertEquals("go", sanitized.platform)
+        assertEquals("core_panic", sanitized.getTag("operation"))
+        assertTrue(sanitized.exceptions!!.single().stacktrace!!.frames!!.none { "0x" in it.function.orEmpty() })
+        // A panic with an arbitrary value keeps only its kind.
+        assertEquals("panic", corePanicEvent(dump.replace("runtime error: index out of range [5] with length 3", "private value"))!!.exceptions!!.single().type)
+        assertNull(corePanicEvent("no crash here"))
+    }
+
+    @Test
     fun failureReportsAreLimitedToOnePerMinuteForEachOperation() {
         assertTrue(diagnosticDue(null, 0))
         assertFalse(diagnosticDue(1_000, 60_999))
@@ -141,7 +213,7 @@ class TelemetryTest {
     fun aConnectionAttemptReportsOnlyItsFirstOutcome() {
         for (first in listOf(ConnectionOutcome.PROCESS_EXIT, ConnectionOutcome.START_ERROR, ConnectionOutcome.CONNECTED)) {
             val reports = mutableListOf<Pair<ConnectionOutcome, Long>>()
-            val attempt = ConnectionAttempt { outcome, duration -> reports += outcome to duration }
+            val attempt = ConnectionAttempt { reports += it.outcome to it.durationMillis }
             ShadowSystemClock.advanceBy(Duration.ofMillis(25))
             attempt.complete(first)
             ShadowSystemClock.advanceBy(Duration.ofMillis(25))
@@ -154,7 +226,7 @@ class TelemetryTest {
     fun separateAttemptsRetainRepeatedOutcomesWithinOneMinute() {
         val reports = mutableListOf<ConnectionOutcome>()
         repeat(3) {
-            ConnectionAttempt { outcome, _ -> reports += outcome }.complete(ConnectionOutcome.CONNECTED)
+            ConnectionAttempt { reports += it.outcome }.complete(ConnectionOutcome.CONNECTED)
         }
         assertEquals(List(3) { ConnectionOutcome.CONNECTED }, reports)
     }

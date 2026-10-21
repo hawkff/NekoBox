@@ -113,6 +113,7 @@ class MainActivity :
         binding.stats.setOnClickListener { if (DataStore.serviceState.connected) binding.stats.testConnection() }
 
         setContentView(binding.root)
+        if (savedInstanceState == null) askHelpToImprove()
         changeState(BaseService.State.Idle)
         connection.connect(this, this)
         DataStore.configurationStore.registerChangeListener(this)
@@ -160,6 +161,18 @@ class MainActivity :
         if (::navigation.isInitialized) {
             navigation.menu.findItem(R.id.nav_traffic)?.isVisible = clashApi
         }
+    }
+
+    // Reports stay off until the user answers once; builds without reporting keys never ask.
+    private fun askHelpToImprove() {
+        if (DataStore.helpToImproveAnswered || (BuildConfig.POSTHOG_PROJECT_TOKEN.isBlank() && BuildConfig.SENTRY_DSN.isBlank())) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.help_to_improve_prompt_title)
+            .setMessage(R.string.help_to_improve_prompt_message)
+            .setPositiveButton(R.string.help_to_improve_prompt_allow) { _, _ -> DataStore.helpToImprove = true }
+            .setNegativeButton(R.string.help_to_improve_prompt_deny) { _, _ -> DataStore.helpToImprove = false }
+            .setCancelable(false)
+            .show()
     }
 
     override fun onNewIntent(intent: Intent) {
