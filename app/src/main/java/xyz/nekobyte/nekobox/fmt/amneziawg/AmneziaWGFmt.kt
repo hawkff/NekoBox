@@ -40,11 +40,12 @@ internal fun amneziaSignatureValid(spec: String): Boolean {
     }
 }
 
-// S1 to S4 pad the handshake initiation, response, cookie reply and empty transport message, in that order.
-private val PADDED_MESSAGE_SIZES = listOf(148, 92, 64, 32)
+// S1 to S4 pad the handshake initiation, response and cookie reply, and transport messages, which carry up to one
+// tunnel packet of [mtu] bytes after their 32 bytes of header and tag.
+private fun paddedMessageSizes(mtu: Int) = listOf(148, 92, 64, 32 + mtu)
 
 /** Whether every message padded by S1 to S4 still fits one datagram; a larger S4 also crashes the device's packet reader. */
-internal fun amneziaPaddingsFit(paddings: List<Int?>) = paddings.zip(PADDED_MESSAGE_SIZES).all { (padding, size) -> (padding ?: 0) in 0..AMNEZIAWG_MAX_PACKET_SIZE - size }
+internal fun amneziaPaddingsFit(paddings: List<Int?>, mtu: Int) = paddings.zip(paddedMessageSizes(mtu)).all { (padding, size) -> (padding ?: 0) in 0..AMNEZIAWG_MAX_PACKET_SIZE - size }
 
 /**
  * H1 to H4 as the device reads them: a number or a min-max range of 32-bit numbers, and a blank one keeps

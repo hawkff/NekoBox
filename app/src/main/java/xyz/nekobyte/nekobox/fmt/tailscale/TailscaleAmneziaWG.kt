@@ -94,7 +94,8 @@ internal object TailscaleAmneziaWG {
         require((options.jmin ?: 0) <= (options.jmax ?: 0)) { "JMin is greater than JMax" }
         require((options.jc ?: 0) <= AMNEZIAWG_MAX_JUNK_PACKETS) { "JC is greater than $AMNEZIAWG_MAX_JUNK_PACKETS" }
         require((options.jmax ?: 0) <= AMNEZIAWG_MAX_PACKET_SIZE) { "JMax is larger than $AMNEZIAWG_MAX_PACKET_SIZE bytes" }
-        require(amneziaPaddingsFit(paddings)) { "S1 to S4 exceed the packet size" }
+        // Tailscale tunnels carry packets of up to 1280 bytes.
+        require(amneziaPaddingsFit(paddings, 1280)) { "S1 to S4 exceed the packet size" }
         // range() already wrote the headers in the device's format.
         amneziaHeaderOverlap(amneziaHeaderRanges(listOf(options.h1, options.h2, options.h3, options.h4))!!)?.let { (first, second) ->
             throw IllegalArgumentException("H$first and H$second overlap")

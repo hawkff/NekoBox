@@ -561,7 +561,7 @@ class WireGuardConfigTest {
         // Paddings that push a message past one datagram, and headers the device cannot read or tell apart.
         for ((name, block) in listOf<Pair<String, AmneziaWGBean.() -> Unit>>(
             "init-padding" to { s1 = 65507 - 147 },
-            "transport-padding" to { s4 = 65507 - 31 },
+            "transport-padding" to { s4 = 65507 - 32 - 1420 + 1 },
             "negative-padding" to { s2 = -1 },
         )) {
             assertTrue(name, failure(awg(name, block)).contains("every handshake and data packet must fit in 65507 bytes"))
@@ -588,7 +588,8 @@ class WireGuardConfigTest {
             jmax = 65507
             i1 = "<b 0xC700000001><t><r 16><rc 8><rd 4><dz 2><d><ds>"
             s1 = 65507 - 148
-            s4 = 65507 - 32
+            // Room for one tunnel packet at the default MTU of 1420.
+            s4 = 65507 - 32 - 1420
             h1 = "100000-800000"
             h2 = " 900000 "
         }
@@ -597,7 +598,7 @@ class WireGuardConfigTest {
         assertEquals(65507, outbound.getInt("jmax"))
         assertEquals("<b 0xC700000001><t><r 16><rc 8><rd 4><dz 2><d><ds>", outbound.getString("i1"))
         assertEquals(65359, outbound.getInt("s1"))
-        assertEquals(65475, outbound.getInt("s4"))
+        assertEquals(64055, outbound.getInt("s4"))
         assertEquals("900000", outbound.getString("h2"))
         // Without junk packets the device ignores Jmin and Jmax.
         build(
