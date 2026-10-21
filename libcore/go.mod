@@ -8,7 +8,7 @@ require (
 	github.com/miekg/dns v1.1.73
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/sagernet/gomobile v0.1.13
-	github.com/sagernet/quic-go v0.61.0-sing-box-mod.9
+	github.com/sagernet/quic-go v0.61.0-sing-box-mod.10
 	github.com/sagernet/sing v0.9.7-0.20260929150544-0ad23b637bd4
 	github.com/sagernet/sing-box v1.0.0 // replaced
 	github.com/sagernet/sing-tun v0.9.7-0.20261009020158-bca4bf029237
