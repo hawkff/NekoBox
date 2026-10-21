@@ -11,9 +11,12 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
 import android.text.style.ForegroundColorSpan
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import androidx.activity.result.component1
 import androidx.activity.result.component2
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,10 +25,15 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.net.toUri
 import androidx.core.view.isGone
+import androidx.core.view.isInvisible
 import androidx.core.view.size
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceDataStore
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -34,9 +42,11 @@ import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import libcore.Libcore
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.Key
@@ -100,6 +110,7 @@ import xyz.nekobyte.nekobox.ui.profile.TrojanSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.TuicSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.VMessSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
+import xyz.nekobyte.nekobox.utils.Util
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -125,12 +136,27 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     private companion object {
         const val KEY_EXIT_PROXY_BASE = "exitProxyBase"
+        const val MAX_SEARCH_RESULTS = 500
+
+        // Actions on the open group; Favorites is no group, so they hide there.
+        val GROUP_ACTIONS = listOf(
+            R.id.action_update_subscription, R.id.action_clear_traffic_statistics, R.id.action_remove_duplicate,
+            R.id.action_connection_tcp_ping, R.id.action_connection_icmp_ping, R.id.action_connection_url_test,
+            R.id.action_connection_test_clear_results, R.id.action_connection_test_delete_unavailable, R.id.action_order_layout,
+        )
     }
 
     lateinit var adapter: GroupPagerAdapter
     lateinit var tabLayout: TabLayout
     lateinit var groupPager: ViewPager2
     private var tabLayoutMediator: TabLayoutMediator? = null
+    private lateinit var tabBar: View
+    private lateinit var searchResults: RecyclerView
+    private lateinit var searchEmpty: View
+    private var searchView: SearchView? = null
+    private var searchJob: Job? = null
+    private val searchResultAdapter = SearchResultAdapter()
+    private var favoritesShown = false
 
     val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
 
@@ -193,14 +219,109 @@ class ConfigurationFragment @JvmOverloads constructor(
     val updateSelectedCallback = object : ViewPager2.OnPageChangeCallback() {
         override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
             if (adapter.groupList.size > position) {
-                DataStore.selectedGroup = adapter.groupList[position].id
+                val groupId = adapter.groupList[position].id
+                setFavoritesShown(groupId == FAVORITES_GROUP_ID)
+                if (groupId != FAVORITES_GROUP_ID) DataStore.selectedGroup = groupId
             }
         }
     }
 
+    private fun setFavoritesShown(shown: Boolean) {
+        if (favoritesShown == shown) return
+        favoritesShown = shown
+        for (id in GROUP_ACTIONS) toolbar.menu.findItem(id)?.isVisible = !shown
+    }
+
     override fun onQueryTextChange(query: String): Boolean {
-        getCurrentGroupFragment()?.adapter?.filter(query)
+        searchAllGroups(query)
         return false
+    }
+
+    // Search covers every group; a result opens its group and scrolls to the profile.
+    private fun searchAllGroups(query: String) {
+        searchJob?.cancel()
+        if (view == null) return
+        val needle = query.trim().lowercase()
+        if (needle.isEmpty()) {
+            showSearchResults(null)
+            return
+        }
+        searchJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(150)
+            val results = withContext(Dispatchers.IO) {
+                val groups = ProfileDatabase.groupDao.allGroups().associate { it.id to it.displayName() }
+                ProfileDatabase.proxyDao.getAll().asSequence()
+                    .filter { profile -> listOf(profile.displayName(), profile.displayType(), profile.displayAddress()).any { it.lowercase().contains(needle) } }
+                    .take(MAX_SEARCH_RESULTS)
+                    .map { SearchResult(it.id, it.displayName(), "${groups[it.groupId].orEmpty()} · ${it.displayType()}") }
+                    .toList()
+            }
+            showSearchResults(results)
+        }
+    }
+
+    private fun showSearchResults(results: List<SearchResult>?) {
+        if (view == null) return
+        searchResults.isGone = results == null
+        searchEmpty.isGone = results?.isEmpty() != true
+        groupPager.isInvisible = results != null
+        searchResultAdapter.submitList(results.orEmpty())
+    }
+
+    // Opens the group that holds the profile and scrolls to it.
+    private fun jumpToProfile(profileId: Long) {
+        runOnDefaultDispatcher {
+            val groupId = ProfileDatabase.proxyDao.getById(profileId)?.groupId ?: return@runOnDefaultDispatcher
+            onMainDispatcher {
+                if (view == null || !::adapter.isInitialized) return@onMainDispatcher
+                val index = adapter.groupList.indexOfFirst { it.id == groupId }
+                if (index < 0) return@onMainDispatcher
+                groupPager.setCurrentItem(index, false)
+                // The page attaches on the next frame; its list scrolls once it has loaded.
+                groupPager.post { adapter.groupFragments[groupId]?.scrollToProfile(profileId) }
+            }
+        }
+    }
+
+    private fun showGroupMenu(anchor: View, position: Int) {
+        val groupId = adapter.groupList.getOrNull(position)?.id?.takeIf { it != FAVORITES_GROUP_ID } ?: return
+        val group = adapter.groupList[position]
+        PopupMenu(requireContext(), anchor).apply {
+            menu.add(0, R.string.group_edit, 0, R.string.group_edit)
+            if (group.type == GroupType.SUBSCRIPTION) menu.add(0, R.string.group_update, 1, R.string.group_update)
+            setOnMenuItemClickListener { item ->
+                if (item.itemId == R.string.group_edit) {
+                    startActivity(Intent(requireContext(), GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, groupId))
+                } else {
+                    runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(groupId)?.let { GroupUpdater.startUpdate(it, true) } }
+                }
+                true
+            }
+        }.show()
+    }
+
+    private fun showGroupPicker() {
+        val groups = adapter.groupList.toList()
+        runOnDefaultDispatcher {
+            val labels = groups.map { group ->
+                val count = if (group.id == FAVORITES_GROUP_ID) DataStore.favoriteProfiles.size else ProfileDatabase.proxyDao.countByGroup(group.id).toInt()
+                listOfNotNull(
+                    group.displayName(),
+                    app.resources.getQuantityString(R.plurals.group_profiles, count, count),
+                    group.subscription?.expiry()?.let { app.getString(R.string.subscription_expire, Util.timeStamp2Text(it * 1000)) },
+                ).joinToString(" · ")
+            }
+            onMainDispatcher {
+                if (!isAdded) return@onMainDispatcher
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.all_groups)
+                    .setSingleChoiceItems(labels.toTypedArray(), groupPager.currentItem) { dialog, which ->
+                        groupPager.setCurrentItem(which, false)
+                        dialog.dismiss()
+                    }
+                    .show()
+            }
+        }
     }
 
     override fun onQueryTextSubmit(query: String): Boolean = false
@@ -244,12 +365,14 @@ class ConfigurationFragment @JvmOverloads constructor(
         // findViewById (not ViewBinding): action_search is a menu action view inflated from the
         // toolbar menu, not a view in this fragment's layout binding.
         val searchView = toolbar.findViewById<SearchView>(R.id.action_search)
+        this.searchView = searchView
         if (searchView != null) {
             searchView.setOnQueryTextListener(this)
             searchView.maxWidth = Int.MAX_VALUE
 
             searchView.setOnQueryTextFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) {
+                // Results stay while the keyboard hides; an empty search closes.
+                if (!hasFocus && searchView.query.isNullOrEmpty()) {
                     cancelSearch(searchView)
                 }
             }
@@ -258,6 +381,12 @@ class ConfigurationFragment @JvmOverloads constructor(
         val groupListBinding = LayoutGroupListBinding.bind(view)
         groupPager = groupListBinding.groupPager
         tabLayout = groupListBinding.groupTab
+        tabBar = groupListBinding.groupTabBar
+        searchResults = groupListBinding.groupSearchResults
+        searchEmpty = groupListBinding.groupSearchEmpty
+        searchResults.layoutManager = LinearLayoutManager(requireContext())
+        searchResults.adapter = searchResultAdapter
+        groupListBinding.groupPicker.setOnClickListener { showGroupPicker() }
         syncProfileState()
         adapter = GroupPagerAdapter()
         ProfileManager.addListener(adapter)
@@ -265,19 +394,27 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         groupPager.adapter = adapter
         groupPager.offscreenPageLimit = 2
+        // Groups switch from the tabs and the group list; a swipe switched them by accident.
+        groupPager.isUserInputEnabled = false
 
         tabLayoutMediator = TabLayoutMediator(tabLayout, groupPager) { tab, position ->
             if (adapter.groupList.size > position) {
                 tab.text = adapter.groupList[position].displayName()
             }
             tab.view.setOnLongClickListener {
-                // clear toast
+                if (!select) showGroupMenu(it, position)
                 true
             }
         }.also { it.attach() }
 
         toolbar.setOnClickListener {
             val fragment = getCurrentGroupFragment()
+            val selectedProfile = selectedItem?.id ?: DataStore.selectedProxy
+            // The active profile sits in another group, or Favorites is open: open its group.
+            if (selectedProfile > 0L && (favoritesShown || fragment?.adapter?.configurationIdList?.contains(selectedProfile) != true)) {
+                jumpToProfile(selectedProfile)
+                return@setOnClickListener
+            }
 
             if (fragment != null) {
                 val fragmentAdapter = fragment.adapter ?: return@setOnClickListener
@@ -1273,6 +1410,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                         newGroupList.remove(it)
                     }
                 }
+                // Favorites leads the tabs while it holds a profile; deleted profiles drop out of it.
+                val favorites = DataStore.favoriteProfiles
+                val liveFavorites = ProfileDatabase.proxyDao.getEntities(favorites).mapTo(HashSet()) { it.id }
+                if (liveFavorites.size != favorites.size) DataStore.favoriteProfiles = favorites.filter { it in liveFavorites }
+                if (liveFavorites.isNotEmpty()) newGroupList.add(0, ProxyGroup(id = FAVORITES_GROUP_ID, name = app.getString(R.string.favorites)))
 
                 var selectedGroup = selectedItem?.groupId ?: DataStore.currentGroupId()
                 var set = false
@@ -1283,14 +1425,17 @@ class ConfigurationFragment @JvmOverloads constructor(
                         set = true
                     }
                 }
-                if (!set && newGroupList.isNotEmpty()) {
-                    selectedGroupIndex = 0
-                    selectedGroup = newGroupList[0].id
+                val firstGroup = newGroupList.indexOfFirst { it.id != FAVORITES_GROUP_ID }
+                if (!set && firstGroup >= 0) {
+                    selectedGroupIndex = firstGroup
+                    selectedGroup = newGroupList[firstGroup].id
                     if (DataStore.selectedGroup != selectedGroup) {
                         DataStore.selectedGroup = selectedGroup
                     }
                     set = true
                 }
+                // An open Favorites tab stays open when its list changes.
+                if (favoritesShown && liveFavorites.isNotEmpty()) selectedGroupIndex = 0
 
                 val runFunc = if (now) activity?.let { it::runOnUiThread } else groupPager::post
                 if (runFunc != null) {
@@ -1302,7 +1447,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                             notifyDataSetChanged()
                             if (set) groupPager.setCurrentItem(selectedGroupIndex, false)
                             val hideTab = groupList.size < 2
-                            tabLayout.isGone = hideTab
+                            tabBar.isGone = hideTab
                             toolbar.elevation = if (hideTab) 0F else dp2px(4).toFloat()
                             if (!select) {
                                 groupPager.registerOnPageChangeCallback(updateSelectedCallback)
@@ -1338,7 +1483,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 groupList.add(group)
 
                 if (groupList.any { !it.ungrouped }) {
-                    tabLayout.visibility = View.VISIBLE
+                    tabBar.visibility = View.VISIBLE
                 }
 
                 notifyItemInserted(groupList.size - 1)
@@ -1370,7 +1515,7 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         override suspend fun groupUpdated(groupId: Long) {
             onMainDispatcher {
-                if (!disposed && groupList.none { it.id == groupId }) reload()
+                if (!disposed && (groupId == FAVORITES_GROUP_ID || groupList.none { it.id == groupId })) reload()
             }
         }
 
@@ -1424,6 +1569,36 @@ class ConfigurationFragment @JvmOverloads constructor(
         searchView.onActionViewCollapsed()
         searchView.clearFocus()
     }
+
+    private inner class SearchResultAdapter : ListAdapter<SearchResult, SearchResultHolder>(SearchResultDiff) {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = SearchResultHolder(
+            LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_2, parent, false),
+        )
+
+        override fun onBindViewHolder(holder: SearchResultHolder, position: Int) = holder.bind(getItem(position))
+    }
+
+    private inner class SearchResultHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val name: TextView = view.findViewById(android.R.id.text1)
+        private val detail: TextView = view.findViewById(android.R.id.text2)
+
+        fun bind(result: SearchResult) {
+            name.text = result.name
+            detail.text = result.detail
+            itemView.setOnClickListener {
+                searchView?.let(::cancelSearch)
+                jumpToProfile(result.id)
+            }
+        }
+    }
+}
+
+private data class SearchResult(val id: Long, val name: String, val detail: String)
+
+private object SearchResultDiff : DiffUtil.ItemCallback<SearchResult>() {
+    override fun areItemsTheSame(oldItem: SearchResult, newItem: SearchResult) = oldItem.id == newItem.id
+
+    override fun areContentsTheSame(oldItem: SearchResult, newItem: SearchResult) = oldItem == newItem
 }
 
 /**

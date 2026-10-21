@@ -119,6 +119,11 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var confirmProfileDelete by configurationStore.boolean(Key.CONFIRM_PROFILE_DELETE) { true }
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { 0 }
 
+    // Profiles pinned to the Favorites tab, in the order they were pinned.
+    var favoriteProfiles: List<Long>
+        get() = configurationStore.getString(Key.FAVORITE_PROFILES).orEmpty().split(',').mapNotNull { it.toLongOrNull() }
+        set(value) = configurationStore.putString(Key.FAVORITE_PROFILES, value.distinct().joinToString(","))
+
     var allowInsecureOnRequest by configurationStore.boolean(Key.ALLOW_INSECURE_ON_REQUEST)
     var networkChangeResetConnections by configurationStore.boolean(Key.NETWORK_CHANGE_RESET_CONNECTIONS) { true }
     var wakeResetConnections by configurationStore.boolean(Key.WAKE_RESET_CONNECTIONS)

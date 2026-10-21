@@ -186,6 +186,17 @@
 <string name="group_duplicate">Дубликат: 
 %s</string>
 <string name="group_edit">Редактировать группу</string>
+<string name="favorites">Избранное</string>
+<string name="favorite_add">Добавить в избранное</string>
+<string name="favorite_remove">Убрать из избранного</string>
+<string name="all_groups">Все группы</string>
+<string name="search_no_results">Профили не найдены</string>
+    <plurals name="group_profiles">
+        <item quantity="one">%d профиль</item>
+        <item quantity="few">%d профиля</item>
+        <item quantity="many">%d профилей</item>
+        <item quantity="other">%d профиля</item>
+    </plurals>
 <string name="group_edit_subscription">Редактировать подписку</string>
 <string name="group_filter">Фильтр</string>
 <string name="group_name">Имя группы</string>

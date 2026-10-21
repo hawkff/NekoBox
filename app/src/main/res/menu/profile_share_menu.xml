@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/action_favorite"
+        android:title="@string/favorite_add" />
+
+    <item
         android:id="@+id/action_group_qr"
         android:title="@string/share_qr_nfc">
         <menu>
