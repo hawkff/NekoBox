@@ -35,7 +35,7 @@ object SendLog {
                 return@runOnDefaultDispatcher
             }
             onMainDispatcher {
-                if (activity.isFinishing) return@onMainDispatcher onDone()
+                if (activity.isFinishing || activity.isDestroyed) return@onMainDispatcher onDone()
                 MaterialAlertDialogBuilder(activity)
                     .setTitle(R.string.problem_report_title)
                     .setMessage(activity.getString(R.string.problem_report_note) + "\n\n" + report)
@@ -91,7 +91,7 @@ object SendLog {
             group.name?.let(values::add)
             group.subscription?.let { listOfNotNull(it.link, it.backupLinks, it.customDnsResolver).forEach(values::add) }
         }
-        return values.flatMap { it.lines() }.map { it.trim() }.filter { it.length >= 4 }.toSet()
+        return values.flatMap { it.lines() }.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     }
 
     private val URL = Regex("""\b[a-z][a-z0-9+.-]*://\S+""", RegexOption.IGNORE_CASE)

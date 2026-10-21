@@ -79,7 +79,9 @@ as Wi-Fi and a hotspot, and asks for the shared credentials.
 - A Tailscale node reaches its control server and relays through its own detour, or directly
   without one.
 - Reports, only after the user agreed to send them: they leave only while a VPN carries the
-  device's traffic. Until then, analytics events wait in a queue and error reports wait in memory,
+  device's traffic. NekoBox's VPN sends them, and the DNS queries for their hosts, through the
+  proxy ahead of the routing rules, so a bypass rule does not expose them; a profile that holds a
+  complete custom configuration routes them by that configuration. Until then, analytics events wait in a queue and error reports wait in memory,
   and they are dropped when the app process ends. Servers, profile names, keys, traffic and logs are
   never part of them.
 - Problem reports leave only when the user shares one, after reading it. Servers, profile and group
