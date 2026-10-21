@@ -37,8 +37,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
 import xyz.nekobyte.nekobox.database.preference.RoomPreferenceDataStore
+import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
+import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import java.io.File
 import java.io.IOException
 import java.time.Duration
@@ -136,6 +139,22 @@ class TelemetryTest {
         assertEquals(6, requireNotNull(filter.run(interrupted)).properties?.size)
         enabled = false
         assertNull(filter.run(interrupted))
+    }
+
+    @Test
+    fun profileKindNamesRealitySecurity() {
+        fun kind(security: String, realityKey: String = "") = profileKind(
+            ProxyEntity().putBean(
+                VMessBean().applyDefaultValues().apply {
+                    alterId = -1
+                    this.security = security
+                    realityPubKey = realityKey
+                },
+            ),
+        )
+        assertEquals(ProfileKind("vless", "tcp", "reality"), kind("tls", "fictional-reality-public-key"))
+        assertEquals(ProfileKind("vless", "tcp", "tls"), kind("tls"))
+        assertEquals(ProfileKind("vless", "tcp", "none"), kind(""))
     }
 
     @Test

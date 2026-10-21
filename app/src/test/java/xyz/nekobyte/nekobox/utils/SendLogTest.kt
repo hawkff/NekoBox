@@ -18,6 +18,7 @@ class SendLogTest {
             "\t/root/go/pkg/mod/github.com/amnezia-vpn/amneziawg-go/v3@v3.1/device/send.go:345 +0x1a5",
             "neko.log trimmed",
             "update of USA done",
+            "outbound/wireguard[my-server]: peer(AbC1…xY/2) - Sending handshake initiation",
             "OS_VERSION: 6.6.30-android15-8-gdd9c02ccfe27-ab12000000 TYPE: userdebug",
             "hex 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         ).joinToString("\n")
@@ -36,6 +37,8 @@ class SendLogTest {
         // A stored username does not cut into words, and a kernel version is no key.
         assertTrue("6.6.30-android15-8-gdd9c02ccfe27-ab12000000 TYPE: userdebug" in report)
         assertTrue("hex <key>" in report)
+        // wireguard-go's short form of a peer's public key goes too.
+        assertTrue("outbound/wireguard[<redacted>]: peer(<key>) - Sending handshake initiation" in report)
         // Short names are replaced too.
         assertTrue("update of <redacted> done" in report)
         assertEquals(log.lines().size, report.lines().size)
