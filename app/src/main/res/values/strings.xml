@@ -846,7 +846,10 @@
     <string name="use_selector">Use selector</string>
     <!-- leak protection page -->
     <string name="kill_switch">Kill switch</string>
-    <string name="kill_switch_summary">Block traffic while the proxy restarts or fails, instead of sending it directly. Takes effect on the next start.</string>
+    <string name="kill_switch_summary">Block traffic while the VPN connects, restarts or fails, instead of sending it directly. Takes effect on the next start.</string>
+    <string name="problem_report_title">Check the report before sharing</string>
+    <string name="problem_report_note">Servers, profile and group names, keys, UUIDs, IP addresses and host names are replaced with placeholders. Only this text is shared.</string>
+    <string name="problem_report_share">Share</string>
     <string name="kill_switch_blocking">Kill switch: traffic blocked</string>
     <string name="webrtc_leak_protection">WebRTC leak protection</string>
     <string name="webrtc_leak_protection_summary">Block STUN and TURN in the tunnel so websites cannot find your IP through WebRTC. Voice and video calls may stop working.</string>

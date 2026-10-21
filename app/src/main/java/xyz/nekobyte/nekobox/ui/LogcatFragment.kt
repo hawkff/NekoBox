@@ -94,12 +94,7 @@ class LogcatFragment :
                 }
             }
 
-            R.id.action_send_logcat -> {
-                val context = requireContext()
-                runOnDefaultDispatcher {
-                    SendLog.sendLog(context, "NekoBox")
-                }
-            }
+            R.id.action_send_logcat -> SendLog.review(requireActivity(), "NekoBox")
 
             R.id.action_refresh -> {
                 reloadSession()

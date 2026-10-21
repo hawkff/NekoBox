@@ -638,6 +638,9 @@ class BaseService {
             }
         }
 
+        // Blocks traffic until the core takes over, where a kill switch can do that.
+        fun blockWhileConnecting() = Unit
+
         fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
             DataStore.baseService = this
 
@@ -657,6 +660,7 @@ class BaseService {
             val ipcProfileId = intent?.getLongExtra(Action.EXTRA_PROFILE_ID, -1L) ?: -1L
 
             data.changeState(State.Connecting)
+            blockWhileConnecting()
             // Register the CLOSE/RELOAD/SHUTDOWN receiver SYNCHRONOUSLY here, before the async
             // refresh below, so a stop/reload broadcast issued during the cold-start window is
             // delivered rather than lost (the receiver used to be registered only after the

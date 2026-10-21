@@ -19,9 +19,11 @@ import go.Seq
 import kotlinx.coroutines.DEBUG_PROPERTY_NAME
 import kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON
 import libcore.Libcore
+import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.isOss
 import xyz.nekobyte.nekobox.ktx.isPreview
@@ -77,6 +79,11 @@ class NekoBox :
             Thread {
                 try {
                     DataStore.configurationStore.prime()
+                    // New installs block traffic while the VPN connects and after failures; an install
+                    // with groups predates that default and keeps the kill switch off unless the user set it.
+                    if (DataStore.configurationStore.getBoolean(Key.KILL_SWITCH) == null) {
+                        DataStore.killSwitch = ProfileDatabase.groupDao.allGroups().isEmpty()
+                    }
                 } catch (t: Throwable) {
                     primeError[0] = t
                 }

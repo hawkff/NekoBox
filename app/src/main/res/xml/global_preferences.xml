@@ -131,7 +131,7 @@
         app:summary="@string/settings_protection_summary"
         app:title="@string/settings_protection">
         <SwitchPreference
-            app:defaultValue="false"
+            app:defaultValue="true"
             app:icon="@drawable/ic_baseline_security_24"
             app:key="killSwitch"
             app:summary="@string/kill_switch_summary"

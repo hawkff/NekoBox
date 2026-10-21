@@ -82,6 +82,16 @@ class VpnService :
     override val tag = "NekoBoxVpnService"
     override fun createNotification(profileName: String) = ServiceNotification(this, profileName, "service-vpn")
 
+    // With the kill switch on, nothing leaves the device while the core starts: a bare interface
+    // holds traffic until startVpn replaces it. The core's own sockets are protected and still reach
+    // the server. A start that fails keeps it as the kill switch hold; a stop closes it.
+    override fun blockWhileConnecting() {
+        if (!DataStore.killSwitch || conn != null) return
+        conn = runCatching { tunBuilder(needBypassRootUid = false).establish() }
+            .onFailure { Logs.w("kill switch could not establish a bare tun", it) }
+            .getOrNull()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (DataStore.serviceMode == Key.MODE_VPN) {
             // Only NekoBox.startService marks a manual start. Any other start, by network
