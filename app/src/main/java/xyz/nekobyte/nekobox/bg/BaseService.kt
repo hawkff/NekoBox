@@ -35,6 +35,7 @@ import xyz.nekobyte.nekobox.utils.DefaultNetworkListener
 import xyz.nekobyte.nekobox.utils.DiagnosticOperation
 import xyz.nekobyte.nekobox.utils.Telemetry
 import xyz.nekobyte.nekobox.utils.Util
+import xyz.nekobyte.nekobox.utils.profileKind
 import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 
@@ -694,7 +695,7 @@ class BaseService {
                     throw e
                 } catch (e: Exception) {
                     Logs.w(e)
-                    attempt.complete(ConnectionOutcome.PREPARE_ERROR)
+                    attempt.complete(ConnectionOutcome.PREPARE_ERROR, e)
                     Telemetry.reportFailure(DiagnosticOperation.SERVICE_PREPARE, e)
                     onMainDispatcher {
                         stopRunner(
@@ -764,6 +765,7 @@ class BaseService {
                     // buildConfig() (via proxy.init()) does synchronous group/profile DAO reads;
                     // run it off the main thread so it works with the main-thread-DB allowance
                     // removed (Plan 027). init() is suspend and does not touch the UI.
+                    attempt.kind = profileKind(proxy.profile)
                     onDefaultDispatcher { proxy.init() }
                     DataStore.currentProfile = proxy.profile.id
 
@@ -772,7 +774,7 @@ class BaseService {
                         Telemetry.reportFailure(DiagnosticOperation.EXTERNAL_PROCESS, it)
                         when (data.state) {
                             State.Connected -> Telemetry.connectionInterrupted()
-                            State.Connecting -> attempt.complete(ConnectionOutcome.PROCESS_EXIT)
+                            State.Connecting -> attempt.complete(ConnectionOutcome.PROCESS_EXIT, it)
                             else -> Unit
                         }
                         stopRunner(false, it.readableMessage)
@@ -800,7 +802,7 @@ class BaseService {
                     // Carries a message so the kill switch treats it as a failure and holds the tun.
                     stopRunner(false, e.readableMessage)
                 } catch (exc: Throwable) {
-                    attempt.complete(ConnectionOutcome.START_ERROR)
+                    attempt.complete(ConnectionOutcome.START_ERROR, exc)
                     Telemetry.reportFailure(DiagnosticOperation.SERVICE_START, exc)
                     if (exc.javaClass.name.endsWith("proxyerror")) {
                         // error from golang
