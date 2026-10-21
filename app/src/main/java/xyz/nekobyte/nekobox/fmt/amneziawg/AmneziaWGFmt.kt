@@ -40,6 +40,33 @@ internal fun amneziaSignatureValid(spec: String): Boolean {
     }
 }
 
+// S1 to S4 pad the handshake initiation, response, cookie reply and empty transport message, in that order.
+private val PADDED_MESSAGE_SIZES = listOf(148, 92, 64, 32)
+
+/** Whether every message padded by S1 to S4 still fits one datagram; a larger S4 also crashes the device's packet reader. */
+internal fun amneziaPaddingsFit(paddings: List<Int?>) = paddings.zip(PADDED_MESSAGE_SIZES).all { (padding, size) -> (padding ?: 0) in 0..AMNEZIAWG_MAX_PACKET_SIZE - size }
+
+/**
+ * H1 to H4 as the device reads them: a number or a min-max range of 32-bit numbers, and a blank one keeps
+ * the WireGuard message type 1 to 4. Null when one does not parse.
+ */
+internal fun amneziaHeaderRanges(headers: List<String?>): List<LongRange>? = headers.mapIndexed { index, header ->
+    val parts = header?.trim().orEmpty().ifEmpty { "${index + 1}" }.split('-')
+    val bounds = parts.map { part -> part.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.toLongOrNull()?.takeIf { it <= UInt.MAX_VALUE.toLong() } ?: return null }
+    if (bounds.size > 2 || bounds.first() > bounds.last()) return null
+    bounds.first()..bounds.last()
+}
+
+/** The first two headers whose ranges overlap, numbered from 1, or null; the device refuses overlapping ranges. */
+internal fun amneziaHeaderOverlap(ranges: List<LongRange>): Pair<Int, Int>? {
+    for (i in ranges.indices) {
+        for (j in i + 1 until ranges.size) {
+            if (ranges[i].first <= ranges[j].last && ranges[j].first <= ranges[i].last) return i + 1 to j + 1
+        }
+    }
+    return null
+}
+
 fun buildSingBoxOutboundAmneziaWGBean(bean: AmneziaWGBean): SingBoxOptions.Outbound_AmneziaWGOptions = SingBoxOptions.Outbound_AmneziaWGOptions().apply {
     bean.checkWireGuardLimits()
     type = "amneziawg"
@@ -66,10 +93,10 @@ fun buildSingBoxOutboundAmneziaWGBean(bean: AmneziaWGBean): SingBoxOptions.Outbo
     if (bean.s2 != 0) s2 = bean.s2
     if (bean.s3 != 0) s3 = bean.s3
     if (bean.s4 != 0) s4 = bean.s4
-    if (bean.h1!!.isNotBlank()) h1 = bean.h1
-    if (bean.h2!!.isNotBlank()) h2 = bean.h2
-    if (bean.h3!!.isNotBlank()) h3 = bean.h3
-    if (bean.h4!!.isNotBlank()) h4 = bean.h4
+    if (bean.h1!!.isNotBlank()) h1 = bean.h1!!.trim()
+    if (bean.h2!!.isNotBlank()) h2 = bean.h2!!.trim()
+    if (bean.h3!!.isNotBlank()) h3 = bean.h3!!.trim()
+    if (bean.h4!!.isNotBlank()) h4 = bean.h4!!.trim()
     if (bean.i1!!.isNotBlank()) i1 = bean.i1
     if (bean.i2!!.isNotBlank()) i2 = bean.i2
     if (bean.i3!!.isNotBlank()) i3 = bean.i3

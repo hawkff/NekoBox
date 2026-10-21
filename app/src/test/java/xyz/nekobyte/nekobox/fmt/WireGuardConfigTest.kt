@@ -558,16 +558,47 @@ class WireGuardConfigTest {
             assertTrue(name, failure(awg(name) { i2 = spec }).contains("I2 needs known tags"))
         }
 
-        // A full batch of datagram-sized junk packets and an I1 with every tag still build, and the core accepts them too.
+        // Paddings that push a message past one datagram, and headers the device cannot read or tell apart.
+        for ((name, block) in listOf<Pair<String, AmneziaWGBean.() -> Unit>>(
+            "init-padding" to { s1 = 65507 - 147 },
+            "transport-padding" to { s4 = 65507 - 31 },
+            "negative-padding" to { s2 = -1 },
+        )) {
+            assertTrue(name, failure(awg(name, block)).contains("every handshake and data packet must fit in 65507 bytes"))
+        }
+        for ((name, block) in listOf<Pair<String, AmneziaWGBean.() -> Unit>>(
+            "header-text" to { h1 = "abc" },
+            "header-reversed" to { h2 = "5-3" },
+            "header-too-large" to { h3 = "4294967296" },
+            "header-inner-spaces" to { h4 = "100 - 200" },
+        )) {
+            assertTrue(name, failure(awg(name, block)).contains("H1 to H4 must be numbers or min-max ranges"))
+        }
+        val overlap = awg("header-overlap") {
+            h1 = "100-200"
+            h3 = "150"
+        }
+        assertTrue(failure(overlap).contains("H1 and H3 overlap"))
+        // A blank H2 keeps the value 2.
+        assertTrue(failure(awg("header-default-overlap") { h1 = "2" }).contains("H1 and H2 overlap"))
+
+        // At the limits everything still builds, and the core accepts it too.
         val limits = awg("awg-limits") {
             jc = 128
             jmax = 65507
             i1 = "<b 0xC700000001><t><r 16><rc 8><rd 4><dz 2><d><ds>"
+            s1 = 65507 - 148
+            s4 = 65507 - 32
+            h1 = "100000-800000"
+            h2 = " 900000 "
         }
         val outbound = outbound(save("awg-limits", build(limits)), "awg-limits")
         assertEquals(128, outbound.getInt("jc"))
         assertEquals(65507, outbound.getInt("jmax"))
         assertEquals("<b 0xC700000001><t><r 16><rc 8><rd 4><dz 2><d><ds>", outbound.getString("i1"))
+        assertEquals(65359, outbound.getInt("s1"))
+        assertEquals(65475, outbound.getInt("s4"))
+        assertEquals("900000", outbound.getString("h2"))
         // Without junk packets the device ignores Jmin and Jmax.
         build(
             awg("no-junk") {
