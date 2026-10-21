@@ -1413,7 +1413,9 @@ class ConfigurationFragment @JvmOverloads constructor(
                 // Favorites leads the tabs while it holds a profile; deleted profiles drop out of it.
                 val favorites = DataStore.favoriteProfiles
                 val liveFavorites = ProfileDatabase.proxyDao.getEntities(favorites).mapTo(HashSet()) { it.id }
-                if (liveFavorites.size != favorites.size) DataStore.favoriteProfiles = favorites.filter { it in liveFavorites }
+                // Only pins known to be gone are dropped; one added meanwhile stays.
+                val gone = favorites.toSet() - liveFavorites
+                if (gone.isNotEmpty()) DataStore.updateFavoriteProfiles { it - gone }
                 if (liveFavorites.isNotEmpty()) newGroupList.add(0, ProxyGroup(id = FAVORITES_GROUP_ID, name = app.getString(R.string.favorites)))
 
                 var selectedGroup = selectedItem?.groupId ?: DataStore.currentGroupId()

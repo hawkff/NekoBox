@@ -830,7 +830,7 @@ class ConfigurationGroupFragment : Fragment() {
             if (isFavorites) {
                 // Removing from Favorites unpins the profile; it stays in its group.
                 runOnDefaultDispatcher {
-                    DataStore.favoriteProfiles = DataStore.favoriteProfiles - profileIds.toSet()
+                    DataStore.updateFavoriteProfiles { it - profileIds.toSet() }
                     GroupManager.postReload(FAVORITES_GROUP_ID)
                 }
                 return
@@ -972,15 +972,17 @@ class ConfigurationGroupFragment : Fragment() {
         override suspend fun groupAdd(group: ProxyGroup) = Unit
         override suspend fun groupRemoved(groupId: Long) = Unit
 
+        // Favorites shows profiles of every group, so any group's update can change it.
         override suspend fun groupUpdated(group: ProxyGroup) {
+            if (isFavorites) return reloadProfiles()
             if (group.id != proxyGroup.id) return
             onMainDispatcher { proxyGroup = group }
             reloadProfiles()
         }
 
         override suspend fun groupUpdated(groupId: Long) {
-            if (groupId != proxyGroup.id) return
             if (isFavorites) return reloadProfiles()
+            if (groupId != proxyGroup.id) return
             val group = ProfileDatabase.groupDao.getById(groupId) ?: return
             onMainDispatcher { proxyGroup = group }
             reloadProfiles()
@@ -1358,8 +1360,7 @@ class ConfigurationGroupFragment : Fragment() {
                 val name = profile.displayName().orEmpty()
                 when (item.itemId) {
                     R.id.action_favorite -> runOnDefaultDispatcher {
-                        val favorites = DataStore.favoriteProfiles
-                        DataStore.favoriteProfiles = if (profileId in favorites) favorites - profileId else favorites + profileId
+                        DataStore.updateFavoriteProfiles { if (profileId in it) it - profileId else it + profileId }
                         GroupManager.postReload(FAVORITES_GROUP_ID)
                     }
 
