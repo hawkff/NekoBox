@@ -257,7 +257,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var automationPaused by configurationStore.boolean(Key.NETWORK_AUTOMATION_PAUSED) { false }
     var networkAutomationBlocked by configurationStore.string(Key.NETWORK_AUTOMATION_BLOCKED)
     var connectionDiagnostics by configurationStore.boolean(Key.CONNECTION_DIAGNOSTICS) { false }
-    var killSwitch by configurationStore.boolean(Key.KILL_SWITCH) { false }
+
+    // NekoBox.onCreate writes it once: on for new installs, off for installs that predate the default.
+    var killSwitch by configurationStore.boolean(Key.KILL_SWITCH) { true }
     var webrtcLeakProtection by configurationStore.boolean(Key.WEBRTC_LEAK_PROTECTION) { false }
     var gpsSpoofing by configurationStore.boolean(Key.GPS_SPOOFING) { false }
     var gpsCoordinates by configurationStore.string(Key.GPS_COORDINATES) { "" }

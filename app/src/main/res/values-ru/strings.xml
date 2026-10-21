@@ -915,7 +915,7 @@
     <string name="tailscale_amnezia_wg_invalid">Неверные настройки AmneziaWG: %s</string>
     <string name="tailscale_only_tcp_443_sum">Передавать весь трафик между узлами через ретранслятор по TCP 443 без UDP. Нужно для цепочки перед Tailscale, иначе прямые соединения с узлами уходят с этого устройства.</string>
     <string name="kill_switch">Kill switch</string>
-    <string name="kill_switch_summary">Блокировать трафик, пока прокси перезапускается или не работает, вместо отправки напрямую. Вступает в силу при следующем запуске.</string>
+    <string name="kill_switch_summary">Блокировать трафик, пока VPN подключается, перезапускается или не работает, вместо отправки напрямую. Вступает в силу при следующем запуске.</string>
     <string name="kill_switch_blocking">Kill switch: трафик заблокирован</string>
     <string name="webrtc_leak_protection">Защита от утечки WebRTC</string>
     <string name="webrtc_leak_protection_summary">Блокировать STUN и TURN в туннеле, чтобы сайты не узнали ваш IP через WebRTC. Голосовые и видеозвонки могут перестать работать.</string>
