@@ -56,6 +56,7 @@ import xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean
 import xyz.nekobyte.nekobox.proxy.shadowtls.buildSingBoxOutboundShadowTLSBean
 import xyz.nekobyte.nekobox.utils.JavaUtil.gson
 import xyz.nekobyte.nekobox.utils.PackageCache
+import xyz.nekobyte.nekobox.utils.Telemetry
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.utils.listByLineOrComma
 import java.net.IDN
@@ -279,7 +280,7 @@ private fun autoDnsDomainStrategy(s: String, ipv6Mode: Int): String? {
     }
 }
 
-fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean = false): ConfigBuildResult {
+fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean = false, reportHosts: List<String> = Telemetry.reportHosts()): ConfigBuildResult {
     require(proxy.canBuild()) {
         NekoBox.application.getString(if (proxy.isHysteria1()) R.string.hysteria1_retired else R.string.profile_unsupported)
     }
@@ -1029,6 +1030,23 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         val mainProxyTag = (if (buildSelector) TAG_PROXY else tagMap[proxy.id]) ?: TAG_PROXY
         // Endpoints are not candidates for the core's implicit first-outbound default.
         route.final_ = mainProxyTag
+
+        // Reports go through the proxy, and their names through its DNS, whatever the rules say: a host
+        // seen on the local network would tell that this app runs.
+        if (!forTest && !forExport && reportHosts.isNotEmpty()) {
+            routeRules.add(
+                Rule_DefaultOptions().apply {
+                    domain = reportHosts
+                    outbound = mainProxyTag
+                },
+            )
+            dnsRules.add(
+                DNSRule_DefaultOptions().apply {
+                    domain = reportHosts
+                    server = "dns-remote"
+                },
+            )
+        }
 
         // Tailnet destinations (peer addresses, advertised subnets, MagicDNS names) go to the
         // node that knows them, even when another outbound is the final one. The exit node's

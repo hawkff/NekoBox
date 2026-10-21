@@ -337,6 +337,8 @@ object RawUpdater : GroupUpdater() {
         val deadline = clock() + budgetMillis
         val urlShare = minOf(ATTEMPT_MILLIS, budgetMillis / (urls.size + 1))
         var failure: Exception? = null
+        // What the first response that held nothing importable contained, for the import report.
+        var refused: ImportReport? = null
         for ((index, url) in urls.withIndex()) {
             val reserved = urlShare * (urls.size - 1 - index)
             var best: Download? = null
@@ -374,8 +376,9 @@ object RawUpdater : GroupUpdater() {
                     }
                     // The update may have been cancelled while the fetch blocked.
                     currentCoroutineContext().ensureActive()
+                    val report = ImportReport()
                     val parsed = try {
-                        parseContent(readSubscriptionContent(response.text).body)
+                        parseContent(readSubscriptionContent(response.text).body, report = report)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (_: Exception) {
@@ -383,6 +386,7 @@ object RawUpdater : GroupUpdater() {
                     }
                     if (parsed == null) {
                         if (failure == null) failure = UnusableResponseException()
+                        if (refused == null) refused = report
                         continue
                     }
                     val candidate = Download(
@@ -406,6 +410,7 @@ object RawUpdater : GroupUpdater() {
             }
             if (best != null) return best
         }
+        refused?.let { Telemetry.importOutcome(it.format, ImportPreview.of(ParsedContent(emptyList(), it))) }
         throw failure ?: UnusableResponseException()
     }
 
@@ -914,8 +919,8 @@ object RawUpdater : GroupUpdater() {
     /** [parseRaw] with what the parse could not use; null when the source holds no importable node. */
     suspend fun parseImport(text: String, fileName: String = ""): ParsedContent? = parseContent(readSubscriptionContent(text).body, fileName)
 
-    internal suspend fun parseContent(body: String, fileName: String = ""): ParsedContent? {
-        val report = ImportReport()
+    /** Parses [body] into [report], which keeps what was refused when nothing is importable. */
+    internal suspend fun parseContent(body: String, fileName: String = "", report: ImportReport = ImportReport()): ParsedContent? {
         val proxies = parseRawContent(body, fileName, report).orEmpty()
         if (proxies.isEmpty()) {
             check("hysteria" !in report.failed) { app.getString(R.string.hysteria1_retired) }

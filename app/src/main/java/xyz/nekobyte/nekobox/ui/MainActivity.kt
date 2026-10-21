@@ -113,7 +113,8 @@ class MainActivity :
         binding.stats.setOnClickListener { if (DataStore.serviceState.connected) binding.stats.testConnection() }
 
         setContentView(binding.root)
-        if (savedInstanceState == null) askHelpToImprove()
+        // A recreated activity asks again until the user answers; the dialog itself is not restored.
+        askHelpToImprove()
         changeState(BaseService.State.Idle)
         connection.connect(this, this)
         DataStore.configurationStore.registerChangeListener(this)

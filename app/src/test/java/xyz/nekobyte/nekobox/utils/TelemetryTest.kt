@@ -53,6 +53,16 @@ class TelemetryTest {
     private val analyticsCache get() = RuntimeEnvironment.getApplication().cacheDir.resolve("telemetry-posthog")
 
     @Test
+    fun reportHostsComeFromTheConfiguredServices() {
+        assertEquals(
+            listOf("us.i.posthog.com", "o1.ingest.us.sentry.io"),
+            Telemetry.reportHosts("https://us.i.posthog.com", "https://key@o1.ingest.us.sentry.io/2"),
+        )
+        // Without a key a service gets no rule.
+        assertEquals(emptyList<String>(), Telemetry.reportHosts(null, ""))
+    }
+
+    @Test
     fun switchDefaultsOffAndPersistsTheChoiceAcrossInflation() {
         val context = RuntimeEnvironment.getApplication()
         val db = Room.inMemoryDatabaseBuilder(context, PublicDatabase::class.java).allowMainThreadQueries().build()

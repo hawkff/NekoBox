@@ -78,6 +78,23 @@ class ConfigBuilderDnsRuleTest {
     }
 
     @Test
+    fun reportHosts_goThroughTheProxyWhateverTheRules() {
+        replaceRules(RuleEntity(domains = "full:reports.example", outbound = -1))
+        val root = ConfigBuilderTestEnv.io { JSONObject(buildConfig(profile, reportHosts = listOf("reports.example")).config) }
+        fun List<JSONObject>.forReports() = filter { it.has("domain") && "reports.example" in values(it.getJSONArray("domain")) }
+        // The app's rules come before the user's bypass rule, in DNS and in routing.
+        val dns = dnsRules(root).forReports()
+        assertEquals(listOf("dns-remote", "dns-direct"), dns.map { it.getString("server") })
+        val routes = objects(root.getJSONObject("route").getJSONArray("rules")).forReports()
+        assertEquals(2, routes.size)
+        assertEquals(root.getJSONObject("route").getString("final"), routes[0].getString("outbound"))
+        assertEquals(TAG_BYPASS, routes[1].getString("outbound"))
+        // Exported configs carry no rule of the app's own.
+        val exported = ConfigBuilderTestEnv.io { JSONObject(buildConfig(profile, forExport = true, reportHosts = listOf("reports.example")).config) }
+        assertEquals(1, objects(exported.getJSONObject("route").getJSONArray("rules")).forReports().size)
+    }
+
+    @Test
     fun networkSourcePortAndPrivateIpOnlyRules_remainInRouting() {
         replaceRules(
             RuleEntity(network = "udp", outbound = -1),

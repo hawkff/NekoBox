@@ -1,7 +1,9 @@
 package xyz.nekobyte.nekobox.utils
 
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.SystemClock
 import androidx.preference.PreferenceDataStore
@@ -199,7 +201,7 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
         }
     }
 
-    // The VPN becomes the default network shortly after the core starts.
+    // A new VPN becomes the default network shortly after it connects.
     private fun flushHeldSoon() {
         for (delay in listOf(5L, 60L)) {
             worker.schedule(Runnable { diagnostic { while (held.isNotEmpty() && tunnelUp()) held.removeFirst()() } }, delay, TimeUnit.SECONDS)
@@ -230,8 +232,13 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
                 report.category?.let { put("category", it.name.lowercase()) }
             },
         )
-        if (report.outcome == ConnectionOutcome.CONNECTED) flushHeldSoon()
     }
+
+    /** The hosts reports go to. NekoBox's VPN routes them through the proxy, whatever the rules say. */
+    internal fun reportHosts(
+        postHogHost: String? = BuildConfig.POSTHOG_HOST.takeIf { BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() },
+        sentryDsn: String = BuildConfig.SENTRY_DSN,
+    ) = listOfNotNull(postHogHost, sentryDsn).mapNotNull { it.toHttpUrlOrNull()?.host }.distinct()
 
     internal fun importOutcome(format: ImportFormat?, preview: ImportPreview) = diagnostic {
         analytics?.capture(
@@ -303,6 +310,18 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
             },
         )
         onPreferenceDataStoreChanged(DataStore.configurationStore, Key.HELP_TO_IMPROVE)
+        // Held reports go out once a VPN carries the traffic, whichever app runs it.
+        runCatching {
+            app.getSystemService(ConnectivityManager::class.java).registerNetworkCallback(
+                NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                    .build(),
+                object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) = flushHeldSoon()
+                },
+            )
+        }.onFailure { Logs.w("Telemetry network callback failed") }
         // The core runs in the service process and leaves its last panic there.
         if (!isMainProcess) worker.execute { reportCoreCrash() }
     }
