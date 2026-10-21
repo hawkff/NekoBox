@@ -87,10 +87,12 @@ internal val COUNT_BUCKETS = listOf("0", "1-9", "10-99", "100+")
 internal fun profileKind(profile: ProxyEntity): ProfileKind {
     val v2ray = runCatching { profile.requireBean() }.getOrNull() as? StandardV2RayBean
     val protocol = if (v2ray?.isVLESS == true) "vless" else PROTOCOL_NAMES[profile.type] ?: "other"
+    // A REALITY profile stores security "tls" together with the REALITY public key.
+    val security = if (v2ray?.security == "tls" && !v2ray.realityPubKey.isNullOrBlank()) "reality" else v2ray?.security?.ifBlank { "none" }
     return ProfileKind(
         protocol,
         v2ray?.type?.ifBlank { "tcp" }?.takeIf { it in REPORTED_TRANSPORTS },
-        v2ray?.security?.ifBlank { "none" }?.takeIf { it in REPORTED_SECURITIES },
+        security?.takeIf { it in REPORTED_SECURITIES },
     )
 }
 

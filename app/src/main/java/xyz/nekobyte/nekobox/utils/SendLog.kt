@@ -100,6 +100,9 @@ object SendLog {
     private val IPV6 = Regex("""(?<![\w:])(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}(?![\w:])""", RegexOption.IGNORE_CASE)
     private val IPV4 = Regex("""\b(?:\d{1,3}\.){3}\d{1,3}\b""")
     private val TOKEN = Regex("""[A-Za-z0-9+/_-]{24,}={0,2}""")
+
+    // wireguard-go names a peer by the first and last characters of its public key.
+    private val PEER_KEY = Regex("""peer\([A-Za-z0-9+/]{4}…[A-Za-z0-9+/]{4}\)""")
     private val DOMAIN = Regex("""\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,23}\b""", RegexOption.IGNORE_CASE)
 
     // Dotted names that are code, not hosts: packages, Go module paths and file names.
@@ -122,6 +125,7 @@ object SendLog {
         result = URL.replace(result, "<url>")
         result = EMAIL.replace(result, "<email>")
         result = UUID.replace(result, "<uuid>")
+        result = PEER_KEY.replace(result, "peer(<key>)")
         // A time such as 12:34:56 has two colons and no "::"; an IPv6 address has more or a "::".
         result = IPV6.replace(result) { if ("::" in it.value || it.value.count { c -> c == ':' } >= 3) "<ip>" else it.value }
         result = IPV4.replace(result, "<ip>")
