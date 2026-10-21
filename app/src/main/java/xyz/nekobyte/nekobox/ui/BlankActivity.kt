@@ -9,11 +9,8 @@ class BlankActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // process crash log
-        intent?.getStringExtra("sendLog")?.apply {
-            SendLog.sendLog(this@BlankActivity, this)
-        }
-
-        finish()
+        // A crash report is shared only after the user has read it.
+        val title = intent?.getStringExtra("sendLog")
+        if (title == null) finish() else SendLog.review(this, title) { finish() }
     }
 }
