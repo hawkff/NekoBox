@@ -5,6 +5,9 @@ import org.json.JSONObject
 import xyz.nekobyte.nekobox.SingBoxOptions
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_JUNK_PACKETS
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_PACKET_SIZE
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaHeaderOverlap
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaHeaderRanges
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaPaddingsFit
 import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureValid
 
 /**
@@ -91,16 +94,11 @@ internal object TailscaleAmneziaWG {
         require((options.jmin ?: 0) <= (options.jmax ?: 0)) { "JMin is greater than JMax" }
         require((options.jc ?: 0) <= AMNEZIAWG_MAX_JUNK_PACKETS) { "JC is greater than $AMNEZIAWG_MAX_JUNK_PACKETS" }
         require((options.jmax ?: 0) <= AMNEZIAWG_MAX_PACKET_SIZE) { "JMax is larger than $AMNEZIAWG_MAX_PACKET_SIZE bytes" }
-        // As the device checks: the paddings fit its packet buffer and the message types stay apart.
-        val limits = listOf(options.s1 to 65535 - 148, options.s2 to 65535 - 92, options.s3 to 65535 - 64, options.s4 to 65535 - 40)
-        require(limits.all { (value, max) -> (value ?: 0) <= max }) { "S1 to S4 exceed the packet size" }
-        val headers = listOf(options.h1, options.h2, options.h3, options.h4).mapIndexed { index, value ->
-            (value ?: "${index + 1}").split('-').let { it.first().toLong()..it.last().toLong() }
-        }
-        for (i in headers.indices) {
-            for (j in i + 1 until headers.size) {
-                require(headers[i].last < headers[j].first || headers[j].last < headers[i].first) { "H${i + 1} and H${j + 1} overlap" }
-            }
+        // Tailscale tunnels carry packets of up to 1280 bytes.
+        require(amneziaPaddingsFit(paddings, 1280)) { "S1 to S4 exceed the packet size" }
+        // range() already wrote the headers in the device's format.
+        amneziaHeaderOverlap(amneziaHeaderRanges(listOf(options.h1, options.h2, options.h3, options.h4))!!)?.let { (first, second) ->
+            throw IllegalArgumentException("H$first and H$second overlap")
         }
         return options
     }

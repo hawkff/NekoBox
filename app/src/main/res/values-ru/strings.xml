@@ -951,5 +951,8 @@
     <string name="amneziawg_junk_count">%1$s: Jc должен быть от 0 до %2$d</string>
     <string name="amneziawg_junk_size">%1$s: при мусорных пакетах Jmin не должен превышать Jmax, а Jmax должен быть не больше %2$d байт</string>
     <string name="amneziawg_signature_invalid">%1$s: в I%2$d нужны известные теги с правильными значениями, а пакет должен быть не больше %3$d байт</string>
+    <string name="amneziawg_padding_size">%1$s: вместе с S1, S2, S3 и S4 каждый пакет рукопожатия и данных должен помещаться в %2$d байт</string>
+    <string name="amneziawg_header_invalid">%1$s: H1, H2, H3 и H4 должны быть числами или диапазонами min-max от 0 до 4294967295</string>
+    <string name="amneziawg_header_overlap">%1$s: H%2$d и H%3$d пересекаются; пустой H сохраняет значение от 1 до 4</string>
     <string name="amneziawg_range_hint">Число или диапазон min-max. Должно совпадать с сервером.</string>
 </resources>

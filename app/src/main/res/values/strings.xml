@@ -979,6 +979,9 @@
     <string name="amneziawg_junk_count">%1$s: Jc must be between 0 and %2$d</string>
     <string name="amneziawg_junk_size">%1$s: with junk packets, Jmin must not exceed Jmax, and Jmax must be at most %2$d bytes</string>
     <string name="amneziawg_signature_invalid">%1$s: I%2$d needs known tags with valid values and at most %3$d bytes</string>
+    <string name="amneziawg_padding_size">%1$s: with S1 to S4 added, every handshake and data packet must fit in %2$d bytes</string>
+    <string name="amneziawg_header_invalid">%1$s: H1 to H4 must be numbers or min-max ranges from 0 to 4294967295</string>
+    <string name="amneziawg_header_overlap">%1$s: H%2$d and H%3$d overlap; an empty H keeps the value 1 to 4</string>
     <string name="amneziawg_range_hint">A number or a min-max range. Must match the server.</string>
 
 </resources>

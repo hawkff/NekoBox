@@ -9,6 +9,9 @@ import xyz.nekobyte.nekobox.fmt.KryoConverters
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_JUNK_PACKETS
 import xyz.nekobyte.nekobox.fmt.amneziawg.AMNEZIAWG_MAX_PACKET_SIZE
 import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaHeaderOverlap
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaHeaderRanges
+import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaPaddingsFit
 import xyz.nekobyte.nekobox.fmt.amneziawg.amneziaSignatureValid
 import xyz.nekobyte.nekobox.fmt.dnsServer
 import xyz.nekobyte.nekobox.fmt.parseHostsAddress
@@ -321,6 +324,9 @@ private fun AmneziaWGBean.checkAmneziaWGDevice(name: String, peers: List<SingBox
     listOf(i1, i2, i3, i4, i5).forEachIndexed { index, spec ->
         require(spec.isNullOrEmpty() || amneziaSignatureValid(spec)) { string(R.string.amneziawg_signature_invalid, name, index + 1, AMNEZIAWG_MAX_PACKET_SIZE) }
     }
+    require(amneziaPaddingsFit(listOf(s1, s2, s3, s4), mtu ?: 1420)) { string(R.string.amneziawg_padding_size, name, AMNEZIAWG_MAX_PACKET_SIZE) }
+    val headers = amneziaHeaderRanges(listOf(h1, h2, h3, h4)) ?: throw IllegalArgumentException(string(R.string.amneziawg_header_invalid, name))
+    amneziaHeaderOverlap(headers)?.let { (first, second) -> throw IllegalArgumentException(string(R.string.amneziawg_header_overlap, name, first, second)) }
     val obfuscated = listOf(jc, jmin, jmax, s1, s2, s3, s4).any { (it ?: 0) != 0 } ||
         listOf(
             h1, h2, h3, h4, i1, i2, i3, i4, i5, headerProtectionKey, contentPaddingAddition, rekeyAfterTime, rekeyTimeout,

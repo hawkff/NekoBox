@@ -148,4 +148,7 @@ replace github.com/sagernet/wireguard-go => github.com/hawkff/wireguard-go v0.0.
 
 replace github.com/sagernet/tailscale => github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261017014144-a62453cd1d3f
 
+// The AmneziaWG device with the timer race fix of amnezia-vpn/amneziawg-go#205, until upstream merges it.
+replace github.com/amnezia-vpn/amneziawg-go/v3 => github.com/hawkff/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604
+
 tool github.com/sagernet/gomobile/cmd/gobind
