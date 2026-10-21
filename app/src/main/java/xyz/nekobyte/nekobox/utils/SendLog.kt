@@ -127,23 +127,35 @@ object SendLog {
         result = UUID.replace(result, "<uuid>")
         result = PEER_KEY.replace(result, "peer(<key>)")
         // A time such as 12:34:56 has two colons and no "::"; an IPv6 address has more or a "::".
-        result = IPV6.replace(result) { if ("::" in it.value || it.value.count { c -> c == ':' } >= 3) "<ip>" else it.value }
+        result = IPV6.replaceEach(result) { value, _ -> if ("::" in value || value.count { it == ':' } >= 3) "<ip>" else value }
         result = IPV4.replace(result, "<ip>")
         // Base64 keys mix upper and lower case with digits, hex keys are long runs of hex digits; versions,
         // paths and code names are neither.
-        result = TOKEN.replace(result) { token ->
-            val value = token.value.trimEnd('=')
+        result = TOKEN.replaceEach(result) { token, _ ->
+            val value = token.trimEnd('=')
             val base64 = value.any(Char::isUpperCase) && value.any(Char::isLowerCase) && value.any(Char::isDigit) && value.count { it == '/' } <= 2
             val hex = value.length >= 32 && value.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }
-            if (base64 || hex) "<key>" else token.value
+            if (base64 || hex) "<key>" else token
         }
-        return DOMAIN.replace(result) { match ->
-            val value = match.value
-            val next = result.getOrNull(match.range.last + 1)
+        return DOMAIN.replaceEach(result) { value, next ->
             val code = next == '/' || next == '(' || CODE_PREFIXES.any { value.startsWith(it, ignoreCase = true) } ||
                 value.substringAfterLast('.').lowercase() in FILE_SUFFIXES
             if (code) value else "<host>"
         }
+    }
+
+    // Regex.replace with a transform starts a new Matcher for every match, and on Android each one copies the
+    // whole text into native memory, so a report with thousands of timestamps took minutes. One Matcher is linear.
+    private inline fun Regex.replaceEach(text: String, transform: (value: String, next: Char?) -> String): String {
+        val matcher = toPattern().matcher(text)
+        if (!matcher.find()) return text
+        val out = StringBuilder(text.length)
+        var last = 0
+        do {
+            out.append(text, last, matcher.start()).append(transform(matcher.group(), text.getOrNull(matcher.end())))
+            last = matcher.end()
+        } while (matcher.find())
+        return out.append(text, last, text.length).toString()
     }
 
     // Get log bytes from neko.log
