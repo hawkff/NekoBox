@@ -2,7 +2,7 @@ package xyz.nekobyte.nekobox.group
 
 /**
  * Minimal INI reader for WireGuard / AmneziaWG `.conf` files, replacing the abandoned
- * org.ini4j dependency (Plan 020). Scoped to exactly the shape those configs use:
+ * org.ini4j dependency. Scoped to exactly the shape those configs use:
  *
  * - repeated sections with the same name (`[Peer]` can appear multiple times),
  * - repeated keys within a section (`Address` can appear multiple times),

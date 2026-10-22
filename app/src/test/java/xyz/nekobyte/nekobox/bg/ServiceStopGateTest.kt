@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * Pure-JVM interleaving tests for [ServiceStopGate] — the stop/reload decision core extracted
- * from BaseService.Data's pendingRestart + stopGeneration fields (Plan 013). Each test pins one
+ * from BaseService.Data's pendingRestart + stopGeneration fields. Each test pins one
  * interleaving of the stop-vs-reload race so a future refactor can't silently break it. All
  * transitions are synchronous; no coroutine machinery needed.
  */

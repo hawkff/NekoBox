@@ -6,7 +6,7 @@ import org.junit.Test
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 
 /**
- * Byte-compatibility guard for the kryo bump (Plan 021).
+ * Byte-compatibility guard for the kryo bump.
  *
  * The beans serialize via kryo's low-level ByteBufferInput/Output (varint + string encoding)
  * only - there is no Kryo instance / registration / FieldSerializer in use - so the on-disk

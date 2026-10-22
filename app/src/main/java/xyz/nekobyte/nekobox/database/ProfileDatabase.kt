@@ -53,7 +53,7 @@ abstract class ProfileDatabase : RoomDatabase() {
             Room.databaseBuilder(NekoBox.application, ProfileDatabase::class.java, file.name)
                 .setJournalMode(JournalMode.TRUNCATE)
                 .addMigrations(ProfileArchiveMigration)
-                // Plan 027 Stage 3: the main-thread-DB allowance is behind a build flag so it can
+                // The main-thread-DB allowance is behind a build flag so it can
                 // be removed once the app runs StrictMode-clean (debug already ships with it off).
                 .apply { if (BuildConfig.ALLOW_MAIN_THREAD_DB) allowMainThreadQueries() }
                 .enableMultiInstanceInvalidation()

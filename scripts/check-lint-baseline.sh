@@ -3,8 +3,7 @@
 # records pre-existing lint findings so the gate is green today; the policy (documented at
 # the top of lint.xml) is that it may only SHRINK - new lint errors must be fixed, not
 # baselined. This guard counts <issue elements in the baseline on the current tree and on
-# the merge base and fails if the count increased. Shared by the Depot (guard.yml) and
-# Namespace (ci.yml) guard jobs.
+# the merge base and fails if the count increased. The lint guard job in ci.yml runs it.
 set -euo pipefail
 
 BASELINE="app/lint-baseline.xml"

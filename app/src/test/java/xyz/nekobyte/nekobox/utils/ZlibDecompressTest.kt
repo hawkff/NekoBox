@@ -7,7 +7,7 @@ import xyz.nekobyte.nekobox.ktx.ImportTooLargeException
 import java.util.zip.Deflater
 
 /**
- * Tests for the bounded zlib inflate (Plan 035) that caps decompression output to prevent a
+ * Tests for the bounded zlib inflate that caps decompression output to prevent a
  * decompression bomb on deep-link / universal-link import. Pure JVM (java.util.zip only; no
  * Android Base64 / libcore JNI on these paths).
  */

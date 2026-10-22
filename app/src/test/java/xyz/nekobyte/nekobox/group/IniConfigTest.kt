@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Tests for IniConfig (Plan 020) — the internal INI reader replacing org.ini4j for parsing
+ * Tests for IniConfig, the internal INI reader replacing org.ini4j for parsing
  * WireGuard / AmneziaWG `.conf` files. Pure JVM (no Android / libcore). These pin the exact
  * behaviors parseWireGuard / parseAmneziaWG rely on so the reader is behavior-equivalent to
  * ini4j on real configs: repeated sections, multi-value keys, comments, and `key = value`

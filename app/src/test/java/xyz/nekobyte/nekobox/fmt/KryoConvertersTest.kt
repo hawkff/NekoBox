@@ -14,7 +14,7 @@ import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
  * the JVM unit-test source set. The corruption-recovery path calls Logs.w (-> libcore JNI),
  * so it is covered by an instrumented test instead (not unit-testable on the JVM).
  *
- * The round-trip fixtures here also seed the byte-stability checks Plan 021 (kryo bump) needs.
+ * The round-trip fixtures here also seed the byte-stability checks the kryo bump needs.
  */
 class KryoConvertersTest {
 
@@ -64,7 +64,7 @@ class KryoConvertersTest {
         // Stronger than serialize-vs-itself: serialize -> deserialize -> serialize must yield
         // identical bytes, catching any asymmetry between the write and read paths (a decode
         // that drops/reorders a field would change the re-serialized bytes). A checked-in
-        // golden fixture for cross-version drift detection is added with Plan 021 (kryo bump).
+        // golden fixture for cross-version drift detection is added with the kryo bump.
         val bean = SOCKSBean().apply {
             serverAddress = "10.0.0.1"
             serverPort = 1080

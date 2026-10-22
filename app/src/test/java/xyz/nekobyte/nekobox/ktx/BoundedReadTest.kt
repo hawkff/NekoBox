@@ -7,7 +7,7 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 
 /**
- * Tests for the bounded-read helpers (Plan 032) that cap untrusted imported/downloaded content
+ * Tests for the bounded-read helpers that cap untrusted imported/downloaded content
  * to prevent OOM/decompression-bomb DoS. Pure JVM (no Android / libcore).
  */
 class BoundedReadTest {

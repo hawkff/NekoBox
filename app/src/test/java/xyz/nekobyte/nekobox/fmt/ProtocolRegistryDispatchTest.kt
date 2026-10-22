@@ -49,7 +49,7 @@ import java.io.File
 import java.util.Base64
 
 /**
- * Wire-format safety net for the protocol descriptor registry (Plan 029, Option C).
+ * Wire-format safety net for the protocol descriptor registry.
  *
  * The registry may change *how* type dispatch is expressed (putByteArray / requireBean /
  * putBean) but must NEVER change the on-disk Kryo wire format or the persisted TYPE_* ids -

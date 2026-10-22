@@ -215,7 +215,7 @@ class ConfigBuildResult(
     data class WireGuardInstance(val tag: String, val ownerProfileId: Long)
 }
 
-// Extracted from buildConfig as pure, capture-free helpers (Plan 028 seams).
+// Extracted from buildConfig as pure, capture-free helpers.
 // Behavior-preserving moves: same inputs -> same outputs.
 
 // buildChain walks hops exit-first: index 0 is the hop that reaches the destination.
