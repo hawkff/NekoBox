@@ -169,7 +169,7 @@ class MainActivity :
         val content = binding.fragmentHolder.backdrop
         binding.fab.useGlass(GlassDrawable(binding.fab, content, Glass.orbTint(this), GlassShape.CIRCLE))
         val inset = resources.getDimension(R.dimen.glass_capsule_inset)
-        binding.stats.useGlass(GlassDrawable(binding.stats, content, Glass.barTint(this), GlassShape.capsule(inset, 2 * inset)))
+        binding.stats.useGlass(GlassDrawable(binding.stats, content, Glass.statsTint(this), GlassShape.capsule(inset, 2 * inset)))
         navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this), GlassShape.DRAWER)
         // The drawer slides without redrawing; its glass follows the screen behind it.
         binding.drawerLayout.addDrawerListener(

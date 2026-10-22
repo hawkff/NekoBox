@@ -27,6 +27,21 @@ class GlassTest {
     }
 
     @Test
+    fun aPaletteKeepsItsOwnTextReadable() {
+        // Catppuccin's bar with its mauve selected tab and subtext unselected tabs, over white content:
+        // mid-tone text lighter than the bar needs the bar dark enough, not a fixed white-text alpha.
+        val bar = 0xFF1E1E2E.toInt()
+        for ((text, target) in listOf(Color.WHITE to 4.5, 0xFFCBA6F7.toInt() to 3.0, 0xFFBAC2DE.toInt() to 3.0)) {
+            val alpha = glassAlpha(bar, text, target = target)
+            assertTrue(ColorUtils.calculateContrast(text, ColorUtils.blendARGB(Color.WHITE, bar, alpha)) >= target)
+        }
+        // Translucent labels count as composited over the glass: 60% white tabs on indigo.
+        val indigo = 0xFF3F51B5.toInt()
+        val faded = 0x99FFFFFF.toInt()
+        assertTrue(ColorUtils.calculateContrast(faded, ColorUtils.blendARGB(Color.WHITE, indigo, glassAlpha(indigo, faded, target = 3.0))) >= 3.0)
+    }
+
+    @Test
     fun aPaletteThatMissesTheTargetStaysNearlyOpaque() {
         // White on Material pink 500 stays under 4.5:1 even when opaque.
         assertEquals(0.92f, glassAlpha(0xFFE91E63.toInt(), Color.WHITE), 0f)

@@ -245,7 +245,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         bars.findViewById<View>(R.id.appbar)?.background = null
         tabBar.background = null
         tabLayout.background = null
-        bars.background = GlassDrawable(bars, binding.groupContent.backdrop, Glass.barTint(requireContext()), GlassShape.BAR)
+        bars.background = GlassDrawable(bars, binding.groupContent.backdrop, Glass.barTint(bars), GlassShape.BAR)
         searchResults.background = null
         searchResults.clipToPadding = false
         val searchEmptyMargin = (searchEmpty.layoutParams as FrameLayout.LayoutParams).topMargin
