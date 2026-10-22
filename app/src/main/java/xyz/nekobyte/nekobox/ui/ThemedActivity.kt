@@ -93,9 +93,26 @@ abstract class ThemedActivity : AppCompatActivity {
         }
     }
 
+    private val wideSwipe by lazy { WideSwipeBack(this) }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         Glass.onTouch(ev, window.decorView)
+        if (!isDialog && wideSwipe.onTouchEvent(ev)) return true
         return super.dispatchTouchEvent(ev)
+    }
+
+    /** Whether a wide swipe from the left part of the screen may start now. */
+    open fun canSwipeBack() = true
+
+    /** A wide swipe went through: Back, unless the screen has something better. */
+    open fun onWideSwipe() = onBackPressedDispatcher.onBackPressed()
+
+    /** Tells the views that were following [event]'s touch that it is taken. */
+    internal fun cancelTouch(event: MotionEvent) {
+        val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+        Glass.onTouch(cancel, window.decorView)
+        window.superDispatchTouchEvent(cancel)
+        cancel.recycle()
     }
 
     override fun onContentChanged() {
