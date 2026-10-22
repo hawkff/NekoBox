@@ -1,12 +1,16 @@
 package xyz.nekobyte.nekobox.fmt
 
 import android.os.ParcelFileDescriptor
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import libcore.BoxPlatformInterface
 import libcore.Libcore
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.NativeInterface
@@ -18,6 +22,14 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
 class SocketProtectionTest {
+    private fun icmpSocketsAllowed() = try {
+        // 1 is IPPROTO_ICMP, written out for API levels whose OsConstants lack it.
+        Os.close(Os.socket(OsConstants.AF_INET, OsConstants.SOCK_DGRAM, 1))
+        true
+    } catch (_: ErrnoException) {
+        false
+    }
+
     private fun withProtection(fail: Boolean, block: (AtomicInteger) -> Unit) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val native = NativeInterface()
@@ -72,6 +84,8 @@ class SocketProtectionTest {
 
     @Test
     fun icmpProbeStopsAtTheFailedPlatformCallback() {
+        // Some Android versions refuse unprivileged ICMP sockets to apps; the probe then fails before protection.
+        assumeTrue(icmpSocketsAllowed())
         withProtection(true) { calls ->
             assertThrows(Exception::class.java) { Libcore.icmpPing("127.0.0.1", 1000) }
             assertTrue(calls.get() > 0)

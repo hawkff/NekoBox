@@ -29,6 +29,7 @@ import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreference
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,8 @@ private const val TAG = "LocationSpoofingDeviceTest"
  * from the simulated ones until a new real fix arrives. The checks allow both and fail only on
  * fixes this app injected.
  */
+// Spoofing needs the boot count Android 7 introduced; earlier versions report it unsupported.
+@SdkSuppress(minSdkVersion = 24)
 @RunWith(AndroidJUnit4::class)
 class LocationSpoofingDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -458,6 +461,8 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    // Users can dismiss ongoing notices from Android 14; earlier they turn spoofing off from the notice action.
+    @SdkSuppress(minSdkVersion = 34)
     @Test
     fun dismissingTheNoticeTurnsSpoofingOffAndLeavesTheVpnConnected() = inForeground {
         withSpoofingVpn {
@@ -471,6 +476,7 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 34)
     @Test
     fun dismissingTheRecoveryNoticeShowsItAgainUntilRemovalIsConfirmed() = inForeground {
         withSpoofingVpn {
