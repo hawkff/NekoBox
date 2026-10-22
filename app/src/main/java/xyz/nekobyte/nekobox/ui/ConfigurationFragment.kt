@@ -1614,6 +1614,13 @@ class ConfigurationFragment @JvmOverloads constructor(
         searchView.clearFocus()
     }
 
+    /** Closes the search if it is open; false when it was not. */
+    fun closeSearch(): Boolean {
+        val searchView = searchView?.takeIf { !it.isIconified } ?: return false
+        cancelSearch(searchView)
+        return true
+    }
+
     private inner class SearchResultAdapter : ListAdapter<SearchResult, SearchResultHolder>(SearchResultDiff) {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = SearchResultHolder(
             LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_2, parent, false),

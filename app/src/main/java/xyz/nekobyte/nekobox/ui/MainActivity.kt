@@ -659,14 +659,9 @@ class MainActivity :
 
     override fun onWideSwipe() {
         val home = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
-        when {
-            home == null -> super.onWideSwipe()
-
-            // Home is the root: the swipe closes an open search, else opens the drawer instead of leaving the app.
-            home.toolbar.hasExpandedActionView() -> home.toolbar.collapseActionView()
-
-            else -> binding.drawerLayout.open()
-        }
+            ?: return super.onWideSwipe()
+        // Home is the root: the swipe closes an open search, else opens the drawer instead of leaving the app.
+        if (!home.closeSearch()) binding.drawerLayout.open()
     }
 
     override fun onDestroy() {

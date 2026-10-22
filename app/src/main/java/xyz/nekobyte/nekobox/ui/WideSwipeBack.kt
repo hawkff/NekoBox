@@ -87,7 +87,8 @@ internal class WideSwipeBack(private val activity: ThemedActivity) {
                 return true
             }
 
-            MotionEvent.ACTION_CANCEL -> {
+            // A second finger makes a gesture of its own, such as a pinch.
+            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
                 val owned = state == DRAGGING
                 if (owned) settle()
                 reset()
