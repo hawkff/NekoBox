@@ -199,8 +199,14 @@ class MainActivity :
         )
         val reach = 64 * resources.displayMetrics.density
         navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this)) { bounds ->
-            // Open at the screen's edges: only the inner edge shows a rim.
-            pane().rect.set(bounds.left - reach, bounds.top - reach, bounds.right.toFloat(), bounds.bottom + reach)
+            // Open at the screen's edges: only the inner edge shows a rim, the left one when the drawer opens from the right.
+            val rtl = navigation.layoutDirection == View.LAYOUT_DIRECTION_RTL
+            pane().rect.set(
+                if (rtl) bounds.left.toFloat() else bounds.left - reach,
+                bounds.top - reach,
+                if (rtl) bounds.right + reach else bounds.right.toFloat(),
+                bounds.bottom + reach,
+            )
         }
         // The drawer slides without redrawing; its glass follows the screen behind it.
         binding.drawerLayout.addDrawerListener(
