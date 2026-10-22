@@ -23,7 +23,7 @@ internal class WideSwipeBack(private val activity: ThemedActivity) {
     private val config = ViewConfiguration.get(activity)
     private val slop = config.scaledTouchSlop.toFloat()
     private val density = activity.resources.displayMetrics.density
-    private val window = IntArray(2)
+    private val onScreen = IntArray(2)
     private var tracker: VelocityTracker? = null
     private var startX = 0f
     private var startY = 0f
@@ -61,6 +61,8 @@ internal class WideSwipeBack(private val activity: ThemedActivity) {
 
                         WATCH -> return false
                     }
+                    // A settle from the last swipe would pull against the finger.
+                    content.animate().cancel()
                     state = DRAGGING
                     activity.cancelTouch(event)
                 }
@@ -108,8 +110,9 @@ internal class WideSwipeBack(private val activity: ThemedActivity) {
     /** Whether the view under the finger moves sideways on its own, so a right swipe belongs to it. */
     private fun movesSideways(view: View, x: Float, y: Float): Boolean {
         if (!view.isShown) return false
-        view.getLocationInWindow(window)
-        if (x < window[0] || y < window[1] || x >= window[0] + view.width || y >= window[1] + view.height) return false
+        // Raw touch coordinates are on the screen; in split screen the window does not start at its corner.
+        view.getLocationOnScreen(onScreen)
+        if (x < onScreen[0] || y < onScreen[1] || x >= onScreen[0] + view.width || y >= onScreen[1] + view.height) return false
         if (view is AbsSeekBar || view is Slider || view.onCheckIsTextEditor()) return true
         // A pager whose swiping is off still reports scrollable pages, itself and through its inner
         // list; its pages do not move under a finger.
