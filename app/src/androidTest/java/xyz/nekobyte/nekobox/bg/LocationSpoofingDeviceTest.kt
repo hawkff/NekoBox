@@ -17,6 +17,7 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.os.Bundle
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.Process
@@ -145,10 +146,24 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    // Before Android 11 only onLocationChanged has a body, so a lambda listener crashes when a provider turns on.
+    private fun collectingListener(received: LinkedBlockingQueue<Location>) = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            received += location
+        }
+
+        override fun onProviderEnabled(provider: String) = Unit
+
+        override fun onProviderDisabled(provider: String) = Unit
+
+        @Deprecated("Deprecated in Java")
+        override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) = Unit
+    }
+
     // Longer than two push intervals: a loop that kept running would deliver again.
     private fun assertNoNewInjectedFixes() {
         val received = LinkedBlockingQueue<Location>()
-        val listener = LocationListener { received += it }
+        val listener = collectingListener(received)
         manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, listener, Looper.getMainLooper())
         try {
             Thread.sleep(5_000)
@@ -342,7 +357,7 @@ class LocationSpoofingDeviceTest {
     @Test
     fun aRequestingListenerReceivesTheSimulatedLocationUntilStop() = inForeground {
         val received = LinkedBlockingQueue<Location>()
-        val listener = LocationListener { received += it }
+        val listener = collectingListener(received)
         manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, listener, Looper.getMainLooper())
         try {
             val spoofing = spoof()
