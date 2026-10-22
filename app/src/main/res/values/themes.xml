@@ -790,6 +790,20 @@
         <item name="colorControlNormal">?android:attr/textColorPrimary</item>
     </style>
 
+    <!-- Applied under the palette: with glass the stats float on the canvas instead of a
+         primary-colored bar, so their default colors follow the canvas. Palettes that set
+         their own keep them. -->
+    <style name="ThemeOverlay.NekoBox.GlassDefaults" parent="">
+        <item name="statusConnectedColor">?attr/primaryOrTextPrimary</item>
+        <item name="statusStoppedColor">?attr/colorError</item>
+        <item name="statusConnectingColor">?android:attr/textColorPrimary</item>
+        <item name="statusTestingColor">?android:attr/textColorPrimary</item>
+        <item name="statusDetailColor">?android:attr/textColorSecondary</item>
+        <item name="speedTextColor">?android:attr/textColorSecondary</item>
+        <!-- Connected, the orb fills with the primary color; its icon stays on-primary. -->
+        <item name="fabConnectedColor">?attr/colorOnPrimary</item>
+    </style>
+
     <!-- Glass dialogs need the system to blur the screen behind them (values-v31). -->
     <style name="ThemeOverlay.NekoBox.GlassDialogs" parent="" />
 
