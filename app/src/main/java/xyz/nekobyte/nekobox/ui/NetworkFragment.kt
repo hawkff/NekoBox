@@ -18,5 +18,8 @@ class NetworkFragment : NamedFragment(R.layout.layout_network) {
         binding.stunTest.setOnClickListener {
             startActivity(Intent(requireContext(), StunActivity::class.java))
         }
+        binding.connectionCheck.setOnClickListener {
+            startActivity(Intent(requireContext(), ConnectionCheckActivity::class.java))
+        }
     }
 }

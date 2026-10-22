@@ -318,6 +318,11 @@
             android:configChanges="uiMode"
             android:launchMode="singleTask"
             android:parentActivityName="xyz.nekobyte.nekobox.ui.MainActivity" />
+        <activity
+            android:name="xyz.nekobyte.nekobox.ui.ConnectionCheckActivity"
+            android:configChanges="uiMode"
+            android:launchMode="singleTask"
+            android:parentActivityName="xyz.nekobyte.nekobox.ui.MainActivity" />
 
         <activity
             android:name="xyz.nekobyte.nekobox.ui.SwitchActivity"
