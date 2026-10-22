@@ -7,11 +7,6 @@ __MACOSX/
 *.iml
 .idea/
 .vscode/
-.cursor/
-.agents/
-.pi-subagents/
-AGENTS.md
-/info_for_agents/
 
 # Python tooling
 __pycache__/
@@ -20,8 +15,7 @@ __pycache__/
 .gradle/
 .kotlin/
 build/
-# buildSrc/build is sometimes a symlink to APFS /tmp (exFAT AppleDouble workaround);
-# the trailing-slash 'build/' rule above doesn't match a symlink, so ignore it explicitly.
+# buildSrc/build may be a symlink, which the trailing-slash 'build/' rule does not match.
 buildSrc/build
 
 # Android / native build outputs
@@ -49,29 +43,8 @@ sentry.properties
 # Submodules / external sources
 /external/
 
-# Signing keys - never commit; provided via CI secrets or local.properties
+# Signing keys and device data backups; never commit
 release.keystore
 *.keystore
 *.jks
-
-#Extra
-currentArchitectureState/*
-localAPKs/
-
-# Depot project id is local-only infra metadata, not for the public fork.
-depot.json
-# Internal notes/docs - keep local, do not publish.
-/docs/
-# Local build env + local-only sources (kept off the public fork).
-buildenv.local.sh
-/libcore/gomobile/
-
-# Local policy and verification helpers.
-/scripts/check-agents-untracked.sh
-/scripts/check-no-shared-prefs.sh
-/scripts/verify.sh
-/scripts/hooks/
-
-# Local on-device DB/config backups (profiles + credentials — never commit)
 device-backups/
-.worklog/

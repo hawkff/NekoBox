@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Tests for sanitizeAssetFileName (Plan 015): an untrusted DISPLAY_NAME must be reduced to a
+ * Tests for sanitizeAssetFileName: an untrusted DISPLAY_NAME must be reduced to a
  * safe basename, with path traversal rejected.
  */
 class AssetFileNameTest {

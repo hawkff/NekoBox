@@ -100,7 +100,7 @@ fun Project.setupCommon() {
                     isShrinkResources = false
                     isMinifyEnabled = false
                 }
-                // Plan 027 Stage 3: release keeps the current main-thread-DB allowance until
+                // Release keeps the current main-thread-DB allowance until
                 // debug has run StrictMode-clean for a full cycle; then this flips to false and
                 // the allowMainThreadQueries() call is deleted.
                 buildConfigField("boolean", "ALLOW_MAIN_THREAD_DB", "true")

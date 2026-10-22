@@ -15,12 +15,12 @@ import org.junit.runner.RunWith
  * Instrumented test proving the ProfileDatabase 8 -> 9 migration PRESERVES user data
  * (it migrates the DB, it does NOT drop-and-recreate it).
  *
- * This is the guard against the data-loss landmine fixed in Plan 025: previously the DB was
- * declared version = 9 with no 8 -> 9 migration and a blanket fallbackToDestructiveMigration(),
- * so an upgrade from a v8 device silently wiped all saved proxy configs/groups/rules.
+ * It guards against a past data loss bug: the DB was declared version = 9 with no 8 -> 9
+ * migration and a blanket fallbackToDestructiveMigration(), so an upgrade from a v8 device
+ * silently wiped all saved proxy configs/groups/rules.
  *
  * MigrationTestHelper operates on its own throwaway test database (TEST_DB), so this test never
- * touches a real device's profiles.db — safe to run on the physical device per AGENTS.md.
+ * touches a real device's profiles.db and is safe to run on a physical device.
  */
 @RunWith(AndroidJUnit4::class)
 class ProfileDatabaseMigrationTest {

@@ -7,7 +7,7 @@ import xyz.nekobyte.nekobox.fmt.shadowsocks.parseShadowsocks
 /**
  * Characterization tests for the Shadowsocks (ss://) URI decoder.
  *
- * These pin CURRENT behavior of parseShadowsocks (see Plan 007). Golden values are
+ * These pin CURRENT behavior of parseShadowsocks. Golden values are
  * hand-traced from ShadowsocksFmt.kt; if one looks wrong, it is recorded as-is and flagged,
  * not "fixed" here.
  */
@@ -16,7 +16,7 @@ class ShadowsocksFmtTest {
     /**
      * SIP002-style with base64url userinfo is intentionally NOT asserted here: the exact
      * decode path (toHttpUrlOrNull on base64 userinfo, jms fallback) is fiddly and deriving a
-     * stable golden needs deeper tracing; characterized later alongside Plan 022. The
+     * stable golden needs deeper tracing; left for a later characterization. The
      * plaintext-userinfo form below is the stable, asserted golden.
      */
     @Test

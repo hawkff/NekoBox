@@ -365,7 +365,7 @@ class BaseService {
                             DataStore.selectedProxy = profileId
                     }
                     // Compute the in-place selector decision here (off the main thread) so
-                    // reloadInner() does no DAO reads on the UI thread (Plan 027). null tag =>
+                    // reloadInner() does no DAO reads on the UI thread. null tag =>
                     // no fast-path (fall through to the state machine). Only a profile switch
                     // carries an id; a reload without one comes from a settings change, and the
                     // in-place select would leave DNS, rules and app routing as they were.
@@ -576,7 +576,7 @@ class BaseService {
             // Flush the final per-profile cumulative rx/tx so a hard ACTION_SHUTDOWN doesn't
             // drop the last session's bytes (normal teardown already persists via
             // TrafficLooper.stop()). Per-profile cumulative traffic reuses the existing
-            // ProxyEntity.tx/rx columns - no new table / migration (see Plan 024 findings).
+            // ProxyEntity.tx/rx columns - no new table / migration.
             //
             // Use goAsync() instead of blocking onReceive (the main thread) with runBlocking:
             // the system keeps the process alive until pending.finish(), so the flush still
@@ -768,7 +768,7 @@ class BaseService {
                     preInit()
                     // buildConfig() (via proxy.init()) does synchronous group/profile DAO reads;
                     // run it off the main thread so it works with the main-thread-DB allowance
-                    // removed (Plan 027). init() is suspend and does not touch the UI.
+                    // removed. init() is suspend and does not touch the UI.
                     attempt.kind = profileKind(proxy.profile)
                     onDefaultDispatcher { proxy.init() }
                     DataStore.currentProfile = proxy.profile.id
