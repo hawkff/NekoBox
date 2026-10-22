@@ -4,6 +4,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Binder
+import android.os.IBinder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
@@ -23,8 +24,18 @@ import java.lang.reflect.Proxy
 @Config(sdk = [35], application = android.app.Application::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class NekoBoxConnectionTailscaleTest {
-    private class Service {
-        val binder = Binder()
+    // A remote binder whose process can die; it keeps the death recipients linked to it.
+    private class DyingBinder : Binder() {
+        var alive = true
+        val recipients = mutableListOf<IBinder.DeathRecipient>()
+        override fun isBinderAlive() = alive
+        override fun linkToDeath(recipient: IBinder.DeathRecipient, flags: Int) {
+            recipients += recipient
+        }
+        override fun unlinkToDeath(recipient: IBinder.DeathRecipient, flags: Int) = recipients.remove(recipient)
+    }
+
+    private class Service(val binder: Binder = Binder()) {
         lateinit var callback: INekoBoxServiceCallback
         val calls = mutableListOf<Pair<String, List<Any?>>>()
         val api = Proxy.newProxyInstance(INekoBoxService::class.java.classLoader, arrayOf(INekoBoxService::class.java)) { _, method, args ->
@@ -48,6 +59,67 @@ class NekoBoxConnectionTailscaleTest {
         } as INekoBoxService
         init {
             binder.attachInterface(api, "xyz.nekobyte.nekobox.aidl.INekoBoxService")
+        }
+    }
+
+    @Test
+    fun aDeadServiceProcessRebindsOnceWhicheverNoticeComesFirst() = runTest {
+        ConfigBuilderTestEnv.reset()
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            for (systemNoticeFirst in listOf(true, false)) {
+                var binds = 0
+                val context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
+                    override fun bindService(intent: Intent, connection: ServiceConnection, flags: Int): Boolean {
+                        binds++
+                        return true
+                    }
+                    override fun unbindService(connection: ServiceConnection) = Unit
+                }
+                val received = mutableListOf<BaseService.State>()
+                val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, listenForDeath = true)
+                val callback = object : NekoBoxConnection.Callback {
+                    override fun stateChanged(state: BaseService.State, profileName: String?, msg: String?) {
+                        received += state
+                    }
+                    override fun onServiceConnected(service: INekoBoxService) = Unit
+
+                    // As the main screen does: drop the dead binding and bind again.
+                    override fun onBinderDied() {
+                        connection.disconnect(context)
+                        connection.connect(context, this)
+                    }
+                }
+                connection.connect(context, callback)
+                try {
+                    val dying = DyingBinder()
+                    connection.onServiceConnected(null, Service(dying).binder)
+                    dying.alive = false
+                    if (systemNoticeFirst) {
+                        // The system reports the lost connection before the death notice runs.
+                        connection.onServiceDisconnected(null)
+                        dying.recipients.toList().forEach { it.binderDied() }
+                    } else {
+                        dying.recipients.toList().forEach { it.binderDied() }
+                        runCurrent()
+                        connection.onServiceDisconnected(null)
+                    }
+                    runCurrent()
+                    assertEquals("system notice first: $systemNoticeFirst", 2, binds)
+
+                    // The service the new binding brings up still reaches the callback.
+                    val replacement = Service()
+                    connection.onServiceConnected(null, replacement.binder)
+                    replacement.callback.stateChanged(BaseService.State.Connected.ordinal, null, null)
+                    runCurrent()
+                    assertEquals("system notice first: $systemNoticeFirst", listOf(BaseService.State.Connected), received)
+                } finally {
+                    connection.disconnect(context)
+                }
+            }
+        } finally {
+            DataStore.serviceState = BaseService.State.Idle
+            Dispatchers.resetMain()
         }
     }
 
