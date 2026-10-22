@@ -30,4 +30,19 @@
         <item name="appBarBackgroundColor">@android:color/system_neutral1_10</item>
         <item name="cardElevatedSurfaceColor">@android:color/system_neutral1_50</item>
     </style>
+
+    <!-- Glass dialogs: translucent over the screen behind, which the system blurs. Theme.apply
+         adds them only while cross-window blur is available. No elevation: a translucent
+         window would show its own shadow through itself. -->
+    <style name="ThemeOverlay.NekoBox.GlassDialogs" parent="">
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.NekoBox.MaterialAlertDialog.Glass</item>
+    </style>
+
+    <style name="ThemeOverlay.NekoBox.MaterialAlertDialog.Glass" parent="ThemeOverlay.NekoBox.MaterialAlertDialog">
+        <item name="colorSurfaceContainerHigh">@color/glass_dialog</item>
+        <item name="android:windowElevation">0dp</item>
+        <item name="android:windowBlurBehindEnabled">true</item>
+        <item name="android:windowBlurBehindRadius">@dimen/glass_window_blur</item>
+        <item name="android:backgroundDimAmount">0.2</item>
+    </style>
 </resources>

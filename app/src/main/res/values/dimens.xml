@@ -18,4 +18,13 @@
     <dimen name="button_corner_radius">12dp</dimen>
 
     <dimen name="mtrl_snackbar_background_corner_radius">12dp</dimen>
+
+    <!-- Liquid glass: blur of the content behind, the refracting rim and its light split,
+         and the blur behind glass dialogs. -->
+    <dimen name="glass_blur">28dp</dimen>
+    <dimen name="glass_bezel">18dp</dimen>
+    <dimen name="glass_refraction">12dp</dimen>
+    <dimen name="glass_dispersion">1.5dp</dimen>
+    <dimen name="glass_window_blur">28dp</dimen>
+    <dimen name="glass_capsule_inset">12dp</dimen>
 </resources>

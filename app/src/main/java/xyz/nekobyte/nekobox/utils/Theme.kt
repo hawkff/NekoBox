@@ -1,11 +1,14 @@
 package xyz.nekobyte.nekobox.utils
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.app
+import xyz.nekobyte.nekobox.widget.glass.Glass
 
 object Theme {
 
@@ -104,12 +107,21 @@ object Theme {
      * and a palette switch must not keep values a previous palette set.
      */
     fun apply(context: Context, theme: Int = DataStore.appTheme, dialog: Boolean = false) {
+        Glass.enabled = DataStore.liquidGlass
         val base = if (dialog) R.style.Theme_NekoBox_Dialog else R.style.Theme_NekoBox
         context.setTheme(base)
         context.theme.apply {
             applyStyle(base, true)
             applyStyle(R.style.ThemeOverlay_NekoBox_Common, true)
             applyStyle(palette(theme), true)
+            if (Glass.enabled) {
+                applyStyle(R.style.ThemeOverlay_NekoBox_Glass, true)
+                // shortcut: blur is read once per screen, so battery saver turning it off mid-screen leaves
+                // translucent dialogs over a sharp screen until the next one; listen for blur changes if that matters.
+                if (Build.VERSION.SDK_INT >= 31 && context is Activity && context.windowManager.isCrossWindowBlurEnabled) {
+                    applyStyle(R.style.ThemeOverlay_NekoBox_GlassDialogs, true)
+                }
+            }
             // The dark schemes paint the app canvas via windowBackground; a dialog keeps its frame.
             if (dialog) applyStyle(R.style.ThemeOverlay_NekoBox_DialogWindow, true)
         }

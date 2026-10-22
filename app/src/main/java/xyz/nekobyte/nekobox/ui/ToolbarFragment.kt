@@ -7,6 +7,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.Fragment
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.widget.glass.Glass
 
 open class ToolbarFragment : Fragment {
 
@@ -22,6 +23,7 @@ open class ToolbarFragment : Fragment {
         // The toolbar id is shared across those layouts, so findViewById on the subclass view is
         // the correct generic lookup.
         toolbar = view.findViewById(R.id.toolbar)
+        view.findViewById<View>(R.id.appbar)?.let(Glass::styleAppBar)
         toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
         toolbar.setNavigationOnClickListener {
             (activity as MainActivity).binding.drawerLayout.openDrawer(GravityCompat.START)

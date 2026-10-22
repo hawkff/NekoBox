@@ -2,13 +2,19 @@ package xyz.nekobyte.nekobox.widget
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Outline
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.AttributeSet
 import android.view.PointerIcon
 import android.view.View
+import android.view.ViewOutlineProvider
 import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.TooltipCompat
+import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +30,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.unwrap
+import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
 import java.util.*
 
 class ServiceButton @JvmOverloads constructor(
@@ -89,6 +96,35 @@ class ServiceButton @JvmOverloads constructor(
     private val animationQueue = ArrayDeque<AnimatedState>()
 
     private var checked = false
+    private var glass: GlassDrawable? = null
+    private var glassTint = 0
+    private val glassBounds = Rect()
+
+    /** Liquid glass: the button becomes a glass orb, filled with its color once connected. */
+    fun useGlass(drawable: GlassDrawable) {
+        glass = drawable
+        glassTint = drawable.tintColor
+        drawable.callback = this
+        backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                getContentRect(glassBounds)
+                drawable.bounds = glassBounds
+                drawable.getOutline(outline)
+            }
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        glass?.let {
+            getContentRect(glassBounds)
+            it.bounds = glassBounds
+            it.draw(canvas)
+        }
+        super.onDraw(canvas)
+    }
+
+    override fun verifyDrawable(who: Drawable) = who == glass || super.verifyDrawable(who)
     private var delayedAnimation: Job? = null
     private lateinit var progress: BaseProgressIndicator<*>
     fun initProgress(progress: BaseProgressIndicator<*>) {
@@ -150,6 +186,15 @@ class ServiceButton @JvmOverloads constructor(
     }
 
     private fun applyStateTint(state: BaseService.State) {
+        glass?.let { glass ->
+            // Clear glass with the icon in the button's color; connected, the color fills the orb
+            // and the icon takes the connected color the theme sets against it.
+            val connected = state == BaseService.State.Connected
+            val color = context.getColorAttr(R.attr.fabColorBackground)
+            glass.tintColor = if (connected) ColorUtils.setAlphaComponent(color, 0xD9) else glassTint
+            imageTintList = ColorStateList.valueOf(if (connected) context.getColorAttr(R.attr.fabConnectedColor) else color)
+            return
+        }
         // Tint the connect FAB icon by state. Connected uses fabConnectedColor
         // (defaults to the green connected status color, but themes whose FAB
         // background is that same green - e.g. Dark High Contrast - override it

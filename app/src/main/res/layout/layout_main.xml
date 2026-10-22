@@ -8,13 +8,15 @@
     app:statusBarBackground="@android:color/transparent"
     tools:openDrawer="start">
 
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
+    <!-- Both record what they draw for liquid glass: the screen for the drawer, the fragment
+         for the connect button and the stats bar. -->
+    <xyz.nekobyte.nekobox.widget.glass.GlassBackdropCoordinatorLayout
         android:id="@+id/coordinator"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipChildren="false">
 
-        <androidx.coordinatorlayout.widget.CoordinatorLayout
+        <xyz.nekobyte.nekobox.widget.glass.GlassBackdropCoordinatorLayout
             android:id="@+id/fragment_holder"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
@@ -32,6 +34,7 @@
             app:layout_scrollFlags="enterAlways|scroll">
 
             <LinearLayout
+                android:id="@+id/stats_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="?android:attr/selectableItemBackground"
@@ -102,7 +105,7 @@
             app:pressedTranslationZ="6dp"
             app:srcCompat="@drawable/ic_service_idle" />
 
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </xyz.nekobyte.nekobox.widget.glass.GlassBackdropCoordinatorLayout>
 
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"

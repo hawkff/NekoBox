@@ -493,4 +493,7 @@
     <color name="catppuccin_yellow">#F9E2AF</color>
     <color name="card_elevated_catppuccin">#181825</color>
 
+    <!-- Rim of glass cards on a light canvas (values-night: on a dark one). -->
+    <color name="glass_rim">#B3FFFFFF</color>
+
 </resources>
