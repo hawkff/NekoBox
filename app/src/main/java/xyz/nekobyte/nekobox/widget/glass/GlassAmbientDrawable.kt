@@ -65,9 +65,11 @@ class GlassAmbientDrawable(
     override fun getOpacity() = PixelFormat.OPAQUE
 
     companion object {
-        fun of(context: Context): GlassAmbientDrawable {
+        /** The theme's canvas: its window background color, or the background color. */
+        @ColorInt
+        fun canvasColor(context: Context): Int {
             val value = TypedValue()
-            val canvasColor = if (
+            return if (
                 context.theme.resolveAttribute(android.R.attr.windowBackground, value, true) &&
                 value.type in TypedValue.TYPE_FIRST_COLOR_INT..TypedValue.TYPE_LAST_COLOR_INT
             ) {
@@ -75,6 +77,10 @@ class GlassAmbientDrawable(
             } else {
                 context.getColorAttr(android.R.attr.colorBackground)
             }
+        }
+
+        fun of(context: Context): GlassAmbientDrawable {
+            val canvasColor = canvasColor(context)
             val luminance = ColorUtils.calculateLuminance(canvasColor)
             // Black canvases keep near-black corners; light ones need less to show.
             val strength = when {

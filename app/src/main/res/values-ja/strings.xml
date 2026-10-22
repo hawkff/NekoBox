@@ -438,7 +438,6 @@
     <string name="release_wake_lock">WakeLock を解放</string>
     <string name="acquire_wake_lock_summary">CPU をオンのままにする</string>
     <string name="hide_from_recent_apps">最近のタスクから隠す</string>
-    <string name="hide_from_recent_apps_summary">バックグラウンド実行時に最近のタスクからアプリを隠す</string>
     <string name="action_switch">切り替え</string>
     <string name="custom_rules_provider">カスタム</string>
     <string name="rules_geosite_url">geosite URL</string>

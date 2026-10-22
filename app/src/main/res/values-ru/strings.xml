@@ -33,7 +33,7 @@
 <string name="alpn">Согласование протокола уровня приложений</string>
 <string name="alter_id">Изменить ID</string>
 <string name="always_show_address">Всегда показывать адрес</string>
-<string name="always_show_address_sum">Всегда отображать адрес сервера на карте конфигурации</string>
+<string name="always_show_address_sum">На карточках профилей</string>
 <string name="app_desc">Универсальный набор инструментов прокси для Android, написанный на Kotlin.</string>
 <string name="app_name">NekoBox</string>
 <string name="app_name_long">NekoBox для Android</string>
@@ -423,7 +423,6 @@
 <string name="share_subscription">Поделиться подпиской</string>
 <string name="show_bottom_bar">Показать нижнюю панель</string>
 <string name="liquid_glass">Жидкое стекло</string>
-<string name="liquid_glass_summary">Панели, кнопка подключения и окна становятся стеклом, которое размывает и преломляет то, что прокручивается под ними. Расходует больше заряда; размытие работает на Android 12 и новее.</string>
 <string name="show_direct_speed">Показать прямую скорость</string>
 <string name="show_direct_speed_sum">Также в уведомлении показывать скорость трафика без прокси</string>
 <string name="show_group_in_notification">Показывать название группы в уведомлении</string>
@@ -579,7 +578,6 @@
     <string name="destination_override_summary">Использовать обнаруженный домен для перезаписи адреса назначения, не только для маршрутизации</string>
     <string name="pcap_notice">Файлы Pcap будут сохранены в %s</string>
     <string name="hide_from_recent_apps">Скрыть из недавних задач</string>
-    <string name="hide_from_recent_apps_summary">Скрывать приложение из недавних задач при работе в фоне</string>
     <string name="custom_rules_provider">Пользовательский</string>
     <string name="rules_geosite_url">URL geosite</string>
     <string name="rules_geoip_url">URL geoip</string>
