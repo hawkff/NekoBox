@@ -113,6 +113,7 @@ object Theme {
         context.theme.apply {
             applyStyle(base, true)
             applyStyle(R.style.ThemeOverlay_NekoBox_Common, true)
+            if (Glass.enabled) applyStyle(R.style.ThemeOverlay_NekoBox_GlassDefaults, true)
             applyStyle(palette(theme), true)
             if (Glass.enabled) {
                 applyStyle(R.style.ThemeOverlay_NekoBox_Glass, true)
