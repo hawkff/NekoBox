@@ -21,6 +21,8 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
+import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassAmbientDrawable
 
 abstract class ThemedActivity : AppCompatActivity {
     constructor() : super()
@@ -36,6 +38,8 @@ abstract class ThemedActivity : AppCompatActivity {
         super.onCreate(savedInstanceState)
 
         uiMode = resources.configuration.uiMode
+        // Glass bends the canvas behind it, so with glass on the canvas carries the palette's light.
+        if (Glass.enabled && !isDialog) window.setBackgroundDrawable(GlassAmbientDrawable.of(this))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -86,6 +90,12 @@ abstract class ThemedActivity : AppCompatActivity {
             // into Material 3's generated tonal roles.
             applyDynamicColors()
         }
+    }
+
+    override fun onContentChanged() {
+        super.onContentChanged()
+        // findViewById: the app bar comes from whichever layout the subclass set.
+        findViewById<View>(R.id.appbar)?.let(Glass::styleAppBar)
     }
 
     /**

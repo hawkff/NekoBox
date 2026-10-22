@@ -10,10 +10,12 @@ import android.os.Bundle
 import android.os.RemoteException
 import android.view.KeyEvent
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.IdRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
@@ -57,6 +59,9 @@ import xyz.nekobyte.nekobox.plugin.PluginTrust
 import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.utils.Util
+import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
+import xyz.nekobyte.nekobox.widget.glass.GlassShape
 import java.util.Locale
 
 class MainActivity :
@@ -88,6 +93,7 @@ class MainActivity :
             binding.drawerLayout.removeView(binding.navView)
         }
         navigation.setNavigationItemSelectedListener(this)
+        if (Glass.enabled) decorateGlass()
 
         if (savedInstanceState == null) {
             displayFragmentWithId(R.id.nav_configuration)
@@ -156,6 +162,21 @@ class MainActivity :
         LocalApiAccess.sync(this)
 
         applyHideFromRecentApps(DataStore.hideFromRecentApps)
+    }
+
+    // Liquid glass: the connect button, the stats bar and the drawer show what lies behind them.
+    private fun decorateGlass() {
+        val content = binding.fragmentHolder.backdrop
+        binding.fab.useGlass(GlassDrawable(binding.fab, content, Glass.orbTint(this), GlassShape.CIRCLE))
+        val inset = resources.getDimension(R.dimen.glass_capsule_inset)
+        binding.stats.useGlass(GlassDrawable(binding.stats, content, Glass.barTint(this), GlassShape.capsule(inset, 2 * inset)))
+        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this), GlassShape.DRAWER)
+        // The drawer slides without redrawing; its glass follows the screen behind it.
+        binding.drawerLayout.addDrawerListener(
+            object : DrawerLayout.SimpleDrawerListener() {
+                override fun onDrawerSlide(drawerView: View, slideOffset: Float) = drawerView.invalidate()
+            },
+        )
     }
 
     fun refreshNavMenu(clashApi: Boolean) {

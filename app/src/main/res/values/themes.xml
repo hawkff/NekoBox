@@ -774,6 +774,21 @@
         <item name="cornerSize">@dimen/nav_item_corner_radius</item>
     </style>
 
+    <!-- Liquid glass (Settings > Appearance), applied after the palette: translucent cards with
+         a light rim. Bars, the connect button and the drawer are drawn in code (widget/glass).
+         Elevated cards stay solid, since their shadow would show through a translucent fill. -->
+    <style name="ThemeOverlay.NekoBox.Glass" parent="">
+        <item name="materialCardViewStyle">@style/Widget.NekoBox.CardView.Glass</item>
+    </style>
+
+    <!-- Glass dialogs need the system to blur the screen behind them (values-v31). -->
+    <style name="ThemeOverlay.NekoBox.GlassDialogs" parent="" />
+
+    <style name="Widget.NekoBox.CardView.Glass">
+        <item name="cardBackgroundColor">@color/glass_card</item>
+        <item name="strokeColor">@color/glass_rim</item>
+    </style>
+
     <style name="ThemeOverlay.NekoBox.AlertDialog" parent="ThemeOverlay.NekoBox.MaterialAlertDialog">
         <item name="android:windowBackground">@drawable/bg_dialog</item>
     </style>

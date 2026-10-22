@@ -1,0 +1,99 @@
+package xyz.nekobyte.nekobox.widget.glass
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Rect
+import android.graphics.RenderNode
+import android.os.Build
+import android.util.AttributeSet
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.annotation.RequiresApi
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+
+/**
+ * The content behind glass. While liquid glass is on, the container records its children into a
+ * render node, so glass drawn in front of it can draw them again, blurred. Glass must not sit
+ * inside the backdrop it shows.
+ */
+class GlassBackdrop(val view: ViewGroup) {
+    private val recorder = if (Build.VERSION.SDK_INT >= 31) Recorder() else null
+    private val hosts = LinkedHashSet<View>()
+    private val visible = Rect()
+    private var notifying = false
+
+    /** The children as drawn in the last frame; null until the container has drawn with glass on. */
+    @get:RequiresApi(31)
+    val node: RenderNode? get() = recorder?.node?.takeIf { it.hasDisplayList() }
+
+    fun dispatchDraw(canvas: Canvas, drawChildren: (Canvas) -> Unit) {
+        val recorder = recorder
+        if (Build.VERSION.SDK_INT < 31 || recorder == null || !Glass.enabled || !canvas.isHardwareAccelerated || view.width == 0 || view.height == 0) {
+            drawChildren(canvas)
+        } else {
+            recorder.draw(canvas, view, drawChildren)
+        }
+    }
+
+    /** Something behind the glass changed: the glass that shows it draws again in the same frame. */
+    fun onDescendantInvalidated() {
+        if (notifying || hosts.isEmpty()) return
+        notifying = true
+        try {
+            for (host in hosts) if (host.isShown && host.getGlobalVisibleRect(visible)) host.invalidate()
+        } finally {
+            notifying = false
+        }
+    }
+
+    fun register(host: View) {
+        hosts += host
+    }
+
+    fun unregister(host: View) {
+        hosts -= host
+    }
+
+    @RequiresApi(31)
+    private class Recorder {
+        val node = RenderNode("glass backdrop")
+
+        fun draw(canvas: Canvas, view: View, drawChildren: (Canvas) -> Unit) {
+            node.setPosition(0, 0, view.width, view.height)
+            drawChildren(node.beginRecording(view.width, view.height))
+            node.endRecording()
+            canvas.drawRenderNode(node)
+        }
+    }
+}
+
+class GlassBackdropFrameLayout @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+) : FrameLayout(context, attrs) {
+    val backdrop = GlassBackdrop(this)
+
+    override fun dispatchDraw(canvas: Canvas) = backdrop.dispatchDraw(canvas) { super.dispatchDraw(it) }
+
+    @RequiresApi(26)
+    override fun onDescendantInvalidated(child: View, target: View) {
+        super.onDescendantInvalidated(child, target)
+        backdrop.onDescendantInvalidated()
+    }
+}
+
+class GlassBackdropCoordinatorLayout @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+) : CoordinatorLayout(context, attrs) {
+    val backdrop = GlassBackdrop(this)
+
+    override fun dispatchDraw(canvas: Canvas) = backdrop.dispatchDraw(canvas) { super.dispatchDraw(it) }
+
+    @RequiresApi(26)
+    override fun onDescendantInvalidated(child: View, target: View) {
+        super.onDescendantInvalidated(child, target)
+        backdrop.onDescendantInvalidated()
+    }
+}

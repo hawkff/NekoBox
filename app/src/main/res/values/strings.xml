@@ -829,6 +829,8 @@
     <string name="domain_strategy_for_direct">Direct domain strategy</string>
     <string name="domain_strategy_for_server">Server domain strategy</string>
     <string name="show_bottom_bar">Show bottom bar</string>
+    <string name="liquid_glass">Liquid glass</string>
+    <string name="liquid_glass_summary">Bars, the connect button and panels turn to glass that blurs and bends what scrolls beneath them. Uses more battery; the blur needs Android 12 or later.</string>
     <string name="utls_fingerprint">uTLS fingerprint</string>
     <string name="custom_outbound_json">Custom outbound JSON</string>
     <string name="custom_config_json">Custom config JSON</string>

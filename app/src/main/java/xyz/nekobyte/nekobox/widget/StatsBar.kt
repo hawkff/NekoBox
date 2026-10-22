@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.widget.TooltipCompat
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withStarted
 import com.google.android.material.bottomappbar.BottomAppBar
@@ -21,6 +22,7 @@ import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.ui.MainActivity
+import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
 
 class StatsBar @JvmOverloads constructor(
     context: Context,
@@ -74,6 +76,13 @@ class StatsBar @JvmOverloads constructor(
             if (!getAllowShow()) return
             super.slideDown(child)
         }
+    }
+
+    /** Liquid glass: the bar becomes a floating glass panel; its text keeps clear of the rounded corners. */
+    fun useGlass(glass: GlassDrawable) {
+        background = glass
+        val inset = resources.getDimensionPixelSize(R.dimen.glass_capsule_inset)
+        findViewById<View>(R.id.stats_content)?.apply { updatePadding(left = paddingLeft + 2 * inset, right = paddingRight + 2 * inset) }
     }
 
     override fun setOnClickListener(l: OnClickListener?) {

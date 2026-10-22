@@ -1,56 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     tools:context=".ui.ConfigurationFragment">
 
-    <include
-        layout="@layout/layout_appbar"
+    <!-- Declared first so the bars draw over it. It sits below them; with liquid glass it fills
+         the screen and scrolls beneath them. -->
+    <xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
+        android:id="@+id/group_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <LinearLayout
-        android:id="@+id/group_tab_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/appBarBackgroundColor"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/group_tab"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="?attr/appBarBackgroundColor"
-            android:elevation="0dp"
-            app:tabIndicatorColor="?tabIndicatorColor"
-            app:tabIndicatorFullWidth="false"
-            app:tabMode="scrollable"
-            app:tabPaddingStart="16dp"
-            app:tabRippleColor="?tabRippleColor"
-            app:tabSelectedTextColor="?tabSelectedTextColor"
-            app:tabTextColor="?tabTextColor"
-            app:tabUnboundedRipple="false" />
-
-        <ImageButton
-            android:id="@+id/group_picker"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/all_groups"
-            android:src="@drawable/ic_baseline_view_list_24"
-            app:tint="?tabTextColor" />
-
-    </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_below="@+id/group_bars">
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/group_pager"
@@ -74,6 +36,56 @@
             android:textAppearance="?attr/textAppearanceBody1"
             android:visibility="gone" />
 
-    </FrameLayout>
+    </xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout>
 
-</LinearLayout>
+    <LinearLayout
+        android:id="@+id/group_bars"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical">
+
+        <include
+            layout="@layout/layout_appbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:id="@+id/group_tab_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/appBarBackgroundColor"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/group_tab"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?attr/appBarBackgroundColor"
+                android:elevation="0dp"
+                app:tabIndicatorColor="?tabIndicatorColor"
+                app:tabIndicatorFullWidth="false"
+                app:tabMode="scrollable"
+                app:tabPaddingStart="16dp"
+                app:tabRippleColor="?tabRippleColor"
+                app:tabSelectedTextColor="?tabSelectedTextColor"
+                app:tabTextColor="?tabTextColor"
+                app:tabUnboundedRipple="false" />
+
+            <ImageButton
+                android:id="@+id/group_picker"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/all_groups"
+                android:src="@drawable/ic_baseline_view_list_24"
+                app:tint="?tabTextColor" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>
