@@ -30,17 +30,8 @@ abstract class ThemedActivity : AppCompatActivity {
     open val isDialog = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (!isDialog) {
-            Theme.apply(this)
-        } else {
-            Theme.applyDialog(this)
-        }
+        applyTheme()
         Theme.applyNightTheme()
-
-        // Only the explicit Dynamic (Material You) theme should use wallpaper colors.
-        // The hand-picked themes keep their legacy palettes instead of being reseeded
-        // into Material 3's generated tonal roles.
-        if (!isDialog) applyDynamicColors()
 
         super.onCreate(savedInstanceState)
 
@@ -75,6 +66,25 @@ abstract class ThemedActivity : AppCompatActivity {
                 updatePadding(bottom = bars.bottom)
             }
             insets
+        }
+    }
+
+    // AppCompat applies a night-mode change in place (these activities handle uiMode) by re-applying
+    // the bare base theme, which drops the palette layered over it.
+    override fun onNightModeChanged(mode: Int) {
+        super.onNightModeChanged(mode)
+        applyTheme()
+    }
+
+    private fun applyTheme() {
+        if (isDialog) {
+            Theme.applyDialog(this)
+        } else {
+            Theme.apply(this)
+            // Only the explicit Dynamic (Material You) theme should use wallpaper colors.
+            // The hand-picked themes keep their legacy palettes instead of being reseeded
+            // into Material 3's generated tonal roles.
+            applyDynamicColors()
         }
     }
 
