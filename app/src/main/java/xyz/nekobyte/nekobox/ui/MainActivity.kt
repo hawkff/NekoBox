@@ -655,6 +655,15 @@ class MainActivity :
         super.onStop()
     }
 
+    override fun canSwipeBack() = !binding.drawerLayout.isOpen
+
+    override fun onWideSwipe() {
+        val home = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
+            ?: return super.onWideSwipe()
+        // Home is the root: the swipe closes an open search, else opens the drawer instead of leaving the app.
+        if (!home.closeSearch()) binding.drawerLayout.open()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         GroupManager.userInterface = null
