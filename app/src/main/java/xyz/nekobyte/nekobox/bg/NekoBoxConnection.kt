@@ -72,6 +72,7 @@ class NekoBoxConnection(
     @Volatile var boundMode: String? = null
         private set
 
+    private val followsDeath get() = listenForDeath || connectionId == CONNECTION_ID_TAILSCALE_STATUS
     private var connectionActive = false
     private var callbackRegistered = false
     private var callback: Callback? = null
@@ -175,7 +176,7 @@ class NekoBoxConnection(
         val service = INekoBoxService.Stub.asInterface(binder)!!
         this.service = service
         try {
-            if (listenForDeath || connectionId == CONNECTION_ID_TAILSCALE_STATUS) {
+            if (followsDeath) {
                 val connectedEpoch = epoch
                 deathRecipient = IBinder.DeathRecipient { handleDeath(connectedEpoch, binder) }.also { binder.linkToDeath(it, 0) }
             }
@@ -191,12 +192,17 @@ class NekoBoxConnection(
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
+        // The service's process died. The system may not bring the service back for this binding,
+        // so a connection that follows deaths rebinds as for a death notice; whichever of the two
+        // notices comes first handles the death.
+        val died = followsDeath && binder?.isBinderAlive == false
         tailscaleBinding = null
         epoch++
         unregisterCallback()
         callback?.onServiceDisconnected()
         service = null
         binder = null
+        if (died && !restartingApp) callback?.onBinderDied()
     }
 
     override fun binderDied() = handleDeath(epoch, binder)
@@ -207,6 +213,7 @@ class NekoBoxConnection(
             tailscaleBinding = null
             epoch++
             service = null
+            binder = null
             callbackRegistered = false
             if (!restartingApp) callback?.onBinderDied()
         }
@@ -246,7 +253,7 @@ class NekoBoxConnection(
         }
         connectionActive = false
         boundMode = null
-        if (listenForDeath || connectionId == CONNECTION_ID_TAILSCALE_STATUS) {
+        if (followsDeath) {
             try {
                 deathRecipient?.let { binder?.unlinkToDeath(it, 0) }
             } catch (_: NoSuchElementException) {
