@@ -22,6 +22,7 @@ import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.ui.MainActivity
+import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
 
 class StatsBar @JvmOverloads constructor(
@@ -81,6 +82,7 @@ class StatsBar @JvmOverloads constructor(
     /** Liquid glass: the bar becomes a floating glass panel; its text keeps clear of the rounded corners. */
     fun useGlass(glass: GlassDrawable) {
         background = glass
+        findViewById<TextView>(R.id.status)?.setTextColor(context.getColorAttr(android.R.attr.textColorPrimary))
         val inset = resources.getDimensionPixelSize(R.dimen.glass_capsule_inset)
         findViewById<View>(R.id.stats_content)?.apply { updatePadding(left = paddingLeft + 2 * inset, right = paddingRight + 2 * inset) }
     }
@@ -129,13 +131,14 @@ class StatsBar @JvmOverloads constructor(
     private fun setStatusColorByState(state: BaseService.State) {
         // Connected = statusConnectedColor (green), Stopped/Stopping = statusStoppedColor
         // (red - "Shutting down…" reads as red), Connecting = statusConnectingColor (Dracula
-        // yellow; colorOnPrimary elsewhere), other = colorOnPrimary.
+        // yellow; colorOnPrimary elsewhere), other = colorOnPrimary, or with glass, where the
+        // bar is no longer primary-colored, the canvas text color.
         // Non-Dracula themes default these attrs to colorOnPrimary, so no change.
         val attr = when (state) {
             BaseService.State.Connected -> R.attr.statusConnectedColor
             BaseService.State.Stopped, BaseService.State.Stopping -> R.attr.statusStoppedColor
             BaseService.State.Connecting -> R.attr.statusConnectingColor
-            else -> com.google.android.material.R.attr.colorOnPrimary
+            else -> if (Glass.enabled) android.R.attr.textColorPrimary else com.google.android.material.R.attr.colorOnPrimary
         }
         statusText.setTextColor(context.getColorAttr(attr))
     }

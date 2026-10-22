@@ -27,7 +27,6 @@
         <SwitchPreference
             app:defaultValue="false"
             app:key="liquidGlass"
-            app:summary="@string/liquid_glass_summary"
             app:title="@string/liquid_glass" />
         <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue=""
@@ -51,7 +50,6 @@
             app:title="@string/confirm_profile_delete" />
         <SwitchPreference
             app:key="hideFromRecentApps"
-            app:summary="@string/hide_from_recent_apps_summary"
             app:title="@string/hide_from_recent_apps" />
     </PreferenceScreen>
 

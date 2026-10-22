@@ -774,20 +774,38 @@
         <item name="cornerSize">@dimen/nav_item_corner_radius</item>
     </style>
 
-    <!-- Liquid glass (Settings > Appearance), applied after the palette: translucent cards with
-         a light rim. Bars, the connect button and the drawer are drawn in code (widget/glass).
-         Elevated cards stay solid, since their shadow would show through a translucent fill. -->
+    <!-- Liquid glass (Settings > Appearance), applied after the palette. Controls float as glass
+         over the canvas (widget/glass) instead of sitting on a colored bar, so the bar's text,
+         icons and tabs take the canvas colors. Content, such as profile cards, stays solid. -->
     <style name="ThemeOverlay.NekoBox.Glass" parent="">
-        <item name="materialCardViewStyle">@style/Widget.NekoBox.CardView.Glass</item>
+        <!-- Clear system bars, so the glass and the content run under them. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="actionBarTheme">@style/ThemeOverlay.NekoBox.ActionBar.Glass</item>
+        <item name="tabTextColor">?android:attr/textColorSecondary</item>
+        <item name="tabSelectedTextColor">?attr/primaryOrTextPrimary</item>
+    </style>
+
+    <style name="ThemeOverlay.NekoBox.ActionBar.Glass" parent="">
+        <item name="colorControlNormal">?android:attr/textColorPrimary</item>
+    </style>
+
+    <!-- Applied under the palette: with glass the stats float on the canvas instead of a
+         primary-colored bar, so their default colors follow the canvas. Palettes that set
+         their own keep them. -->
+    <style name="ThemeOverlay.NekoBox.GlassDefaults" parent="">
+        <item name="statusConnectedColor">?attr/primaryOrTextPrimary</item>
+        <item name="statusStoppedColor">?attr/colorError</item>
+        <item name="statusConnectingColor">?android:attr/textColorPrimary</item>
+        <item name="statusTestingColor">?android:attr/textColorPrimary</item>
+        <item name="statusDetailColor">?android:attr/textColorSecondary</item>
+        <item name="speedTextColor">?android:attr/textColorSecondary</item>
+        <!-- Connected, the orb fills with the primary color; its icon stays on-primary. -->
+        <item name="fabConnectedColor">?attr/colorOnPrimary</item>
     </style>
 
     <!-- Glass dialogs need the system to blur the screen behind them (values-v31). -->
     <style name="ThemeOverlay.NekoBox.GlassDialogs" parent="" />
-
-    <style name="Widget.NekoBox.CardView.Glass">
-        <item name="cardBackgroundColor">@color/glass_card</item>
-        <item name="strokeColor">@color/glass_rim</item>
-    </style>
 
     <style name="ThemeOverlay.NekoBox.AlertDialog" parent="ThemeOverlay.NekoBox.MaterialAlertDialog">
         <item name="android:windowBackground">@drawable/bg_dialog</item>

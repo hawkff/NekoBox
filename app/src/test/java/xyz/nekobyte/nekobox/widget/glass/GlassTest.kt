@@ -1,14 +1,25 @@
 package xyz.nekobyte.nekobox.widget.glass
 
+import android.app.Activity
 import android.app.Application
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.ContextThemeWrapper
+import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.appcompat.widget.ActionMenuView
+import androidx.appcompat.widget.Toolbar
 import androidx.core.graphics.ColorUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.R
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -45,6 +56,38 @@ class GlassTest {
     fun aPaletteThatMissesTheTargetStaysNearlyOpaque() {
         // White on Material pink 500 stays under 4.5:1 even when opaque.
         assertEquals(0.92f, glassAlpha(0xFFE91E63.toInt(), Color.WHITE), 0f)
+    }
+
+    @Test
+    fun toolbarButtonsFloatAsACircleAndACapsule() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val host = FrameLayout(ContextThemeWrapper(activity, R.style.Theme_NekoBox))
+        val toolbar = Toolbar(host.context)
+        host.addView(toolbar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        toolbar.navigationIcon = ColorDrawable(Color.WHITE)
+        repeat(2) { toolbar.menu.add("action $it").setIcon(ColorDrawable(Color.WHITE)).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS) }
+        activity.setContentView(host)
+        fun lay(): GlassLayout {
+            host.measure(View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(400, View.MeasureSpec.EXACTLY))
+            host.layout(0, 0, 1080, 400)
+            return GlassLayout().also { with(Glass) { it.toolbarPanes(host, toolbar) } }
+        }
+
+        val layout = lay()
+        assertEquals(2, layout.count)
+        val button = layout.panes[0]
+        assertEquals(button.rect.width(), button.rect.height(), 0.01f)
+        assertEquals(button.rect.width() / 2, button.radius, 0.01f)
+        val actions = layout.panes[1]
+        assertTrue(actions.anchor is ActionMenuView)
+        assertEquals(actions.rect.height() / 2, actions.radius, 0.01f)
+        // One capsule holds both actions.
+        assertTrue(actions.rect.width() > 1.5f * actions.rect.height())
+        assertTrue(button.rect.right < actions.rect.left)
+
+        // A button that is gone gets no pane.
+        toolbar.navigationIcon = null
+        assertEquals(1, lay().count)
     }
 
     @Test

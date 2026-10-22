@@ -60,8 +60,9 @@ import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassBand
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
-import xyz.nekobyte.nekobox.widget.glass.GlassShape
+import xyz.nekobyte.nekobox.widget.glass.followSwell
 import java.util.Locale
 
 class MainActivity :
@@ -164,13 +165,49 @@ class MainActivity :
         applyHideFromRecentApps(DataStore.hideFromRecentApps)
     }
 
-    // Liquid glass: the connect button, the stats bar and the drawer show what lies behind them.
+    // Liquid glass: the connect button and the stats bar float as glass over the profiles; the
+    // drawer is a sheet of glass over the screen. Glass sets itself off by its edge, not a shadow.
     private fun decorateGlass() {
         val content = binding.fragmentHolder.backdrop
-        binding.fab.useGlass(GlassDrawable(binding.fab, content, Glass.orbTint(this), GlassShape.CIRCLE))
+        val tint = Glass.tint(this)
+        val fab = binding.fab
+        fab.compatElevation = 0f
+        fab.compatPressedTranslationZ = 0f
+        fab.useGlass(
+            GlassDrawable(fab, content, tint) { bounds ->
+                pane().apply {
+                    rect.set(bounds)
+                    radius = rect.width() / 2
+                    anchor = fab
+                }
+            },
+        )
+        val stats = binding.stats
+        val statsContent = stats.findViewById<View>(R.id.stats_content)
         val inset = resources.getDimension(R.dimen.glass_capsule_inset)
-        binding.stats.useGlass(GlassDrawable(binding.stats, content, Glass.statsTint(this), GlassShape.capsule(inset, 2 * inset)))
-        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this), GlassShape.DRAWER)
+        stats.elevation = 0f
+        stats.useGlass(
+            GlassDrawable(stats, content, tint) { bounds ->
+                val capsule = pane()
+                capsule.rect.set(bounds.left + inset, bounds.top + inset, bounds.right - inset, bounds.bottom - stats.paddingBottom - inset)
+                capsule.radius = 2 * inset
+                capsule.anchor = statsContent
+                capsule.followSwell()
+                // The profiles fade out under the capsule, so its status reads over any of them.
+                band.set(GlassBand.BOTTOM, capsule.rect.top, inset)
+            },
+        )
+        val reach = 64 * resources.displayMetrics.density
+        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this)) { bounds ->
+            // Open at the screen's edges: only the inner edge shows a rim, the left one when the drawer opens from the right.
+            val rtl = navigation.layoutDirection == View.LAYOUT_DIRECTION_RTL
+            pane().rect.set(
+                if (rtl) bounds.left.toFloat() else bounds.left - reach,
+                bounds.top - reach,
+                if (rtl) bounds.right + reach else bounds.right.toFloat(),
+                bounds.bottom + reach,
+            )
+        }
         // The drawer slides without redrawing; its glass follows the screen behind it.
         binding.drawerLayout.addDrawerListener(
             object : DrawerLayout.SimpleDrawerListener() {

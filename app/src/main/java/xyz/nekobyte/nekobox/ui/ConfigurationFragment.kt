@@ -116,8 +116,8 @@ import xyz.nekobyte.nekobox.ui.profile.VMessSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassBand
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
-import xyz.nekobyte.nekobox.widget.glass.GlassShape
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -237,21 +237,30 @@ class ConfigurationFragment @JvmOverloads constructor(
         }
     }
 
-    // The groups fill the screen and scroll beneath one glass panel: the app bar and the tab row.
+    // The groups fill the screen and scroll beneath the floating controls: the menu button, the
+    // actions and the tabs as glass, over a band where the content fades into the canvas.
     private fun setupGlassBars(binding: LayoutGroupListBinding) {
         val bars = binding.groupBars
         binding.groupContent.updateLayoutParams<RelativeLayout.LayoutParams> { removeRule(RelativeLayout.BELOW) }
-        // ToolbarFragment gave the app bar glass of its own; the panel replaces it.
+        // ToolbarFragment gave the app bar glass of its own; the bars' glass holds its buttons too.
         bars.findViewById<View>(R.id.appbar)?.background = null
         tabBar.background = null
         tabLayout.background = null
-        bars.background = GlassDrawable(bars, binding.groupContent.backdrop, Glass.barTint(bars), GlassShape.BAR)
+        Glass.styleTabs(tabLayout, tabBar)
+        // The band fades out below the controls, inside the bars so the bars can draw it.
+        val fade = resources.getDimensionPixelSize(R.dimen.glass_edge_fade)
+        bars.updatePadding(bottom = fade)
+        bars.background = GlassDrawable(bars, binding.groupContent.backdrop, Glass.tint(requireContext())) { bounds ->
+            with(Glass) { toolbarPanes(bars, toolbar) }
+            paneOver(bars, tabBar, 0f, 0f)
+            band.set(GlassBand.TOP, (bounds.bottom - fade).toFloat(), fade.toFloat())
+        }
         searchResults.background = null
         searchResults.clipToPadding = false
         val searchEmptyMargin = (searchEmpty.layoutParams as FrameLayout.LayoutParams).topMargin
         bars.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
-            glassTopInset = bottom - top
+            glassTopInset = bottom - top - fade
             searchResults.updatePadding(top = glassTopInset)
             searchEmpty.updateLayoutParams<FrameLayout.LayoutParams> { topMargin = searchEmptyMargin + glassTopInset }
             if (::adapter.isInitialized) adapter.groupFragments.values.forEach { it.setGlassInset(glassTopInset) }

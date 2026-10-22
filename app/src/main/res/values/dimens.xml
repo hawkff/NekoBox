@@ -19,12 +19,13 @@
 
     <dimen name="mtrl_snackbar_background_corner_radius">12dp</dimen>
 
-    <!-- Liquid glass: blur of the content behind, the refracting rim and its light split,
-         and the blur behind glass dialogs. -->
-    <dimen name="glass_blur">28dp</dimen>
-    <dimen name="glass_bezel">18dp</dimen>
-    <dimen name="glass_refraction">12dp</dimen>
-    <dimen name="glass_dispersion">1.5dp</dimen>
+    <!-- Liquid glass: frost of the content behind, the refracting rim and its light split, the
+         fade of the band under floating controls, and the blur behind glass dialogs. -->
+    <dimen name="glass_blur">12dp</dimen>
+    <dimen name="glass_bezel">14dp</dimen>
+    <dimen name="glass_refraction">9dp</dimen>
+    <dimen name="glass_dispersion">1.2dp</dimen>
+    <dimen name="glass_edge_fade">24dp</dimen>
     <dimen name="glass_window_blur">28dp</dimen>
     <dimen name="glass_capsule_inset">12dp</dimen>
 </resources>

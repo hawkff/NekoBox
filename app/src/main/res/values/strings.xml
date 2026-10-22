@@ -509,7 +509,7 @@
     <string name="available" translatable="false">%dms</string>
     <string name="unavailable">Unavailable</string>
     <string name="always_show_address">Always show address</string>
-    <string name="always_show_address_sum">Show the server address on profile cards</string>
+    <string name="always_show_address_sum">On profile cards</string>
     <string name="clear_traffic_statistics">Clear traffic statistics</string>
     <string name="connection_test">Connection test</string>
     <string name="connection_test_clear_results">Clear test results</string>
@@ -803,7 +803,6 @@
     <string name="release_wake_lock">Release WakeLock</string>
     <string name="acquire_wake_lock_summary">Hold a wake lock while connected. Uses more battery.</string>
     <string name="hide_from_recent_apps">Hide from recent tasks</string>
-    <string name="hide_from_recent_apps_summary">Hide the app from recents while it runs in the background</string>
     <string name="action_switch">Switch</string>
     <string name="custom_rules_provider">Custom</string>
     <string name="rules_geosite_url">GeoSite URL</string>
@@ -830,7 +829,6 @@
     <string name="domain_strategy_for_server">Server domain strategy</string>
     <string name="show_bottom_bar">Show bottom bar</string>
     <string name="liquid_glass">Liquid glass</string>
-    <string name="liquid_glass_summary">Bars, the connect button and panels turn to glass that blurs and bends what scrolls beneath them. Uses more battery; the blur needs Android 12 or later.</string>
     <string name="utls_fingerprint">uTLS fingerprint</string>
     <string name="custom_outbound_json">Custom outbound JSON</string>
     <string name="custom_config_json">Custom config JSON</string>

@@ -432,7 +432,6 @@
     <string name="release_wake_lock">WakeLock 해제</string>
     <string name="acquire_wake_lock_summary">CPU를 켠 상태로 유지</string>
     <string name="hide_from_recent_apps">최근 작업에서 숨기기</string>
-    <string name="hide_from_recent_apps_summary">백그라운드 실행 시 최근 작업에서 앱 숨기기</string>
     <string name="action_switch">전환</string>
     <string name="custom_rules_provider">사용자 지정</string>
     <string name="rules_geosite_url">geosite URL</string>

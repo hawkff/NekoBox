@@ -562,7 +562,6 @@
     <string name="filter_exclude">مستثنا</string>
     <string name="filter_regex">فیلتر (عبارت باقاعده)</string>
     <string name="hide_from_recent_apps">پنهان کردن از کارهای اخیر</string>
-    <string name="hide_from_recent_apps_summary">پنهان کردن برنامه از کارهای اخیر هنگام اجرا در پس‌زمینه</string>
     <string name="custom_rules_provider">سفارشی</string>
     <string name="rules_geosite_url">نشانی geosite</string>
     <string name="rules_geoip_url">نشانی geoip</string>

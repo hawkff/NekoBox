@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
 import android.widget.TextView
 import androidx.annotation.StringRes
@@ -46,11 +47,11 @@ abstract class ThemedActivity : AppCompatActivity {
 
             val insetController = WindowCompat.getInsetsController(window, window.decorView)
             insetController.isAppearanceLightNavigationBars = !Theme.usingNightMode()
-            // The transparent status bar sits over the app bar: dark icons whenever white
-            // would not read on it (the same 3:1 floor the light-primary palettes use).
-            val appBar = getColorAttr(R.attr.appBarBackgroundColor)
+            // The transparent status bar sits over the app bar, or with glass over the canvas: dark
+            // icons whenever white would not read there (the same 3:1 floor the light-primary palettes use).
+            val behind = if (Glass.enabled) GlassAmbientDrawable.canvasColor(this) else getColorAttr(R.attr.appBarBackgroundColor)
             insetController.isAppearanceLightStatusBars =
-                Color.alpha(appBar) == 0xFF && ColorUtils.calculateContrast(Color.WHITE, appBar) < 3.0
+                Color.alpha(behind) == 0xFF && ColorUtils.calculateContrast(Color.WHITE, behind) < 3.0
         }
 
         // findViewById (not ViewBinding): ThemedActivity is a base class applied over arbitrary
@@ -90,6 +91,11 @@ abstract class ThemedActivity : AppCompatActivity {
             // into Material 3's generated tonal roles.
             applyDynamicColors()
         }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        Glass.onTouch(ev, window.decorView)
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun onContentChanged() {
