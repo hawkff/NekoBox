@@ -6,9 +6,15 @@
         <domain includeSubdomains="false">127.0.0.1</domain>
         <domain includeSubdomains="false">localhost</domain>
     </domain-config>
-    <!-- The connection check talks to bash.ws, whose chain ends at ISRG Root X1; Android trusts it only from 7.1.1. -->
+    <!-- The connection check's hosts may chain to ISRG Root X1, which Android trusts only from 7.1.1. -->
     <domain-config>
         <domain includeSubdomains="true">bash.ws</domain>
+        <domain includeSubdomains="true">ipleak.net</domain>
+        <domain includeSubdomains="true">cloudflare.com</domain>
+        <domain includeSubdomains="true">dnscheck.tools</domain>
+        <domain includeSubdomains="true">proxycheck.io</domain>
+        <domain includeSubdomains="true">torproject.org</domain>
+        <domain includeSubdomains="true">raw.githubusercontent.com</domain>
         <trust-anchors>
             <certificates src="system" />
             <certificates src="@raw/isrg_root_x1" />

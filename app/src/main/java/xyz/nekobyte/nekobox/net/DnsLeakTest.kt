@@ -7,18 +7,13 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resumeWithException
 
 /**
  * The bash.ws DNS leak test, run the way its web page runs it: start a test, request unique names
@@ -109,22 +104,6 @@ object DnsLeakTest {
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             answer ?: throw IOException("unexpected answer from bash.ws")
         }
-    }
-
-    // Leaving the check cancels the request in flight; a blocking execute() would run on.
-    private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
-        continuation.invokeOnCancellation { cancel() }
-        enqueue(
-            object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    if (continuation.isActive) continuation.resumeWithException(e)
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    if (continuation.isActive) continuation.resume(response) { _, value, _ -> value.close() } else response.close()
-                }
-            },
-        )
     }
 
     // Each row sits under its table's header; only the DNS server table names DNS there.
