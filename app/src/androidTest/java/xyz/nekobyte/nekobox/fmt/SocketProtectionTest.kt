@@ -7,7 +7,6 @@ import libcore.BoxPlatformInterface
 import libcore.Libcore
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.NativeInterface
@@ -73,9 +72,6 @@ class SocketProtectionTest {
 
     @Test
     fun icmpProbeStopsAtTheFailedPlatformCallback() {
-        // The probe needs datagram ICMP sockets, which some Android versions keep from apps; it then
-        // fails before protection is asked for.
-        withProtection(false) { assumeTrue(runCatching { Libcore.icmpPing("127.0.0.1", 1000) }.isSuccess) }
         withProtection(true) { calls ->
             assertThrows(Exception::class.java) { Libcore.icmpPing("127.0.0.1", 1000) }
             assertTrue(calls.get() > 0)
