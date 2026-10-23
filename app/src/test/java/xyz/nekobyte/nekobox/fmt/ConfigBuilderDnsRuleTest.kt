@@ -283,7 +283,8 @@ class ConfigBuilderDnsRuleTest {
         }
     }
 
-    private fun build() = ConfigBuilderTestEnv.io { JSONObject(buildConfig(profile).config) }
+    // Report hosts come from the build's telemetry settings and add a rule of their own; they have their own test.
+    private fun build() = ConfigBuilderTestEnv.io { JSONObject(buildConfig(profile, reportHosts = emptyList()).config) }
     private fun dnsRules(root: JSONObject = build()) = objects(root.getJSONObject("dns").getJSONArray("rules"))
         .filterNot { it.optString("action") == "predefined" && it.has("query_type") }
     private fun objects(array: JSONArray) = (0 until array.length()).map(array::getJSONObject)
