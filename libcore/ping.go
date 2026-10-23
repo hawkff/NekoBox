@@ -15,7 +15,9 @@ import (
 // IcmpPing sends one echo request to an IP address and returns the round-trip time in
 // milliseconds. It uses an unprivileged ICMP datagram socket (Android opens
 // net.ipv4.ping_group_range to every group) and protects the socket like every other libcore
-// socket, so the probe leaves through the underlying network while the VPN is up.
+// socket, so the probe leaves through the underlying network while the VPN is up. The socket
+// is never bound: Android 9 and older let apps create it but refuse bind(), and the kernel
+// assigns the echo ID on the first send.
 func IcmpPing(address string, timeout int32) (latency int32, err error) {
 	defer deferPanicToError("IcmpPing", func(err_ error) { err = err_ })
 
@@ -23,14 +25,20 @@ func IcmpPing(address string, timeout int32) (latency int32, err error) {
 	if ip == nil {
 		return 0, fmt.Errorf("not an IP address: %s", address)
 	}
-	network, listen, protocol := "udp4", "0.0.0.0", ipv4.ICMPTypeEchoReply.Protocol()
+	family, protocol := syscall.AF_INET, ipv4.ICMPTypeEchoReply.Protocol()
 	var echo, reply icmp.Type = ipv4.ICMPTypeEcho, ipv4.ICMPTypeEchoReply
 	if ip.To4() == nil {
-		network, listen, protocol = "udp6", "::", ipv6.ICMPTypeEchoReply.Protocol()
+		family, protocol = syscall.AF_INET6, ipv6.ICMPTypeEchoReply.Protocol()
 		echo, reply = ipv6.ICMPTypeEchoRequest, ipv6.ICMPTypeEchoReply
 	}
 
-	conn, err := icmp.ListenPacket(network, listen)
+	fd, err := syscall.Socket(family, syscall.SOCK_DGRAM|syscall.SOCK_CLOEXEC, protocol)
+	if err != nil {
+		return 0, os.NewSyscallError("socket", err)
+	}
+	file := os.NewFile(uintptr(fd), "icmp")
+	conn, err := net.FilePacketConn(file)
+	file.Close()
 	if err != nil {
 		return 0, err
 	}
@@ -83,16 +91,8 @@ func IcmpPing(address string, timeout int32) (latency int32, err error) {
 const echoSeq = 1
 
 // The platform decides whether a VPN needs bypassing; a protection failure stops the probe.
-func protectPacketConn(conn *icmp.PacketConn) error {
-	var inner net.PacketConn
-	if v4 := conn.IPv4PacketConn(); v4 != nil {
-		inner = v4.PacketConn
-	} else if v6 := conn.IPv6PacketConn(); v6 != nil {
-		inner = v6.PacketConn
-	}
-	syscallConn, ok := inner.(interface {
-		SyscallConn() (syscall.RawConn, error)
-	})
+func protectPacketConn(conn net.PacketConn) error {
+	syscallConn, ok := conn.(syscall.Conn)
 	if !ok {
 		return fmt.Errorf("ICMP socket does not expose a file descriptor")
 	}
