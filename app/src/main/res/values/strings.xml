@@ -995,5 +995,19 @@
     <string name="amneziawg_header_invalid">%1$s: H1 to H4 must be numbers or min-max ranges from 0 to 4294967295</string>
     <string name="amneziawg_header_overlap">%1$s: H%2$d and H%3$d overlap; an empty H keeps the value 1 to 4</string>
     <string name="amneziawg_range_hint">A number or a min-max range. Must match the server.</string>
-
+    <string name="connection_check">Connection check</string>
+    <string name="connection_check_summary">The public address and DNS servers this connection shows</string>
+    <string name="connection_check_note">The check runs through bash.ws, which sees your public address and DNS servers.</string>
+    <string name="connection_check_start">Check</string>
+    <string name="connection_check_path_vpn">Through the VPN</string>
+    <string name="connection_check_path_proxy">Through the local proxy</string>
+    <string name="connection_check_path_direct">NekoBox is off: this checks your direct connection</string>
+    <string name="connection_check_address">Public address</string>
+    <string name="connection_check_dns">DNS servers</string>
+    <string name="connection_check_none">None seen</string>
+    <string name="connection_check_no_verdict">bash.ws gave no verdict</string>
+    <string name="dns_leak_none">No DNS leak</string>
+    <string name="dns_leak_found">DNS may be leaking</string>
+    <string name="connection_check_failed">The check failed: %1$s</string>
+    <string name="connection_check_service_error">bash.ws answered: %1$s</string>
 </resources>

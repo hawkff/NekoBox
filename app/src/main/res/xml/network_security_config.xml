@@ -6,4 +6,12 @@
         <domain includeSubdomains="false">127.0.0.1</domain>
         <domain includeSubdomains="false">localhost</domain>
     </domain-config>
+    <!-- The connection check talks to bash.ws, whose chain ends at ISRG Root X1; Android trusts it only from 7.1.1. -->
+    <domain-config>
+        <domain includeSubdomains="true">bash.ws</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+        </trust-anchors>
+    </domain-config>
 </network-security-config>

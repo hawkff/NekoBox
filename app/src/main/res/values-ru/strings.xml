@@ -969,4 +969,19 @@
     <string name="amneziawg_header_invalid">%1$s: H1, H2, H3 и H4 должны быть числами или диапазонами min-max от 0 до 4294967295</string>
     <string name="amneziawg_header_overlap">%1$s: H%2$d и H%3$d пересекаются; пустой H сохраняет значение от 1 до 4</string>
     <string name="amneziawg_range_hint">Число или диапазон min-max. Должно совпадать с сервером.</string>
+    <string name="connection_check">Проверка соединения</string>
+    <string name="connection_check_summary">Внешний адрес и DNS-серверы, которые видны у этого соединения</string>
+    <string name="connection_check_note">Проверку выполняет bash.ws: сервис видит ваш внешний адрес и DNS-серверы.</string>
+    <string name="connection_check_start">Проверить</string>
+    <string name="connection_check_path_vpn">Через VPN</string>
+    <string name="connection_check_path_proxy">Через локальный прокси</string>
+    <string name="connection_check_path_direct">NekoBox выключен: проверяется прямое соединение</string>
+    <string name="connection_check_address">Внешний адрес</string>
+    <string name="connection_check_dns">DNS-серверы</string>
+    <string name="connection_check_none">Не обнаружены</string>
+    <string name="connection_check_no_verdict">bash.ws не дал вывода</string>
+    <string name="dns_leak_none">Утечки DNS нет</string>
+    <string name="dns_leak_found">Возможна утечка DNS</string>
+    <string name="connection_check_failed">Проверка не удалась: %1$s</string>
+    <string name="connection_check_service_error">Ответ bash.ws: %1$s</string>
 </resources>
