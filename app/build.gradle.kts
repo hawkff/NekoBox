@@ -101,9 +101,9 @@ dependencies {
     compileOnly("org.eclipse.jdt:org.eclipse.jdt.annotation:2.4.100")
 
     // Minimal SDK modules; automatic capture is configured explicitly.
-    implementation("com.posthog:posthog:6.47.1")
-    implementation("io.sentry:sentry-android-core:8.61.0")
-    implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    implementation("com.posthog:posthog:6.47.4")
+    implementation("io.sentry:sentry-android-core:8.61.1")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.yaml:snakeyaml:2.7")
     implementation("com.jakewharton:process-phoenix:3.0.0")
     implementation("com.esotericsoftware:kryo:5.7.1")
