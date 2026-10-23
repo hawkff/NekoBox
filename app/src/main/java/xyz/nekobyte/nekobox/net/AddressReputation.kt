@@ -58,11 +58,14 @@ object AddressReputation {
         if (file.isFile && System.currentTimeMillis() - file.lastModified() < MAX_AGE_MS) return file.readLines()
         return try {
             val text = client.text(url)
+            // An error page or a changed format has content but no networks; it must not replace a good copy.
+            val lines = text.lines()
+            if (lines.none { network(it) != null } && lines.any { it.substringBefore('#').isNotBlank() }) throw IOException("unreadable list")
             file.parentFile?.mkdirs()
             val partial = File(file.path + ".part")
             partial.writeText(text)
             if (!partial.renameTo(file)) partial.delete()
-            text.lines()
+            lines
         } catch (_: IOException) {
             if (file.isFile) file.readLines() else null
         }

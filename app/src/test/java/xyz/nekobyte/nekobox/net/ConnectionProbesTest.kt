@@ -82,8 +82,9 @@ class ConnectionProbesTest {
         assertEquals(ConnectionProbes.Ipv6.CONNECTED, ConnectionProbes.ipv6(direct = true, vpn, home))
         assertEquals(ConnectionProbes.Ipv6.SAME_NETWORK, ConnectionProbes.ipv6(direct = false, vpn, home.copy(asn = 64500)))
         assertEquals(ConnectionProbes.Ipv6.OTHER_NETWORK, ConnectionProbes.ipv6(direct = false, vpn, home))
-        // Without IPv4's network nothing vouches for IPv6.
-        assertEquals(ConnectionProbes.Ipv6.OTHER_NETWORK, ConnectionProbes.ipv6(direct = false, null, home))
+        // Without both networks there is nothing to compare, and no warning.
+        assertEquals(ConnectionProbes.Ipv6.UNCOMPARED, ConnectionProbes.ipv6(direct = false, null, home))
+        assertEquals(ConnectionProbes.Ipv6.UNCOMPARED, ConnectionProbes.ipv6(direct = false, vpn, home.copy(asn = null)))
     }
 
     @Test
@@ -97,6 +98,7 @@ class ConnectionProbesTest {
         assertEquals(ConnectionProbes.Udp.SAME_NETWORK, ConnectionProbes.udp(true, tcp, udp("203.0.113.10"), vpn.copy(ip = "203.0.113.10")))
         assertEquals(ConnectionProbes.Udp.OTHER_NETWORK, ConnectionProbes.udp(true, tcp, udp("198.51.100.4"), home.copy(ip = "198.51.100.4")))
         assertEquals(ConnectionProbes.Udp.OTHER_ADDRESS, ConnectionProbes.udp(true, tcp, udp("198.51.100.4"), null))
+        assertEquals(ConnectionProbes.Udp.OTHER_ADDRESS, ConnectionProbes.udp(true, listOf(vpn.copy(asn = null)), udp("198.51.100.4"), home.copy(ip = "198.51.100.4")))
     }
 
     @Test

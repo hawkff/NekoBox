@@ -1010,10 +1010,13 @@
     <string name="dns_leak_found">DNS may be leaking</string>
     <string name="connection_check_failed">The check failed: %1$s</string>
     <string name="connection_check_service_error">bash.ws answered: %1$s</string>
+    <string name="connection_check_ipv4">IPv4</string>
+    <string name="connection_check_ipv4_none">No IPv4 connection</string>
     <string name="connection_check_ipv6">IPv6</string>
     <string name="connection_check_ipv6_none">No IPv6 connection</string>
     <string name="connection_check_ipv6_connected">IPv6 connected</string>
     <string name="connection_check_ipv6_same">The IPv6 exit is in the same network as the IPv4 exit</string>
+    <string name="connection_check_ipv6_uncompared">IPv6 connected, but its network could not be compared with the IPv4 one</string>
     <string name="connection_check_ipv6_other">The IPv6 exit is in another network than the IPv4 exit</string>
     <string name="connection_check_udp">UDP</string>
     <string name="connection_check_udp_same_address">UDP leaves from the same address as TCP</string>

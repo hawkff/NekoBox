@@ -154,7 +154,16 @@ class ConnectionCheckActivity : ThemedActivity() {
             try {
                 val client = client(path)
                 coroutineScope {
-                    val dns = async { runCatching { DnsLeakTest.run(client) } }
+                    // The DNS result shows as soon as it is in; the other rows wait for one another.
+                    launch {
+                        try {
+                            show(DnsLeakTest.run(client))
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            failed(e)
+                        }
+                    }
                     val ipv4 = async { ConnectionProbes.publicAddress(client, ConnectionProbes.IPV4) }
                     val ipv6 = async { ConnectionProbes.publicAddress(client, ConnectionProbes.IPV6) }
                     // An HTTP proxy carries no UDP, so in proxy mode there is nothing to compare.
@@ -166,7 +175,6 @@ class ConnectionCheckActivity : ThemedActivity() {
                     // Another UDP address is looked up, so that only another network counts as another exit.
                     val udpNetwork = udp.await()?.address?.takeIf { address -> public.none { AddressReputation.numeric(it.ip)?.contentEquals(address.address) == true } }
                         ?.let { ConnectionProbes.publicAddress(client, ConnectionProbes.lookupUrl(it.hostAddress.orEmpty())) }
-                    dns.await().onSuccess(::show).onFailure { if (it is CancellationException) throw it else failed(it) }
                     lookupClient = client
                     lookupAddress = public.firstOrNull()?.ip
                     rows(path, ipv4.await(), ipv6.await(), udp.await(), udpNetwork, lists.await(), dnssec.await(), trace.await())
@@ -202,12 +210,18 @@ class ConnectionCheckActivity : ThemedActivity() {
         trace: ConnectionProbes.Trace?,
     ) {
         binding.connectionCheckRows.removeAllViews()
+        if (ipv4 == null) {
+            row(R.string.connection_check_ipv4, getString(R.string.connection_check_ipv4_none), Tone.INFO)
+        } else {
+            row(R.string.connection_check_ipv4, describe(ipv4), Tone.INFO)
+        }
         val ipv6Detail = ipv6?.let(::describe)
         when (ConnectionProbes.ipv6(path == Path.DIRECT, ipv4, ipv6)) {
             ConnectionProbes.Ipv6.NONE -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_none), if (path == Path.DIRECT) Tone.INFO else Tone.OK)
             ConnectionProbes.Ipv6.CONNECTED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_connected), Tone.INFO, ipv6Detail)
             ConnectionProbes.Ipv6.SAME_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_same), Tone.OK, ipv6Detail)
             ConnectionProbes.Ipv6.OTHER_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_other), Tone.WARNING, ipv6Detail)
+            ConnectionProbes.Ipv6.UNCOMPARED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_uncompared), Tone.INFO, ipv6Detail)
         }
         val udpDetail = udp?.let { listOfNotNull(it.address.hostAddress, udpNetwork?.isp?.ifEmpty { null }).joinToString(" · ") }
         when (ConnectionProbes.udp(path != Path.PROXY, listOfNotNull(ipv4, ipv6), udp, udpNetwork)) {

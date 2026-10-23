@@ -37,7 +37,7 @@ object ConnectionProbes {
 
     enum class Dnssec { VALIDATED, NOT_VALIDATED, UNKNOWN }
 
-    enum class Ipv6 { NONE, CONNECTED, SAME_NETWORK, OTHER_NETWORK }
+    enum class Ipv6 { NONE, CONNECTED, SAME_NETWORK, OTHER_NETWORK, UNCOMPARED }
 
     enum class Udp { NOT_CHECKED, NO_ANSWER, SAME_ADDRESS, SAME_NETWORK, OTHER_NETWORK, OTHER_ADDRESS }
 
@@ -89,11 +89,12 @@ object ConnectionProbes {
         }
     }
 
-    /** Through NekoBox, the IPv6 exit has to be in the network (AS) of the IPv4 exit. */
+    /** Through NekoBox, the IPv6 exit has to be in the network (AS) of the IPv4 exit. Without both networks there is no verdict. */
     fun ipv6(direct: Boolean, ipv4: PublicAddress?, ipv6: PublicAddress?) = when {
         ipv6 == null -> Ipv6.NONE
         direct -> Ipv6.CONNECTED
-        ipv4?.asn != null && ipv4.asn == ipv6.asn -> Ipv6.SAME_NETWORK
+        ipv4?.asn == null || ipv6.asn == null -> Ipv6.UNCOMPARED
+        ipv4.asn == ipv6.asn -> Ipv6.SAME_NETWORK
         else -> Ipv6.OTHER_NETWORK
     }
 
@@ -105,7 +106,7 @@ object ConnectionProbes {
         !checked -> Udp.NOT_CHECKED
         udp == null -> Udp.NO_ANSWER
         tcp.any { AddressReputation.numeric(it.ip)?.contentEquals(udp.address.address) == true } -> Udp.SAME_ADDRESS
-        network?.asn == null -> Udp.OTHER_ADDRESS
+        network?.asn == null || tcp.none { it.asn != null } -> Udp.OTHER_ADDRESS
         tcp.any { it.asn == network.asn } -> Udp.SAME_NETWORK
         else -> Udp.OTHER_NETWORK
     }

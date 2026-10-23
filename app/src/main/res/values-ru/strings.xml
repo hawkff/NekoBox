@@ -984,10 +984,13 @@
     <string name="dns_leak_found">Возможна утечка DNS</string>
     <string name="connection_check_failed">Проверка не удалась: %1$s</string>
     <string name="connection_check_service_error">Ответ bash.ws: %1$s</string>
+    <string name="connection_check_ipv4">IPv4</string>
+    <string name="connection_check_ipv4_none">Нет IPv4-соединения</string>
     <string name="connection_check_ipv6">IPv6</string>
     <string name="connection_check_ipv6_none">Нет IPv6-соединения</string>
     <string name="connection_check_ipv6_connected">IPv6 подключён</string>
     <string name="connection_check_ipv6_same">Выход IPv6 в той же сети, что и выход IPv4</string>
+    <string name="connection_check_ipv6_uncompared">IPv6 подключён, но его сеть не удалось сравнить с сетью IPv4</string>
     <string name="connection_check_ipv6_other">Выход IPv6 в другой сети, не той, что выход IPv4</string>
     <string name="connection_check_udp">UDP</string>
     <string name="connection_check_udp_same_address">UDP выходит с того же адреса, что и TCP</string>

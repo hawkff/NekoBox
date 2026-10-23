@@ -34,13 +34,14 @@ class AddressReputationTest {
         "torbulkexitlist" to "192.0.2.77\n",
     )
 
-    // Plays GitHub and the Tor Project; with failing set, every download fails.
-    private fun client(requests: AtomicInteger, failing: Boolean = false) = OkHttpClient.Builder().addInterceptor(
+    // Plays GitHub and the Tor Project; with failing set every download fails, with errorPage each answers
+    // with an HTML page.
+    private fun client(requests: AtomicInteger, failing: Boolean = false, errorPage: Boolean = false) = OkHttpClient.Builder().addInterceptor(
         Interceptor { chain ->
             requests.incrementAndGet()
             if (failing) throw IOException("offline")
             val url = chain.request().url.toString()
-            val body = lists.entries.firstOrNull { url.endsWith(it.key) }?.value ?: error("unexpected request $url")
+            val body = if (errorPage) "<html><body>Rate limited</body></html>\n" else lists.entries.firstOrNull { url.endsWith(it.key) }?.value ?: error("unexpected request $url")
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("").body(body.toResponseBody()).build()
         },
     ).build()
@@ -71,6 +72,18 @@ class AddressReputationTest {
         cache.walk().filter { it.isFile }.forEach { it.setLastModified(0) }
         assertEquals(expected, kinds(AddressReputation.match(client(requests, failing = true), cache, addresses)))
         assertEquals(10, requests.get())
+    }
+
+    @Test
+    fun anErrorPageNeitherReplacesAGoodCopyNorPassesForAList() = runTest {
+        val cache = folder.newFolder()
+        AddressReputation.match(client(AtomicInteger()), cache, addresses)
+        cache.walk().filter { it.isFile }.forEach { it.setLastModified(0) }
+        val kept = AddressReputation.match(client(AtomicInteger(), errorPage = true), cache, addresses)
+        assertEquals(setOf(AddressReputation.Kind.VPN), kept.getValue("198.51.100.4").kinds)
+        assertTrue(kept.values.all { it.complete })
+        val fresh = AddressReputation.match(client(AtomicInteger(), errorPage = true), folder.newFolder(), addresses)
+        assertTrue(fresh.values.all { it.kinds.isEmpty() && !it.complete })
     }
 
     @Test
