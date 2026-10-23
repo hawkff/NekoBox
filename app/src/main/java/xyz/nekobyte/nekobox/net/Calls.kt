@@ -25,8 +25,15 @@ internal suspend fun Call.await(): Response = suspendCancellableCoroutine { cont
     )
 }
 
+/** The server answered, but with a failure status or a body that could not be read. */
+internal class AnsweredException(message: String, cause: Throwable? = null) : IOException(message, cause)
+
 /** The body of a successful GET. Reading it blocks, so call this off the main thread. */
 internal suspend fun OkHttpClient.text(url: String): String = newCall(Request.Builder().url(url).build()).await().use { response ->
-    if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-    response.body.string()
+    if (!response.isSuccessful) throw AnsweredException("HTTP ${response.code}")
+    try {
+        response.body.string()
+    } catch (e: IOException) {
+        throw AnsweredException("unreadable answer", e)
+    }
 }

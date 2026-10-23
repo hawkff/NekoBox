@@ -21,29 +21,42 @@ object AddressReputation {
     enum class Kind { VPN, DATACENTER, TOR }
 
     private const val X4B = "https://raw.githubusercontent.com/X4BNet/lists_vpn/main/output"
+
+    // Each list with the address family it covers; the Tor Project lists IPv4 exits only.
+    private class Source(val kind: Kind, val url: String, val ipv6: Boolean)
+
     private val SOURCES = listOf(
-        Kind.VPN to "$X4B/vpn/ipv4.txt",
-        Kind.VPN to "$X4B/vpn/ipv6.txt",
-        Kind.DATACENTER to "$X4B/datacenter/ipv4.txt",
-        Kind.DATACENTER to "$X4B/datacenter/ipv6.txt",
-        Kind.TOR to "https://check.torproject.org/torbulkexitlist",
+        Source(Kind.VPN, "$X4B/vpn/ipv4.txt", ipv6 = false),
+        Source(Kind.VPN, "$X4B/vpn/ipv6.txt", ipv6 = true),
+        Source(Kind.DATACENTER, "$X4B/datacenter/ipv4.txt", ipv6 = false),
+        Source(Kind.DATACENTER, "$X4B/datacenter/ipv6.txt", ipv6 = true),
+        Source(Kind.TOR, "https://check.torproject.org/torbulkexitlist", ipv6 = false),
     )
     private const val MAX_AGE_MS = 24 * 60 * 60 * 1000L
 
-    /** The lists an address is on. Without every list, an empty set proves nothing. */
-    data class Match(val kinds: Set<Kind>, val complete: Boolean)
+    /**
+     * The lists an address is on. Without every list for its address family, an empty set proves nothing;
+     * [uncovered] are the kinds no list covers for that family.
+     */
+    data class Match(val kinds: Set<Kind>, val complete: Boolean, val uncovered: Set<Kind> = emptySet())
 
     /** proxycheck.io's view of an address. */
     data class Lookup(val vpn: Boolean, val proxy: Boolean, val tor: Boolean, val hosting: Boolean, val network: String?, val operator: String?)
 
     suspend fun match(client: OkHttpClient, cache: File, addresses: List<String>): Map<String, Match> = withContext(Dispatchers.IO) {
+        if (addresses.isEmpty()) return@withContext emptyMap()
         val loaded = coroutineScope {
-            SOURCES.map { (kind, url) -> async { kind to lines(client, cache, url)?.mapNotNull(::network) } }.awaitAll()
+            SOURCES.map { source -> async { source to lines(client, cache, source.url)?.mapNotNull(::network) } }.awaitAll()
         }
-        val complete = loaded.all { it.second != null }
         addresses.associateWith { text ->
             val address = numeric(text)
-            Match(loaded.filter { (_, networks) -> address != null && networks?.any { it.contains(address) } == true }.map { it.first }.toSet(), complete)
+            val ipv6 = address?.size == 16
+            val applicable = loaded.filter { (source, _) -> source.ipv6 == ipv6 }
+            Match(
+                applicable.filter { (_, networks) -> address != null && networks?.any { it.contains(address) } == true }.map { it.first.kind }.toSet(),
+                address != null && applicable.all { it.second != null },
+                Kind.entries.toSet() - applicable.map { it.first.kind }.toSet(),
+            )
         }
     }
 

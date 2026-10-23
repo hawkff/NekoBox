@@ -42,8 +42,10 @@ class DnsLeakTestTest {
         status: Int = 200,
         pending: Int = 0,
         probeMillis: Long = 0,
+        lostTests: Int = 0,
     ): OkHttpClient {
         var checks = 0
+        var execs = 0
         return OkHttpClient.Builder().addInterceptor(
             Interceptor { chain ->
                 val request = chain.request()
@@ -65,7 +67,9 @@ class DnsLeakTestTest {
 
                     form["start"] == "1" && form["url"] == "/dnsleak" -> start
 
-                    form["exec"] == "1" && form["url"] == "/dnsleak/test/3128jeklvpzdjrb4" -> answer("started" to 1)
+                    // bash.ws forgets a test that a connection from another address asks about.
+                    form["exec"] == "1" && form["url"] == "/dnsleak/test/3128jeklvpzdjrb4" ->
+                        if (execs++ < lostTests) answer("error" to "Invalid test ID") else answer("started" to 1)
 
                     form["checkrun"] == "1" && form["url"] == "/dnsleak/test/3128jeklvpzdjrb4" ->
                         if (checks++ < pending) answer("done" to 0) else answer("done" to 1, "format" to "html", "result" to sample)
@@ -119,6 +123,16 @@ class DnsLeakTestTest {
         val steps = events.toList()
         assertTrue("$steps", steps.indexOf("keep-alive") in 2 until steps.indexOf("checkrun"))
         assertTrue("$steps", steps.lastIndexOf("keep-alive") < steps.indexOf("checkrun"))
+    }
+
+    @Test
+    fun aTestBashWsForgotIsStartedOnceMore() = runTest {
+        val events = ConcurrentLinkedQueue<String>()
+        assertEquals(DnsLeakTest.Verdict.CLEAN, DnsLeakTest.run(client(events, lostTests = 1)).verdict)
+        assertEquals(2, events.count { it == "start" })
+        // Twice is not retried again.
+        val error = runCatching { DnsLeakTest.run(client(lostTests = 2)) }.exceptionOrNull()
+        assertEquals("Invalid test ID", (error as DnsLeakTest.ServiceException).message)
     }
 
     @Test

@@ -65,6 +65,9 @@ class AddressReputationTest {
         assertEquals(expected, kinds(first))
         assertTrue(first.values.all { it.complete })
         assertEquals(5, requests.get())
+        // The Tor Project lists IPv4 exits only, so no list covers Tor for an IPv6 address.
+        assertEquals(setOf(AddressReputation.Kind.TOR), first.getValue("2001:db8:1::5").uncovered)
+        assertEquals(emptySet<AddressReputation.Kind>(), first.getValue("203.0.113.9").uncovered)
         // Fresh copies are reused.
         assertEquals(expected, kinds(AddressReputation.match(client(requests), cache, addresses)))
         assertEquals(5, requests.get())
@@ -84,6 +87,13 @@ class AddressReputationTest {
         assertTrue(kept.values.all { it.complete })
         val fresh = AddressReputation.match(client(AtomicInteger(), errorPage = true), folder.newFolder(), addresses)
         assertTrue(fresh.values.all { it.kinds.isEmpty() && !it.complete })
+    }
+
+    @Test
+    fun withoutAddressesNothingIsDownloaded() = runTest {
+        val requests = AtomicInteger()
+        assertEquals(emptyMap<String, AddressReputation.Match>(), AddressReputation.match(client(requests), folder.newFolder(), emptyList()))
+        assertEquals(0, requests.get())
     }
 
     @Test

@@ -1001,6 +1001,7 @@
     <string name="connection_check_udp_proxy">Не проверено: локальный прокси не передаёт UDP</string>
     <string name="connection_check_lists">Публичные списки</string>
     <string name="connection_check_lists_none">Нет в публичных списках VPN, дата-центров и Tor</string>
+    <string name="connection_check_lists_tor_ipv4">Список выходов Tor охватывает только адреса IPv4</string>
     <string name="connection_check_lists_found">В списках как %1$s</string>
     <string name="connection_check_lists_incomplete">Часть списков не удалось загрузить</string>
     <string name="connection_check_kind_vpn">VPN-провайдер</string>

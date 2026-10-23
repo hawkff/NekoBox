@@ -32,8 +32,17 @@ object ConnectionProbes {
 
     data class PublicAddress(val ip: String, val isp: String, val asn: Long?, val country: String)
 
-    /** The TLS this app's own client negotiates, as Cloudflare reports it. */
-    data class Trace(val tls: String?, val encryptedSni: Boolean)
+    /** The TLS this app's own client negotiates, as Cloudflare reports it; null where the trace says nothing. */
+    data class Trace(val tls: String?, val encryptedSni: Boolean?)
+
+    /** What an ipleak.net host shows: the address, no connection over that family, or no usable answer. */
+    sealed interface Exit {
+        data class Seen(val address: PublicAddress) : Exit
+
+        data object Unreachable : Exit
+
+        data object Unchecked : Exit
+    }
 
     enum class Dnssec { VALIDATED, NOT_VALIDATED, UNKNOWN }
 
@@ -44,16 +53,22 @@ object ConnectionProbes {
     // What ipleak.net knows about another address, such as the one UDP left from.
     fun lookupUrl(address: String) = "https://ipleak.net/json/$address"
 
-    /** The address an ipleak.net host sees, or null when that address family does not get through. */
-    suspend fun publicAddress(client: OkHttpClient, url: String): PublicAddress? = withContext(Dispatchers.IO) {
+    // No answer means the address family does not get through; an answer that fails or is not an address
+    // means only that the service failed.
+    suspend fun exit(client: OkHttpClient, url: String): Exit = withContext(Dispatchers.IO) {
         try {
-            parsePublicAddress(client.text(url))
-        } catch (_: IOException) {
-            null
+            parsePublicAddress(client.text(url))?.let(Exit::Seen) ?: Exit.Unchecked
+        } catch (_: AnsweredException) {
+            Exit.Unchecked
         } catch (_: JSONException) {
-            null
+            Exit.Unchecked
+        } catch (_: IOException) {
+            Exit.Unreachable
         }
     }
+
+    /** The address an ipleak.net host sees, or null without one. */
+    suspend fun publicAddress(client: OkHttpClient, url: String) = (exit(client, url) as? Exit.Seen)?.address
 
     suspend fun trace(client: OkHttpClient): Trace? = withContext(Dispatchers.IO) {
         try {
@@ -141,7 +156,8 @@ object ConnectionProbes {
 
     internal fun parsePublicAddress(json: String): PublicAddress? {
         val root = JSONObject(json)
-        val ip = root.optString("ip").ifEmpty { return null }
+        // org.json turns a JSON null into the text "null"; only an address literal counts.
+        val ip = root.optString("ip").takeUnless { root.isNull("ip") }?.takeIf { AddressReputation.numeric(it) != null } ?: return null
         return PublicAddress(
             ip,
             root.optString("isp_name").takeUnless { root.isNull("isp_name") }.orEmpty(),
@@ -152,7 +168,12 @@ object ConnectionProbes {
 
     internal fun parseTrace(text: String): Trace {
         val fields = text.lines().mapNotNull { line -> line.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
-        return Trace(fields["tls"], fields["sni"] == "encrypted")
+        val sni = when (fields["sni"]) {
+            "encrypted" -> true
+            "plaintext" -> false
+            else -> null
+        }
+        return Trace(fields["tls"], sni)
     }
 
     // A Binding success response for our transaction: XOR-MAPPED-ADDRESS, else the older MAPPED-ADDRESS.

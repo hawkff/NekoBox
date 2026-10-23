@@ -53,6 +53,17 @@ object DnsLeakTest {
     class ServiceException(message: String) : IOException(message)
 
     suspend fun run(client: OkHttpClient): Result = withContext(Dispatchers.IO) {
+        try {
+            attempt(client)
+        } catch (e: ServiceException) {
+            // A test belongs to the address that started it. Where connections leave from changing
+            // addresses, a connection opened mid-test makes it unknown; a fresh test usually gets through.
+            if (!e.message.orEmpty().contains("test id", ignoreCase = true)) throw e
+            attempt(client)
+        }
+    }
+
+    private suspend fun attempt(client: OkHttpClient): Result {
         val test = post(client, "start" to "1", "url" to "/dnsleak")
         val id = test.optString("run_id")
         val url = test.optString("url")
@@ -87,7 +98,7 @@ object DnsLeakTest {
         }
         repeat(POLLS) {
             val check = post(client, "checkrun" to "1", "url" to url, "summary" to "0")
-            if (check.optString("done") == "1") return@withContext parse(check.optString("result"))
+            if (check.optString("done") == "1") return parse(check.optString("result"))
             // Under the second after which bash.ws drops the connection.
             delay(500)
         }

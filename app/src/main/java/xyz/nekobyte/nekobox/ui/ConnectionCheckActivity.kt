@@ -86,6 +86,8 @@ class ConnectionCheckActivity : ThemedActivity() {
 
     override fun onResume() {
         super.onResume()
+        // A check that started on another path no longer describes this connection.
+        if (check?.isActive == true && path() != shown) check?.cancel()
         if (check?.isActive != true) followPath()
     }
 
@@ -153,36 +155,46 @@ class ConnectionCheckActivity : ThemedActivity() {
         check = lifecycleScope.launch {
             try {
                 val client = client(path)
+
+                // Results are shown only while the path they were measured on holds.
+                fun held() = path() == path
                 coroutineScope {
                     // The DNS result shows as soon as it is in; the other rows wait for one another.
                     launch {
                         try {
-                            show(DnsLeakTest.run(client))
+                            DnsLeakTest.run(client).let { if (held()) show(it) }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            failed(e)
+                            if (held()) failed(e)
                         }
                     }
-                    val ipv4 = async { ConnectionProbes.publicAddress(client, ConnectionProbes.IPV4) }
-                    val ipv6 = async { ConnectionProbes.publicAddress(client, ConnectionProbes.IPV6) }
+                    val ipv4 = async { ConnectionProbes.exit(client, ConnectionProbes.IPV4) }
+                    val ipv6 = async { ConnectionProbes.exit(client, ConnectionProbes.IPV6) }
                     // An HTTP proxy carries no UDP, so in proxy mode there is nothing to compare.
                     val udp = async { if (path == Path.PROXY) null else ConnectionProbes.udpAddress() }
                     val trace = async { ConnectionProbes.trace(client) }
                     val dnssec = async { ConnectionProbes.dnssec(client) }
-                    val public = listOfNotNull(ipv4.await(), ipv6.await())
+                    val public = listOf(ipv4.await(), ipv6.await()).mapNotNull { (it as? ConnectionProbes.Exit.Seen)?.address }
                     val lists = async { AddressReputation.match(client, cacheDir, public.map { it.ip }) }
                     // Another UDP address is looked up, so that only another network counts as another exit.
                     val udpNetwork = udp.await()?.address?.takeIf { address -> public.none { AddressReputation.numeric(it.ip)?.contentEquals(address.address) == true } }
                         ?.let { ConnectionProbes.publicAddress(client, ConnectionProbes.lookupUrl(it.hostAddress.orEmpty())) }
+                    val matches = lists.await()
+                    val validation = dnssec.await()
+                    val tls = trace.await()
+                    if (!held()) {
+                        followPath()
+                        return@coroutineScope
+                    }
                     lookupClient = client
                     lookupAddress = public.firstOrNull()?.ip
-                    rows(path, ipv4.await(), ipv6.await(), udp.await(), udpNetwork, lists.await(), dnssec.await(), trace.await())
+                    rows(path, ipv4.await(), ipv6.await(), udp.await(), udpNetwork, matches, validation, tls)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                failed(e)
+                if (path() == path) failed(e)
             } finally {
                 binding.connectionCheckProgress.isVisible = false
                 binding.connectionCheckStart.isEnabled = true
@@ -201,8 +213,8 @@ class ConnectionCheckActivity : ThemedActivity() {
 
     private fun rows(
         path: Path,
-        ipv4: ConnectionProbes.PublicAddress?,
-        ipv6: ConnectionProbes.PublicAddress?,
+        ipv4: ConnectionProbes.Exit,
+        ipv6: ConnectionProbes.Exit,
         udp: InetSocketAddress?,
         udpNetwork: ConnectionProbes.PublicAddress?,
         lists: Map<String, AddressReputation.Match>,
@@ -210,21 +222,28 @@ class ConnectionCheckActivity : ThemedActivity() {
         trace: ConnectionProbes.Trace?,
     ) {
         binding.connectionCheckRows.removeAllViews()
-        if (ipv4 == null) {
-            row(R.string.connection_check_ipv4, getString(R.string.connection_check_ipv4_none), Tone.INFO)
-        } else {
-            row(R.string.connection_check_ipv4, describe(ipv4), Tone.INFO)
+        val v4 = (ipv4 as? ConnectionProbes.Exit.Seen)?.address
+        val v6 = (ipv6 as? ConnectionProbes.Exit.Seen)?.address
+        when (ipv4) {
+            is ConnectionProbes.Exit.Seen -> row(R.string.connection_check_ipv4, describe(ipv4.address), Tone.INFO)
+            ConnectionProbes.Exit.Unreachable -> row(R.string.connection_check_ipv4, getString(R.string.connection_check_ipv4_none), Tone.INFO)
+            ConnectionProbes.Exit.Unchecked -> row(R.string.connection_check_ipv4, getString(R.string.connection_check_unchecked), Tone.INFO)
         }
-        val ipv6Detail = ipv6?.let(::describe)
-        when (ConnectionProbes.ipv6(path == Path.DIRECT, ipv4, ipv6)) {
-            ConnectionProbes.Ipv6.NONE -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_none), if (path == Path.DIRECT) Tone.INFO else Tone.OK)
-            ConnectionProbes.Ipv6.CONNECTED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_connected), Tone.INFO, ipv6Detail)
-            ConnectionProbes.Ipv6.SAME_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_same), Tone.OK, ipv6Detail)
-            ConnectionProbes.Ipv6.OTHER_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_other), Tone.WARNING, ipv6Detail)
-            ConnectionProbes.Ipv6.UNCOMPARED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_uncompared), Tone.INFO, ipv6Detail)
+        val ipv6Detail = v6?.let(::describe)
+        // A failed answer says nothing about whether IPv6 gets through.
+        if (ipv6 == ConnectionProbes.Exit.Unchecked) {
+            row(R.string.connection_check_ipv6, getString(R.string.connection_check_unchecked), Tone.INFO)
+        } else {
+            when (ConnectionProbes.ipv6(path == Path.DIRECT, v4, v6)) {
+                ConnectionProbes.Ipv6.NONE -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_none), if (path == Path.DIRECT) Tone.INFO else Tone.OK)
+                ConnectionProbes.Ipv6.CONNECTED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_connected), Tone.INFO, ipv6Detail)
+                ConnectionProbes.Ipv6.SAME_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_same), Tone.OK, ipv6Detail)
+                ConnectionProbes.Ipv6.OTHER_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_other), Tone.WARNING, ipv6Detail)
+                ConnectionProbes.Ipv6.UNCOMPARED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_uncompared), Tone.INFO, ipv6Detail)
+            }
         }
         val udpDetail = udp?.let { listOfNotNull(it.address.hostAddress, udpNetwork?.isp?.ifEmpty { null }).joinToString(" · ") }
-        when (ConnectionProbes.udp(path != Path.PROXY, listOfNotNull(ipv4, ipv6), udp, udpNetwork)) {
+        when (ConnectionProbes.udp(path != Path.PROXY, listOfNotNull(v4, v6), udp, udpNetwork)) {
             ConnectionProbes.Udp.NOT_CHECKED -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_proxy), Tone.INFO)
             ConnectionProbes.Udp.NO_ANSWER -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_none), Tone.INFO)
             ConnectionProbes.Udp.SAME_ADDRESS -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same_address), Tone.OK, udpDetail)
@@ -235,9 +254,17 @@ class ConnectionCheckActivity : ThemedActivity() {
         val kinds = lists.values.flatMap { it.kinds }.toSortedSet()
         when {
             lists.isEmpty() -> row(R.string.connection_check_lists, getString(R.string.connection_check_unchecked), Tone.INFO)
+
             kinds.isNotEmpty() -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_found, kinds.joinToString(", ") { getString(it.label()) }), Tone.INFO)
+
             lists.values.any { !it.complete } -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_incomplete), Tone.INFO)
-            else -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_none), Tone.OK)
+
+            else -> row(
+                R.string.connection_check_lists,
+                getString(R.string.connection_check_lists_none),
+                Tone.OK,
+                getString(R.string.connection_check_lists_tor_ipv4).takeIf { lists.values.any { AddressReputation.Kind.TOR in it.uncovered } },
+            )
         }
         when (dnssec) {
             ConnectionProbes.Dnssec.VALIDATED -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_dnssec_validated), Tone.OK)
@@ -247,8 +274,13 @@ class ConnectionCheckActivity : ThemedActivity() {
         if (trace == null) {
             row(R.string.connection_check_tls, getString(R.string.connection_check_tls_unknown), Tone.INFO)
         } else {
-            val ech = getString(if (trace.encryptedSni) R.string.connection_check_tls_ech else R.string.connection_check_tls_no_ech)
-            row(R.string.connection_check_tls, listOfNotNull(trace.tls?.replace("TLSv", "TLS "), ech).joinToString(" · "), Tone.INFO, getString(R.string.connection_check_tls_detail))
+            val ech = when (trace.encryptedSni) {
+                true -> getString(R.string.connection_check_tls_ech)
+                false -> getString(R.string.connection_check_tls_no_ech)
+                null -> null
+            }
+            val status = listOfNotNull(trace.tls?.replace("TLSv", "TLS "), ech).joinToString(" · ").ifEmpty { getString(R.string.connection_check_tls_unknown) }
+            row(R.string.connection_check_tls, status, Tone.INFO, getString(R.string.connection_check_tls_detail))
         }
         binding.connectionCheckRows.isVisible = true
         binding.connectionCheckLookup.isVisible = lookupAddress != null

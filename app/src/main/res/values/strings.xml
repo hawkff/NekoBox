@@ -1027,6 +1027,7 @@
     <string name="connection_check_udp_proxy">Not checked: the local proxy carries no UDP</string>
     <string name="connection_check_lists">Public lists</string>
     <string name="connection_check_lists_none">Not on the public VPN, datacenter or Tor lists</string>
+    <string name="connection_check_lists_tor_ipv4">The Tor exit list covers IPv4 addresses only</string>
     <string name="connection_check_lists_found">Listed as %1$s</string>
     <string name="connection_check_lists_incomplete">Some lists could not be loaded</string>
     <string name="connection_check_kind_vpn">VPN provider</string>

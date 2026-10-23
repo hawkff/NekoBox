@@ -5,10 +5,14 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.asResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import okio.Source
+import okio.Timeout
+import okio.buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -71,6 +75,40 @@ class ConnectionProbesTest {
             ConnectionProbes.parsePublicAddress("""{"ip": "2001:db8::9", "isp_name": null, "as_number": null, "country_name": null}"""),
         )
         assertNull(ConnectionProbes.parsePublicAddress("{}"))
+        // org.json reads a JSON null as the text "null"; neither that nor a host name is an address.
+        assertNull(ConnectionProbes.parsePublicAddress("""{"ip": null, "isp_name": "Example ISP"}"""))
+        assertNull(ConnectionProbes.parsePublicAddress("""{"ip": "example.com"}"""))
+    }
+
+    @Test
+    fun exitsTellNoConnectionApartFromAFailedAnswer() = runTest {
+        // Plays ipleak.net: an answer with a status and body, or a failed connection.
+        fun client(code: Int, body: String, unreachable: Boolean = false) = OkHttpClient.Builder().addInterceptor(
+            Interceptor { chain ->
+                if (unreachable) throw IOException("no route to host")
+                Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("").body(body.toResponseBody()).build()
+            },
+        ).build()
+        val seen = ConnectionProbes.exit(client(200, """{"ip": "2001:db8::9", "as_number": 64511}"""), ConnectionProbes.IPV6)
+        assertEquals(ConnectionProbes.Exit.Seen(ConnectionProbes.PublicAddress("2001:db8::9", "", 64511, "")), seen)
+        assertEquals(ConnectionProbes.Exit.Unreachable, ConnectionProbes.exit(client(200, "", unreachable = true), ConnectionProbes.IPV6))
+        assertEquals(ConnectionProbes.Exit.Unchecked, ConnectionProbes.exit(client(503, "busy"), ConnectionProbes.IPV6))
+        assertEquals(ConnectionProbes.Exit.Unchecked, ConnectionProbes.exit(client(200, "<html>"), ConnectionProbes.IPV6))
+        assertEquals(ConnectionProbes.Exit.Unchecked, ConnectionProbes.exit(client(200, """{"ip": null}"""), ConnectionProbes.IPV6))
+        // An answer cut off after its status still came from the server.
+        val cut = OkHttpClient.Builder().addInterceptor(
+            Interceptor { chain ->
+                val failing = object : Source {
+                    override fun read(sink: Buffer, byteCount: Long): Long = throw IOException("closed early")
+
+                    override fun timeout() = Timeout.NONE
+
+                    override fun close() = Unit
+                }
+                Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("").body(failing.buffer().asResponseBody()).build()
+            },
+        ).build()
+        assertEquals(ConnectionProbes.Exit.Unchecked, ConnectionProbes.exit(cut, ConnectionProbes.IPV6))
     }
 
     private val vpn = ConnectionProbes.PublicAddress("203.0.113.9", "Example VPN", 64500, "Netherlands")
@@ -136,7 +174,9 @@ class ConnectionProbesTest {
     @Test
     fun theTraceTellsTheTlsVersionAndWhetherTheNameWasEncrypted() {
         assertEquals(ConnectionProbes.Trace("TLSv1.3", false), ConnectionProbes.parseTrace("fl=1\nh=www.cloudflare.com\nip=203.0.113.9\ntls=TLSv1.3\nsni=plaintext\nwarp=off\n"))
-        assertTrue(ConnectionProbes.parseTrace("tls=TLSv1.3\nsni=encrypted").encryptedSni)
-        assertEquals(ConnectionProbes.Trace(null, false), ConnectionProbes.parseTrace(""))
+        assertEquals(true, ConnectionProbes.parseTrace("tls=TLSv1.3\nsni=encrypted").encryptedSni)
+        // Without an sni field nothing is known about Encrypted Client Hello.
+        assertEquals(ConnectionProbes.Trace(null, null), ConnectionProbes.parseTrace(""))
+        assertEquals(ConnectionProbes.Trace("TLSv1.3", null), ConnectionProbes.parseTrace("tls=TLSv1.3\nsni=unknown"))
     }
 }
