@@ -17,6 +17,7 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.os.Bundle
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.Process
@@ -29,6 +30,7 @@ import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreference
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +73,8 @@ private const val TAG = "LocationSpoofingDeviceTest"
  * from the simulated ones until a new real fix arrives. The checks allow both and fail only on
  * fixes this app injected.
  */
+// Spoofing needs the boot count Android 7 introduced; earlier versions report it unsupported.
+@SdkSuppress(minSdkVersion = 24)
 @RunWith(AndroidJUnit4::class)
 class LocationSpoofingDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -142,10 +146,24 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    // Before Android 11 only onLocationChanged has a body, so a lambda listener crashes when a provider turns on.
+    private fun collectingListener(received: LinkedBlockingQueue<Location>) = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            received += location
+        }
+
+        override fun onProviderEnabled(provider: String) = Unit
+
+        override fun onProviderDisabled(provider: String) = Unit
+
+        @Deprecated("Deprecated in Java")
+        override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) = Unit
+    }
+
     // Longer than two push intervals: a loop that kept running would deliver again.
     private fun assertNoNewInjectedFixes() {
         val received = LinkedBlockingQueue<Location>()
-        val listener = LocationListener { received += it }
+        val listener = collectingListener(received)
         manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, listener, Looper.getMainLooper())
         try {
             Thread.sleep(5_000)
@@ -339,7 +357,7 @@ class LocationSpoofingDeviceTest {
     @Test
     fun aRequestingListenerReceivesTheSimulatedLocationUntilStop() = inForeground {
         val received = LinkedBlockingQueue<Location>()
-        val listener = LocationListener { received += it }
+        val listener = collectingListener(received)
         manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0L, 0f, listener, Looper.getMainLooper())
         try {
             val spoofing = spoof()
@@ -458,6 +476,8 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    // Users can dismiss ongoing notices from Android 14; earlier they turn spoofing off from the notice action.
+    @SdkSuppress(minSdkVersion = 34)
     @Test
     fun dismissingTheNoticeTurnsSpoofingOffAndLeavesTheVpnConnected() = inForeground {
         withSpoofingVpn {
@@ -471,6 +491,7 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    @SdkSuppress(minSdkVersion = 34)
     @Test
     fun dismissingTheRecoveryNoticeShowsItAgainUntilRemovalIsConfirmed() = inForeground {
         withSpoofingVpn {
