@@ -333,11 +333,14 @@ class RouteSettingsActivity : ThemedActivity() {
         addresses.firstOrNull { it.startsWith("geoip:") && it != "geoip:private" && it.removePrefix("geoip:").uppercase() !in Locale.getISOCountries() }?.let {
             return getString(R.string.route_editor_no_list, it)
         }
-        val sites = rule.domains.listByLineOrComma()
-        // Without the unpacked lists the core's check can't read them; the service unpacks them on its first start.
-        if ((sites.isEmpty() && addresses.isEmpty()) || !RouteChecks.settings().listsLoaded) return null
+        rule.ruleset.listByLineOrComma().firstOrNull { !isDownloadedList(it) }?.let { return getString(R.string.route_editor_bad_list, it) }
+        // The bundled lists are unpacked when the service first starts; until then the core checks the rest.
+        val loaded = RouteChecks.settings().listsLoaded
+        val sites = rule.domains.listByLineOrComma().filter { loaded || !it.startsWith("geosite:") }
+        val checked = addresses.filter { loaded || !it.startsWith("geoip:") || it == "geoip:private" }
+        if (sites.isEmpty() && checked.isEmpty()) return null
         return try {
-            Libcore.matchRouteDestination(RouteTester.destinationJson(sites, addresses), "example.invalid")
+            Libcore.matchRouteDestination(RouteTester.destinationJson(sites, checked), "example.invalid")
             null
         } catch (e: Exception) {
             e.readableMessage
@@ -429,6 +432,12 @@ class RouteSettingsActivity : ThemedActivity() {
         /** Lists to offer: an entry and its label, or null for the name of its country. */
         private val SITE_LISTS = listOf("geosite:category-ads-all" to R.string.route_editor_ads, "geosite:cn" to null, "geosite:category-ir" to null, "geosite:category-ru" to null)
         private val ADDRESS_LISTS = listOf("geoip:private" to R.string.route_words_local_network, "geoip:cn" to null, "geoip:ir" to null, "geoip:ru" to null)
+
+        /** Whether [entry] is a downloaded list as ConfigBuilder reads one: rssite: or rsip: and a web link. */
+        fun isDownloadedList(entry: String): Boolean {
+            val link = entry.removePrefix("rssite:").removePrefix("rsip:")
+            return link != entry && (link.startsWith("https://") || link.startsWith("http://"))
+        }
 
         /** Whether [entry] is a port or a range of ports as the core reads them: 443, 1000:2000, :1024 or 8000:. */
         fun isPorts(entry: String): Boolean {

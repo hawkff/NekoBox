@@ -75,6 +75,9 @@ class RouteScreenDeviceTest {
             val label = context.packageManager.getApplicationLabel(context.applicationInfo).toString()
             ask(root, label)
             assertTrue(text(root, R.id.answer_notes).startsWith(context.getString(R.string.route_test_app, label)))
+            // A package name reads like a site, but an installed app's means the app.
+            ask(root, context.packageName)
+            assertTrue(text(root, R.id.answer_notes).startsWith(context.getString(R.string.route_test_app, label)))
         }
     }
 

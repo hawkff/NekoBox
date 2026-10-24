@@ -50,7 +50,7 @@ object RuleWords {
 
     fun site(context: Context, entry: String): String = when {
         entry.startsWith("geosite:") -> siteList(context, entry.removePrefix("geosite:"))
-        entry.startsWith("full:") -> entry.removePrefix("full:")
+        entry.startsWith("full:") -> context.getString(R.string.route_words_exact, entry.removePrefix("full:"))
         entry.startsWith("domain:") -> entry.removePrefix("domain:")
         entry.startsWith("keyword:") -> context.getString(R.string.route_words_keyword, entry.removePrefix("keyword:"))
         entry.startsWith("regexp:") -> context.getString(R.string.route_words_pattern)

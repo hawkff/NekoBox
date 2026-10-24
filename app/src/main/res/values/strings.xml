@@ -1105,6 +1105,7 @@
     <string name="route_words_list">%s list</string>
     <string name="route_words_keyword">Sites with “%s”</string>
     <string name="route_words_pattern">Sites matching a pattern</string>
+    <string name="route_words_exact">%s only</string>
     <plurals name="route_words_downloaded">
         <item quantity="one">%d downloaded list</item>
         <item quantity="other">%d downloaded lists</item>
@@ -1201,4 +1202,5 @@
     <string name="route_editor_broken">With this rule the connection wouldn’t start: %s</string>
     <string name="route_editor_no_list">there’s no address list named %s</string>
     <string name="route_editor_bad_port">%s isn’t a port or a range of ports</string>
+    <string name="route_editor_bad_list">%s isn’t rssite: or rsip: followed by a web link</string>
 </resources>

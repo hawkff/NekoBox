@@ -1079,6 +1079,7 @@
 <string name="route_words_list">Список %s</string>
 <string name="route_words_keyword">Сайты со словом «%s»</string>
 <string name="route_words_pattern">Сайты по шаблону</string>
+<string name="route_words_exact">только %s</string>
 <plurals name="route_words_downloaded">
     <item quantity="one">%d загруженный список</item>
     <item quantity="few">%d загруженных списка</item>
@@ -1182,5 +1183,6 @@
 <string name="route_editor_try_unknown">Здесь не проверить: %s</string>
 <string name="route_editor_broken">С этим правилом подключение не запустится: %s</string>
 <string name="route_editor_no_list">нет списка адресов %s</string>
-<string name="route_editor_bad_port">%s — не порт и не диапазон портов</string>
+<string name="route_editor_bad_port">%s не является портом или диапазоном портов</string>
+<string name="route_editor_bad_list">%s: нужно rssite: или rsip:, а за ним веб-ссылка</string>
 </resources>

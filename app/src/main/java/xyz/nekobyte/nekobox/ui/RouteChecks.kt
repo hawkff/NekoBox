@@ -24,11 +24,15 @@ object RouteChecks {
         listsLoaded = listOf("geosite.db", "geoip.db").all { File(app.externalAssets, it).exists() },
     )
 
-    /** What [text] asks about: a site or an address, or else an app by the name the launcher shows; with the app's name. */
+    /**
+     * What [text] asks about: a site or an address, or else an app by the name the launcher shows; with the
+     * app's name. An installed app's package name, which reads like a site, means the app.
+     */
     fun probe(text: String): Pair<RouteProbe, String?>? {
-        RouteProbe.parse(text)?.let { return it to null }
         PackageCache.awaitLoadSync()
         val name = text.trim().lowercase()
+        if (name in PackageCache.installedPackages) return RouteProbe(packageName = name) to PackageCache.loadLabel(name)
+        RouteProbe.parse(text)?.let { return it to null }
         val apps = PackageCache.installedPackages.keys.map { it to PackageCache.loadLabel(it) }
         val (packageName, label) = apps.firstOrNull { (packageName, label) -> label.lowercase() == name || packageName == name }
             ?: apps.filter { (_, label) -> label.lowercase().startsWith(name) }.minByOrNull { (_, label) -> label.length }
