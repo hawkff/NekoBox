@@ -31,6 +31,7 @@ import xyz.nekobyte.nekobox.utils.toBytesString
 import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 import java.lang.NumberFormatException
 import java.util.*
 
@@ -63,7 +64,7 @@ class GroupFragment :
 
         undoManager = UndoSnackbarManager(activity, groupAdapter)
 
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+        groupListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.START,
         ) {
@@ -102,7 +103,7 @@ class GroupFragment :
                 super.clearView(recyclerView, viewHolder)
                 groupAdapter.commitMove()
             }
-        }).attachToRecyclerView(groupListView)
+        })
     }
 
     override fun onMenuItemClick(item: MenuItem): Boolean {

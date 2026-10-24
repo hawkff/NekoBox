@@ -62,12 +62,14 @@ class SettingsFragment :
         if (depth == 0) {
             toolbar.setTitle(R.string.settings)
             toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
+            toolbar.setNavigationContentDescription(R.string.open_menu)
             toolbar.setNavigationOnClickListener {
                 (activity as MainActivity).binding.drawerLayout.openDrawer(GravityCompat.START)
             }
         } else {
             toolbar.title = childFragmentManager.getBackStackEntryAt(depth - 1).name
             toolbar.setNavigationIcon(R.drawable.baseline_arrow_back_24)
+            toolbar.setNavigationContentDescription(androidx.appcompat.R.string.abc_action_bar_up_description)
             toolbar.setNavigationOnClickListener { childFragmentManager.popBackStack() }
         }
     }

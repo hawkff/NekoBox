@@ -21,6 +21,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutAssetItemBinding
 import xyz.nekobyte.nekobox.databinding.LayoutAssetsBinding
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 import java.io.File
 import java.io.FileWriter
 import java.util.*
@@ -78,7 +79,7 @@ class AssetsActivity : ThemedActivity() {
 
         undoManager = UndoSnackbarManager(this, adapter)
 
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+        binding.recyclerView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(
             0,
             ItemTouchHelper.START,
         ) {
@@ -100,7 +101,7 @@ class AssetsActivity : ThemedActivity() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder,
             ) = false
-        }).attachToRecyclerView(binding.recyclerView)
+        })
     }
 
     override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(layout.coordinator, text, Snackbar.LENGTH_LONG)

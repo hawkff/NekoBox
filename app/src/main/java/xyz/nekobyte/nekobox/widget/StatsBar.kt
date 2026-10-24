@@ -178,20 +178,15 @@ class StatsBar @JvmOverloads constructor(
         }
     }
 
+    // The arrows are for the eye; a screen reader says what each number is.
     @SuppressLint("SetTextI18n")
     fun updateSpeed(txRate: Long, rxRate: Long) {
-        txText.text = "▲  ${
-            context.getString(
-                R.string.speed,
-                Formatter.formatFileSize(context, txRate),
-            )
-        }"
-        rxText.text = "▼  ${
-            context.getString(
-                R.string.speed,
-                Formatter.formatFileSize(context, rxRate),
-            )
-        }"
+        val tx = context.getString(R.string.speed, Formatter.formatFileSize(context, txRate))
+        val rx = context.getString(R.string.speed, Formatter.formatFileSize(context, rxRate))
+        txText.text = "▲  $tx"
+        txText.contentDescription = context.getString(R.string.speed_upload, tx)
+        rxText.text = "▼  $rx"
+        rxText.contentDescription = context.getString(R.string.speed_download, rx)
     }
 
     fun testConnection() {

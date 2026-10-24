@@ -58,6 +58,7 @@ import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
 import xyz.nekobyte.nekobox.ktx.tryToShow
 import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.set
@@ -128,18 +129,7 @@ class ConfigurationGroupFragment : Fragment() {
             itemTouchHelper.attachToRecyclerView(null)
         }
 
-        itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, 0) {
-            override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                val dragFlags = if (DataStore.groupLayoutMode == 1) {
-                    ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
-                } else {
-                    ItemTouchHelper.UP or ItemTouchHelper.DOWN
-                }
-                return makeMovementFlags(dragFlags, 0) // No swipe flags
-            }
-
-            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = 0
-
+        itemTouchHelper = configurationListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, 0) {
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (isEnabled && adapter?.canDrag() == true) {
                 if (DataStore.groupLayoutMode == 1) {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
@@ -179,7 +169,6 @@ class ConfigurationGroupFragment : Fragment() {
                 adapter?.commitMove()
             }
         })
-        itemTouchHelper.attachToRecyclerView(configurationListView)
     }
     lateinit var configurationListView: RecyclerView
     private var listTopPadding = 0
@@ -1234,6 +1223,8 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         private fun applySelected(selected: Boolean) {
+            // Screen readers say "selected"; the look below is for the eye only.
+            card.isSelected = selected
             val ctx = card.context
             val primary = ctx.getColorAttr(R.attr.colorPrimary)
             val surface = ctx.getColorAttr(R.attr.colorSurface)

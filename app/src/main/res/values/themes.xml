@@ -14,6 +14,7 @@
     -->
 
     <style name="Base.Theme.NekoBox" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="actionOverflowButtonStyle">@style/Widget.NekoBox.ActionButton.Overflow</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
@@ -665,6 +666,11 @@
 
     <style name="Widget.NekoBox.Button.TextButton.Dialog.Flush" parent="Widget.Material3.Button.TextButton.Dialog.Flush">
         <item name="android:textColor">?primaryOrTextPrimary</item>
+    </style>
+
+    <!-- The overflow button keeps a 48 dp touch target; AppCompat's is narrower. -->
+    <style name="Widget.NekoBox.ActionButton.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
+        <item name="android:minWidth">48dp</item>
     </style>
 
     <!-- The button that runs a network check: medium size, with an icon; its corners tighten
