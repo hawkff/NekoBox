@@ -655,13 +655,13 @@ class MainActivity :
         super.onStop()
     }
 
-    override fun canSwipeBack() = !binding.drawerLayout.isOpen
+    private fun home() = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
+
+    override fun canSwipeBack() = wideSwipeAllowed(binding.drawerLayout.isOpen, home()?.searchOpen)
 
     override fun onWideSwipe() {
-        val home = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
-            ?: return super.onWideSwipe()
-        // Home is the root: the swipe closes an open search, else opens the drawer instead of leaving the app.
-        if (!home.closeSearch()) binding.drawerLayout.open()
+        val home = home() ?: return super.onWideSwipe()
+        home.closeSearch()
     }
 
     override fun onDestroy() {
@@ -695,3 +695,9 @@ class MainActivity :
         return fragment != null && fragment.onKeyDown(keyCode, event)
     }
 }
+
+/**
+ * Whether the wide swipe may start: never over an open drawer, and on Home ([searchOpen] not null)
+ * only to close an open search, since a sideways swipe there moves between the groups.
+ */
+internal fun wideSwipeAllowed(drawerOpen: Boolean, searchOpen: Boolean?) = !drawerOpen && searchOpen != false
