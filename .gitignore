@@ -44,6 +44,7 @@ sentry.properties
 /external/
 
 # Signing keys and device data backups; never commit
+/signing/
 release.keystore
 *.keystore
 *.jks
