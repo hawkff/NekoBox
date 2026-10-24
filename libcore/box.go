@@ -19,16 +19,11 @@ import (
 
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/common/conntrack"
-	"github.com/sagernet/sing-box/common/dialer"
 	"github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 )
-
-func init() {
-	dialer.DoNotSelectInterface.Store(true)
-}
 
 // mainInstance is the core the service runs. mainAccess also guards protectCloser, so a core
 // that is closing cannot stop the protect server of the core that replaced it.
