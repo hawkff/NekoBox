@@ -41,7 +41,7 @@ private class RowActions(private val list: RecyclerView, private val callback: I
             return when (action) {
                 R.id.row_move_up -> position != RecyclerView.NO_POSITION && move(holder, position - 1)
                 R.id.row_move_down -> position != RecyclerView.NO_POSITION && move(holder, position + 1)
-                R.id.row_remove -> remove(holder)
+                R.id.row_remove -> position != RecyclerView.NO_POSITION && remove(holder)
                 else -> super.performAccessibilityAction(host, action, args)
             }
         }

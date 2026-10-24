@@ -38,6 +38,9 @@ class RowActionsDeviceTest {
                 settle()
                 lateinit var list: RecyclerView
                 scenario.onActivity { list = it.findViewById(R.id.group_list) }
+                // The groups made here are the last ones: bring the end of the list into view.
+                instrumentation.runOnMainSync { list.scrollToPosition(list.adapter!!.itemCount - 1) }
+                settle()
                 val rows = list.compatAccessibilityDelegate!!.itemDelegate
                 fun row(name: String): View? = list.children.firstOrNull { (list.getChildViewHolder(it) as GroupFragment.GroupHolder).proxyGroup.name == name }
                 fun actions(view: View) = AccessibilityNodeInfoCompat.obtain().also { rows.onInitializeAccessibilityNodeInfo(view, it) }.actionList.map { it.id }
