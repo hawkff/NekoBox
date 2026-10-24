@@ -1319,6 +1319,10 @@ class ConfigurationGroupFragment : Fragment() {
             if (same && profileStatus.text.toString() != shownStatus) {
                 profileStatus.alpha = 0f
                 profileStatus.animate().alpha(1f).setDuration(STATUS_FADE).start()
+            } else if (!same) {
+                // A card shown for another profile ends the last one's fade.
+                profileStatus.animate().cancel()
+                profileStatus.alpha = 1f
             }
 
             val selectOrChain = select || proxyEntity.type == ProxyEntity.TYPE_CHAIN
