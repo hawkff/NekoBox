@@ -1,9 +1,11 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.graphics.Rect
 import android.os.Bundle
 import android.text.format.Formatter
 import android.view.LayoutInflater
 import android.view.MenuItem
+import android.view.TouchDelegate
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -1222,6 +1224,15 @@ class ConfigurationGroupFragment : Fragment() {
             return running.groupId == groupId && group.isSelector && group.autoSelect
         }
 
+        private fun statusTarget(): TouchDelegate {
+            val bounds = Rect()
+            profileStatus.getDrawingRect(bounds)
+            card.offsetDescendantRectToMyCoords(profileStatus, bounds)
+            val minimum = (48 * card.resources.displayMetrics.density).toInt()
+            bounds.inset(-((minimum - bounds.width()) / 2).coerceAtLeast(0), -((minimum - bounds.height()) / 2).coerceAtLeast(0))
+            return TouchDelegate(bounds, profileStatus)
+        }
+
         private fun applySelected(selected: Boolean) {
             // Screen readers say "selected"; the look below is for the eye only.
             card.isSelected = selected
@@ -1319,6 +1330,11 @@ class ConfigurationGroupFragment : Fragment() {
                 val msg = Protocols.genFriendlyMsg(err)
                 profileStatus.text = if (msg != err) msg else getString(R.string.unavailable)
             }
+            // Only a failed test has more to show, its error; the short line then answers a 48 dp tap.
+            val failed = proxyEntity.status == 3
+            profileStatus.isClickable = failed
+            card.touchDelegate = null
+            if (failed) profileStatus.post { card.touchDelegate = statusTarget() }
 
             val selectOrChain = select || proxyEntity.type == ProxyEntity.TYPE_CHAIN
             val isDoubleColumn = DataStore.groupLayoutMode == 1
