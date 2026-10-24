@@ -1071,8 +1071,8 @@
     <string name="connection_check_flag_tor">Tor</string>
     <string name="connection_check_flag_hosting">хостинг</string>
 <!-- Route list and tester -->
-<string name="route_words_sites_in">Сайты: %s</string>
-<string name="route_words_addresses_in">Адреса: %s</string>
+<string name="route_words_sites_in">Сайты (%s)</string>
+<string name="route_words_addresses_in">Адреса (%s)</string>
 <string name="route_words_ads">Реклама</string>
 <string name="route_words_local_network">Локальная сеть</string>
 <string name="route_words_brand_sites">Сайты %s</string>
