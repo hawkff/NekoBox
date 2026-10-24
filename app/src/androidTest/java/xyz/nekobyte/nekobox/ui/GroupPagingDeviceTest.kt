@@ -1,0 +1,126 @@
+package xyz.nekobyte.nekobox.ui
+
+import android.os.SystemClock
+import android.view.MotionEvent
+import android.view.View
+import androidx.appcompat.widget.SearchView
+import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.viewpager2.widget.ViewPager2
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.ktx.applyDefaultValues
+
+/** Swiping between groups on the profile list, with touches the way a finger sends them. */
+@RunWith(AndroidJUnit4::class)
+class GroupPagingDeviceTest {
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private lateinit var groups: List<Long>
+    private var savedGroup = 0L
+
+    @Before
+    fun setUp() {
+        savedGroup = DataStore.selectedGroup
+        // Two groups after any the device already has, each with a profile.
+        groups = List(2) { index ->
+            ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "Paging ${index + 1}", userOrder = 1_000_000L + index)).also { id ->
+                ProfileDatabase.proxyDao.addProxy(
+                    ProxyEntity(groupId = id).putBean(
+                        SOCKSBean().applyDefaultValues().apply {
+                            name = "paging-${index + 1}"
+                            serverAddress = "192.0.2.1"
+                            serverPort = 1080
+                        },
+                    ),
+                )
+            }
+        }
+        DataStore.selectedGroup = groups[0]
+    }
+
+    @After
+    fun tearDown() {
+        for (id in groups) {
+            ProfileDatabase.proxyDao.deleteAll(id)
+            ProfileDatabase.groupDao.deleteById(id)
+        }
+        DataStore.selectedGroup = savedGroup
+    }
+
+    @Test
+    fun aSwipeMovesBetweenGroupsButNotWhileSearching() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            settle()
+            lateinit var pager: ViewPager2
+            lateinit var search: SearchView
+            scenario.onActivity {
+                pager = it.findViewById(R.id.group_pager)
+                search = it.findViewById(R.id.action_search)
+            }
+            assertTrue(pager.isUserInputEnabled)
+
+            // A drag that rests before lifting springs back and selects nothing.
+            drag(pager, from = 0.8f, to = 0.55f, rest = true)
+            assertEquals(groups[0], DataStore.selectedGroup)
+
+            // A fling moves to the next group.
+            drag(pager, from = 0.8f, to = 0.2f, rest = false)
+            assertEquals(groups[1], DataStore.selectedGroup)
+
+            // With the search open the pager stays put; its close button lets it page again.
+            instrumentation.runOnMainSync { search.isIconified = false }
+            settle()
+            assertFalse(pager.isUserInputEnabled)
+            drag(pager, from = 0.2f, to = 0.8f, rest = false)
+            assertEquals(groups[1], DataStore.selectedGroup)
+            instrumentation.runOnMainSync { search.isIconified = true }
+            settle()
+            assertTrue(pager.isUserInputEnabled)
+        }
+    }
+
+    private fun settle() {
+        instrumentation.waitForIdleSync()
+        Thread.sleep(800)
+    }
+
+    /** A horizontal drag across [view] from and to fractions of its width; with [rest] the finger stops before lifting. */
+    private fun drag(view: View, from: Float, to: Float, rest: Boolean) {
+        val location = IntArray(2)
+        instrumentation.runOnMainSync { view.getLocationOnScreen(location) }
+        val y = location[1] + view.height / 2f
+        val start = location[0] + view.width * from
+        val end = location[0] + view.width * to
+        val down = SystemClock.uptimeMillis()
+        fun send(action: Int, x: Float) {
+            val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+            instrumentation.sendPointerSync(event)
+            event.recycle()
+        }
+        send(MotionEvent.ACTION_DOWN, start)
+        for (step in 1..10) {
+            Thread.sleep(10)
+            send(MotionEvent.ACTION_MOVE, start + (end - start) * step / 10)
+        }
+        if (rest) {
+            repeat(10) {
+                Thread.sleep(60)
+                send(MotionEvent.ACTION_MOVE, end)
+            }
+        }
+        send(MotionEvent.ACTION_UP, end)
+        settle()
+    }
+}
