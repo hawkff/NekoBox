@@ -7,18 +7,13 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resumeWithException
 
 /**
  * The bash.ws DNS leak test, run the way its web page runs it: start a test, request unique names
@@ -58,6 +53,17 @@ object DnsLeakTest {
     class ServiceException(message: String) : IOException(message)
 
     suspend fun run(client: OkHttpClient): Result = withContext(Dispatchers.IO) {
+        try {
+            attempt(client)
+        } catch (e: ServiceException) {
+            // A test belongs to the address that started it. Where connections leave from changing
+            // addresses, a connection opened mid-test makes it unknown; a fresh test usually gets through.
+            if (!e.message.orEmpty().contains("test id", ignoreCase = true)) throw e
+            attempt(client)
+        }
+    }
+
+    private suspend fun attempt(client: OkHttpClient): Result {
         val test = post(client, "start" to "1", "url" to "/dnsleak")
         val id = test.optString("run_id")
         val url = test.optString("url")
@@ -92,7 +98,7 @@ object DnsLeakTest {
         }
         repeat(POLLS) {
             val check = post(client, "checkrun" to "1", "url" to url, "summary" to "0")
-            if (check.optString("done") == "1") return@withContext parse(check.optString("result"))
+            if (check.optString("done") == "1") return parse(check.optString("result"))
             // Under the second after which bash.ws drops the connection.
             delay(500)
         }
@@ -109,22 +115,6 @@ object DnsLeakTest {
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             answer ?: throw IOException("unexpected answer from bash.ws")
         }
-    }
-
-    // Leaving the check cancels the request in flight; a blocking execute() would run on.
-    private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
-        continuation.invokeOnCancellation { cancel() }
-        enqueue(
-            object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    if (continuation.isActive) continuation.resumeWithException(e)
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    if (continuation.isActive) continuation.resume(response) { _, value, _ -> value.close() } else response.close()
-                }
-            },
-        )
     }
 
     // Each row sits under its table's header; only the DNS server table names DNS there.
