@@ -970,6 +970,8 @@
     <string name="connection_check_summary">Внешний адрес и DNS-серверы, которые видны у этого соединения</string>
     <string name="connection_check_note">Проверка обращается к bash.ws, ipleak.net, dnscheck.tools, Cloudflare и STUN-серверу Cloudflare, они видят ваш внешний адрес. Списки адресов VPN, дата-центров и Tor загружаются с GitHub и сайта Tor Project и сверяются на этом устройстве.</string>
     <string name="connection_check_start">Проверить</string>
+    <string name="check_running">Проверка…</string>
+    <string name="check_again">Проверить снова</string>
     <string name="connection_check_path_vpn">Через VPN</string>
     <string name="connection_check_path_proxy">Через локальный прокси</string>
     <string name="connection_check_path_direct">NekoBox выключен: проверяется прямое соединение</string>

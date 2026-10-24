@@ -667,6 +667,23 @@
         <item name="android:textColor">?primaryOrTextPrimary</item>
     </style>
 
+    <!-- The button that runs a network check: medium size, with an icon; its corners tighten
+         under a finger. It also says aloud when a check runs and when it is done. -->
+    <style name="Widget.NekoBox.Button.Check" parent="@style/Widget.NekoBox.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">28dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:stateListAnimator">@animator/check_button_press</item>
+        <item name="android:accessibilityLiveRegion">polite</item>
+        <item name="cornerRadius">@dimen/check_button_corner_radius</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">10dp</item>
+    </style>
+
     <!-- The heading of a group of check results. -->
     <style name="Widget.NekoBox.CheckSection" parent="">
         <item name="android:layout_width">match_parent</item>

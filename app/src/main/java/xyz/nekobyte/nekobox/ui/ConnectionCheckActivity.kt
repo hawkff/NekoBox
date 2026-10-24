@@ -2,6 +2,8 @@ package xyz.nekobyte.nekobox.ui
 
 import android.os.Build
 import android.os.Bundle
+import android.transition.TransitionManager
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.LinearLayout
 import androidx.annotation.StringRes
@@ -32,6 +34,7 @@ import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.net.AddressReputation
 import xyz.nekobyte.nekobox.net.ConnectionProbes
 import xyz.nekobyte.nekobox.net.DnsLeakTest
+import xyz.nekobyte.nekobox.widget.CheckCat
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.security.KeyStore
@@ -56,6 +59,12 @@ class ConnectionCheckActivity : ThemedActivity() {
 
     // The path the label and any results on screen belong to.
     private var shown: Path? = null
+
+    // Whether anything on screen calls for attention, which the cat shows when the check ends.
+    private var alarming = false
+
+    // Where the next result row comes in its batch, so a batch arrives in order.
+    private var order = 0
 
     private enum class Path(val label: Int, val icon: Int) {
         VPN(R.string.connection_check_path_vpn, R.drawable.ic_baseline_vpn_key_24),
@@ -146,14 +155,19 @@ class ConnectionCheckActivity : ThemedActivity() {
         binding.connectionCheckResults.isVisible = false
         binding.connectionCheckRows.isVisible = false
         binding.connectionCheckLookup.isVisible = false
+        binding.connectionCheckCat.pose = CheckCat.Pose.WAITING
+        binding.connectionCheckStart.setText(R.string.connection_check_start)
+        alarming = false
     }
 
     private fun start() {
         val path = path()
         showPath(path)
-        binding.connectionCheckStart.isEnabled = false
-        binding.connectionCheckProgress.isVisible = true
         hideResults()
+        binding.connectionCheckStart.isEnabled = false
+        binding.connectionCheckStart.setText(R.string.check_running)
+        binding.connectionCheckStart.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        binding.connectionCheckCat.pose = CheckCat.Pose.RUNNING
         check?.cancel()
         lookup?.cancel()
         check = lifecycleScope.launch {
@@ -200,8 +214,12 @@ class ConnectionCheckActivity : ThemedActivity() {
             } catch (e: Exception) {
                 if (path() == path) failed(e)
             } finally {
-                binding.connectionCheckProgress.isVisible = false
                 binding.connectionCheckStart.isEnabled = true
+                // A check cut short by a change of path leaves nothing behind to judge.
+                if (path() == path) {
+                    binding.connectionCheckStart.setText(R.string.check_again)
+                    binding.connectionCheckCat.pose = if (alarming) CheckCat.Pose.ALERT else CheckCat.Pose.CONTENT
+                }
             }
         }
     }
@@ -217,6 +235,8 @@ class ConnectionCheckActivity : ThemedActivity() {
         val icon = ContextCompat.getDrawable(context, R.drawable.ic_baseline_warning_24)?.mutate()?.apply { setTint(color) }
         setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
         isVisible = true
+        reveal(0)
+        alarming = true
     }
 
     private fun rows(
@@ -230,6 +250,7 @@ class ConnectionCheckActivity : ThemedActivity() {
         trace: ConnectionProbes.Trace?,
     ) {
         binding.connectionCheckRows.removeAllViews()
+        order = 0
         section(R.string.connection_check_section_exits)
         val v4 = (ipv4 as? ConnectionProbes.Exit.Seen)?.address
         val v6 = (ipv6 as? ConnectionProbes.Exit.Seen)?.address
@@ -341,7 +362,10 @@ class ConnectionCheckActivity : ThemedActivity() {
     }
 
     private fun section(@StringRes title: Int) {
-        ItemCheckSectionBinding.inflate(layoutInflater, binding.connectionCheckRows, true).root.setText(title)
+        ItemCheckSectionBinding.inflate(layoutInflater, binding.connectionCheckRows, true).root.apply {
+            setText(title)
+            reveal(order++)
+        }
     }
 
     private fun row(@StringRes title: Int, status: CharSequence, tone: CheckTone, detail: CharSequence? = null, tag: String? = null) {
@@ -350,14 +374,20 @@ class ConnectionCheckActivity : ThemedActivity() {
         ItemCheckResultBinding.inflate(layoutInflater, rows, true).apply {
             root.tag = tag
             showResult(title, status, tone, detail)
+            // A lookup on request comes in alone.
+            root.reveal(if (tag == null) order++ else 0)
         }
+        if (tone == CheckTone.WARNING && tag == null) alarming = true
     }
 
     private fun show(result: DnsLeakTest.Result) {
         when (result.verdict) {
             DnsLeakTest.Verdict.CLEAN -> verdict(getString(R.string.dns_leak_none), CheckTone.OK)
 
-            DnsLeakTest.Verdict.LEAK -> verdict(getString(R.string.dns_leak_found), CheckTone.WARNING)
+            DnsLeakTest.Verdict.LEAK -> {
+                verdict(getString(R.string.dns_leak_found), CheckTone.WARNING)
+                alarming = true
+            }
 
             // Text bash.ws did not phrase as a known verdict is shown as it came.
             DnsLeakTest.Verdict.UNKNOWN -> verdict(result.conclusion ?: getString(R.string.connection_check_no_verdict), CheckTone.INFO)
@@ -391,6 +421,8 @@ class ConnectionCheckActivity : ThemedActivity() {
         ItemCheckMoreBinding.inflate(layoutInflater, list, true).root.apply {
             text = getString(R.string.connection_check_show_more, addresses.size - shown.size)
             setOnClickListener {
+                // The page grows smoothly around the rest of the list.
+                TransitionManager.beginDelayedTransition(binding.connectionCheckScroll)
                 list.removeView(this)
                 addresses.drop(shown.size).forEach { add(list, it) }
             }

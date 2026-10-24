@@ -1025,6 +1025,8 @@
     <string name="connection_check_summary">The public address and DNS servers this connection shows</string>
     <string name="connection_check_note">The check asks bash.ws, ipleak.net, dnscheck.tools, Cloudflare and a Cloudflare STUN server, which see your public address. Lists of VPN, datacenter and Tor addresses come from GitHub and the Tor Project and are matched on this device.</string>
     <string name="connection_check_start">Check</string>
+    <string name="check_running">Checking…</string>
+    <string name="check_again">Check again</string>
     <string name="connection_check_path_vpn">Through the VPN</string>
     <string name="connection_check_path_proxy">Through the local proxy</string>
     <string name="connection_check_path_direct">NekoBox is off: this checks your direct connection</string>
