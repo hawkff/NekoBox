@@ -11,6 +11,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -23,7 +24,6 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.widget.glass.Glass
-import xyz.nekobyte.nekobox.widget.glass.GlassAmbientDrawable
 
 abstract class ThemedActivity : AppCompatActivity {
     constructor() : super()
@@ -39,8 +39,8 @@ abstract class ThemedActivity : AppCompatActivity {
         super.onCreate(savedInstanceState)
 
         uiMode = resources.configuration.uiMode
-        // Glass bends the canvas behind it, so with glass on the canvas carries the palette's light.
-        if (Glass.enabled && !isDialog) window.setBackgroundDrawable(GlassAmbientDrawable.of(this))
+        // Glass bends the canvas behind it, so with glass on the window draws the palette's canvas color.
+        if (Glass.enabled && !isDialog) window.setBackgroundDrawable(Glass.canvasColor(this).toDrawable())
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -49,7 +49,7 @@ abstract class ThemedActivity : AppCompatActivity {
             insetController.isAppearanceLightNavigationBars = !Theme.usingNightMode()
             // The transparent status bar sits over the app bar, or with glass over the canvas: dark
             // icons whenever white would not read there (the same 3:1 floor the light-primary palettes use).
-            val behind = if (Glass.enabled) GlassAmbientDrawable.canvasColor(this) else getColorAttr(R.attr.appBarBackgroundColor)
+            val behind = if (Glass.enabled) Glass.canvasColor(this) else getColorAttr(R.attr.appBarBackgroundColor)
             insetController.isAppearanceLightStatusBars =
                 Color.alpha(behind) == 0xFF && ColorUtils.calculateContrast(Color.WHITE, behind) < 3.0
         }

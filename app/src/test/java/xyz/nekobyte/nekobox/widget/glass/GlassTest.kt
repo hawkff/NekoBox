@@ -91,25 +91,10 @@ class GlassTest {
     }
 
     @Test
-    fun onlyATrueBlackCanvasStaysFlat() {
+    fun theCanvasIsThePalettesOwnColor() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
-        fun canvas(palette: Int) = GlassAmbientDrawable.of(ContextThemeWrapper(activity, R.style.Theme_NekoBox).apply { theme.applyStyle(palette, true) })
-        assertEquals(Color.BLACK, (canvas(R.style.ThemeOverlay_NekoBox_Palette_DarkHighContrast) as ColorDrawable).color)
-        // The darkest canvas that is not black keeps its glows.
-        for (palette in listOf(R.style.ThemeOverlay_NekoBox_Palette_Catppuccin, R.style.ThemeOverlay_NekoBox_Palette_Nord)) {
-            assertTrue(canvas(palette) is GlassAmbientDrawable)
-        }
-    }
-
-    @Test
-    fun theSecondGlowStandsApartFromTheFirst() {
-        val green = 0xFF4CAF50.toInt()
-        val primary = FloatArray(3)
-        val second = FloatArray(3)
-        ColorUtils.colorToHSL(green, primary)
-        ColorUtils.colorToHSL(secondGlow(green, 0xFF66BB6A.toInt()), second)
-        assertEquals((primary[0] + 50f) % 360f, second[0], 1f)
-        // An accent of its own stays.
-        assertEquals(0xFF2196F3.toInt(), secondGlow(green, 0xFF2196F3.toInt()))
+        fun canvas(palette: Int) = Glass.canvasColor(ContextThemeWrapper(activity, R.style.Theme_NekoBox).apply { theme.applyStyle(palette, true) })
+        assertEquals(Color.BLACK, canvas(R.style.ThemeOverlay_NekoBox_Palette_DarkHighContrast))
+        assertEquals(0xFF1E1E2E.toInt(), canvas(R.style.ThemeOverlay_NekoBox_Palette_Catppuccin))
     }
 }
