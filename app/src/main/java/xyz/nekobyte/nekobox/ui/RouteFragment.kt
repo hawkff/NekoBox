@@ -1,6 +1,5 @@
 package xyz.nekobyte.nekobox.ui
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -22,7 +21,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
@@ -49,6 +47,7 @@ import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.launchCustomTab
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
+import xyz.nekobyte.nekobox.widget.CardHighlight
 import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
@@ -281,39 +280,6 @@ class RouteFragment :
         }
     }
 
-    /** The look of a card that the tester picks out: the selected profile's look, faded in. */
-    private class Highlight(private val card: MaterialCardView) {
-        private val context = card.context
-        private val primary = context.getColorAttr(R.attr.colorPrimary)
-        private val surface = context.getColorAttr(R.attr.colorSurface)
-        private val stroke = context.getColor(R.color.card_stroke)
-        private val thin = context.resources.getDimensionPixelSize(R.dimen.card_stroke_width)
-        private val thick = context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_selected)
-        private var lit = -1f
-        private var animator: ValueAnimator? = null
-
-        fun show(on: Boolean, animate: Boolean, delay: Long = 0) {
-            val target = if (on) 1f else 0f
-            if (target == lit && animator == null) return
-            animator?.cancel()
-            animator = null
-            if (!animate || lit < 0) return paint(target)
-            animator = ValueAnimator.ofFloat(lit, target).apply {
-                startDelay = delay
-                duration = LIGHT
-                addUpdateListener { paint(it.animatedValue as Float) }
-                start()
-            }
-        }
-
-        private fun paint(fraction: Float) {
-            lit = fraction
-            card.strokeWidth = (thin + (thick - thin) * fraction).toInt()
-            card.strokeColor = ColorUtils.blendARGB(stroke, primary, fraction)
-            card.setCardBackgroundColor(ColorUtils.blendARGB(surface, ColorUtils.compositeColors(ColorUtils.setAlphaComponent(primary, 26), surface), fraction))
-        }
-    }
-
     inner class RuleAdapter :
         RecyclerView.Adapter<RecyclerView.ViewHolder>(),
         ProfileManager.RuleListener,
@@ -461,7 +427,7 @@ class RouteFragment :
     inner class RuleHolder(private val binding: LayoutRouteItemBinding) : RecyclerView.ViewHolder(binding.root) {
         private lateinit var row: RuleRow
         private val card = binding.root
-        private val highlight = Highlight(card)
+        private val highlight = CardHighlight(card)
 
         init {
             card.setOnClickListener {
@@ -537,7 +503,7 @@ class RouteFragment :
     }
 
     inner class EndHolder(private val binding: LayoutRouteEndBinding) : RecyclerView.ViewHolder(binding.root) {
-        private val highlight = Highlight(binding.fallback)
+        private val highlight = CardHighlight(binding.fallback)
 
         init {
             binding.add.setOnClickListener { startActivity(Intent(it.context, RouteSettingsActivity::class.java)) }
@@ -566,7 +532,6 @@ class RouteFragment :
         const val FADE = 160L
         const val STAGGER = 24
         const val MAX_STAGGER = 10
-        const val LIGHT = 220L
         const val POP = 1.12f
         const val OFF_ALPHA = 0.5f
         const val PASSED_ALPHA = 0.38f

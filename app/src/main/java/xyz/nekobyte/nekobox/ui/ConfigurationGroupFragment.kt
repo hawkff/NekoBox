@@ -13,7 +13,6 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.TooltipCompat
-import androidx.core.graphics.ColorUtils
 import androidx.core.os.BundleCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -58,6 +57,7 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
 import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
 import xyz.nekobyte.nekobox.ktx.tryToShow
+import xyz.nekobyte.nekobox.widget.CardHighlight
 import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
@@ -1091,6 +1091,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         val trafficText: TextView = binding.trafficText
         private val card = view as MaterialCardView
+        private val highlight = CardHighlight(card)
         val editButton: ImageView = binding.edit
         val doubleColumnMenuButton: ImageView = binding.doubleColumnMenu
         val shareLayout: ImageView = binding.share
@@ -1233,32 +1234,12 @@ class ConfigurationGroupFragment : Fragment() {
             return TouchDelegate(bounds, profileStatus)
         }
 
-        private fun applySelected(selected: Boolean) {
-            // Screen readers say "selected"; the look below is for the eye only.
-            card.isSelected = selected
-            val ctx = card.context
-            val primary = ctx.getColorAttr(R.attr.colorPrimary)
-            val surface = ctx.getColorAttr(R.attr.colorSurface)
-            card.strokeWidth = ctx.resources.getDimensionPixelSize(
-                if (selected) R.dimen.card_stroke_width_selected else R.dimen.card_stroke_width,
-            )
-            card.strokeColor =
-                if (selected) primary else ctx.getColor(R.color.card_stroke)
-            card.setCardBackgroundColor(
-                if (selected) {
-                    ColorUtils.compositeColors(
-                        ColorUtils.setAlphaComponent(primary, 26),
-                        surface,
-                    )
-                } else {
-                    surface
-                },
-            )
-        }
-
         fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean) {
             val pf = parentFragment as? ConfigurationFragment ?: return
 
+            // A card shown again for the same profile changes in place: its selection and test result fade.
+            val same = ::entity.isInitialized && entity.id == proxyEntity.id
+            val shownStatus = profileStatus.text.toString()
             entity = proxyEntity
 
             profileName.text = proxyEntity.displayName()
@@ -1335,6 +1316,10 @@ class ConfigurationGroupFragment : Fragment() {
             profileStatus.isClickable = failed
             card.touchDelegate = null
             if (failed) profileStatus.post { card.touchDelegate = statusTarget() }
+            if (same && profileStatus.text.toString() != shownStatus) {
+                profileStatus.alpha = 0f
+                profileStatus.animate().alpha(1f).setDuration(STATUS_FADE).start()
+            }
 
             val selectOrChain = select || proxyEntity.type == ProxyEntity.TYPE_CHAIN
             val isDoubleColumn = DataStore.groupLayoutMode == 1
@@ -1355,7 +1340,9 @@ class ConfigurationGroupFragment : Fragment() {
             val running = pf.isRunningProfile(proxyEntity.id)
             editButton.isEnabled = !running
             removeButton.isEnabled = !running
-            applySelected(selected)
+            // Screen readers say "selected"; the highlight is for the eye.
+            card.isSelected = selected
+            highlight.show(selected, animate = same)
         }
 
         private fun showCode(link: String, name: String) {
@@ -1408,3 +1395,6 @@ class ConfigurationGroupFragment : Fragment() {
         }
     }
 }
+
+// A new test result fades in over this long.
+private const val STATUS_FADE = 150L

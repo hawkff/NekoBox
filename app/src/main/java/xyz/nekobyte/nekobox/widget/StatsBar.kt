@@ -96,7 +96,12 @@ class StatsBar @JvmOverloads constructor(
         super.setOnClickListener(l)
     }
 
+    // A new status, such as a test result, fades in; the words are right from the first frame.
     private fun setStatus(text: CharSequence) {
+        if (statusText.isShown && statusText.text.toString() != text.toString()) {
+            statusText.alpha = STATUS_FROM
+            statusText.animate().alpha(1f).setDuration(STATUS_FADE).start()
+        }
         statusText.text = text
         TooltipCompat.setTooltipText(this, text)
     }
@@ -231,5 +236,10 @@ class StatsBar @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val STATUS_FROM = 0.25f
+        const val STATUS_FADE = 180L
     }
 }
