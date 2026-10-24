@@ -103,6 +103,7 @@ class ConfigBuilderDnsRuleTest {
     }
 
     @Test
+    @Config(sdk = [28])
     fun fromAndroid9_theCoreKeepsTheSystemStore() {
         assertFalse(build().has("certificate"))
     }
