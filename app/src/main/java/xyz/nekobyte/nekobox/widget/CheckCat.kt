@@ -79,11 +79,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
     private val oval = RectF()
 
-    private val motion = if (Build.VERSION.SDK_INT >= 26) {
-        ValueAnimator.areAnimatorsEnabled()
-    } else {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
-    }
+    private var motion = motionOn()
     private var time = 0f
     private val clock = TimeAnimator().apply {
         setTimeListener { _, total, _ ->
@@ -110,7 +106,18 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(visibility)
+        // Animations may have been switched on or off while the page was away.
+        if (visibility == VISIBLE) {
+            motion = motionOn()
+            invalidate()
+        }
         updateClock()
+    }
+
+    private fun motionOn() = if (Build.VERSION.SDK_INT >= 26) {
+        ValueAnimator.areAnimatorsEnabled()
+    } else {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
     }
 
     private fun updateClock() {
