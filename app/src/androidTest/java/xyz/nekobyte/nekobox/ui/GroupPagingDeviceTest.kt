@@ -3,9 +3,11 @@ package xyz.nekobyte.nekobox.ui
 import android.Manifest
 import android.os.Build
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.widget.SearchView
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -119,6 +121,23 @@ class GroupPagingDeviceTest {
             drag(pager, from = 0.6f, to = 0.95f, rest = false)
             assertTrue(activity.binding.drawerLayout.isOpen)
             instrumentation.runOnMainSync { activity.binding.drawerLayout.close() }
+        }
+    }
+
+    @Test
+    fun backClosesAnOpenDrawerBeforeAnythingElse() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            settle()
+            lateinit var activity: MainActivity
+            scenario.onActivity {
+                activity = it
+                it.binding.drawerLayout.open()
+            }
+            settle()
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            settle()
+            assertFalse(activity.binding.drawerLayout.isOpen)
+            assertEquals(Lifecycle.State.RESUMED, scenario.state)
         }
     }
 

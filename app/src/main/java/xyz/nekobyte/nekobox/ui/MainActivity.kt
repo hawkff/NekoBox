@@ -101,7 +101,9 @@ class MainActivity :
         }
         onBackPressedDispatcher.addCallback {
             val current = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+            // An open drawer goes first: Back closes it, and leaves the screen as it was.
             when {
+                binding.drawerLayout.isOpen -> binding.drawerLayout.close()
                 current?.onBackPressed() == true -> Unit
                 current is ConfigurationFragment -> moveTaskToBack(true)
                 else -> displayFragmentWithId(R.id.nav_configuration)
