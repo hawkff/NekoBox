@@ -36,6 +36,16 @@ class WideSwipeBackTest {
     }
 
     @Test
+    fun onHomeTheWideSwipeOnlyClosesASearch() {
+        // Elsewhere, Back.
+        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = null))
+        // On Home a sideways swipe pages the groups; with the search open it closes the search.
+        assertFalse(wideSwipeAllowed(drawerOpen = false, searchOpen = false))
+        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = true))
+        assertFalse(wideSwipeAllowed(drawerOpen = true, searchOpen = null))
+    }
+
+    @Test
     fun theContentFollowsWithResistance() {
         assertEquals(0f, follow(-10f, 112f), 0f)
         assertEquals(1f, follow(1f, 112f), 0.02f)

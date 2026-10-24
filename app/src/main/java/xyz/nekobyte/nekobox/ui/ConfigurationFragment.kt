@@ -227,8 +227,16 @@ class ConfigurationFragment @JvmOverloads constructor(
         }
     }
 
+    // A page selects its group once it settles: a swipe that springs back changes nothing. A layout
+    // also reports the settled page, which keeps the selection right after the groups change.
     val updateSelectedCallback = object : ViewPager2.OnPageChangeCallback() {
+        override fun onPageSelected(position: Int) = selectGroupAt(position)
+
         override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
+            if (positionOffset == 0f) selectGroupAt(position)
+        }
+
+        private fun selectGroupAt(position: Int) {
             if (adapter.groupList.size > position) {
                 val groupId = adapter.groupList[position].id
                 setFavoritesShown(groupId == FAVORITES_GROUP_ID)
@@ -417,6 +425,12 @@ class ConfigurationFragment @JvmOverloads constructor(
                     cancelSearch(searchView)
                 }
             }
+            searchView.setOnSearchClickListener { updatePaging() }
+            // Its close button collapses it without passing through cancelSearch; look again once it has.
+            searchView.setOnCloseListener {
+                searchView.post(::updatePaging)
+                false
+            }
         }
 
         val groupListBinding = LayoutGroupListBinding.bind(view)
@@ -436,8 +450,7 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         groupPager.adapter = adapter
         groupPager.offscreenPageLimit = 2
-        // Groups switch from the tabs and the group list; a swipe switched them by accident.
-        groupPager.isUserInputEnabled = false
+        updatePaging()
 
         tabLayoutMediator = TabLayoutMediator(tabLayout, groupPager) { tab, position ->
             if (adapter.groupList.size > position) {
@@ -1612,6 +1625,15 @@ class ConfigurationFragment @JvmOverloads constructor(
     private fun cancelSearch(searchView: SearchView) {
         searchView.onActionViewCollapsed()
         searchView.clearFocus()
+        updatePaging()
+    }
+
+    /** Whether the search field is open. */
+    val searchOpen get() = searchView?.isIconified == false
+
+    // A sideways swipe moves between the groups, except in the profile picker and while searching.
+    private fun updatePaging() {
+        if (::groupPager.isInitialized) groupPager.isUserInputEnabled = !select && !searchOpen
     }
 
     /** Closes the search if it is open; false when it was not. */
