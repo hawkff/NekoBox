@@ -320,6 +320,9 @@ class RouteFragment :
 
         val rows = ArrayList<RuleRow>()
 
+        // Until the rules are first read, an empty list doesn't mean there are none.
+        var loaded = false
+
         /** The first row on screen when an answer came, which the fade starts from. */
         var firstVisible = 0
 
@@ -334,6 +337,7 @@ class RouteFragment :
                 if (!isAdded) return@onMainDispatcher
                 rows.clear()
                 rows.addAll(fresh)
+                loaded = true
                 notifyDataSetChanged()
                 test()
             }
@@ -540,7 +544,7 @@ class RouteFragment :
 
         fun bind(animate: Boolean) {
             val context = binding.root.context
-            binding.empty.isVisible = ruleAdapter.rows.isEmpty()
+            binding.empty.isVisible = ruleAdapter.loaded && ruleAdapter.rows.isEmpty()
             binding.fallbackDestination.paintDestination(RuleWords.outbound(context, 0L), RuleWords.outboundColor(context, 0L))
             val decision = tested?.answer?.decision
             val matched = decision == RouteDecision.Proxy || decision == RouteDecision.GlobalMode
