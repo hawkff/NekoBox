@@ -36,13 +36,15 @@ class WideSwipeBackTest {
     }
 
     @Test
-    fun onHomeTheWideSwipeOnlyClosesASearch() {
+    fun onHomeTheWideSwipeClosesASearchOrOpensTheDrawerFromTheFirstGroup() {
         // Elsewhere, Back.
-        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = null))
+        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = null, firstGroup = false))
         // On Home a sideways swipe pages the groups; with the search open it closes the search.
-        assertFalse(wideSwipeAllowed(drawerOpen = false, searchOpen = false))
-        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = true))
-        assertFalse(wideSwipeAllowed(drawerOpen = true, searchOpen = null))
+        assertFalse(wideSwipeAllowed(drawerOpen = false, searchOpen = false, firstGroup = false))
+        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = true, firstGroup = false))
+        // On the first group nothing lies to the left: the swipe opens the drawer.
+        assertTrue(wideSwipeAllowed(drawerOpen = false, searchOpen = false, firstGroup = true))
+        assertFalse(wideSwipeAllowed(drawerOpen = true, searchOpen = null, firstGroup = true))
     }
 
     @Test
