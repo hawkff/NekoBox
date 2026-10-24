@@ -148,7 +148,7 @@ Network automation, under Settings > Connection, acts when the device joins mobi
 
 Share connection, in the Configuration menu, lets other devices use your connection through an HTTP and SOCKS5 proxy with a generated username and password. The proxy listens on all of the device's IPv4 networks, Wi-Fi and hotspot included, so anyone there with the credentials can connect. Regenerate the credentials to lock out devices that hold the old ones.
 
-The Configuration menu tests profiles by TCP ping, ICMP ping or URL test. A URL test checks that the server reaches the internet. Under Tools > Network, NAT behaviour discovery checks your NAT type over STUN.
+The Configuration menu tests profiles by TCP ping, ICMP ping or URL test. A URL test checks that the server reaches the internet. Under Tools > Network, the connection check shows what your connection reveals: its public addresses, the DNS servers that resolve your lookups, where IPv6 and UDP leave, and whether the address is on public VPN, datacenter or Tor lists. NAT behavior tests how your NAT maps and filters UDP, using a STUN server.
 
 Under Tools > Backup, you can save profiles, routing rules and settings to a file or to WebDAV, and restore them. Backups contain your server credentials, so keep them private.
 
