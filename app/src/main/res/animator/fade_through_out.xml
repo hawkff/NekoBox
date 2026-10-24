@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The last screen of a fade-through: gone quickly, before the next one appears. -->
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="90"
+    android:interpolator="@android:interpolator/accelerate_cubic"
+    android:propertyName="alpha"
+    android:valueFrom="1"
+    android:valueTo="0" />

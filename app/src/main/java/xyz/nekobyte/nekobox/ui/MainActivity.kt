@@ -507,9 +507,13 @@ class MainActivity :
             binding.stats.performHide()
             binding.fab.hide()
         }
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_holder, fragment)
-            .commitAllowingStateLoss()
+        val transaction = supportFragmentManager.beginTransaction()
+        // The drawer's destinations are peers: one fades through to the next, as Material moves between them.
+        // The first screen just appears.
+        if (supportFragmentManager.findFragmentById(R.id.fragment_holder) != null) {
+            transaction.setCustomAnimations(R.animator.fade_through_in, R.animator.fade_through_out)
+        }
+        transaction.replace(R.id.fragment_holder, fragment).commitAllowingStateLoss()
         binding.drawerLayout.closeDrawers()
     }
 
