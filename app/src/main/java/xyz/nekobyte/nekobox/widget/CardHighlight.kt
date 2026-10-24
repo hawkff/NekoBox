@@ -18,6 +18,7 @@ class CardHighlight(private val card: MaterialCardView) {
     private val tint = ColorUtils.compositeColors(ColorUtils.setAlphaComponent(primary, 26), surface)
     private val thin = context.resources.getDimensionPixelSize(R.dimen.card_stroke_width)
     private val thick = context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_selected)
+
     // Where the look is, and where it is going: a card that rebinds unchanged starts nothing.
     private var lit = -1f
     private var aim = -1f
