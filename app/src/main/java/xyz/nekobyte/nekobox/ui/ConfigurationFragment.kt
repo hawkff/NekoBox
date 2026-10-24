@@ -1631,6 +1631,9 @@ class ConfigurationFragment @JvmOverloads constructor(
     /** Whether the search field is open. */
     val searchOpen get() = searchView?.isIconified == false
 
+    /** Whether the first group is on screen, with no group to its left. */
+    val atFirstGroup get() = ::groupPager.isInitialized && groupPager.currentItem == 0
+
     // A sideways swipe moves between the groups, except in the profile picker and while searching.
     private fun updatePaging() {
         if (::groupPager.isInitialized) groupPager.isUserInputEnabled = !select && !searchOpen

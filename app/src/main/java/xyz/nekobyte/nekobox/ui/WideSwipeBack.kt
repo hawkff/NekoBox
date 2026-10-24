@@ -14,7 +14,8 @@ import kotlin.math.exp
 
 /**
  * Back from anywhere in the left part of the window, not only from its edge: a quick, clearly
- * horizontal swipe to the right that starts in the left [START_ZONE]. The content follows the
+ * horizontal swipe to the right that starts in the left [START_ZONE], or wherever the activity's
+ * [ThemedActivity.wideSwipeZone] allows. The content follows the
  * finger a little; on release far or fast enough, [ThemedActivity.onWideSwipe] runs. Touches that
  * begin on something that moves sideways itself (a scrolled strip, a slider, a text field) or
  * that become a long press stay with the views below.
@@ -38,7 +39,7 @@ internal class WideSwipeBack(private val activity: ThemedActivity) {
             MotionEvent.ACTION_DOWN -> {
                 reset()
                 val width = content.width
-                if (width == 0 || event.x > width * START_ZONE || event.x < EDGE * density || !activity.canSwipeBack()) return false
+                if (width == 0 || event.x > width * activity.wideSwipeZone() || event.x < EDGE * density || !activity.canSwipeBack()) return false
                 if (movesSideways(activity.window.decorView, event.rawX, event.rawY)) return false
                 startX = event.x
                 startY = event.y

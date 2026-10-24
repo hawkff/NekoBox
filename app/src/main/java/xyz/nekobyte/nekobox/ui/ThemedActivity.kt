@@ -104,6 +104,9 @@ abstract class ThemedActivity : AppCompatActivity {
     /** Whether a wide swipe from the left part of the screen may start now. */
     open fun canSwipeBack() = true
 
+    /** The share of the window's width, from the left, where a wide swipe may start. */
+    open fun wideSwipeZone() = WideSwipeBack.START_ZONE
+
     /** A wide swipe went through: Back, unless the screen has something better. */
     open fun onWideSwipe() = onBackPressedDispatcher.onBackPressed()
 

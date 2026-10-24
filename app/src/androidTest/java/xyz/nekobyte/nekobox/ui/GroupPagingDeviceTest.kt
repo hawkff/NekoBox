@@ -97,6 +97,31 @@ class GroupPagingDeviceTest {
         }
     }
 
+    @Test
+    fun fromTheFirstGroupASwipeOpensTheDrawer() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            settle()
+            lateinit var activity: MainActivity
+            lateinit var pager: ViewPager2
+            scenario.onActivity {
+                activity = it
+                pager = it.findViewById(R.id.group_pager)
+            }
+            instrumentation.runOnMainSync { pager.setCurrentItem(1, false) }
+            settle()
+
+            // From the second group a rightward swipe pages back.
+            drag(pager, from = 0.6f, to = 0.95f, rest = false)
+            assertEquals(0, pager.currentItem)
+            assertFalse(activity.binding.drawerLayout.isOpen)
+
+            // On the first nothing lies to the left: the same swipe, from the middle of the list, opens the drawer.
+            drag(pager, from = 0.6f, to = 0.95f, rest = false)
+            assertTrue(activity.binding.drawerLayout.isOpen)
+            instrumentation.runOnMainSync { activity.binding.drawerLayout.close() }
+        }
+    }
+
     private fun settle() {
         instrumentation.waitForIdleSync()
         Thread.sleep(800)

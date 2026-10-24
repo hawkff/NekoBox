@@ -657,11 +657,15 @@ class MainActivity :
 
     private fun home() = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
 
-    override fun canSwipeBack() = wideSwipeAllowed(binding.drawerLayout.isOpen, home()?.searchOpen)
+    override fun canSwipeBack() = home().let { wideSwipeAllowed(binding.drawerLayout.isOpen, it?.searchOpen, it?.atFirstGroup == true) }
+
+    // On the first group nothing lies to the left, so a swipe from anywhere on the list opens the drawer.
+    override fun wideSwipeZone() = if (home()?.let { it.atFirstGroup && !it.searchOpen } == true) 1f else super.wideSwipeZone()
 
     override fun onWideSwipe() {
         val home = home() ?: return super.onWideSwipe()
-        home.closeSearch()
+        // Home is the root: the swipe closes an open search, else opens the drawer.
+        if (!home.closeSearch()) binding.drawerLayout.open()
     }
 
     override fun onDestroy() {
@@ -697,7 +701,8 @@ class MainActivity :
 }
 
 /**
- * Whether the wide swipe may start: never over an open drawer, and on Home ([searchOpen] not null)
- * only to close an open search, since a sideways swipe there moves between the groups.
+ * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a
+ * sideways swipe moves between the groups, so the wide swipe only closes an open search, or opens
+ * the drawer from the [firstGroup], where nothing lies to the left.
  */
-internal fun wideSwipeAllowed(drawerOpen: Boolean, searchOpen: Boolean?) = !drawerOpen && searchOpen != false
+internal fun wideSwipeAllowed(drawerOpen: Boolean, searchOpen: Boolean?, firstGroup: Boolean) = !drawerOpen && (searchOpen != false || firstGroup)
