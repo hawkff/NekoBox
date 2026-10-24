@@ -3,6 +3,7 @@ package libcore
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/netip"
@@ -20,7 +21,8 @@ import (
 // MatchRouteDestination reports whether host, a domain or an IP address, meets the destination
 // conditions of a route rule given as JSON: domain, domain_suffix, domain_keyword, domain_regex,
 // ip_cidr, ip_is_private and the bundled geosite: and geoip: lists in rule_set. One is enough, as
-// in the core. An error names a condition the core would refuse, such as a list the databases lack.
+// in the core. An error names a condition the core would refuse: a site list the database lacks, an
+// address list that isn't a country code, a malformed address or expression.
 func MatchRouteDestination(ruleJSON string, host string) (bool, error) {
 	var conditions struct {
 		Domain        []string `json:"domain"`
@@ -75,6 +77,10 @@ func MatchRouteDestination(ruleJSON string, host string) (bool, error) {
 				headless = append(headless, siteRule.DefaultOptions)
 			}
 		} else if code, isAddress := strings.CutPrefix(name, "geoip:"); isAddress {
+			// The address lists are named by two-letter country codes; checked whatever the host is.
+			if len(code) != 2 || strings.Trim(strings.ToLower(code), "abcdefghijklmnopqrstuvwxyz") != "" {
+				return false, fmt.Errorf("no address list named %s", name)
+			}
 			countries = append(countries, strings.ToLower(code))
 		}
 	}

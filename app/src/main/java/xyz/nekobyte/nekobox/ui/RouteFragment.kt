@@ -137,9 +137,10 @@ class RouteFragment :
         test()
     }
 
-    override fun onDestroy() {
+    // The adapter and its listener belong to the view, made with it in onViewCreated.
+    override fun onDestroyView() {
         if (::ruleAdapter.isInitialized) ProfileManager.removeListener(ruleAdapter)
-        super.onDestroy()
+        super.onDestroyView()
     }
 
     private fun showGlobalNotice() {

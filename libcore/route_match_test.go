@@ -53,7 +53,7 @@ func TestMatchRouteDestination(t *testing.T) {
 			t.Errorf("%s for %s = %v, %v; want %v", c.rule, c.host, got, err, c.want)
 		}
 	}
-	for _, broken := range []string{`{"rule_set":["geosite:no-such-list"]}`, `{"ip_cidr":["10.0.0.0/33"]}`, `{"domain_regex":["("]}`} {
+	for _, broken := range []string{`{"rule_set":["geosite:no-such-list"]}`, `{"rule_set":["geoip:no-such-list"]}`, `{"ip_cidr":["10.0.0.0/33"]}`, `{"domain_regex":["("]}`} {
 		if _, err := MatchRouteDestination(broken, "example.com"); err == nil {
 			t.Errorf("%s: no error", broken)
 		}

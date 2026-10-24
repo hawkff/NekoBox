@@ -30,9 +30,10 @@ object RouteChecks {
      */
     fun probe(text: String): Pair<RouteProbe, String?>? {
         PackageCache.awaitLoadSync()
-        val name = text.trim().lowercase()
-        if (name in PackageCache.installedPackages) return RouteProbe(packageName = name) to PackageCache.loadLabel(name)
+        val typed = text.trim()
+        if (typed in PackageCache.installedPackages) return RouteProbe(packageName = typed) to PackageCache.loadLabel(typed)
         RouteProbe.parse(text)?.let { return it to null }
+        val name = typed.lowercase()
         val apps = PackageCache.installedPackages.keys.map { it to PackageCache.loadLabel(it) }
         val (packageName, label) = apps.firstOrNull { (packageName, label) -> label.lowercase() == name || packageName == name }
             ?: apps.filter { (_, label) -> label.lowercase().startsWith(name) }.minByOrNull { (_, label) -> label.length }
