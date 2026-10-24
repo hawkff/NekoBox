@@ -164,7 +164,7 @@ func TestLocationLookupEndsWithTheInstance(t *testing.T) {
 	select {
 	case err := <-result:
 		if err == nil {
-			t.Fatal("cancelled lookup reported success")
+			t.Fatal("canceled lookup reported success")
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("closing the instance did not cancel the lookup")

@@ -30,7 +30,7 @@ class ConnectionTestsTest {
     }
 
     @Test
-    fun cleanupWaitsForCancelledWorkersBeforeAllowingAnotherBatch() = runBlocking {
+    fun cleanupWaitsForCanceledWorkersBeforeAllowingAnotherBatch() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val worker = launch {
@@ -88,7 +88,7 @@ class ConnectionTestsTest {
 
     @Test
     fun reloadFailureOrCancellationPropagatesAfterSuccessfulPersistence() = ConfigBuilderTestEnv.io {
-        for (reloadFailure in listOf(IllegalArgumentException("reload failed"), CancellationException("cancelled"))) {
+        for (reloadFailure in listOf(IllegalArgumentException("reload failed"), CancellationException("canceled"))) {
             val result = result(1)
             withReloadListener({ throw reloadFailure }) {
                 DataStore.runningTest = true

@@ -542,7 +542,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             default_domain_resolver = dnsResolver("dns-direct", directStrategy)
 
             // sing-box 1.13 moved sniffing + domain resolution off inbounds onto route
-            // rule actions. Emit them first so behaviour matches the old inbound fields.
+            // rule actions. Emit them first so behavior matches the old inbound fields.
             // sniff: previously inbound.sniff (trafficSniffing > 0). The old
             //   sniff_override_destination (trafficSniffing == 2) toggle has no 1.13
             //   equivalent - the sniff action overrides the destination by default, so the

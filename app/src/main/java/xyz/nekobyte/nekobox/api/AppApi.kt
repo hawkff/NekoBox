@@ -763,6 +763,8 @@ internal class AppApi(private val context: Context, private val runtime: ApiRunt
             runtime.job {
                 val result = Libcore.stunTest(server)
                 JSONObject().put("success", result.success).put("text", result.text)
+                    .put("mapping", result.mapping).put("filtering", result.filtering).put("publicAddress", result.publicAddress)
+                    .put("noNat", result.noNat).put("problem", result.problem)
             }
         }
         command("diagnostics.icmp", "Run a bounded ICMP probe as a polled job", "address", "timeoutMs") {

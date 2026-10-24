@@ -252,10 +252,10 @@ class SubscriptionRequestSwitchTest {
         withContext(Dispatchers.IO) {
             assertEquals(notice, runCatching { update(respond = respond) }.exceptionOrNull()?.message)
             assertEquals(notice, runCatching { update(Ui(answer = false), respond) }.exceptionOrNull()?.message)
-            // Cancelled while asking: nothing is stored, the marker included.
-            val cancelled = launch { update(Ui(answer = true) { currentCoroutineContext().cancel() }, respond) }
-            cancelled.join()
-            assertTrue(cancelled.isCancelled)
+            // Canceled while asking: nothing is stored, the marker included.
+            val canceled = launch { update(Ui(answer = true) { currentCoroutineContext().cancel() }, respond) }
+            canceled.join()
+            assertTrue(canceled.isCancelled)
             assertEquals(before, rows().map { it.id to it.displayName() })
             assertEquals(SubscriptionFormat.CHANGED, ProfileDatabase.groupDao.getById(group.id)!!.subscription!!.negotiatedFormat)
         }
@@ -299,7 +299,7 @@ class SubscriptionRequestSwitchTest {
     }
 
     @Test
-    fun aCancelledUpdateStoresNothingEvenWhenTheFetchReturns() = runTest {
+    fun aCanceledUpdateStoresNothingEvenWhenTheFetchReturns() = runTest {
         withContext(Dispatchers.IO) { update { clash("5.0 GB") } }
         val stored = withContext(Dispatchers.IO) { KryoConverters.serialize(ProfileDatabase.groupDao.getById(group.id)!!.subscription) }
         val before = withContext(Dispatchers.IO) { rows().map { it.id to it.displayName() } }

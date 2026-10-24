@@ -274,7 +274,7 @@ class TailscaleSessionControllerTest {
     }
 
     @Test
-    fun cancelledQueuedExitAcknowledgesOnceWithoutApplying() = runBlocking {
+    fun canceledQueuedExitAcknowledgesOnceWithoutApplying() = runBlocking {
         val client = Client()
         open(client)
         client.status()
@@ -296,7 +296,7 @@ class TailscaleSessionControllerTest {
     }
 
     @Test
-    fun cancelledPingAcknowledgesDoneAfterProducerCleanup() = runBlocking {
+    fun canceledPingAcknowledgesDoneAfterProducerCleanup() = runBlocking {
         val client = Client()
         open(client)
         client.status()
@@ -321,7 +321,7 @@ class TailscaleSessionControllerTest {
         assertNull(client.resultEvents.poll(100, TimeUnit.MILLISECONDS))
     }
 
-    private fun cancelledAdmittedExit(failSave: Boolean) = runBlocking {
+    private fun canceledAdmittedExit(failSave: Boolean) = runBlocking {
         val client = Client()
         open(client)
         client.status()
@@ -363,10 +363,10 @@ class TailscaleSessionControllerTest {
     }
 
     @Test
-    fun cancelledAdmittedExitAcknowledgesActualCommit() = cancelledAdmittedExit(false)
+    fun canceledAdmittedExitAcknowledgesActualCommit() = canceledAdmittedExit(false)
 
     @Test
-    fun cancelledAdmittedExitAcknowledgesActualRollback() = cancelledAdmittedExit(true)
+    fun canceledAdmittedExitAcknowledgesActualRollback() = canceledAdmittedExit(true)
 
     @Test
     fun replacedOwnerDoesNotReceiveLateRequestCompletion() = runBlocking {
@@ -483,7 +483,7 @@ class TailscaleSessionControllerTest {
     }
 
     @Test
-    fun lifecycleDrainStillJoinsCancelledAdmittedRequest() = runBlocking {
+    fun lifecycleDrainStillJoinsCanceledAdmittedRequest() = runBlocking {
         val client = Client()
         open(client)
         client.status()

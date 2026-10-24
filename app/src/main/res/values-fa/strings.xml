@@ -452,10 +452,7 @@
 
     <string name="stun_test">کشف رفتار NAT</string>
     <string name="stun_test_summary">تعیین رفتار NAT و رفتار فیلتر NAT تعریف‌شده در RFC 3478 با استفاده از STUN.</string>
-    <string name="start">Start</string>
-    <string name="stun_attest_loading">ممکن است چند دقیقه‌ای طول بکشد...</string>
     <string name="nat_stun_server_hint">سرور STUN</string>
-    <string name="nat_result_hint">بررسی نتیجه NAT</string>
     <string name="tools_network">شبکه</string>
     <string name="mtu" translatable="false">MTU</string>
 

@@ -292,7 +292,6 @@
     <string name="subscription_import">Importer une souscription</string>
     <string name="profile_import">Importer un profil</string>
     <string name="warp_generate">Générer une configuration</string>
-    <string name="stun_attest_loading">Cela peut prendre quelques minutes…</string>
     <string name="invalid_backup_file">Fichier de sauvegarde invalide</string>
     <string name="backup_import_summary">L\'importation écrasera les données existantes.</string>
     <string name="tools_network">Réseaux</string>

@@ -20,7 +20,7 @@ func TestSocksHandshakeFailureAndCancellationCloseSocket(t *testing.T) {
 	for _, cancelHandshake := range []bool{false, true} {
 		name := "rejected"
 		if cancelHandshake {
-			name = "cancelled"
+			name = "canceled"
 		}
 		t.Run(name, func(t *testing.T) {
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -330,7 +330,7 @@ func TestRaceHTTPRequestsFirstSuccessCancelsLoserAndKeepsWinnerReadable(t *testi
 	case <-winnerBody.closed:
 		t.Fatal("winning response body was closed")
 	case <-winnerRequestDone:
-		t.Fatal("winning request context was cancelled before body close")
+		t.Fatal("winning request context was canceled before body close")
 	default:
 	}
 

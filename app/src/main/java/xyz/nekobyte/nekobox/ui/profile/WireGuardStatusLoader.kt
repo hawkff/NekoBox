@@ -73,10 +73,10 @@ internal fun describeWireGuardStatus(context: Context, json: String?, now: Long,
     val state = json?.let { runCatching { parseWireGuardServiceStatus(it) }.getOrNull() }
     if (state == null || !state.running) return context.getString(R.string.wireguard_status_not_running)
     if (state.instances.isEmpty()) return context.getString(R.string.wireguard_status_not_in_config)
-    val labelled = state.instances.size > 1
+    val labeled = state.instances.size > 1
     return state.instances.joinToString("\n\n") { instance ->
         buildList {
-            if (labelled) add(context.getString(R.string.wireguard_status_via, ownerName(instance.ownerProfileId)))
+            if (labeled) add(context.getString(R.string.wireguard_status_via, ownerName(instance.ownerProfileId)))
             if (instance.error != null) add(context.getString(R.string.wireguard_status_unavailable))
             for (peer in instance.peers) {
                 val handshake = if (peer.lastHandshake == 0L) {

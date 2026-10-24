@@ -76,7 +76,7 @@ class AwaitDialogTest {
     }
 
     @Test
-    fun cancellingTheCallerClosesTheDialog() = runTest(main) {
+    fun cancelingTheCallerClosesTheDialog() = runTest(main) {
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         val result = async { awaitDialog(WeakReference(controller.get()), "dismissed", ::build) }
         assertTrue(shown!!.isShowing)

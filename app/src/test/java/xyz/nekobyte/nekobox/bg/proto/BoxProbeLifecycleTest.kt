@@ -62,7 +62,7 @@ class BoxProbeLifecycleTest {
     }
 
     @Test
-    fun cancelledSynchronousInitializationIsJoinedBeforeCloseAndLeaseRelease() = runBlocking {
+    fun canceledSynchronousInitializationIsJoinedBeforeCloseAndLeaseRelease() = runBlocking {
         val node = node()
         val release = CountDownLatch(1)
         val instance = Probe(node, prepared(node), releaseInit = release)

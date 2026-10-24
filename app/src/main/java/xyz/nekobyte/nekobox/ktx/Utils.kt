@@ -16,7 +16,6 @@ import android.system.OsConstants
 import android.util.TypedValue
 import android.view.View
 import androidx.annotation.AttrRes
-import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -177,8 +176,6 @@ fun View.crossFadeFrom(other: View) {
         }
     }).duration = shortAnimTime
 }
-
-fun Context.getColour(@ColorRes colorRes: Int): Int = ContextCompat.getColor(this, colorRes)
 
 fun Context.getColorAttr(@AttrRes resId: Int): Int {
     val tv = TypedValue()

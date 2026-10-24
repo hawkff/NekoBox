@@ -374,7 +374,7 @@ object RawUpdater : GroupUpdater() {
                         reachable = false
                         break
                     }
-                    // The update may have been cancelled while the fetch blocked.
+                    // The update may have been canceled while the fetch blocked.
                     currentCoroutineContext().ensureActive()
                     val report = ImportReport()
                     val parsed = try {
@@ -770,7 +770,7 @@ object RawUpdater : GroupUpdater() {
 
         var updatedCount = 0
         var deletedCount = 0
-        // Nothing is stored for an update that was cancelled, for example while it asked the user.
+        // Nothing is stored for an update that was canceled, for example while it asked the user.
         currentCoroutineContext().ensureActive()
         ProfileDatabase.instance.runInTransaction {
             if (toInsert.isNotEmpty()) {

@@ -168,7 +168,7 @@ class TailscaleExitFinalizerTest {
     }
 
     @Test
-    fun cancelledQueuedMutationNeverApplies() = runTest {
+    fun canceledQueuedMutationNeverApplies() = runTest {
         var applied = false
         val owner = launch(start = CoroutineStart.LAZY) {
             ensureActive()

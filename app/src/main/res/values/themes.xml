@@ -275,7 +275,7 @@
         <item name="colorAccent">@color/material_brown_200</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_brown</item>
     </style>
-    <style name="ThemeOverlay.NekoBox.Palette.Grey" parent="">
+    <style name="ThemeOverlay.NekoBox.Palette.Gray" parent="">
         <item name="colorPrimary">@color/material_grey_600</item>
         <item name="appBarBackgroundColor">@color/material_grey_600</item>
         <item name="colorPrimaryDark">@color/material_grey_700</item>
@@ -667,6 +667,16 @@
         <item name="android:textColor">?primaryOrTextPrimary</item>
     </style>
 
+    <!-- The heading of a group of check results. -->
+    <style name="Widget.NekoBox.CheckSection" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingTop">20dp</item>
+        <item name="android:paddingBottom">2dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
     <style name="Widget.NekoBox.Chip.Choice" parent="Widget.Material3.Chip.Suggestion">
         <item name="textStartPadding">30dp</item>
         <item name="textEndPadding">30dp</item>
@@ -724,6 +734,11 @@
         <item name="cornerSize">@dimen/input_corner_radius</item>
     </style>
     <style name="Widget.NekoBox.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Input</item>
+    </style>
+
+    <!-- A text field that also offers choices from a menu. -->
+    <style name="Widget.NekoBox.TextInputLayout.ExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Input</item>
     </style>
 

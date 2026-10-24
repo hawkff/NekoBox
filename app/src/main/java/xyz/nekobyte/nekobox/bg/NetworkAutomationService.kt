@@ -111,7 +111,7 @@ class NetworkAutomationService : Service() {
         }
     }
 
-    // Work of this instance; cancelled when it is destroyed, so none of it outlives the instance.
+    // Work of this instance; canceled when it is destroyed, so none of it outlives the instance.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var lastStartId = 0
     private var recheckRegistered = false

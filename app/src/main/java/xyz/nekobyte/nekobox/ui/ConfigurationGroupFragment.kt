@@ -48,7 +48,6 @@ import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.alert
 import xyz.nekobyte.nekobox.ktx.getColorAttr
-import xyz.nekobyte.nekobox.ktx.getColour
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
@@ -1242,7 +1241,7 @@ class ConfigurationGroupFragment : Fragment() {
                 if (selected) R.dimen.card_stroke_width_selected else R.dimen.card_stroke_width,
             )
             card.strokeColor =
-                if (selected) primary else ctx.getColour(R.color.card_stroke)
+                if (selected) primary else ctx.getColor(R.color.card_stroke)
             card.setCardBackgroundColor(
                 if (selected) {
                     ColorUtils.compositeColors(

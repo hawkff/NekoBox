@@ -294,7 +294,7 @@ def main():
                             raise RuntimeError(f"Background operation {result['state']}{details}")
                         break
                     if time.monotonic() >= deadline:
-                        raise RuntimeError("Job is still running; its operation was not cancelled or retried")
+                        raise RuntimeError("Job is still running; its operation was not canceled or retried")
                     time.sleep(1)
         print(json.dumps(result, indent=2, ensure_ascii=False))
     except (OSError, RuntimeError, ValueError, KeyError, subprocess.TimeoutExpired) as error:

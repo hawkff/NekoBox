@@ -19,15 +19,25 @@ import (
 	"net"
 )
 
+// Errors of the behavior test that callers tell apart.
+var (
+	// ErrNoAnswer: the server did not answer a plain binding request, so UDP is blocked or the server is down.
+	ErrNoAnswer = errors.New("NAT blocked.")
+	// ErrNoOtherAddress: the server names no alternate address, which testing NAT behavior needs (RFC 5780).
+	ErrNoOtherAddress = errors.New("Server error: no other address and changed address.")
+	// ErrNotBehindNAT: the server saw the address the request came from.
+	ErrNotBehindNAT = errors.New("Not behind a NAT.")
+)
+
 // sendChecked sends a binding request and rejects responses that did not
-// honour the requested IP/port change.
+// honor the requested IP/port change.
 func (c *Client) sendChecked(conn net.PacketConn, addr *net.UDPAddr, changeIP bool, changePort bool) (*response, error) {
 	resp, err := c.sendBindingReq(conn, addr, changeIP, changePort)
 	if err != nil {
 		return nil, err
 	}
 	if resp == nil && !changeIP && !changePort {
-		return nil, errors.New("NAT blocked.")
+		return nil, ErrNoAnswer
 	}
 	if resp != nil && !addrCompare(resp.serverAddr, addr, changeIP, changePort) {
 		return nil, errors.New("Server error: response IP/port")

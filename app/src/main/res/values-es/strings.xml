@@ -421,10 +421,7 @@
  
     <string name="stun_test">Descubrimiento de comportamiento NAT</string> 
     <string name="stun_test_summary">Determine el comportamiento de asignación de NAT del cliente y el comportamiento de filtrado de NAT definido en RFC 3478 mediante STUN.</string> 
-    <string name="start">Iniciar</string> 
-    <string name="stun_attest_loading">Esto puede tomar unos pocos minutos…</string> 
     <string name="nat_stun_server_hint">Servidor Stun</string> 
-    <string name="nat_result_hint">Resultado de la comprobación de NAT</string> 
     <string name="tools_network">Red</string> 
     <string name="mtu" translatable="false">MTU</string> 
  
