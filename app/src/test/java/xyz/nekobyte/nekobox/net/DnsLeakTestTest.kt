@@ -33,6 +33,18 @@ class DnsLeakTestTest {
         row("198.51.100.54", "", "AS64502 Other") +
         """</div><div class="conclusion">[OK] DNS is not leaking.</div><div class="info"> You use the same ISP for DNS and internet access.</div>"""
 
+    // The markup bash.ws has used since October 2026: the city and the rest of the place in spans of a location cell.
+    private fun rowWithLocationCell(ip: String, place: String, city: String, rest: String) = """<div class="tr ip-row"><div class="td"><span data-type="ip" data-host="$ip" class="ip4 d0">""" +
+        """<s data-whois="..." data-host="..." data-ping="..." data-refs="none" data-traceroute="..." data-ctr="fi" data-ctrname="$place">$ip</s><i></i></span></div>""" +
+        """<div class="td ip-location"><span class="ip-location-main"><img src="/module/bashws/images/flag/fi.png" /> $city</span><span class="ip-location-rest">$rest</span></div></div>"""
+
+    private val sampleWithLocationCell = """<div class="test-ip"><b>Your IP address:</b><div class="table">""" +
+        rowWithLocationCell("203.0.113.7", "Helsinki, Uusimaa, Finland", "Helsinki", "Uusimaa, Finland, AS64500 Example AB") +
+        """</div></div><b>You use 1 DNS server:</b><div class="table">""" +
+        rowWithLocationCell("198.51.100.53", "Helsinki, Uusimaa, Finland", "Helsinki", "Uusimaa, Finland, AS64500 Example AB") +
+        """</div><div class="conclusion"><span class="green">[OK]</span> DNS is not leaking.</div>""" +
+        """<div class="info"> You use the same ISP for DNS and internet access. If "AS64500 Example AB" is your VPN, then your connection is 100% secure.</div>"""
+
     private fun answer(vararg fields: Pair<String, Any>) = JSONObject(fields.toMap()).toString()
 
     // Plays bash.ws: the page's start, exec and checkrun answers, and refused probes. Records each step.
@@ -101,6 +113,35 @@ class DnsLeakTestTest {
         val unbacked = DnsLeakTest.parse("""<div class="conclusion">[OK] DNS is not leaking.</div>""")
         assertEquals(null, unbacked.conclusion)
         assertEquals(DnsLeakTest.Verdict.UNKNOWN, unbacked.verdict)
+        assertEquals(DnsLeakTest.Verdict.LEAK, DnsLeakTest.parse("""$server<div class="conclusion">DNS is leaking.</div>""").verdict)
+    }
+
+    @Test
+    fun readsTheMarkupWithALocationCell() {
+        val result = DnsLeakTest.parse(sampleWithLocationCell)
+        val address = { ip: String -> DnsLeakTest.Address(ip, "Helsinki, Uusimaa, Finland", "AS64500 Example AB") }
+        assertEquals(listOf(address("203.0.113.7")), result.addresses)
+        assertEquals(listOf(address("198.51.100.53")), result.servers)
+        assertEquals("DNS is not leaking.", result.conclusion)
+        assertEquals(DnsLeakTest.Verdict.CLEAN, result.verdict)
+    }
+
+    @Test
+    fun boldTextInsideARowIsNoHeading() {
+        val bold = rowWithLocationCell("198.51.100.54", "Helsinki, Uusimaa, Finland", "Helsinki", "Uusimaa, Finland, <b>AS64501</b> Other Oy")
+        val result = DnsLeakTest.parse(sampleWithLocationCell.replaceFirst("""</div><div class="conclusion">""", """$bold</div><div class="conclusion">"""))
+        assertEquals(listOf("203.0.113.7"), result.addresses.map { it.ip })
+        assertEquals(listOf("198.51.100.53", "198.51.100.54"), result.servers.map { it.ip })
+        assertEquals("AS64501 Other Oy", result.servers[1].asn)
+    }
+
+    @Test
+    fun bashWsCountOfTheServersBacksAVerdictWhoseRowsCannotBeRead() {
+        val counted = DnsLeakTest.parse("""<b>You use 2 DNS servers:</b><div class="table"><p>198.51.100.53</p></div><div class="conclusion">[WARNING] DNS may be leaking.</div>""")
+        assertEquals(emptyList<DnsLeakTest.Address>(), counted.servers)
+        assertEquals(DnsLeakTest.Verdict.LEAK, counted.verdict)
+        val noLookups = DnsLeakTest.parse("""<b>You use 0 DNS servers:</b><div class="conclusion">[OK] DNS is not leaking.</div>""")
+        assertEquals(DnsLeakTest.Verdict.UNKNOWN, noLookups.verdict)
     }
 
     @Test
