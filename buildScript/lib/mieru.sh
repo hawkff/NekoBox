@@ -17,10 +17,10 @@ if [ -z "$ANDROID_NDK_HOME" ]; then
 fi
 
 # Mieru release tag to build from source.
-MIERU_VERSION="${MIERU_VERSION:-v3.38.1}"
+MIERU_VERSION="${MIERU_VERSION:-v3.39.0}"
 # Immutable commit that MIERU_VERSION points to (pinned for reproducible builds;
 # update together with MIERU_VERSION on any bump).
-MIERU_COMMIT="${MIERU_COMMIT:-a2208ee7a38fb41d843a13ecdde858e67ef2f485}"
+MIERU_COMMIT="${MIERU_COMMIT:-bcd14b88d0fb7e7707bb80e5d7f6c33675d26c06}"
 
 DEPS="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 # macOS NDK host dirs are darwin-x86_64 / darwin-arm64; fall back if linux is absent.
