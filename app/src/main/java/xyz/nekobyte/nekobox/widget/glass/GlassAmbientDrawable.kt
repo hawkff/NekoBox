@@ -13,12 +13,13 @@ import android.graphics.drawable.Drawable
 import android.util.TypedValue
 import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toDrawable
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-/** The light glass bends: two soft glows in the palette's colors over its canvas. */
+/** The light glass bends: two faint glows in the palette's colors over its canvas. */
 class GlassAmbientDrawable(
     @ColorInt private val canvasColor: Int,
     @ColorInt private val first: Int,
@@ -79,15 +80,15 @@ class GlassAmbientDrawable(
             }
         }
 
-        fun of(context: Context): GlassAmbientDrawable {
+        /** Whether [canvasColor] is the true black of an OLED theme, which glass leaves flat; the darkest other canvas, Catppuccin's, is near 0.014. */
+        fun isBlack(@ColorInt canvasColor: Int) = ColorUtils.calculateLuminance(canvasColor) < 0.005
+
+        /** The window's canvas: flat when black, else with the glows, faint enough not to read as a gradient. */
+        fun of(context: Context): Drawable {
             val canvasColor = canvasColor(context)
-            val luminance = ColorUtils.calculateLuminance(canvasColor)
-            // Black canvases keep near-black corners; light ones need less to show.
-            val strength = when {
-                luminance < 0.02 -> 0.2f
-                luminance < 0.5 -> 0.24f
-                else -> 0.16f
-            }
+            if (isBlack(canvasColor)) return canvasColor.toDrawable()
+            // Light canvases need less to show.
+            val strength = if (ColorUtils.calculateLuminance(canvasColor) < 0.5) 0.12f else 0.08f
             val primary = context.getColorAttr(androidx.appcompat.R.attr.colorPrimary)
             val accent = context.getColorAttr(androidx.appcompat.R.attr.colorAccent)
             return GlassAmbientDrawable(
