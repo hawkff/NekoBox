@@ -28,6 +28,7 @@ object DnsLeakTest {
     private const val POLLS = 40
     private val ID = Regex("[A-Za-z0-9]{1,64}")
     private val HEADER = Regex("<b>(.*?)</b>", RegexOption.DOT_MATCHES_ALL)
+    private val SECTION = Regex("""\b(IP address|DNS servers?)\b""", RegexOption.IGNORE_CASE)
     private val ADDRESS = Regex("""<s\b([^>]*)>([^<]+)</s>""")
     private val PLACE = Regex("""data-ctrname="([^"]*)"""")
     private val NETWORK = Regex("""\bAS\d+\b.*""")
@@ -126,7 +127,8 @@ object DnsLeakTest {
     internal fun parse(html: String): Result {
         val conclusion = CONCLUSION.find(html)
         val end = conclusion?.range?.first ?: html.length
-        val headers = HEADER.findAll(html).filter { it.range.first < end }.map { it.range.first to text(it.groupValues[1]) }.toList()
+        // Bold text that names no section, such as a label inside a row, is no heading.
+        val headers = HEADER.findAll(html).filter { it.range.first < end }.map { it.range.first to text(it.groupValues[1]) }.filter { SECTION.containsMatchIn(it.second) }.toList()
         val cells = ADDRESS.findAll(html).filter { it.range.first < end }.toList()
         val addresses = mutableListOf<Address>()
         val servers = mutableListOf<Address>()

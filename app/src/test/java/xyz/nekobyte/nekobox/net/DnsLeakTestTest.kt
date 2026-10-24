@@ -127,6 +127,15 @@ class DnsLeakTestTest {
     }
 
     @Test
+    fun boldTextInsideARowIsNoHeading() {
+        val bold = rowWithLocationCell("198.51.100.54", "Helsinki, Uusimaa, Finland", "Helsinki", "Uusimaa, Finland, <b>AS64501</b> Other Oy")
+        val result = DnsLeakTest.parse(sampleWithLocationCell.replaceFirst("""</div><div class="conclusion">""", """$bold</div><div class="conclusion">"""))
+        assertEquals(listOf("203.0.113.7"), result.addresses.map { it.ip })
+        assertEquals(listOf("198.51.100.53", "198.51.100.54"), result.servers.map { it.ip })
+        assertEquals("AS64501 Other Oy", result.servers[1].asn)
+    }
+
+    @Test
     fun bashWsCountOfTheServersBacksAVerdictWhoseRowsCannotBeRead() {
         val counted = DnsLeakTest.parse("""<b>You use 2 DNS servers:</b><div class="table"><p>198.51.100.53</p></div><div class="conclusion">[WARNING] DNS may be leaking.</div>""")
         assertEquals(emptyList<DnsLeakTest.Address>(), counted.servers)
