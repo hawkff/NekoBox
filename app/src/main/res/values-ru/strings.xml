@@ -997,9 +997,9 @@
     <string name="connection_check_udp_other_address">UDP выходит с другого адреса, не того, что TCP</string>
     <string name="connection_check_udp_none">Нет ответа по UDP</string>
     <string name="connection_check_udp_proxy">Не проверено: локальный прокси не передаёт UDP</string>
+    <string name="webrtc_may_drop_stun">Защита WebRTC может отбрасывать STUN в VPN.</string>
     <string name="nat_note">Проверка отправляет UDP на STUN-сервер, который видит ваш внешний адрес. Она занимает до минуты.</string>
     <string name="nat_path_proxy">Режим прокси: проверяется прямое соединение</string>
-    <string name="nat_webrtc">Защита WebRTC включена: NekoBox отбрасывает STUN в VPN, и проверка не получит ответа.</string>
     <string name="nat_stun_server_helper">Серверу нужна поддержка RFC 5780</string>
     <string name="nat_server_missing">Укажите STUN-сервер</string>
     <string name="nat_type_none">NAT нет</string>
@@ -1028,7 +1028,6 @@
     <string name="nat_filtering_endpoint">Любой узел может отправить пакет на внешний порт</string>
     <string name="nat_filtering_address">Ответить могут только узлы, которым устройство отправляло пакеты</string>
     <string name="nat_filtering_address_port">Ответить могут только адрес и порт, которым устройство отправляло пакеты</string>
-    <string name="connection_check_udp_webrtc">Не проверено: защита WebRTC отбрасывает STUN в VPN</string>
     <string name="connection_check_section_exits">Выходы</string>
     <string name="connection_check_section_dns_tls">DNS и TLS</string>
     <string name="connection_check_section_lists">Списки адресов</string>

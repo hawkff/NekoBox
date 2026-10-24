@@ -780,7 +780,6 @@
     <string name="stun_test_summary">How the NAT on this connection maps and filters UDP, tested with a STUN server (RFC 5780)</string>
     <string name="nat_note">The test sends UDP to the STUN server, which sees your public address. It takes up to a minute.</string>
     <string name="nat_path_proxy">Proxy mode: this tests your direct connection</string>
-    <string name="nat_webrtc">WebRTC protection is on, so NekoBox drops STUN in the VPN and this test gets no answer.</string>
     <string name="nat_stun_server_hint">STUN server</string>
     <string name="nat_stun_server_helper">The server needs RFC 5780 support</string>
     <string name="nat_server_missing">Enter a STUN server</string>
@@ -1053,7 +1052,7 @@
     <string name="connection_check_udp_other_address">UDP leaves from another address than TCP</string>
     <string name="connection_check_udp_none">No answer over UDP</string>
     <string name="connection_check_udp_proxy">Not checked: the local proxy carries no UDP</string>
-    <string name="connection_check_udp_webrtc">Not checked: WebRTC protection drops STUN in the VPN</string>
+    <string name="webrtc_may_drop_stun">WebRTC protection may drop STUN in the VPN.</string>
     <string name="connection_check_section_exits">Exits</string>
     <string name="connection_check_section_dns_tls">DNS and TLS</string>
     <string name="connection_check_section_lists">Address lists</string>

@@ -2,9 +2,7 @@ package xyz.nekobyte.nekobox.ui
 
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
-import android.widget.TextView
-import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
+import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
@@ -13,10 +11,15 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isNotEmpty
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import libcore.Libcore
@@ -34,7 +37,7 @@ import xyz.nekobyte.nekobox.net.NatBehavior
 class StunActivity : ThemedActivity() {
 
     private lateinit var binding: LayoutStunBinding
-    private var test: Job? = null
+    private val model by viewModels<NatTest>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +62,9 @@ class StunActivity : ThemedActivity() {
             (action == EditorInfo.IME_ACTION_GO).also { if (it) start() }
         }
         binding.natStart.setOnClickListener { start() }
-        binding.natWebrtc.icon(R.drawable.ic_baseline_warning_24, getColorAttr(androidx.appcompat.R.attr.colorError))
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) { model.state.collect(::render) }
+        }
     }
 
     override fun onResume() {
@@ -67,57 +72,52 @@ class StunActivity : ThemedActivity() {
         showPath()
     }
 
+    private fun vpn() = DataStore.serviceState.started && DataStore.serviceMode != Key.MODE_PROXY
+
     // This app stays inside the VPN, so its UDP takes the path other apps take; the local proxy carries none of it.
     private fun showPath() {
-        val vpn = DataStore.serviceState.started && DataStore.serviceMode != Key.MODE_PROXY
         val label = when {
-            vpn -> R.string.connection_check_path_vpn
+            vpn() -> R.string.connection_check_path_vpn
             DataStore.serviceState.started -> R.string.nat_path_proxy
             else -> R.string.connection_check_path_direct
         }
         binding.natPath.setText(label)
-        binding.natPath.icon(if (vpn) R.drawable.ic_baseline_vpn_key_24 else R.drawable.baseline_public_24, getColorAttr(android.R.attr.textColorSecondary))
-        binding.natWebrtc.isVisible = vpn && DataStore.webrtcLeakProtection
-    }
-
-    private fun TextView.icon(@DrawableRes icon: Int, @ColorInt color: Int) {
-        val drawable = ContextCompat.getDrawable(context, icon)?.mutate()?.apply { setTint(color) }
-        setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
+        val icon = ContextCompat.getDrawable(this, if (vpn()) R.drawable.ic_baseline_vpn_key_24 else R.drawable.baseline_public_24)?.mutate()
+        icon?.setTint(getColorAttr(android.R.attr.textColorSecondary))
+        binding.natPath.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
     }
 
     private fun start() {
-        // The core's test cannot be stopped, so a second one would only race the first.
-        if (test?.isActive == true) return
         val server = binding.natStunServer.text.toString().trim()
         if (server.isEmpty()) {
             binding.natServerLayout.error = getString(R.string.nat_server_missing)
             return
         }
         binding.natServerLayout.error = null
-        binding.natStart.isEnabled = false
-        binding.natProgress.isVisible = true
+        model.start(server)
+    }
+
+    private fun render(state: NatTest.State) {
+        val running = state == NatTest.State.Running
+        binding.natStart.isEnabled = !running
+        binding.natProgress.isVisible = running
         binding.natVerdict.isVisible = false
         binding.natVerdictDetail.isVisible = false
         binding.natRows.isVisible = false
-        test = lifecycleScope.launch {
-            try {
-                show(withContext(Dispatchers.IO) { Libcore.stunTest(server) })
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                verdict(R.string.nat_failed, CheckTone.WARNING, e.readableMessage)
-            } finally {
-                binding.natProgress.isVisible = false
-                binding.natStart.isEnabled = true
-            }
+        when (state) {
+            is NatTest.State.Done -> show(state.result)
+            is NatTest.State.Failed -> verdict(R.string.nat_failed, CheckTone.WARNING, state.message)
+            else -> Unit
         }
     }
 
     private fun show(result: StunResult) {
         val type = NatBehavior.type(result.noNat, result.mapping, result.filtering)
+        // WebRTC protection drops STUN in the VPN, unless the profile brings a config of its own.
+        val unreachable = listOfNotNull(getString(R.string.nat_unreachable_detail), getString(R.string.webrtc_may_drop_stun).takeIf { vpn() && DataStore.webrtcLeakProtection })
         // A symmetric NAT limits peer-to-peer connections without being a fault, so it reads as neutral.
         when {
-            result.problem == NatBehavior.UNREACHABLE -> verdict(R.string.nat_unreachable, CheckTone.WARNING, getString(R.string.nat_unreachable_detail))
+            result.problem == NatBehavior.UNREACHABLE -> verdict(R.string.nat_unreachable, CheckTone.WARNING, unreachable.joinToString(" "))
             result.problem == NatBehavior.UNSUPPORTED -> verdict(R.string.nat_unsupported, CheckTone.INFO, getString(R.string.nat_unsupported_detail))
             type == NatBehavior.Type.NONE -> verdict(R.string.nat_type_none, CheckTone.INFO, getString(R.string.nat_detail_none))
             type == NatBehavior.Type.FULL_CONE -> verdict(R.string.nat_type_full_cone, CheckTone.OK, getString(R.string.nat_detail_cone))
@@ -178,5 +178,35 @@ class StunActivity : ThemedActivity() {
     private companion object {
         // STUN servers that answer from a second address, which the behavior test needs (RFC 5780).
         val SERVERS = arrayOf("stun.voipgate.com:3478", "stun.nextcloud.com:3478", "stun.sonetel.com:3478")
+    }
+}
+
+/**
+ * The NAT test and its outcome, kept while the screen is recreated: the core's test cannot be
+ * stopped, so a new screen shows the running one instead of starting another.
+ */
+class NatTest : ViewModel() {
+    sealed interface State {
+        data object Idle : State
+        data object Running : State
+        class Done(val result: StunResult) : State
+        class Failed(val message: String) : State
+    }
+
+    private val mutableState = MutableStateFlow<State>(State.Idle)
+    val state = mutableState.asStateFlow()
+
+    fun start(server: String) {
+        if (mutableState.value == State.Running) return
+        mutableState.value = State.Running
+        viewModelScope.launch {
+            mutableState.value = try {
+                State.Done(withContext(Dispatchers.IO) { Libcore.stunTest(server) })
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                State.Failed(e.readableMessage)
+            }
+        }
     }
 }

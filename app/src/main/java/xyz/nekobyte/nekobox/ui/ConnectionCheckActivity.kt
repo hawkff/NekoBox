@@ -175,14 +175,8 @@ class ConnectionCheckActivity : ThemedActivity() {
                     }
                     val ipv4 = async { ConnectionProbes.exit(client, ConnectionProbes.IPV4) }
                     val ipv6 = async { ConnectionProbes.exit(client, ConnectionProbes.IPV6) }
-                    // An HTTP proxy carries no UDP, and WebRTC protection drops STUN in the VPN, so then
-                    // there is nothing to compare.
-                    val udpSkipped = when {
-                        path == Path.PROXY -> R.string.connection_check_udp_proxy
-                        path == Path.VPN && DataStore.webrtcLeakProtection -> R.string.connection_check_udp_webrtc
-                        else -> null
-                    }
-                    val udp = async { if (udpSkipped != null) null else ConnectionProbes.udpAddress() }
+                    // An HTTP proxy carries no UDP, so in proxy mode there is nothing to compare.
+                    val udp = async { if (path == Path.PROXY) null else ConnectionProbes.udpAddress() }
                     val trace = async { ConnectionProbes.trace(client) }
                     val dnssec = async { ConnectionProbes.dnssec(client) }
                     val public = listOf(ipv4.await(), ipv6.await()).mapNotNull { (it as? ConnectionProbes.Exit.Seen)?.address }
@@ -199,7 +193,7 @@ class ConnectionCheckActivity : ThemedActivity() {
                     }
                     lookupClient = client
                     lookupAddress = public.firstOrNull()?.ip
-                    rows(path, ipv4.await(), ipv6.await(), udpSkipped, udp.await(), udpNetwork, matches, validation, tls)
+                    rows(path, ipv4.await(), ipv6.await(), udp.await(), udpNetwork, matches, validation, tls)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -229,7 +223,6 @@ class ConnectionCheckActivity : ThemedActivity() {
         path: Path,
         ipv4: ConnectionProbes.Exit,
         ipv6: ConnectionProbes.Exit,
-        @StringRes udpSkipped: Int?,
         udp: InetSocketAddress?,
         udpNetwork: ConnectionProbes.PublicAddress?,
         lists: Map<String, AddressReputation.Match>,
@@ -259,9 +252,11 @@ class ConnectionCheckActivity : ThemedActivity() {
             }
         }
         val udpDetail = udp?.let { listOfNotNull(it.address.hostAddress, udpNetwork?.isp?.ifEmpty { null }).joinToString(" · ") }
-        when (ConnectionProbes.udp(udpSkipped == null, listOfNotNull(v4, v6), udp, udpNetwork)) {
-            ConnectionProbes.Udp.NOT_CHECKED -> row(R.string.connection_check_udp, getString(udpSkipped ?: R.string.connection_check_udp_proxy), CheckTone.INFO)
-            ConnectionProbes.Udp.NO_ANSWER -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_none), CheckTone.INFO)
+        // WebRTC protection drops STUN in the VPN, unless the profile brings a config of its own.
+        val webrtc = getString(R.string.webrtc_may_drop_stun).takeIf { path == Path.VPN && DataStore.webrtcLeakProtection }
+        when (ConnectionProbes.udp(path != Path.PROXY, listOfNotNull(v4, v6), udp, udpNetwork)) {
+            ConnectionProbes.Udp.NOT_CHECKED -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_proxy), CheckTone.INFO)
+            ConnectionProbes.Udp.NO_ANSWER -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_none), CheckTone.INFO, webrtc)
             ConnectionProbes.Udp.SAME_ADDRESS -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same_address), CheckTone.OK, udpDetail)
             ConnectionProbes.Udp.SAME_NETWORK -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same), CheckTone.INFO, udpDetail)
             ConnectionProbes.Udp.OTHER_NETWORK -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_other), CheckTone.WARNING, udpDetail)

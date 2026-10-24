@@ -39,16 +39,6 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?android:attr/textColorSecondary" />
 
-            <TextView
-                android:id="@+id/nat_webrtc"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:drawablePadding="12dp"
-                android:text="@string/nat_webrtc"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:visibility="gone" />
-
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/nat_server_layout"
                 style="@style/Widget.NekoBox.TextInputLayout.ExposedDropdownMenu"
