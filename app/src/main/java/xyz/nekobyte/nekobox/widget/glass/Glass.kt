@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -47,6 +48,20 @@ object Glass {
     fun onTouch(event: MotionEvent, root: View) {
         if (!enabled) return
         for (drawable in drawables.toTypedArray()) if (drawable.host.rootView === root) drawable.onTouch(event)
+    }
+
+    /** The theme's canvas: its window background color, or the background color. */
+    @ColorInt
+    fun canvasColor(context: Context): Int {
+        val value = TypedValue()
+        return if (
+            context.theme.resolveAttribute(android.R.attr.windowBackground, value, true) &&
+            value.type in TypedValue.TYPE_FIRST_COLOR_INT..TypedValue.TYPE_LAST_COLOR_INT
+        ) {
+            value.data
+        } else {
+            context.getColorAttr(android.R.attr.colorBackground)
+        }
     }
 
     /** Clear glass: the surface color, thin enough that the content shows through. */
@@ -106,7 +121,7 @@ object Glass {
         val side = (2 * density).roundToInt()
         val gap = (5 * density).roundToInt()
         tabLayout.setSelectedTabIndicator(InsetDrawable(pill, side, gap, side, gap))
-        val dark = ColorUtils.calculateLuminance(GlassAmbientDrawable.canvasColor(context)) < 0.5
+        val dark = ColorUtils.calculateLuminance(canvasColor(context)) < 0.5
         val onSurface = context.getColorAttr(com.google.android.material.R.attr.colorOnSurface)
         tabLayout.setSelectedTabIndicatorColor(ColorUtils.setAlphaComponent(onSurface, if (dark) 0x2E else 0x17))
         tabLayout.setSelectedTabIndicatorGravity(TabLayout.INDICATOR_GRAVITY_STRETCH)

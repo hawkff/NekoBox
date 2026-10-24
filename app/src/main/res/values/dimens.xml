@@ -24,7 +24,6 @@
     <dimen name="glass_blur">12dp</dimen>
     <dimen name="glass_bezel">14dp</dimen>
     <dimen name="glass_refraction">9dp</dimen>
-    <dimen name="glass_dispersion">1.2dp</dimen>
     <dimen name="glass_edge_fade">24dp</dimen>
     <dimen name="glass_window_blur">28dp</dimen>
     <dimen name="glass_capsule_inset">12dp</dimen>

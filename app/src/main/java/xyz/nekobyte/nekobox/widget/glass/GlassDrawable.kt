@@ -6,11 +6,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.LinearGradient
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
-import android.graphics.RadialGradient
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.RenderEffect
@@ -28,7 +26,6 @@ import android.view.animation.OvershootInterpolator
 import androidx.annotation.ColorInt
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.ColorUtils
-import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -119,8 +116,9 @@ internal fun GlassPane.followSwell() {
 }
 
 /**
- * Liquid glass for [host]: floating panes that bend and frost what lies behind them, lit along
- * their rim, with a darkened edge that sets them off the content, and an optional scroll edge band.
+ * Liquid glass for [host]: floating panes that bend and frost what lies behind them, flat with a
+ * hairline rim, and on light canvases a soft edge that sets them off the content, plus an optional
+ * scroll edge band.
  * [place] lays out the panes for the drawable's bounds on every frame. With a [backdrop] on
  * Android 13+ the glass refracts the live content; elsewhere it is a tinted pane over the canvas.
  */
@@ -145,52 +143,27 @@ class GlassDrawable(
     private val layout = GlassLayout()
 
     @ColorInt
-    private val canvasColor = GlassAmbientDrawable.canvasColor(host.context)
+    private val canvasColor = Glass.canvasColor(host.context)
     private val dark = ColorUtils.calculateLuminance(canvasColor) < 0.5
+    private val live = if (backdrop != null && Build.VERSION.SDK_INT >= 33) LiveGlass.create(host, backdrop, res) else null
 
-    // On the true black of an OLED theme the glass stays flat: no sheen or colored fringes, a plain rim.
-    private val flat = GlassAmbientDrawable.isBlack(canvasColor)
-    private val live = if (backdrop != null && Build.VERSION.SDK_INT >= 33) LiveGlass.create(host, backdrop, res, flat) else null
-
+    // Flat paint only: a tint, a hairline rim, and on light canvases a soft edge, as thin glass shows.
     private val tintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint }
-
-    // The gradients are drawn in a unit square, mapped onto each pane.
-    // Light falls on the upper half and leaves the lower edge in shade, so the pane reads as thick glass.
-    private val shade = LinearGradient(
-        0f,
-        0f,
-        0f,
-        1f,
-        intArrayOf(if (dark) 0x14FFFFFF else 0x47FFFFFF, Color.TRANSPARENT, Color.TRANSPARENT, if (dark) 0x18000000 else 0x0A000000),
-        floatArrayOf(0f, 0.45f, 0.62f, 1f),
-        Shader.TileMode.CLAMP,
-    )
-
-    // The specular rim: bright where the light comes from, a softer reflection across from it.
-    private val specular = LinearGradient(
-        0f,
-        0f,
-        1f,
-        1f,
-        intArrayOf(if (dark) 0xA6FFFFFF.toInt() else 0xFFFFFFFF.toInt(), if (dark) 0x14FFFFFF else 0x40FFFFFF, if (dark) 0x4DFFFFFF else 0xB3FFFFFF.toInt()),
-        floatArrayOf(0f, 0.5f, 1f),
-        Shader.TileMode.CLAMP,
-    )
-    private val glow = RadialGradient(0f, 0f, 1f, if (dark) 0x47FFFFFF else 0x8CFFFFFF.toInt(), Color.TRANSPARENT, Shader.TileMode.CLAMP)
-    private val shadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = shade }
     private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.5f * density
-        if (flat) color = FLAT_RIM else shader = specular
+        strokeWidth = density
+        color = if (dark) 0x33FFFFFF else 0xCCFFFFFF.toInt()
     }
     private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = density
-        color = if (dark) 0x8C000000.toInt() else 0x29000000
+        color = 0x24000000
     }
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = glow }
+
+    // A pressed pane brightens evenly.
+    private val pressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+    private val pressAlpha = if (dark) 0x1F else 0x47
     private val bandPaint = Paint()
-    private val unit = Matrix()
     private val path = Path()
     private val ring = RectF()
     private var bandKey = Float.NaN
@@ -264,32 +237,18 @@ class GlassDrawable(
         path.reset()
         path.addRoundRect(rect, radius, radius, Path.Direction.CW)
         canvas.drawPath(path, tintPaint)
-        if (!flat) {
-            unit.setScale(1f, rect.height())
-            unit.postTranslate(0f, rect.top)
-            shade.setLocalMatrix(unit)
-            canvas.drawPath(path, shadePaint)
-        }
         pane.anchor?.let { presses[it] }?.let { press ->
             if (press.amount > 0f) {
-                // Light gathers where the finger rests.
-                val reach = max(rect.height(), rect.width() / 2) * 1.2f
-                unit.setScale(reach, reach)
-                unit.postTranslate(press.x, press.y)
-                glow.setLocalMatrix(unit)
-                glowPaint.alpha = (press.amount.coerceIn(0f, 1f) * 255).roundToInt()
-                canvas.withClip(path) { drawCircle(press.x, press.y, reach, glowPaint) }
+                pressPaint.alpha = (press.amount.coerceIn(0f, 1f) * pressAlpha).roundToInt()
+                canvas.drawPath(path, pressPaint)
             }
         }
-        // The darkened edge just outside sets the pane off whatever lies behind it; black needs none.
-        if (!flat) {
+        // On a light canvas a soft edge just outside sets the pane off whatever lies behind it.
+        if (!dark) {
             val edge = edgePaint.strokeWidth / 2
             ring.set(rect)
             ring.inset(-edge, -edge)
             canvas.drawRoundRect(ring, radius + edge, radius + edge, edgePaint)
-            unit.setScale(rect.width(), rect.height())
-            unit.postTranslate(rect.left, rect.top)
-            specular.setLocalMatrix(unit)
         }
         val rim = rimPaint.strokeWidth / 2
         ring.set(rect)
@@ -366,9 +325,6 @@ class GlassDrawable(
     private companion object {
         /** How much a pressed pane and its content grow. */
         const val SWELL = 0.1f
-
-        /** The rim of flat glass: a hairline, as thin glass shows on black. */
-        const val FLAT_RIM = 0x33FFFFFF
     }
 }
 
@@ -379,7 +335,7 @@ private class LiveGlass private constructor(private val host: View, private val 
     private val blur = res.getDimension(R.dimen.glass_blur)
 
     // The frost and the bend reach past the panes, so the copy covers that much more.
-    private val margin = blur + res.getDimension(R.dimen.glass_refraction) + res.getDimension(R.dimen.glass_dispersion)
+    private val margin = blur + res.getDimension(R.dimen.glass_refraction)
     private val hostInWindow = IntArray(2)
     private val backdropInWindow = IntArray(2)
     private val area = RectF()
@@ -471,8 +427,7 @@ private class LiveGlass private constructor(private val host: View, private val 
     companion object {
         const val MAX_PANES = 4
 
-        // Flat glass bends the content without parting its colors or deepening them.
-        fun create(host: View, backdrop: GlassBackdrop, res: Resources, flat: Boolean): LiveGlass? = try {
+        fun create(host: View, backdrop: GlassBackdrop, res: Resources): LiveGlass? = try {
             LiveGlass(
                 host,
                 backdrop,
@@ -480,8 +435,6 @@ private class LiveGlass private constructor(private val host: View, private val 
                 RuntimeShader(LIQUID).apply {
                     setFloatUniform("bezel", res.getDimension(R.dimen.glass_bezel))
                     setFloatUniform("refraction", res.getDimension(R.dimen.glass_refraction))
-                    setFloatUniform("dispersion", if (flat) 0f else res.getDimension(R.dimen.glass_dispersion))
-                    setFloatUniform("saturation", if (flat) 1f else 1.5f)
                     setFloatUniform("dims", 0.62f, 0.4f)
                 },
             )
@@ -493,8 +446,8 @@ private class LiveGlass private constructor(private val host: View, private val 
 
         /**
          * Inside a pane, samples near the rim move outward along the edge normal, most at the edge,
-         * so what lies beyond bends into view as through the rim of a lens; red and blue part a
-         * little, and colors gain saturation. In the band, the frosted content fades into the
+         * so what lies beyond bends into view as through the rim of a lens, its colors unchanged.
+         * In the band, the frosted content fades into the
          * canvas: [dims] from the screen edge to the end of the solid part, then out over the fade.
          */
         private const val LIQUID = """
@@ -507,8 +460,6 @@ layout(color) uniform half4 canvasColor;
 uniform float2 dims;
 uniform float bezel;
 uniform float refraction;
-uniform float dispersion;
-uniform float saturation;
 
 float paneDistance(float2 p, float4 r, float radius) {
     float2 center = (r.xy + r.zw) * 0.5;
@@ -541,13 +492,8 @@ half4 main(float2 p) {
                 paneDistance(p + float2(1.0, 0.0), r, radius) - paneDistance(p - float2(1.0, 0.0), r, radius),
                 paneDistance(p + float2(0.0, 1.0), r, radius) - paneDistance(p - float2(0.0, 1.0), r, radius)) + 0.0001);
             float rim = clamp(1.0 + d / b, 0.0, 1.0);
-            float2 base = p + normal * (rim * rim * refraction);
-            float2 spread = normal * (rim * dispersion);
-            half4 middle = content.eval(base);
-            color = half4(content.eval(base + spread).r, middle.g, content.eval(base - spread).b, middle.a);
+            color = content.eval(p + normal * (rim * rim * refraction));
         }
-        half luma = dot(color.rgb, half3(0.2126, 0.7152, 0.0722));
-        color.rgb = mix(half3(luma), color.rgb, half(saturation));
         return color * half(clamp(0.5 - d, 0.0, 1.0));
     }
     if (band.w == 0.0) {
