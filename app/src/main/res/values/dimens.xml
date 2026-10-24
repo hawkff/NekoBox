@@ -16,6 +16,8 @@
 
     <dimen name="nav_item_corner_radius">14dp</dimen>
     <dimen name="button_corner_radius">12dp</dimen>
+    <dimen name="check_button_corner_radius">16dp</dimen>
+    <dimen name="check_button_pressed_corner_radius">10dp</dimen>
 
     <dimen name="mtrl_snackbar_background_corner_radius">12dp</dimen>
 

@@ -23,6 +23,14 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Waits by its ramen, runs while the test runs. The button says the same in words. -->
+            <xyz.nekobyte.nekobox.widget.CheckCat
+                android:id="@+id/nat_cat"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginBottom="8dp"
+                android:importantForAccessibility="no" />
+
             <TextView
                 android:id="@+id/nat_path"
                 android:layout_width="match_parent"
@@ -61,18 +69,9 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/nat_start"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/connection_check_start" />
-
-            <com.google.android.material.progressindicator.LinearProgressIndicator
-                android:id="@+id/nat_progress"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:indeterminate="true"
-                android:visibility="gone" />
+                style="@style/Widget.NekoBox.Button.Check"
+                android:text="@string/connection_check_start"
+                app:icon="@drawable/ic_baseline_nat_24" />
 
             <TextView
                 android:id="@+id/nat_verdict"

@@ -2,6 +2,8 @@ package xyz.nekobyte.nekobox.ui
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.view.View
+import android.view.animation.PathInterpolator
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
@@ -41,4 +43,18 @@ fun TextView.showVerdict(text: CharSequence, tone: CheckTone) {
     val icon = ContextCompat.getDrawable(context, look.icon)?.mutate()?.apply { setTint(look.color) }
     setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
     isVisible = true
+    reveal(0)
+}
+
+private val easeOut = PathInterpolator(0.16f, 1f, 0.3f, 1f)
+
+/**
+ * Brings a result in with a short rise and fade, [order] places after the first of its batch, so a
+ * list arrives as a list. With animations off it simply appears.
+ */
+fun View.reveal(order: Int) {
+    animate().cancel()
+    alpha = 0f
+    translationY = 12 * resources.displayMetrics.density
+    animate().alpha(1f).translationY(0f).setStartDelay(minOf(order * 35L, 245L)).setDuration(220).setInterpolator(easeOut).start()
 }

@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import android.view.inputmethod.EditorInfo
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
@@ -32,6 +33,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutStunBinding
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.net.NatBehavior
+import xyz.nekobyte.nekobox.widget.CheckCat
 
 /** How the NAT on this connection maps and filters UDP, tested against a STUN server (RFC 5780). */
 class StunActivity : ThemedActivity() {
@@ -94,24 +96,39 @@ class StunActivity : ThemedActivity() {
             return
         }
         binding.natServerLayout.error = null
+        binding.natStart.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         model.start(server)
     }
 
     private fun render(state: NatTest.State) {
         val running = state == NatTest.State.Running
         binding.natStart.isEnabled = !running
-        binding.natProgress.isVisible = running
+        binding.natStart.setText(
+            when (state) {
+                NatTest.State.Idle -> R.string.connection_check_start
+                NatTest.State.Running -> R.string.check_running
+                else -> R.string.check_again
+            },
+        )
         binding.natVerdict.isVisible = false
         binding.natVerdictDetail.isVisible = false
         binding.natRows.isVisible = false
-        when (state) {
+        binding.natCat.pose = when (state) {
+            NatTest.State.Idle -> CheckCat.Pose.WAITING
+
+            NatTest.State.Running -> CheckCat.Pose.RUNNING
+
             is NatTest.State.Done -> show(state.result)
-            is NatTest.State.Failed -> verdict(R.string.nat_failed, CheckTone.WARNING, state.message)
-            else -> Unit
+
+            is NatTest.State.Failed -> {
+                verdict(R.string.nat_failed, CheckTone.WARNING, state.message)
+                CheckCat.Pose.ALERT
+            }
         }
     }
 
-    private fun show(result: StunResult) {
+    /** Shows the outcome and returns how the cat takes it: alert when the test could not finish. */
+    private fun show(result: StunResult): CheckCat.Pose {
         val type = NatBehavior.type(result.noNat, result.mapping, result.filtering)
         // WebRTC protection drops STUN in the VPN, unless the profile brings a config of its own.
         val unreachable = listOfNotNull(getString(R.string.nat_unreachable_detail), getString(R.string.webrtc_may_drop_stun).takeIf { vpn() && DataStore.webrtcLeakProtection })
@@ -138,16 +155,23 @@ class StunActivity : ThemedActivity() {
         }
         if (result.publicAddress.isNotEmpty()) row(R.string.connection_check_address, result.publicAddress, CheckTone.INFO)
         rows.isVisible = rows.isNotEmpty()
+        return if (result.problem.isEmpty() && type != NatBehavior.Type.UNKNOWN) CheckCat.Pose.CONTENT else CheckCat.Pose.ALERT
     }
 
     private fun verdict(@StringRes title: Int, tone: CheckTone, detail: String?) {
         binding.natVerdict.showVerdict(getString(title), tone)
         binding.natVerdictDetail.text = detail
         binding.natVerdictDetail.isVisible = !detail.isNullOrEmpty()
+        if (!detail.isNullOrEmpty()) binding.natVerdictDetail.reveal(1)
     }
 
     private fun row(@StringRes title: Int, status: CharSequence, tone: CheckTone, detail: CharSequence? = null) {
-        ItemCheckResultBinding.inflate(layoutInflater, binding.natRows, true).showResult(title, status, tone, detail)
+        val rows = binding.natRows
+        ItemCheckResultBinding.inflate(layoutInflater, rows, true).apply {
+            showResult(title, status, tone, detail)
+            // After the verdict and its detail.
+            root.reveal(rows.childCount + 1)
+        }
     }
 
     private fun behavior(name: String) = getString(
