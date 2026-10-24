@@ -1,9 +1,11 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.graphics.Rect
 import android.os.Bundle
 import android.text.format.Formatter
 import android.view.LayoutInflater
 import android.view.MenuItem
+import android.view.TouchDelegate
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -58,6 +60,7 @@ import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
 import xyz.nekobyte.nekobox.ktx.tryToShow
 import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.set
@@ -128,18 +131,7 @@ class ConfigurationGroupFragment : Fragment() {
             itemTouchHelper.attachToRecyclerView(null)
         }
 
-        itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, 0) {
-            override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                val dragFlags = if (DataStore.groupLayoutMode == 1) {
-                    ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
-                } else {
-                    ItemTouchHelper.UP or ItemTouchHelper.DOWN
-                }
-                return makeMovementFlags(dragFlags, 0) // No swipe flags
-            }
-
-            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = 0
-
+        itemTouchHelper = configurationListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, 0) {
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (isEnabled && adapter?.canDrag() == true) {
                 if (DataStore.groupLayoutMode == 1) {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
@@ -179,7 +171,6 @@ class ConfigurationGroupFragment : Fragment() {
                 adapter?.commitMove()
             }
         })
-        itemTouchHelper.attachToRecyclerView(configurationListView)
     }
     lateinit var configurationListView: RecyclerView
     private var listTopPadding = 0
@@ -1233,7 +1224,18 @@ class ConfigurationGroupFragment : Fragment() {
             return running.groupId == groupId && group.isSelector && group.autoSelect
         }
 
+        private fun statusTarget(): TouchDelegate {
+            val bounds = Rect()
+            profileStatus.getDrawingRect(bounds)
+            card.offsetDescendantRectToMyCoords(profileStatus, bounds)
+            val minimum = (48 * card.resources.displayMetrics.density).toInt()
+            bounds.inset(-((minimum - bounds.width()) / 2).coerceAtLeast(0), -((minimum - bounds.height()) / 2).coerceAtLeast(0))
+            return TouchDelegate(bounds, profileStatus)
+        }
+
         private fun applySelected(selected: Boolean) {
+            // Screen readers say "selected"; the look below is for the eye only.
+            card.isSelected = selected
             val ctx = card.context
             val primary = ctx.getColorAttr(R.attr.colorPrimary)
             val surface = ctx.getColorAttr(R.attr.colorSurface)
@@ -1328,6 +1330,11 @@ class ConfigurationGroupFragment : Fragment() {
                 val msg = Protocols.genFriendlyMsg(err)
                 profileStatus.text = if (msg != err) msg else getString(R.string.unavailable)
             }
+            // Only a failed test has more to show, its error; the short line then answers a 48 dp tap.
+            val failed = proxyEntity.status == 3
+            profileStatus.isClickable = failed
+            card.touchDelegate = null
+            if (failed) profileStatus.post { card.touchDelegate = statusTarget() }
 
             val selectOrChain = select || proxyEntity.type == ProxyEntity.TYPE_CHAIN
             val isDoubleColumn = DataStore.groupLayoutMode == 1

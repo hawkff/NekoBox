@@ -256,6 +256,7 @@
     <item quantity="other">%d строки</item>
 </plurals>
 <string name="log_level">Тип журнала</string>
+<string name="log_empty">Журнал пуст. Чтобы он записывался, выберите тип журнала в настройках.</string>
 <string name="log_level_help">Удерживайте для настройки размера буфера.</string>
 <string name="logcat">Экспорт отладочной информации</string>
 <string name="action_close">Закрыть</string>
@@ -431,6 +432,12 @@
 <string name="sniff_override">Результат проверки для адрес назначения</string>
 <string name="sniff_routing">Перехватывать результат для Маршрутизации</string>
 <string name="speed">%s/с</string>
+<string name="speed_upload">Отдача %s</string>
+<string name="speed_download">Загрузка %s</string>
+<string name="open_menu">Открыть меню</string>
+<string name="close">Закрыть</string>
+<string name="move_up">Переместить вверх</string>
+<string name="move_down">Переместить вниз</string>
 <string name="speed_detail">Прокси ：%1$s↑ %2$s↓ 
 \nПрямой ：%3$s↑%4$s↓</string>
 <string name="speed_interval">Интервал обновления уведомлений о скорости</string>

@@ -29,6 +29,8 @@
                 android:ems="10"
                 android:focusable="true"
                 android:gravity="start|top"
+                android:hint="@string/log_empty"
+                android:minHeight="48dp"
                 android:textIsSelectable="true"
                 tools:ignore="LabelFor" />
         </ScrollView>

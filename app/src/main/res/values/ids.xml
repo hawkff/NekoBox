@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Screen reader actions on list rows that are dragged or swiped by touch. -->
+    <item name="row_move_up" type="id" />
+    <item name="row_move_down" type="id" />
+    <item name="row_remove" type="id" />
+</resources>

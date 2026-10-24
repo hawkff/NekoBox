@@ -25,6 +25,7 @@ open class ToolbarFragment : Fragment {
         toolbar = view.findViewById(R.id.toolbar)
         view.findViewById<View>(R.id.appbar)?.let(Glass::styleAppBar)
         toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
+        toolbar.setNavigationContentDescription(R.string.open_menu)
         toolbar.setNavigationOnClickListener {
             (activity as MainActivity).binding.drawerLayout.openDrawer(GravityCompat.START)
         }

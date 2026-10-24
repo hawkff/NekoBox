@@ -24,6 +24,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutTwoLineItemBinding
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 
 class NetworkAutomationActivity : ThemedActivity() {
 
@@ -46,13 +47,13 @@ class NetworkAutomationActivity : ThemedActivity() {
         }
         binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
         binding.recyclerView.adapter = adapter
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.START) {
+        binding.recyclerView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.START) {
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 adapter.removeAt(viewHolder.bindingAdapterPosition)
             }
-        }).attachToRecyclerView(binding.recyclerView)
+        })
     }
 
     override fun onResume() {

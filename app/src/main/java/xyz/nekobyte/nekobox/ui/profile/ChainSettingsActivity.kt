@@ -33,6 +33,7 @@ import xyz.nekobyte.nekobox.fmt.internal.chainHops
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.ui.ProfileSelectActivity
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 
 // An earlier TCP-only proxy can carry encapsulated UDP, so only the exit's capability is
 // definitive here. Other hints leave the requirements between hops conditional.
@@ -129,7 +130,7 @@ class ChainSettingsActivity : ProfileSettingsActivity<ChainBean>(R.layout.layout
         configurationList.adapter = configurationAdapter
         FastScrollerBuilder(configurationList).useMd2Style().build()
 
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+        configurationList.attachItemTouch(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.START,
         ) {
@@ -162,7 +163,7 @@ class ChainSettingsActivity : ProfileSettingsActivity<ChainBean>(R.layout.layout
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 configurationAdapter.remove(viewHolder.bindingAdapterPosition)
             }
-        }).attachToRecyclerView(configurationList)
+        })
     }
 
     override fun PreferenceFragmentCompat.viewCreated(view: View, savedInstanceState: Bundle?) {

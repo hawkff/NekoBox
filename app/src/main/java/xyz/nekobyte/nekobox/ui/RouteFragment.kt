@@ -24,6 +24,7 @@ import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
+import xyz.nekobyte.nekobox.widget.attachItemTouch
 
 class RouteFragment :
     ToolbarFragment(R.layout.layout_route),
@@ -52,7 +53,7 @@ class RouteFragment :
         FastScrollerBuilder(ruleListView).useMd2Style().build()
         undoManager = UndoSnackbarManager(activity, ruleAdapter)
 
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+        ruleListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.START,
         ) {
@@ -90,7 +91,7 @@ class RouteFragment :
                 super.clearView(recyclerView, viewHolder)
                 ruleAdapter.commitMove()
             }
-        }).attachToRecyclerView(ruleListView)
+        })
     }
 
     override fun onDestroy() {
