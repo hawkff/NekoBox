@@ -668,6 +668,40 @@
         <item name="android:textColor">?primaryOrTextPrimary</item>
     </style>
 
+    <!-- A rule's place in the order on the Route screen: its number in a ring. -->
+    <style name="Widget.NekoBox.RouteOrder" parent="">
+        <item name="android:layout_width">28dp</item>
+        <item name="android:layout_height">28dp</item>
+        <item name="android:background">@drawable/route_order</item>
+        <item name="android:gravity">center</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+
+    <!-- Where a rule sends traffic: a small label in the destination's color. -->
+    <style name="Widget.NekoBox.RouteDestination" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:maxWidth">128dp</item>
+        <item name="android:minHeight">24dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
+    </style>
+
+    <style name="Widget.NekoBox.RouteDestination.Answer">
+        <item name="android:maxWidth">160dp</item>
+        <item name="android:minHeight">32dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
+    </style>
+
     <!-- The overflow button keeps a 48 dp touch target; AppCompat's is narrower. -->
     <style name="Widget.NekoBox.ActionButton.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
         <item name="android:minWidth">48dp</item>
@@ -691,7 +725,7 @@
     </style>
 
     <!-- The heading of a group of check results. -->
-    <style name="Widget.NekoBox.CheckSection" parent="">
+    <style name="Widget.NekoBox.Section" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:paddingTop">20dp</item>

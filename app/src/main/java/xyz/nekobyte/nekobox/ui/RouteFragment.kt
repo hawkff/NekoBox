@@ -1,90 +1,109 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.animation.ValueAnimator
+import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
+import androidx.annotation.ColorInt
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
+import androidx.core.content.getSystemService
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
+import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.shape.MaterialShapeDrawable
+import com.google.android.material.shape.ShapeAppearanceModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.RuleEntity
-import xyz.nekobyte.nekobox.databinding.LayoutEmptyRouteBinding
 import xyz.nekobyte.nekobox.databinding.LayoutRouteBinding
+import xyz.nekobyte.nekobox.databinding.LayoutRouteEndBinding
 import xyz.nekobyte.nekobox.databinding.LayoutRouteItemBinding
-import xyz.nekobyte.nekobox.ktx.*
+import xyz.nekobyte.nekobox.fmt.RouteAnswer
+import xyz.nekobyte.nekobox.fmt.RouteDecision
+import xyz.nekobyte.nekobox.fmt.RouteVerdict
+import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.getColorAttr
+import xyz.nekobyte.nekobox.ktx.itemMoveIndices
+import xyz.nekobyte.nekobox.ktx.launchCustomTab
+import xyz.nekobyte.nekobox.ktx.onMainDispatcher
+import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
 
+/**
+ * The route rules in the order the core tries them, and a tester above them that says where a site,
+ * an address or an app goes: the rules it passes fade, and the one that catches it stands out.
+ */
 class RouteFragment :
     ToolbarFragment(R.layout.layout_route),
     Toolbar.OnMenuItemClickListener {
 
-    lateinit var activity: MainActivity
-    lateinit var ruleListView: RecyclerView
-    lateinit var ruleAdapter: RuleAdapter
-    lateinit var undoManager: UndoSnackbarManager<RuleEntity>
+    /** A rule and its words, made off the main thread. */
+    class RuleRow(val rule: RuleEntity, val title: String, val summary: String, val destination: String, @param:ColorInt val color: Int)
+
+    /** The tester's answer and its words, made off the main thread. [verdicts] has the line under each rule. */
+    private class Tested(val answer: RouteAnswer?, val destination: String?, @param:ColorInt val color: Int, val by: String, val notes: String?, val verdicts: List<String?>)
+
+    private lateinit var binding: LayoutRouteBinding
+    private lateinit var ruleAdapter: RuleAdapter
+    private lateinit var undoManager: UndoSnackbarManager<RuleRow>
+    private var tested: Tested? = null
+    private var testing: Job? = null
+    private var showMatchWhenAnswered = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        activity = requireActivity() as MainActivity
-
+        binding = LayoutRouteBinding.bind(view)
         ViewCompat.setOnApplyWindowInsetsListener(view, ListListener)
         toolbar.setTitle(R.string.menu_route)
         toolbar.inflateMenu(R.menu.add_route_menu)
         toolbar.setOnMenuItemClickListener(this)
 
-        ruleListView = LayoutRouteBinding.bind(view).routeList
-        ruleListView.layoutManager = FixedLinearLayoutManager(ruleListView)
+        val list = binding.routeList
+        list.layoutManager = FixedLinearLayoutManager(list)
         ruleAdapter = RuleAdapter()
         ProfileManager.addListener(ruleAdapter)
-        ruleListView.adapter = ruleAdapter
-        FastScrollerBuilder(ruleListView).useMd2Style().build()
-        undoManager = UndoSnackbarManager(activity, ruleAdapter)
+        list.adapter = ruleAdapter
+        FastScrollerBuilder(list).useMd2Style().build()
+        undoManager = UndoSnackbarManager(requireActivity() as MainActivity, ruleAdapter)
+        list.attachItemTouch(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START) {
+            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleHolder) super.getDragDirs(recyclerView, viewHolder) else 0
 
-        ruleListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
-            ItemTouchHelper.START,
-        ) {
+            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleHolder) super.getSwipeDirs(recyclerView, viewHolder) else 0
 
-            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleAdapter.DocumentHolder) {
-                0
-            } else {
-                super.getSwipeDirs(recyclerView, viewHolder)
-            }
-
-            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleAdapter.DocumentHolder) {
-                0
-            } else {
-                super.getDragDirs(recyclerView, viewHolder)
-            }
+            override fun canDropOver(recyclerView: RecyclerView, current: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = target is RuleHolder
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val index = viewHolder.bindingAdapterPosition
-                ruleAdapter.remove(index)
-                undoManager.remove(index to (viewHolder as RuleAdapter.RuleHolder).rule)
+                undoManager.remove(index to ruleAdapter.remove(index))
             }
 
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder,
-            ): Boolean = if (target is RuleAdapter.DocumentHolder) {
-                false
-            } else {
+            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 ruleAdapter.move(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
-                true
+                return true
             }
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
@@ -92,24 +111,49 @@ class RouteFragment :
                 ruleAdapter.commitMove()
             }
         })
+
+        val header = binding.header
+        header.globalOff.setOnClickListener {
+            DataStore.globalMode = false
+            showGlobalNotice()
+            test()
+            needReload()
+        }
+        header.probe.doAfterTextChanged { test() }
+        // Search on the keyboard means done typing: the rule that catches it comes into view.
+        header.probe.setOnEditorActionListener { field, action, _ ->
+            if (action != EditorInfo.IME_ACTION_SEARCH) return@setOnEditorActionListener false
+            field.context.getSystemService<InputMethodManager>()?.hideSoftInputFromWindow(field.windowToken, 0)
+            if (testing == null) showMatch() else showMatchWhenAnswered = true
+            true
+        }
+        header.answer.setOnClickListener { showMatch() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Global mode and the VPN settings may have changed elsewhere.
+        showGlobalNotice()
+        test()
     }
 
     override fun onDestroy() {
-        if (::ruleAdapter.isInitialized) {
-            ProfileManager.removeListener(ruleAdapter)
-        }
+        if (::ruleAdapter.isInitialized) ProfileManager.removeListener(ruleAdapter)
         super.onDestroy()
+    }
+
+    private fun showGlobalNotice() {
+        binding.header.globalNotice.isVisible = DataStore.globalMode
     }
 
     override fun onMenuItemClick(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_new_route -> {
-                startActivity(Intent(context, RouteSettingsActivity::class.java))
-            }
+            R.id.action_new_route -> startActivity(Intent(context, RouteSettingsActivity::class.java))
 
             R.id.action_reset_route -> {
-                MaterialAlertDialogBuilder(activity).setTitle(R.string.confirm)
-                    .setMessage(R.string.clear_profiles_message)
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.route_reset)
+                    .setMessage(R.string.route_reset_message)
                     .setPositiveButton(R.string.yes) { _, _ ->
                         runOnDefaultDispatcher {
                             ProfileDatabase.rulesDao.reset()
@@ -121,211 +165,405 @@ class RouteFragment :
                     .show()
             }
 
-            R.id.action_manage_assets -> {
-                startActivity(Intent(requireContext(), AssetsActivity::class.java))
-            }
+            R.id.action_manage_assets -> startActivity(Intent(requireContext(), AssetsActivity::class.java))
 
-            R.id.action_routing_profiles -> {
-                startActivity(Intent(requireContext(), RoutingProfilesActivity::class.java))
-            }
+            R.id.action_routing_profiles -> startActivity(Intent(requireContext(), RoutingProfilesActivity::class.java))
+
+            R.id.action_route_guide -> requireContext().launchCustomTab(GUIDE)
         }
         return true
+    }
+
+    /** Asks the tester about what the field holds, a moment after typing stops. */
+    private fun test() {
+        if (!::ruleAdapter.isInitialized || view == null) return
+        testing?.cancel()
+        val text = binding.header.probe.text?.toString().orEmpty().trim()
+        if (text.isEmpty()) return show(null)
+        val context = requireContext()
+        val rows = ruleAdapter.rows.toList()
+        testing = viewLifecycleOwner.lifecycleScope.launch {
+            delay(TYPING)
+            show(withContext(Dispatchers.Default) { ask(context, text, rows) })
+        }
+    }
+
+    private fun ask(context: Context, text: String, rows: List<RuleRow>): Tested {
+        val (probe, app) = RouteChecks.probe(text) ?: return Tested(null, null, 0, context.getString(R.string.route_test_nothing, text), null, emptyList())
+        // Most traffic is TCP; UDP gets a note when it goes elsewhere, as QUIC does past a rule that blocks it.
+        val tester = RouteChecks.tester()
+        val rules = rows.map { it.rule }
+        val answer = tester.test(rules, probe.copy(network = "tcp"))
+        val overUdp = tester.test(rules, probe.copy(network = "udp")).decision
+        val (destination, color) = destination(context, answer.decision, rows)
+        val by = when (val decision = answer.decision) {
+            is RouteDecision.Rule -> context.getString(R.string.route_answer_rule, decision.index + 1, rows[decision.index].title)
+            RouteDecision.Dns -> context.getString(R.string.route_answer_dns)
+            RouteDecision.AppOutsideVpn -> context.getString(R.string.route_answer_app_outside)
+            RouteDecision.LocalOutsideVpn -> context.getString(R.string.route_answer_local_outside)
+            RouteDecision.GlobalMode -> context.getString(R.string.route_answer_global)
+            RouteDecision.LocalNetwork -> context.getString(R.string.route_answer_local)
+            RouteDecision.Proxy -> context.getString(R.string.route_answer_proxy)
+        }
+        val udp = overUdp.takeIf { it != answer.decision }?.let { decision ->
+            val (where, _) = destination(context, decision, rows)
+            if (decision is RouteDecision.Rule) {
+                context.getString(R.string.route_answer_udp_rule, where, decision.index + 1)
+            } else {
+                context.getString(R.string.route_answer_udp, where)
+            }
+        }
+        // The rules before the answer that might still catch it first.
+        val doubts = answer.verdicts.withIndex().mapNotNull { (index, verdict) ->
+            when (verdict) {
+                is RouteVerdict.CatchesIf -> context.getString(R.string.route_answer_maybe, index + 1, RuleWords.conditions(context, verdict.conditions))
+                is RouteVerdict.Unknown -> context.getString(R.string.route_answer_unknown, index + 1, RuleWords.unknown(context, verdict.reason))
+                else -> null
+            }
+        }
+        val more = (doubts.size - SHOWN_DOUBTS).takeIf { it > 0 }?.let { context.resources.getQuantityString(R.plurals.route_answer_more, it, it) }
+        val notes = listOfNotNull(app?.let { context.getString(R.string.route_test_app, it) }, udp) + doubts.take(SHOWN_DOUBTS) + listOfNotNull(more)
+        val verdicts = answer.verdicts.map { verdict ->
+            when (verdict) {
+                RouteVerdict.Catches -> context.getString(R.string.route_verdict_catches)
+                is RouteVerdict.CatchesIf -> context.getString(R.string.route_verdict_maybe, RuleWords.conditions(context, verdict.conditions))
+                is RouteVerdict.Unknown -> context.getString(R.string.route_verdict_unknown, RuleWords.unknown(context, verdict.reason))
+                RouteVerdict.Passes, null -> null
+            }
+        }
+        return Tested(answer, destination, color, by, notes.joinToString("\n").ifEmpty { null }, verdicts)
+    }
+
+    /** Where [decision] sends traffic, in words and in the destination's color. */
+    private fun destination(context: Context, decision: RouteDecision, rows: List<RuleRow>): Pair<String, Int> {
+        val direct = RuleWords.outboundColor(context, -1L)
+        return when (decision) {
+            is RouteDecision.Rule -> rows[decision.index].destination to rows[decision.index].color
+            RouteDecision.Dns -> context.getString(R.string.route_destination_dns) to context.getColorAttr(android.R.attr.textColorSecondary)
+            RouteDecision.AppOutsideVpn, RouteDecision.LocalOutsideVpn -> context.getString(R.string.route_destination_outside_vpn) to direct
+            RouteDecision.LocalNetwork -> RuleWords.outbound(context, -1L) to direct
+            RouteDecision.GlobalMode, RouteDecision.Proxy -> RuleWords.outbound(context, 0L) to RuleWords.outboundColor(context, 0L)
+        }
+    }
+
+    private fun showMatch() {
+        val decision = tested?.answer?.decision ?: return
+        binding.routeList.smoothScrollToPosition(if (decision is RouteDecision.Rule) decision.index else ruleAdapter.rows.size)
+    }
+
+    private fun show(result: Tested?) {
+        testing = null
+        tested = result
+        val header = binding.header
+        header.answer.isVisible = result != null
+        if (result != null) {
+            header.answerDestination.isVisible = result.destination != null
+            result.destination?.let { header.answerDestination.paintDestination(it, result.color) }
+            header.answerBy.text = result.by
+            header.answerNotes.text = result.notes
+            header.answerNotes.isVisible = result.notes != null
+        }
+        val first = (binding.routeList.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+        ruleAdapter.firstVisible = first.coerceAtLeast(0)
+        ruleAdapter.notifyItemRangeChanged(0, ruleAdapter.itemCount, VERDICT)
+        if (showMatchWhenAnswered) {
+            showMatchWhenAnswered = false
+            showMatch()
+        }
+    }
+
+    private fun TextView.paintDestination(text: String, @ColorInt color: Int) {
+        this.text = text
+        setTextColor(color)
+        background = MaterialShapeDrawable(ShapeAppearanceModel.builder().setAllCornerSizes(8 * resources.displayMetrics.density).build()).apply {
+            fillColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(color, 0x1F))
+        }
+    }
+
+    /** The look of a card that the tester picks out: the selected profile's look, faded in. */
+    private class Highlight(private val card: MaterialCardView) {
+        private val context = card.context
+        private val primary = context.getColorAttr(R.attr.colorPrimary)
+        private val surface = context.getColorAttr(R.attr.colorSurface)
+        private val stroke = context.getColor(R.color.card_stroke)
+        private val thin = context.resources.getDimensionPixelSize(R.dimen.card_stroke_width)
+        private val thick = context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_selected)
+        private var lit = -1f
+        private var animator: ValueAnimator? = null
+
+        fun show(on: Boolean, animate: Boolean, delay: Long = 0) {
+            val target = if (on) 1f else 0f
+            if (target == lit && animator == null) return
+            animator?.cancel()
+            animator = null
+            if (!animate || lit < 0) return paint(target)
+            animator = ValueAnimator.ofFloat(lit, target).apply {
+                startDelay = delay
+                duration = LIGHT
+                addUpdateListener { paint(it.animatedValue as Float) }
+                start()
+            }
+        }
+
+        private fun paint(fraction: Float) {
+            lit = fraction
+            card.strokeWidth = (thin + (thick - thin) * fraction).toInt()
+            card.strokeColor = ColorUtils.blendARGB(stroke, primary, fraction)
+            card.setCardBackgroundColor(ColorUtils.blendARGB(surface, ColorUtils.compositeColors(ColorUtils.setAlphaComponent(primary, 26), surface), fraction))
+        }
     }
 
     inner class RuleAdapter :
         RecyclerView.Adapter<RecyclerView.ViewHolder>(),
         ProfileManager.RuleListener,
-        UndoSnackbarManager.Interface<RuleEntity> {
+        UndoSnackbarManager.Interface<RuleRow> {
 
-        val ruleList = ArrayList<RuleEntity>()
-        suspend fun reload() {
-            val rules = ProfileManager.getRules()
-            ruleListView.post {
-                ruleList.clear()
-                ruleList.addAll(rules)
-                ruleAdapter.notifyDataSetChanged()
-            }
-        }
+        val rows = ArrayList<RuleRow>()
+
+        /** The first row on screen when an answer came, which the fade starts from. */
+        var firstVisible = 0
 
         init {
-            runOnDefaultDispatcher {
-                reload()
+            runOnDefaultDispatcher { reload() }
+        }
+
+        suspend fun reload() {
+            val context = context ?: return
+            val fresh = ProfileManager.getRules().map { it.row(context) }
+            onMainDispatcher {
+                if (!isAdded) return@onMainDispatcher
+                rows.clear()
+                rows.addAll(fresh)
+                notifyDataSetChanged()
+                test()
             }
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder = if (viewType == 0) {
-            DocumentHolder(LayoutEmptyRouteBinding.inflate(layoutInflater, parent, false))
-        } else {
+        private fun RuleEntity.row(context: Context) = RuleRow(this, RuleWords.title(context, this), RuleWords.summary(context, this), RuleWords.outbound(context, outbound), RuleWords.outboundColor(context, outbound))
+
+        override fun getItemCount() = rows.size + 1
+
+        override fun getItemViewType(position: Int) = if (position < rows.size) RULE else END
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder = if (viewType == RULE) {
             RuleHolder(LayoutRouteItemBinding.inflate(layoutInflater, parent, false))
+        } else {
+            EndHolder(LayoutRouteEndBinding.inflate(layoutInflater, parent, false))
         }
 
-        override fun getItemViewType(position: Int): Int {
-            if (position == 0) return 0
-            return 1
-        }
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = onBindViewHolder(holder, position, emptyList())
 
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            if (holder is DocumentHolder) {
-                holder.bind()
-            } else if (holder is RuleHolder) {
-                holder.bind(ruleList[position - 1])
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: List<Any>) {
+            val animate = VERDICT in payloads
+            when (holder) {
+                is RuleHolder -> holder.bind(rows[position], animate)
+                is EndHolder -> holder.bind(animate)
             }
         }
 
-        override fun getItemCount(): Int = ruleList.size + 1
+        private val moved = HashSet<RuleEntity>()
 
-        override fun getItemId(position: Int): Long {
-            if (position == 0) return 0L
-            return ruleList[position - 1].id
-        }
-
-        private val updated = HashSet<RuleEntity>()
         fun move(from: Int, to: Int) {
-            val first = ruleList[from - 1]
-            var previousOrder = first.userOrder
+            val first = rows[from]
+            var previousOrder = first.rule.userOrder
             val step = if (from < to) 1 else -1
-            for (i in itemMoveIndices(from - 1, to - 1)) {
-                val next = ruleList[i + step]
-                val order = next.userOrder
-                next.userOrder = previousOrder
+            for (i in itemMoveIndices(from, to)) {
+                val next = rows[i + step]
+                val order = next.rule.userOrder
+                next.rule.userOrder = previousOrder
                 previousOrder = order
-                ruleList[i] = next
-                updated.add(next)
+                rows[i] = next
+                moved.add(next.rule)
             }
-            first.userOrder = previousOrder
-            ruleList[to - 1] = first
-            updated.add(first)
+            first.rule.userOrder = previousOrder
+            rows[to] = first
+            moved.add(first.rule)
             notifyItemMoved(from, to)
         }
 
-        fun commitMove() = runOnDefaultDispatcher {
-            if (updated.isNotEmpty()) {
-                ProfileDatabase.rulesDao.updateRules(updated.toList())
-                updated.clear()
-                needReload()
+        fun commitMove() {
+            if (moved.isEmpty()) return
+            val rules = moved.toList()
+            moved.clear()
+            test()
+            runOnDefaultDispatcher {
+                ProfileDatabase.rulesDao.updateRules(rules)
+                onMainDispatcher { needReload() }
             }
         }
 
-        fun remove(index: Int) {
-            ruleList.removeAt(index - 1)
+        fun remove(index: Int): RuleRow {
+            val row = rows.removeAt(index)
             notifyItemRemoved(index)
+            test()
+            return row
         }
 
-        override fun undo(actions: List<Pair<Int, RuleEntity>>) {
-            for ((index, item) in actions) {
-                ruleList.add(index - 1, item)
+        override fun undo(actions: List<Pair<Int, RuleRow>>) {
+            for ((index, row) in actions) {
+                rows.add(index, row)
                 notifyItemInserted(index)
             }
+            test()
         }
 
-        override fun commit(actions: List<Pair<Int, RuleEntity>>) {
-            val rules = actions.map { it.second }
-            runOnDefaultDispatcher {
-                ProfileManager.deleteRules(rules)
-            }
+        override fun commit(actions: List<Pair<Int, RuleRow>>) {
+            val rules = actions.map { it.second.rule }
+            runOnDefaultDispatcher { ProfileManager.deleteRules(rules) }
         }
 
         override suspend fun onAdd(rule: RuleEntity) {
-            ruleListView.post {
-                ruleList.add(rule)
-                ruleAdapter.notifyItemInserted(ruleList.size)
+            val row = rule.row(context ?: return)
+            onMainDispatcher {
+                if (!isAdded) return@onMainDispatcher
+                rows.add(row)
+                notifyItemInserted(rows.size - 1)
+                test()
                 needReload()
             }
         }
 
         override suspend fun onUpdated(rule: RuleEntity) {
-            val index = ruleList.indexOfFirst { it.id == rule.id }
-            if (index == -1) return
-            ruleListView.post {
-                ruleList[index] = rule
-                ruleAdapter.notifyItemChanged(index + 1)
+            val row = rule.row(context ?: return)
+            onMainDispatcher {
+                val index = rows.indexOfFirst { it.rule.id == rule.id }
+                if (!isAdded || index < 0) return@onMainDispatcher
+                rows[index] = row
+                notifyItemChanged(index)
+                test()
                 needReload()
             }
         }
 
-        override suspend fun onRemoved(ruleId: Long) {
-            val index = ruleList.indexOfFirst { it.id == ruleId }
-            if (index == -1) {
-                onMainDispatcher {
-                    needReload()
-                }
-            } else {
-                ruleListView.post {
-                    ruleList.removeAt(index)
-                    ruleAdapter.notifyItemRemoved(index + 1)
-                    needReload()
-                }
+        override suspend fun onRemoved(ruleId: Long) = onMainDispatcher {
+            if (!isAdded) return@onMainDispatcher
+            val index = rows.indexOfFirst { it.rule.id == ruleId }
+            if (index >= 0) {
+                rows.removeAt(index)
+                notifyItemRemoved(index)
+                test()
             }
+            needReload()
         }
 
-        // The whole table was replaced (routing profile switch): re-read it.
+        // The whole table was replaced, by a routing profile or a reset: read it again.
         override suspend fun onCleared() {
             reload()
             onMainDispatcher { if (isAdded) needReload() }
         }
+    }
 
-        inner class DocumentHolder(binding: LayoutEmptyRouteBinding) : RecyclerView.ViewHolder(binding.root) {
-            fun bind() {
-                itemView.setOnClickListener {
-                    it.context.launchCustomTab("https://matsuridayo.github.io/nb4a-route/")
+    inner class RuleHolder(private val binding: LayoutRouteItemBinding) : RecyclerView.ViewHolder(binding.root) {
+        private lateinit var row: RuleRow
+        private val card = binding.root
+        private val highlight = Highlight(card)
+
+        init {
+            card.setOnClickListener {
+                startActivity(Intent(it.context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, row.rule.id))
+            }
+            binding.enable.setOnCheckedChangeListener { _, on ->
+                if (on == row.rule.enabled) return@setOnCheckedChangeListener
+                val rule = row.rule
+                rule.enabled = on
+                show(animate = true)
+                test()
+                runOnDefaultDispatcher {
+                    ProfileDatabase.rulesDao.updateRule(rule)
+                    onMainDispatcher { needReload() }
                 }
             }
         }
 
-        inner class RuleHolder(binding: LayoutRouteItemBinding) : RecyclerView.ViewHolder(binding.root) {
-
-            lateinit var rule: RuleEntity
-            val profileName = binding.profileName
-            val profileType = binding.profileType
-            val routeOutbound = binding.routeOutbound
-            val editButton = binding.edit
-            val enableSwitch = binding.enable
-
-            fun bind(ruleEntity: RuleEntity) {
-                rule = ruleEntity
-                profileName.text = rule.displayName()
-                profileType.text = rule.mkSummary()
-                routeOutbound.text = rule.displayOutbound()
-
-                // set text color based on route type
-                val ctx = itemView.context
-                val outboundColor = when (rule.outbound) {
-                    // block: red
-                    -2L -> ctx.getColorAttr(R.attr.routeBlockColor)
-
-                    // direct: green
-                    -1L -> ctx.getColorAttr(R.attr.routeDirectColor)
-
-                    // proxy: blue/cyan
-                    0L -> ctx.getColorAttr(R.attr.routeProxyColor)
-
-                    // config: purple
-                    else -> ContextCompat.getColor(ctx, R.color.color_route_config)
-                }
-                routeOutbound.setTextColor(outboundColor)
-
-                itemView.setOnClickListener {
-                    enableSwitch.performClick()
-                }
-                enableSwitch.setOnCheckedChangeListener(null)
-                enableSwitch.isChecked = rule.enabled
-                enableSwitch.setOnCheckedChangeListener { _, isChecked ->
-                    runOnDefaultDispatcher {
-                        rule.enabled = isChecked
-                        ProfileDatabase.rulesDao.updateRule(rule)
-                        onMainDispatcher {
-                            needReload()
-                        }
-                    }
-                }
-                editButton.setOnClickListener {
-                    startActivity(
-                        Intent(it.context, RouteSettingsActivity::class.java).apply {
-                            putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, rule.id)
-                        },
-                    )
-                }
-            }
+        fun bind(row: RuleRow, animate: Boolean) {
+            this.row = row
+            binding.title.text = row.title
+            binding.summary.text = row.summary
+            binding.destination.paintDestination(row.destination, row.color)
+            binding.enable.isChecked = row.rule.enabled
+            binding.enable.contentDescription = row.title
+            show(animate)
         }
+
+        /** The rule's number, how it looks against the tester's answer, and what a screen reader says. */
+        private fun show(animate: Boolean) {
+            val position = bindingAdapterPosition.takeIf { it != RecyclerView.NO_POSITION } ?: return
+            val context = card.context
+            val result = tested?.takeIf { it.answer != null }
+            val decision = result?.answer?.decision
+            val matched = decision is RouteDecision.Rule && decision.index == position
+            val verdict = result?.verdicts?.getOrNull(position)
+            binding.order.text = (position + 1).toString()
+            binding.verdict.text = verdict
+            binding.verdict.isVisible = verdict != null
+            binding.verdict.setTextColor(context.getColorAttr(if (matched) R.attr.colorPrimary else android.R.attr.textColorSecondary))
+            val alpha = when {
+                result == null -> if (row.rule.enabled) 1f else OFF_ALPHA
+                matched || verdict != null -> 1f
+                else -> PASSED_ALPHA
+            }
+            val delay = ((position - ruleAdapter.firstVisible).coerceIn(0, MAX_STAGGER) * STAGGER).toLong()
+            for (view in listOf(binding.order, binding.title, binding.summary, binding.destination, binding.verdict)) {
+                view.animate().cancel()
+                // A pop cut short never runs its end action.
+                view.scaleX = 1f
+                view.scaleY = 1f
+                if (animate) view.animate().alpha(alpha).setStartDelay(delay).setDuration(FADE).start() else view.alpha = alpha
+            }
+            highlight.show(matched, animate, delay)
+            if (animate && matched) {
+                binding.destination.animate().scaleX(POP).scaleY(POP).setStartDelay(delay + FADE).setDuration(FADE).withEndAction {
+                    binding.destination.animate().scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(FADE).start()
+                }.start()
+            }
+            val spoken = when {
+                result == null -> null
+                matched -> context.getString(R.string.route_verdict_catches)
+                verdict != null -> verdict
+                decision is RouteDecision.Rule && position > decision.index -> context.getString(R.string.route_verdict_not_reached)
+                else -> context.getString(R.string.route_verdict_passes)
+            }
+            card.contentDescription = listOfNotNull(
+                context.getString(R.string.route_rule_description, position + 1, row.title, row.summary, row.destination),
+                context.getString(R.string.route_rule_off).takeIf { !row.rule.enabled },
+                spoken,
+            ).joinToString(". ")
+        }
+    }
+
+    inner class EndHolder(private val binding: LayoutRouteEndBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val highlight = Highlight(binding.fallback)
+
+        init {
+            binding.add.setOnClickListener { startActivity(Intent(it.context, RouteSettingsActivity::class.java)) }
+        }
+
+        fun bind(animate: Boolean) {
+            val context = binding.root.context
+            binding.empty.isVisible = ruleAdapter.rows.isEmpty()
+            binding.fallbackDestination.paintDestination(RuleWords.outbound(context, 0L), RuleWords.outboundColor(context, 0L))
+            val decision = tested?.answer?.decision
+            val matched = decision == RouteDecision.Proxy || decision == RouteDecision.GlobalMode
+            highlight.show(matched, animate, (ruleAdapter.rows.size - ruleAdapter.firstVisible).coerceIn(0, MAX_STAGGER) * STAGGER.toLong())
+            ViewCompat.setStateDescription(binding.fallback, context.getString(R.string.route_verdict_catches).takeIf { matched })
+        }
+    }
+
+    private companion object {
+        const val RULE = 0
+        const val END = 1
+        const val VERDICT = "verdict"
+        const val GUIDE = "https://matsuridayo.github.io/nb4a-route/"
+        const val TYPING = 250L
+        const val SHOWN_DOUBTS = 2
+
+        // The fade runs down the list the way the core reads it, one row after another.
+        const val FADE = 160L
+        const val STAGGER = 24
+        const val MAX_STAGGER = 10
+        const val LIGHT = 220L
+        const val POP = 1.12f
+        const val OFF_ALPHA = 0.5f
+        const val PASSED_ALPHA = 0.38f
     }
 }

@@ -13,13 +13,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
+        <!-- The tester stays in place while the rules scroll, so its answer stays in view. -->
+        <include
+            android:id="@+id/header"
+            layout="@layout/layout_route_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/route_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingLeft="4dp"
-            android:paddingTop="4dp"
             android:paddingRight="4dp"
             android:paddingBottom="168dp"
             android:scrollbarSize="0dp" />
