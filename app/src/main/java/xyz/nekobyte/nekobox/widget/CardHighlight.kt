@@ -26,11 +26,17 @@ class CardHighlight(private val card: MaterialCardView) {
     /** Lights the card up or down; without [animate], or the first time, at once. */
     fun show(on: Boolean, animate: Boolean, delay: Long = 0) {
         val target = if (on) 1f else 0f
+        // At once: a card shown for something else, mid-fade or not, takes its own look now.
+        if (!animate || lit < 0) {
+            if (animator == null && lit == target) return
+            animator?.cancel()
+            animator = null
+            aim = target
+            return paint(target)
+        }
         if (target == aim) return
         aim = target
         animator?.cancel()
-        animator = null
-        if (!animate || lit < 0) return paint(target)
         animator = ValueAnimator.ofFloat(lit, target).apply {
             startDelay = delay
             duration = DURATION
