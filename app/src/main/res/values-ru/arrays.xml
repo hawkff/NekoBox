@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string-array name="route_protocol_entry">
-        <item>TCP и UDP</item>
-        <item>TCP</item>
-        <item>UDP</item>
-    </string-array>
     <string-array name="snell_obfs_modes_entry">
         <item>Нет</item>
         <item>HTTP</item>

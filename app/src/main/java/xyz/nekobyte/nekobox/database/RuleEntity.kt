@@ -3,8 +3,6 @@ package xyz.nekobyte.nekobox.database
 import android.os.Parcelable
 import androidx.room.*
 import kotlinx.parcelize.Parcelize
-import xyz.nekobyte.nekobox.R
-import xyz.nekobyte.nekobox.ktx.app
 
 @Entity(tableName = "rules")
 @Parcelize
@@ -32,42 +30,6 @@ data class RuleEntity(
 ) : Parcelable {
 
     fun displayName(): String = name.takeIf { it.isNotBlank() } ?: "Rule $id"
-
-    fun mkSummary(): String {
-        var summary = ""
-        if (config.isNotBlank()) summary += "[config]\n"
-        if (domains.isNotBlank()) summary += "$domains\n"
-        if (ip.isNotBlank()) summary += "$ip\n"
-        if (source.isNotBlank()) summary += "src ip: $source\n"
-        if (sourcePort.isNotBlank()) summary += "src port: $sourcePort\n"
-        if (port.isNotBlank()) summary += "dst port: $port\n"
-        if (network.isNotBlank()) summary += "network: $network\n"
-        if (protocol.isNotBlank()) summary += "protocol: $protocol\n"
-        if (ruleset.isNotBlank()) summary += "$ruleset\n"
-        if (packages.isNotEmpty()) {
-            summary += app.getString(
-                R.string.apps_message,
-                packages.size,
-            ) + "\n"
-        }
-        val lines = summary.trim().split("\n")
-        return if (lines.size > 3) {
-            lines.subList(0, 3).joinToString("\n", postfix = "\n...")
-        } else {
-            summary.trim()
-        }
-    }
-
-    fun displayOutbound(): String = when (outbound) {
-        0L -> app.getString(R.string.route_proxy)
-
-        -1L -> app.getString(R.string.route_bypass)
-
-        -2L -> app.getString(R.string.route_block)
-
-        else -> ProfileManager.getProfile(outbound)?.displayName()
-            ?: app.getString(R.string.error_title)
-    }
 
     @androidx.room.Dao
     interface Dao {

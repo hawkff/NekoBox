@@ -352,17 +352,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var serverUserId by profileCacheStore.string(Key.SERVER_USER_ID)
     var serverPinnedCertChainSha256 by profileCacheStore.string(Key.SERVER_PINNED_CERT_CHAIN_SHA256)
 
-    var routeName by profileCacheStore.string(Key.ROUTE_NAME)
-    var routeDomain by profileCacheStore.string(Key.ROUTE_DOMAIN)
-    var routeIP by profileCacheStore.string(Key.ROUTE_IP)
-    var routePort by profileCacheStore.string(Key.ROUTE_PORT)
-    var routeSourcePort by profileCacheStore.string(Key.ROUTE_SOURCE_PORT)
-    var routeNetwork by profileCacheStore.string(Key.ROUTE_NETWORK)
-    var routeSource by profileCacheStore.string(Key.ROUTE_SOURCE)
-    var routeProtocol by profileCacheStore.string(Key.ROUTE_PROTOCOL)
-    var routeRuleset by profileCacheStore.string(Key.ROUTE_RULESET)
-    var routeOutbound by profileCacheStore.stringToInt(Key.ROUTE_OUTBOUND)
-    var routeOutboundRule by profileCacheStore.long(Key.ROUTE_OUTBOUND + "Long")
     var routePackages by profileCacheStore.string(Key.ROUTE_PACKAGES)
 
     var frontProxy by profileCacheStore.long(Key.GROUP_FRONT_PROXY + "Long")

@@ -72,7 +72,7 @@
                     android:textAppearance="?attr/textAppearanceTitleLarge" />
 
                 <TextView
-                    style="@style/Widget.NekoBox.CheckSection"
+                    style="@style/Widget.NekoBox.Section"
                     android:accessibilityHeading="true"
                     android:text="@string/connection_check_address"
                     tools:targetApi="p" />
@@ -84,7 +84,7 @@
                     android:orientation="vertical" />
 
                 <TextView
-                    style="@style/Widget.NekoBox.CheckSection"
+                    style="@style/Widget.NekoBox.Section"
                     android:accessibilityHeading="true"
                     android:text="@string/connection_check_dns"
                     tools:targetApi="p" />

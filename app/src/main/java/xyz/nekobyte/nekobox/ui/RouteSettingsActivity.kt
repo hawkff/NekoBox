@@ -1,227 +1,421 @@
 package xyz.nekobyte.nekobox.ui
 
-import android.app.Activity
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.os.Parcelable
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.widget.Toast
+import android.widget.EditText
 import androidx.activity.addCallback
-import androidx.activity.result.component1
-import androidx.activity.result.component2
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.LayoutRes
-import androidx.appcompat.app.AlertDialog
+import androidx.core.os.BundleCompat
+import androidx.core.os.ConfigurationCompat
 import androidx.core.view.ViewCompat
-import androidx.preference.EditTextPreference
-import androidx.preference.Preference
-import androidx.preference.PreferenceDataStore
-import androidx.preference.PreferenceFragmentCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.children
+import androidx.core.view.isNotEmpty
+import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
+import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.parcelize.Parcelize
-import xyz.nekobyte.nekobox.Key
-import xyz.nekobyte.nekobox.NekoBox
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import libcore.Libcore
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.RuleEntity
-import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
+import xyz.nekobyte.nekobox.databinding.ItemRouteListChipBinding
+import xyz.nekobyte.nekobox.databinding.LayoutRouteEditorBinding
+import xyz.nekobyte.nekobox.fmt.RouteTester
+import xyz.nekobyte.nekobox.fmt.RouteVerdict
 import xyz.nekobyte.nekobox.fmt.validateDnsRouting
-import xyz.nekobyte.nekobox.ktx.Logs
-import xyz.nekobyte.nekobox.ktx.app
-import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.readableMessage
-import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
+import xyz.nekobyte.nekobox.ui.profile.ConfigEditActivity
 import xyz.nekobyte.nekobox.utils.PackageCache
-import xyz.nekobyte.nekobox.widget.AppListPreference
-import xyz.nekobyte.nekobox.widget.ListListener
-import xyz.nekobyte.nekobox.widget.OutboundPreference
+import xyz.nekobyte.nekobox.utils.listByLineOrComma
+import java.util.Locale
 
-@Suppress("UNCHECKED_CAST")
-class RouteSettingsActivity(
-    @LayoutRes resId: Int = R.layout.layout_settings_activity,
-) : ThemedActivity(resId),
-    OnPreferenceDataStoreChangeListener {
+/**
+ * Makes or changes a route rule. The form edits a draft, which survives the screen being recreated;
+ * nothing is stored until Save, and leaving with changes asks first.
+ */
+class RouteSettingsActivity : ThemedActivity() {
 
-    fun init(packageName: String?, domain: String? = null, ip: String? = null) {
-        RuleEntity().apply {
-            if (!packageName.isNullOrBlank()) {
-                packages = setOf(packageName)
-                name = app.getString(R.string.route_for, PackageCache.loadLabel(packageName))
+    private lateinit var binding: LayoutRouteEditorBinding
+    private lateinit var original: RuleEntity
+    private lateinit var draft: RuleEntity
+
+    // Set while the form shows the draft, so that the fields' listeners don't write it back.
+    private var filling = false
+    private var describing: Job? = null
+    private var trying: Job? = null
+
+    private val pickProfile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val id = result.data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0L) ?: 0L
+        if (result.resultCode == RESULT_OK && id > 0L) draft.outbound = id
+        showOutbound()
+        changed()
+    }
+
+    // The app list reads and writes its choice in the settings store.
+    private val pickApps = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        draft.packages = DataStore.routePackages.split('\n').filter { it.isNotBlank() }.toSet()
+        showApps()
+        changed()
+    }
+
+    private val editJson = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        draft.config = DataStore.serverConfig
+        showJson()
+        changed()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = LayoutRouteEditorBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(findViewById(R.id.toolbar))
+        val editingId = intent.getLongExtra(EXTRA_ROUTE_ID, 0L)
+        supportActionBar?.apply {
+            setTitle(if (editingId == 0L) R.string.route_editor_new else R.string.route_editor_edit)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+        }
+        val bottom = binding.scroll.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(binding.scroll) { view, insets ->
+            view.updatePadding(bottom = bottom + insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()).bottom)
+            insets
+        }
+        onBackPressedDispatcher.addCallback(this) {
+            if (::draft.isInitialized && draft != original) askToSave() else finish()
+        }
+
+        val savedDraft = savedInstanceState?.let { BundleCompat.getParcelable(it, DRAFT, RuleEntity::class.java) }
+        val savedOriginal = savedInstanceState?.let { BundleCompat.getParcelable(it, ORIGINAL, RuleEntity::class.java) }
+        if (savedDraft != null && savedOriginal != null) return start(stored = savedOriginal, edited = savedDraft)
+        lifecycleScope.launch {
+            val rule = withContext(Dispatchers.IO) { if (editingId == 0L) newRule() else ProfileDatabase.rulesDao.getById(editingId) }
+            if (rule == null) finish() else start(stored = rule, edited = rule.copy())
+        }
+    }
+
+    // A rule made from the connections list starts with the app, site or address it came from.
+    private fun newRule() = RuleEntity(enabled = true).apply {
+        intent.getStringExtra(EXTRA_PACKAGE_NAME)?.takeIf { it.isNotBlank() }?.let {
+            PackageCache.awaitLoadSync()
+            packages = setOf(it)
+            name = getString(R.string.route_for, PackageCache.loadLabel(it))
+        }
+        intent.getStringExtra(EXTRA_DOMAIN)?.takeIf { it.isNotBlank() }?.let {
+            domains = it
+            name = getString(R.string.route_for, it)
+        }
+        intent.getStringExtra(EXTRA_IP)?.takeIf { it.isNotBlank() }?.let {
+            ip = it
+            name = getString(R.string.route_for, it)
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (!::draft.isInitialized) return
+        outState.putParcelable(DRAFT, draft)
+        outState.putParcelable(ORIGINAL, original)
+    }
+
+    private fun start(stored: RuleEntity, edited: RuleEntity) {
+        original = stored
+        draft = edited
+        offerLists(binding.siteLists, binding.sites, SITE_LISTS)
+        offerLists(binding.addressLists, binding.addresses, ADDRESS_LISTS)
+        filling = true
+        binding.name.setText(draft.name)
+        binding.sites.setText(draft.domains)
+        binding.addresses.setText(draft.ip)
+        binding.downloaded.setText(draft.ruleset)
+        binding.ports.setText(draft.port)
+        binding.protocols.setText(draft.protocol)
+        binding.source.setText(draft.source)
+        binding.sourcePorts.setText(draft.sourcePort)
+        binding.dns.isChecked = draft.dnsThroughOutbound
+        binding.dnsServer.setText(draft.dnsServer)
+        binding.network.check(
+            when (draft.network) {
+                "tcp" -> R.id.network_tcp
+                "udp" -> R.id.network_udp
+                else -> R.id.network_any
+            },
+        )
+        filling = false
+        showOutbound()
+        showApps()
+        showJson()
+
+        fun EditText.writes(write: RuleEntity.(String) -> Unit) = doAfterTextChanged {
+            if (filling) return@doAfterTextChanged
+            draft.write(it?.toString().orEmpty())
+            changed()
+        }
+        binding.name.writes { name = it.trim() }
+        binding.sites.writes { domains = it }
+        binding.addresses.writes { ip = it }
+        binding.downloaded.writes { ruleset = it }
+        binding.ports.writes { port = it }
+        binding.protocols.writes { protocol = it }
+        binding.source.writes { source = it }
+        binding.sourcePorts.writes { sourcePort = it }
+        binding.dnsServer.writes { dnsServer = it.trim() }
+        binding.dns.setOnCheckedChangeListener { _, on ->
+            if (filling) return@setOnCheckedChangeListener
+            draft.dnsThroughOutbound = on
+            binding.dnsServerLayout.isEnabled = on
+            changed()
+        }
+        binding.dnsServerLayout.isEnabled = draft.dnsThroughOutbound
+        binding.network.setOnCheckedStateChangeListener { _, checked ->
+            if (filling) return@setOnCheckedStateChangeListener
+            draft.network = when (checked.firstOrNull()) {
+                R.id.network_tcp -> "tcp"
+                R.id.network_udp -> "udp"
+                else -> ""
             }
-            if (!domain.isNullOrBlank()) {
-                domains = domain
-                name = app.getString(R.string.route_for, domain)
+            changed()
+        }
+        binding.outbound.setOnCheckedStateChangeListener { _, checked ->
+            if (filling) return@setOnCheckedStateChangeListener
+            draft.outbound = when (checked.firstOrNull()) {
+                R.id.to_bypass -> -1L
+                R.id.to_block -> -2L
+                R.id.to_profile -> return@setOnCheckedStateChangeListener
+                else -> 0L
             }
-            if (!ip.isNullOrBlank()) {
-                this.ip = ip
-                name = app.getString(R.string.route_for, ip)
-            }
-        }.init()
-    }
-
-    fun RuleEntity.init() {
-        DataStore.routeName = name
-        DataStore.serverConfig = config
-        DataStore.routeDomain = domains
-        DataStore.routeIP = ip
-        DataStore.routePort = port
-        DataStore.routeSourcePort = sourcePort
-        DataStore.routeNetwork = network
-        DataStore.routeSource = source
-        DataStore.routeProtocol = protocol
-        DataStore.routeRuleset = ruleset
-        DataStore.routeOutboundRule = outbound
-        DataStore.routeOutbound = when (outbound) {
-            0L -> 0
-            -1L -> 1
-            -2L -> 2
-            else -> OutboundPreference.VALUE_SELECT_PROFILE.toInt()
+            binding.dnsSection.isVisible = draft.outbound >= 0L || draft.dnsThroughOutbound
+            changed()
         }
-        DataStore.routePackages = packages.joinToString("\n")
-        DataStore.profileCacheStore.putBoolean(Key.ROUTE_DNS_THROUGH_OUTBOUND, dnsThroughOutbound)
-        DataStore.profileCacheStore.putString(Key.ROUTE_DNS_SERVER, dnsServer)
-    }
-
-    fun RuleEntity.serialize() {
-        name = DataStore.routeName
-        config = DataStore.serverConfig
-        domains = DataStore.routeDomain
-        ip = DataStore.routeIP
-        port = DataStore.routePort
-        sourcePort = DataStore.routeSourcePort
-        network = DataStore.routeNetwork
-        source = DataStore.routeSource
-        protocol = DataStore.routeProtocol
-        ruleset = DataStore.routeRuleset
-        outbound = when (DataStore.routeOutbound) {
-            0 -> 0L
-            1 -> -1L
-            2 -> -2L
-            else -> DataStore.routeOutboundRule
-        }
-        packages = DataStore.routePackages.split("\n").filter { it.isNotBlank() }.toSet()
-        dnsThroughOutbound = DataStore.profileCacheStore.getBoolean(Key.ROUTE_DNS_THROUGH_OUTBOUND, false)
-        dnsServer = DataStore.profileCacheStore.getString(Key.ROUTE_DNS_SERVER).orEmpty().trim()
-
-        if (DataStore.editingId == 0L) {
-            enabled = true
-        }
-    }
-
-    private lateinit var editConfigPreference: EditConfigPreference
-
-    fun needSave(): Boolean = DataStore.dirty
-
-    fun PreferenceFragmentCompat.createPreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        addPreferencesFromResource(R.xml.route_preferences)
-
-        editConfigPreference = findPreference(Key.SERVER_CONFIG)!!
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        if (::editConfigPreference.isInitialized) {
-            editConfigPreference.notifyChanged()
-        }
-    }
-
-    val selectProfileForAdd = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { (resultCode, data) ->
-        if (resultCode == Activity.RESULT_OK) {
-            runOnDefaultDispatcher {
-                val profile = ProfileManager.getProfile(
-                    data!!.getLongExtra(
-                        ProfileSelectActivity.EXTRA_PROFILE_ID,
-                        0,
-                    ),
-                ) ?: return@runOnDefaultDispatcher
-                DataStore.routeOutboundRule = profile.id
-                onMainDispatcher {
-                    outbound.value = OutboundPreference.VALUE_SELECT_PROFILE
-                }
+        // A tap picks a profile, also when one is already picked.
+        binding.toProfile.setOnClickListener {
+            lifecycleScope.launch {
+                val selected = withContext(Dispatchers.IO) { ProfileManager.getProfile(draft.outbound) }
+                pickProfile.launch(Intent(this@RouteSettingsActivity, ProfileSelectActivity::class.java).apply { selected?.let { putExtra(ProfileSelectActivity.EXTRA_SELECTED, it) } })
             }
         }
+        binding.apps.setOnClickListener {
+            DataStore.routePackages = draft.packages.joinToString("\n")
+            pickApps.launch(Intent(this, AppListActivity::class.java))
+        }
+        binding.customJson.setOnClickListener {
+            DataStore.serverConfig = draft.config
+            editJson.launch(Intent(this, ConfigEditActivity::class.java))
+        }
+        binding.tryProbe.doAfterTextChanged { tryIt() }
+        changed()
     }
 
-    val selectAppList = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { (_, _) ->
-        apps.postUpdate()
+    /** Chips for common lists under [field]: checked while the field holds the list, and tapping one adds or removes it. */
+    private fun offerLists(group: ChipGroup, field: EditText, lists: List<Pair<String, Int?>>) {
+        if (group.isNotEmpty()) return
+        val locale = ConfigurationCompat.getLocales(resources.configuration)[0] ?: Locale.getDefault()
+        for ((entry, label) in lists) {
+            val chip = ItemRouteListChipBinding.inflate(layoutInflater, group, false).root
+            chip.text = label?.let(::getString)
+                ?: Locale("", entry.substringAfter(':').substringAfter("category-").uppercase()).getDisplayCountry(locale)
+            chip.tag = entry
+            chip.setOnCheckedChangeListener { _, on ->
+                if (filling) return@setOnCheckedChangeListener
+                val entries = field.text?.toString().orEmpty().listByLineOrComma().filter { it != entry }
+                field.setText((if (on) entries + entry else entries).joinToString("\n"))
+                field.setSelection(field.length())
+            }
+            group.addView(chip)
+        }
     }
 
-    lateinit var outbound: OutboundPreference
-    lateinit var apps: AppListPreference
+    private fun showLists() {
+        filling = true
+        for ((group, text) in listOf(binding.siteLists to draft.domains, binding.addressLists to draft.ip)) {
+            val entries = text.listByLineOrComma()
+            for (chip in group.children.filterIsInstance<Chip>()) chip.isChecked = chip.tag in entries
+        }
+        filling = false
+    }
 
-    fun PreferenceFragmentCompat.viewCreated(view: View, savedInstanceState: Bundle?) {
-        outbound = findPreference(Key.ROUTE_OUTBOUND)!!
-        apps = findPreference(Key.ROUTE_PACKAGES)!!
+    private fun showOutbound() {
+        filling = true
+        binding.outbound.check(
+            when (draft.outbound) {
+                0L -> R.id.to_proxy
+                -1L -> R.id.to_bypass
+                -2L -> R.id.to_block
+                else -> R.id.to_profile
+            },
+        )
+        filling = false
+        val outbound = draft.outbound
+        binding.dnsSection.isVisible = outbound >= 0L || draft.dnsThroughOutbound
+        if (outbound <= 0L) return binding.toProfile.setText(R.string.route_editor_profile)
+        lifecycleScope.launch {
+            binding.toProfile.text = withContext(Dispatchers.IO) { RuleWords.outbound(this@RouteSettingsActivity, outbound) }
+        }
+    }
 
-        outbound.setOnPreferenceChangeListener { _, newValue ->
-            if (newValue.toString() == OutboundPreference.VALUE_SELECT_PROFILE) {
-                selectProfileForAdd.launch(
-                    Intent(
-                        this@RouteSettingsActivity,
-                        ProfileSelectActivity::class.java,
-                    ).apply {
-                        ProfileManager.getProfile(DataStore.routeOutboundRule)?.let {
-                            putExtra(ProfileSelectActivity.EXTRA_SELECTED, it)
+    private fun showApps() {
+        val packages = draft.packages
+        if (packages.isEmpty()) return binding.appsSummary.setText(R.string.route_editor_any_app)
+        lifecycleScope.launch {
+            binding.appsSummary.text = withContext(Dispatchers.Default) { RuleWords.apps(this@RouteSettingsActivity, packages) }
+        }
+    }
+
+    private fun showJson() {
+        val lines = draft.config.lines().count { it.isNotBlank() }
+        binding.customJsonSummary.text = if (lines == 0) getString(androidx.preference.R.string.not_set) else getString(R.string.lines, lines)
+    }
+
+    /** After every edit: the chips, the sentence on top and the try field follow the draft. */
+    private fun changed() {
+        showLists()
+        describing?.cancel()
+        val rule = draft.copy()
+        describing = lifecycleScope.launch {
+            delay(WORDS)
+            val (summary, destination, color) = withContext(Dispatchers.Default) {
+                Triple(RuleWords.summary(this@RouteSettingsActivity, rule), RuleWords.outbound(this@RouteSettingsActivity, rule.outbound), RuleWords.outboundColor(this@RouteSettingsActivity, rule.outbound))
+            }
+            val sentence = SpannableString(getString(R.string.route_editor_sentence, summary, destination))
+            val at = sentence.lastIndexOf(destination)
+            if (at >= 0) sentence.setSpan(ForegroundColorSpan(color), at, at + destination.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            binding.sentence.text = sentence
+        }
+        tryIt()
+    }
+
+    private fun tryIt() {
+        trying?.cancel()
+        val text = binding.tryProbe.text?.toString().orEmpty().trim()
+        if (text.isEmpty()) {
+            binding.tryResult.isVisible = false
+            return
+        }
+        val rule = draft.copy(enabled = true)
+        trying = lifecycleScope.launch {
+            delay(TYPING)
+            binding.tryResult.text = withContext(Dispatchers.Default) { tryWords(rule, text) }
+            binding.tryResult.isVisible = true
+        }
+    }
+
+    private fun tryWords(rule: RuleEntity, text: String): String {
+        val (probe, _) = RouteChecks.probe(text) ?: return getString(R.string.route_test_nothing, text)
+        return when (val verdict = RouteChecks.tester().judge(rule, probe)) {
+            RouteVerdict.Catches -> getString(R.string.route_editor_try_catches)
+            RouteVerdict.Passes -> getString(R.string.route_editor_try_passes)
+            is RouteVerdict.CatchesIf -> getString(R.string.route_editor_try_maybe, RuleWords.conditions(this, verdict.conditions))
+            is RouteVerdict.Unknown -> getString(R.string.route_editor_try_unknown, RuleWords.unknown(this, verdict.reason))
+        }
+    }
+
+    /** What would keep the core from starting with [rule], in words; null when nothing would. */
+    private fun problem(rule: RuleEntity): String? {
+        for (entry in rule.port.listByLineOrComma() + rule.sourcePort.listByLineOrComma()) {
+            if (!isPorts(entry)) return getString(R.string.route_editor_bad_port, entry)
+        }
+        val addresses = rule.ip.listByLineOrComma()
+        addresses.firstOrNull { it.startsWith("geoip:") && it != "geoip:private" && it.removePrefix("geoip:").uppercase() !in Locale.getISOCountries() }?.let {
+            return getString(R.string.route_editor_no_list, it)
+        }
+        rule.ruleset.listByLineOrComma().firstOrNull { !isDownloadedList(it) }?.let { return getString(R.string.route_editor_bad_list, it) }
+        // The bundled lists are unpacked when the service first starts; until then the core checks the rest.
+        val loaded = RouteChecks.settings().listsLoaded
+        val sites = rule.domains.listByLineOrComma().filter { loaded || !it.startsWith("geosite:") }
+        val checked = addresses.filter { loaded || !it.startsWith("geoip:") || it == "geoip:private" }
+        if (sites.isEmpty() && checked.isEmpty()) return null
+        return try {
+            Libcore.matchRouteDestination(RouteTester.destinationJson(sites, checked), "example.invalid")
+            null
+        } catch (e: Exception) {
+            e.readableMessage
+        }
+    }
+
+    // Set from the first Save until the screen closes or says what to fix, so that a second tap can't store the rule twice.
+    private var saving = false
+
+    private fun save() {
+        if (saving) return
+        saving = true
+        val rule = draft.copy()
+        lifecycleScope.launch {
+            if (rule.domains.isBlank() && rule.ip.isBlank() && rule.port.isBlank() && rule.sourcePort.isBlank() && rule.network.isBlank() &&
+                rule.source.isBlank() && rule.protocol.isBlank() && rule.ruleset.isBlank() && rule.packages.isEmpty() && rule.config.isBlank()
+            ) {
+                return@launch tell(R.string.empty_route, getString(R.string.empty_route_notice))
+            }
+            runCatching { rule.validateDnsRouting() }.exceptionOrNull()?.let { return@launch tell(R.string.route_dns_error, it.readableMessage) }
+            withContext(Dispatchers.Default) { problem(rule) }?.let { return@launch tell(R.string.error_title, getString(R.string.route_editor_broken, it)) }
+            withContext(Dispatchers.IO) { if (rule.id == 0L) ProfileManager.createRule(rule) else ProfileManager.updateRule(rule) }
+            if (intent.hasExtra(EXTRA_PACKAGE_NAME)) setResult(RESULT_OK, Intent())
+            finish()
+        }
+    }
+
+    private fun tell(title: Int, message: String) {
+        saving = false
+        MaterialAlertDialogBuilder(this).setTitle(title).setMessage(message).setPositiveButton(android.R.string.ok, null).show()
+    }
+
+    private fun askToSave() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.unsaved_changes_prompt)
+            .setPositiveButton(R.string.yes) { _, _ -> save() }
+            .setNegativeButton(R.string.no) { _, _ -> finish() }
+            .setNeutralButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.profile_config_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (!::draft.isInitialized) return super.onOptionsItemSelected(item)
+        when (item.itemId) {
+            R.id.action_apply -> save()
+
+            R.id.action_delete -> {
+                val id = draft.id
+                if (id == 0L) return true.also { finish() }
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.delete_route_prompt)
+                    .setPositiveButton(R.string.yes) { _, _ ->
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.IO) { ProfileManager.deleteRule(id) }
+                            finish()
                         }
-                    },
-                )
-                false
-            } else {
-                true
+                    }
+                    .setNegativeButton(R.string.no, null)
+                    .show()
             }
-        }
 
-        apps.setOnPreferenceClickListener {
-            selectAppList.launch(
-                Intent(
-                    this@RouteSettingsActivity,
-                    AppListActivity::class.java,
-                ),
-            )
-            true
+            else -> return super.onOptionsItemSelected(item)
         }
+        return true
     }
 
-    fun displayPreferenceDialog(preference: Preference): Boolean = false
-
-    class UnsavedChangesDialogFragment : AlertDialogFragment<Empty, Empty>() {
-        override fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener) {
-            setTitle(R.string.unsaved_changes_prompt)
-            setPositiveButton(R.string.yes) { _, _ ->
-                runOnDefaultDispatcher {
-                    (requireActivity() as RouteSettingsActivity).saveAndExit()
-                }
-            }
-            setNegativeButton(R.string.no) { _, _ ->
-                requireActivity().finish()
-            }
-            setNeutralButton(android.R.string.cancel, null)
-        }
-    }
-
-    @Parcelize
-    data class ProfileIdArg(val ruleId: Long) : Parcelable
-    class DeleteConfirmationDialogFragment : AlertDialogFragment<ProfileIdArg, Empty>() {
-        override fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener) {
-            setTitle(R.string.delete_route_prompt)
-            setPositiveButton(R.string.yes) { _, _ ->
-                runOnDefaultDispatcher {
-                    ProfileManager.deleteRule(arg.ruleId)
-                }
-                requireActivity().finish()
-            }
-            setNegativeButton(R.string.no, null)
-        }
+    // The up button goes through Back, which asks before dropping changes.
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressedDispatcher.onBackPressed()
+        return true
     }
 
     companion object {
@@ -229,199 +423,31 @@ class RouteSettingsActivity(
         const val EXTRA_PACKAGE_NAME = "pkg"
         const val EXTRA_DOMAIN = "domain"
         const val EXTRA_IP = "ip"
-    }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        onBackPressedDispatcher.addCallback(this) {
-            if (needSave()) {
-                UnsavedChangesDialogFragment().apply { key() }.show(supportFragmentManager, null)
-            } else {
-                finish()
-            }
-        }
-        // ViewBinding intentionally not used here: this activity sets its content via the
-        // ThemedActivity(@LayoutRes) constructor (contentLayoutId), not by inflating a binding,
-        // so the toolbar is resolved with findViewById.
-        setSupportActionBar(findViewById(R.id.toolbar))
-        supportActionBar?.apply {
-            setTitle(R.string.cag_route)
-            setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+        private const val DRAFT = "draft"
+        private const val ORIGINAL = "original"
+        private const val WORDS = 120L
+        private const val TYPING = 250L
+
+        /** Lists to offer: an entry and its label, or null for the name of its country. */
+        private val SITE_LISTS = listOf("geosite:category-ads-all" to R.string.route_editor_ads, "geosite:cn" to null, "geosite:category-ir" to null, "geosite:category-ru" to null)
+        private val ADDRESS_LISTS = listOf("geoip:private" to R.string.route_words_local_network, "geoip:cn" to null, "geoip:ir" to null, "geoip:ru" to null)
+
+        /** Whether [entry] is a downloaded list as ConfigBuilder reads one: rssite: or rsip: and a web link. */
+        fun isDownloadedList(entry: String): Boolean {
+            val link = entry.removePrefix("rssite:").removePrefix("rsip:")
+            return link != entry && (link.startsWith("https://") || link.startsWith("http://"))
         }
 
-        if (savedInstanceState == null) {
-            val editingId = intent.getLongExtra(EXTRA_ROUTE_ID, 0L)
-            DataStore.editingId = editingId
-            runOnDefaultDispatcher {
-                if (editingId == 0L) {
-                    init(
-                        intent.getStringExtra(EXTRA_PACKAGE_NAME),
-                        intent.getStringExtra(EXTRA_DOMAIN),
-                        intent.getStringExtra(EXTRA_IP),
-                    )
-                } else {
-                    val ruleEntity = ProfileDatabase.rulesDao.getById(editingId)
-                    if (ruleEntity == null) {
-                        onMainDispatcher {
-                            finish()
-                        }
-                        return@runOnDefaultDispatcher
-                    }
-                    ruleEntity.init()
-                }
-
-                onMainDispatcher {
-                    supportFragmentManager.beginTransaction()
-                        .replace(R.id.settings, MyPreferenceFragmentCompat())
-                        .commit()
-
-                    DataStore.dirty = false
-                    DataStore.profileCacheStore.registerChangeListener(this@RouteSettingsActivity)
-                }
-            }
-        }
-    }
-
-    suspend fun saveAndExit() {
-        if (!needSave()) {
-            onMainDispatcher {
-                MaterialAlertDialogBuilder(this@RouteSettingsActivity).setTitle(R.string.empty_route)
-                    .setMessage(R.string.empty_route_notice)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show()
-            }
-            return
-        }
-
-        try {
-            RuleEntity().apply { serialize() }.validateDnsRouting()
-        } catch (e: IllegalArgumentException) {
-            onMainDispatcher {
-                MaterialAlertDialogBuilder(this@RouteSettingsActivity)
-                    .setTitle(R.string.route_dns_error)
-                    .setMessage(e.readableMessage)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show()
-            }
-            return
-        }
-
-        val editingId = DataStore.editingId
-        if (editingId == 0L) {
-            if (intent.hasExtra(EXTRA_PACKAGE_NAME)) {
-                setResult(RESULT_OK, Intent())
-            }
-
-            ProfileManager.createRule(RuleEntity().apply { serialize() })
-        } else {
-            val entity = ProfileDatabase.rulesDao.getById(DataStore.editingId)
-            if (entity == null) {
-                finish()
-                return
-            }
-            ProfileManager.updateRule(entity.apply { serialize() })
-        }
-        finish()
-    }
-
-    val child by lazy { supportFragmentManager.findFragmentById(R.id.settings) as MyPreferenceFragmentCompat }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.profile_config_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem) = child.onOptionsItemSelected(item)
-
-    override fun onSupportNavigateUp(): Boolean {
-        // Route the action-bar up button through the back dispatcher so it honors the
-        // unsaved-changes guard instead of finishing directly (avoids data loss).
-        onBackPressedDispatcher.onBackPressed()
-        return true
-    }
-
-    override fun onDestroy() {
-        DataStore.profileCacheStore.unregisterChangeListener(this)
-        super.onDestroy()
-    }
-
-    override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
-        if (key != Key.PROFILE_DIRTY) {
-            DataStore.dirty = true
-        }
-    }
-
-    class MyPreferenceFragmentCompat : PreferenceFragmentCompat() {
-
-        var activity: RouteSettingsActivity? = null
-
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            preferenceManager.preferenceDataStore = DataStore.profileCacheStore
-            try {
-                activity = (requireActivity() as RouteSettingsActivity).apply {
-                    createPreferences(savedInstanceState, rootKey)
-                }
-            } catch (e: Exception) {
-                Toast.makeText(
-                    NekoBox.application,
-                    "Error on createPreferences, please try again.",
-                    Toast.LENGTH_SHORT,
-                ).show()
-                Logs.e(e)
-            }
-        }
-
-        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-            super.onViewCreated(view, savedInstanceState)
-
-            ViewCompat.setOnApplyWindowInsetsListener(listView, ListListener)
-
-            activity?.apply {
-                viewCreated(view, savedInstanceState)
-            }
-        }
-
-        override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-            R.id.action_delete -> {
-                if (DataStore.editingId == 0L) {
-                    requireActivity().finish()
-                } else {
-                    DeleteConfirmationDialogFragment().apply {
-                        arg(ProfileIdArg(DataStore.editingId))
-                        key()
-                    }.show(parentFragmentManager, null)
-                }
-                true
-            }
-
-            R.id.action_apply -> {
-                runOnDefaultDispatcher {
-                    activity?.saveAndExit()
-                }
-                true
-            }
-
-            else -> false
-        }
-
-        override fun onDisplayPreferenceDialog(preference: Preference) {
-            activity?.apply {
-                if (displayPreferenceDialog(preference)) return
-            }
-            super.onDisplayPreferenceDialog(preference)
-        }
-    }
-
-    object PasswordSummaryProvider : Preference.SummaryProvider<EditTextPreference> {
-
-        override fun provideSummary(preference: EditTextPreference): CharSequence {
-            val text = preference.text
-            return if (text.isNullOrBlank()) {
-                preference.context.getString(androidx.preference.R.string.not_set)
-            } else {
-                "\u2022".repeat(text.length)
-            }
+        /** Whether [entry] is a port or a range of ports as the core reads them: 443, 1000:2000, :1024 or 8000:. */
+        fun isPorts(entry: String): Boolean {
+            fun port(text: String) = text.toIntOrNull()?.takeIf { it in 1..65535 }
+            if (':' !in entry) return port(entry) != null
+            val (low, high) = entry.split(':', limit = 2)
+            if (low.isEmpty() && high.isEmpty()) return false
+            val from = if (low.isEmpty()) 1 else port(low) ?: return false
+            val to = if (high.isEmpty()) 65535 else port(high) ?: return false
+            return from <= to
         }
     }
 }

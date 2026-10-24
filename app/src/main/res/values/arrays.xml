@@ -300,17 +300,7 @@
         -->
     </string-array>
 
-    <string-array name="route_protocol_entry">
-        <item>TCP and UDP</item>
-        <item>TCP</item>
-        <item>UDP</item>
-    </string-array>
 
-    <string-array name="route_protocol_value">
-        <item />
-        <item>tcp</item>
-        <item>udp</item>
-    </string-array>
 
     <string-array name="outbound_entry">
         <item>@string/route_proxy</item>
