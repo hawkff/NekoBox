@@ -1,5 +1,7 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.Manifest
+import android.os.Build
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
@@ -32,6 +34,10 @@ class GroupPagingDeviceTest {
 
     @Before
     fun setUp() {
+        // On a fresh device the launch asks for this, and the prompt would take the swipes.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            instrumentation.uiAutomation.grantRuntimePermission(instrumentation.targetContext.packageName, Manifest.permission.POST_NOTIFICATIONS)
+        }
         savedGroup = DataStore.selectedGroup
         // Two groups after any the device already has, each with a profile.
         groups = List(2) { index ->
