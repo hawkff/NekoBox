@@ -604,7 +604,7 @@ class LocationSpoofingDeviceTest {
         clickButton(context.getString(android.R.string.cancel))
         assertFalse(DataStore.gpsSpoofing)
 
-        // The prompt names the providers, and cancelling removes nothing.
+        // The prompt names the providers, and canceling removes nothing.
         tap()
         awaitNode(providers.joinToString(", "))
         clickButton(context.getString(android.R.string.cancel))
@@ -634,7 +634,7 @@ class LocationSpoofingDeviceTest {
         onMain { shown = remove.isVisible }
         assertFalse("removal still offered", shown)
 
-        // Once removed, turning on goes to the usual warning, and stays off when cancelled.
+        // Once removed, turning on goes to the usual warning, and stays off when canceled.
         turnOn()
         awaitNode(context.getString(R.string.gps_spoofing_warning, DataStore.gpsLookupUrl).substringBefore('\n'))
         clickButton(context.getString(android.R.string.cancel))

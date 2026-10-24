@@ -776,13 +776,39 @@
         Using it in an insecure way defeats its purpose. \n\nIf you must use this, try N=2 first to
         see if it solves your issues. Strongly recommend against using more than 4 connections here.</string>
 
-    <string name="stun_test">NAT behaviour discovery</string>
-    <string name="stun_test_summary">Determine the client\'s NAT mapping behaviour and the NAT
-        filtering behaviour defined in RFC 3478 using STUN.</string>
-    <string name="start">Start</string>
-    <string name="stun_attest_loading">This may take a few minutes…</string>
-    <string name="nat_stun_server_hint">Stun server</string>
-    <string name="nat_result_hint">NAT check result</string>
+    <string name="stun_test">NAT behavior</string>
+    <string name="stun_test_summary">How the NAT on this connection maps and filters UDP, tested with a STUN server (RFC 5780)</string>
+    <string name="nat_note">The test sends UDP to the STUN server, which sees your public address. It takes up to a minute.</string>
+    <string name="nat_path_proxy">Proxy mode: this tests your direct connection</string>
+    <string name="nat_stun_server_hint">STUN server</string>
+    <string name="nat_stun_server_helper">The server needs RFC 5780 support</string>
+    <string name="nat_server_missing">Enter a STUN server</string>
+    <string name="nat_type_none">No NAT</string>
+    <string name="nat_type_full_cone">Full cone NAT</string>
+    <string name="nat_type_restricted_cone">Restricted cone NAT</string>
+    <string name="nat_type_port_restricted_cone">Port-restricted cone NAT</string>
+    <string name="nat_type_cone">Cone NAT</string>
+    <string name="nat_type_symmetric">Symmetric NAT</string>
+    <string name="nat_detail_none">The server saw this device\'s own address, so no NAT is in the way.</string>
+    <string name="nat_detail_cone">Every destination sees the same public port, so peer-to-peer connections and games usually get through.</string>
+    <string name="nat_detail_symmetric">Each destination sees another public port, so peer-to-peer connections often fail without a relay.</string>
+    <string name="nat_unreachable">No answer from the STUN server</string>
+    <string name="nat_unreachable_detail">UDP may be blocked on this connection, or the server is down.</string>
+    <string name="nat_unsupported">This server can\'t test NAT behavior</string>
+    <string name="nat_unsupported_detail">It has no second address to answer from. Pick another server from the list.</string>
+    <string name="nat_failed">The test failed</string>
+    <string name="nat_mapping">Mapping</string>
+    <string name="nat_filtering">Filtering</string>
+    <string name="nat_behavior_endpoint">Endpoint-independent</string>
+    <string name="nat_behavior_address">Address-dependent</string>
+    <string name="nat_behavior_address_port">Address- and port-dependent</string>
+    <string name="nat_behavior_unknown">Not determined</string>
+    <string name="nat_mapping_endpoint">One public port for every destination</string>
+    <string name="nat_mapping_address">A new public port for each destination address</string>
+    <string name="nat_mapping_address_port">A new public port for each destination address and port</string>
+    <string name="nat_filtering_endpoint">Any host can send to the public port</string>
+    <string name="nat_filtering_address">Only hosts this device sent to can reply</string>
+    <string name="nat_filtering_address_port">Only the address and port this device sent to can reply</string>
     <string name="tools_network">Network</string>
     <string name="mtu" translatable="false">MTU</string>
 
@@ -936,7 +962,7 @@
     <string name="wake_reset_connections">Reset connections when the device wakes</string>
     <string name="backup_in_progress">Backup is already in progress</string>
     <string name="restore_in_progress">Restore is already in progress</string>
-    <string name="restore_cancelled">Restore operation cancelled</string>
+    <string name="restore_cancelled">Restore operation canceled</string>
     <string name="ruleset_update_interval">Rule set update interval</string>
     <string name="ruleset_update_interval_summary">How often remote rule sets update, for example 1h or 30m. 0 turns updates off.</string>
     <string name="ruleset_prefix_error">Ruleset format error: must start with rsip: or rssite:</string>
@@ -1005,6 +1031,7 @@
     <string name="connection_check_address">Public address</string>
     <string name="connection_check_dns">DNS servers</string>
     <string name="connection_check_none">None seen</string>
+    <string name="connection_check_show_more">Show %1$d more</string>
     <string name="connection_check_no_verdict">bash.ws gave no verdict</string>
     <string name="dns_leak_none">No DNS leak</string>
     <string name="dns_leak_found">DNS may be leaking</string>
@@ -1025,6 +1052,13 @@
     <string name="connection_check_udp_other_address">UDP leaves from another address than TCP</string>
     <string name="connection_check_udp_none">No answer over UDP</string>
     <string name="connection_check_udp_proxy">Not checked: the local proxy carries no UDP</string>
+    <string name="webrtc_may_drop_stun">WebRTC protection may drop STUN in the VPN.</string>
+    <string name="connection_check_section_exits">Exits</string>
+    <string name="connection_check_section_dns_tls">DNS and TLS</string>
+    <string name="connection_check_section_lists">Address lists</string>
+    <string name="check_tone_ok">Passed</string>
+    <string name="check_tone_warning">Warning</string>
+    <string name="check_tone_info">Note</string>
     <string name="connection_check_lists">Public lists</string>
     <string name="connection_check_lists_none">Not on the public VPN, datacenter or Tor lists</string>
     <string name="connection_check_lists_tor_ipv4">The Tor exit list covers IPv4 addresses only</string>

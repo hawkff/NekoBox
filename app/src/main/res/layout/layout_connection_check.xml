@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -26,14 +27,16 @@
                 android:id="@+id/connection_check_path"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceSubtitle2" />
+                android:drawablePadding="12dp"
+                android:gravity="center_vertical"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/connection_check_note"
-                android:textAppearance="?attr/textAppearanceBody2"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?android:attr/textColorSecondary" />
 
             <com.google.android.material.button.MaterialButton
@@ -51,21 +54,65 @@
                 android:indeterminate="true"
                 android:visibility="gone" />
 
+            <!-- What bash.ws saw, shown as soon as it answers. -->
+            <LinearLayout
+                android:id="@+id/connection_check_results"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/connection_check_verdict"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:drawablePadding="12dp"
+                    android:gravity="center_vertical"
+                    android:textAppearance="?attr/textAppearanceTitleLarge" />
+
+                <TextView
+                    style="@style/Widget.NekoBox.CheckSection"
+                    android:accessibilityHeading="true"
+                    android:text="@string/connection_check_address"
+                    tools:targetApi="p" />
+
+                <LinearLayout
+                    android:id="@+id/connection_check_addresses"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    style="@style/Widget.NekoBox.CheckSection"
+                    android:accessibilityHeading="true"
+                    android:text="@string/connection_check_dns"
+                    tools:targetApi="p" />
+
+                <LinearLayout
+                    android:id="@+id/connection_check_servers"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+
+            <!-- A failed check, in place of the results. -->
             <TextView
-                android:id="@+id/connection_check_verdict"
+                android:id="@+id/connection_check_failure"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:drawablePadding="12dp"
                 android:gravity="center_vertical"
-                android:textAppearance="?attr/textAppearanceHeadline6"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
                 android:visibility="gone" />
 
+            <!-- The other findings, in groups under their headings. -->
             <LinearLayout
                 android:id="@+id/connection_check_rows"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 android:orientation="vertical"
                 android:visibility="gone" />
 
@@ -73,7 +120,7 @@
                 android:id="@+id/connection_check_lookup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:orientation="vertical"
                 android:visibility="gone">
 
@@ -87,46 +134,10 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:text="@string/connection_check_proxycheck_note"
-                    android:textAppearance="?attr/textAppearanceBody2"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="?android:attr/textColorSecondary" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/connection_check_results"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="@string/connection_check_address"
-                    android:textAppearance="?attr/textAppearanceSubtitle2"
-                    android:textColor="?attr/colorPrimary" />
-
-                <LinearLayout
-                    android:id="@+id/connection_check_addresses"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="@string/connection_check_dns"
-                    android:textAppearance="?attr/textAppearanceSubtitle2"
-                    android:textColor="?attr/colorPrimary" />
-
-                <LinearLayout
-                    android:id="@+id/connection_check_servers"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
 
             </LinearLayout>
 

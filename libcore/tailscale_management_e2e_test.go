@@ -316,35 +316,35 @@ func TestTailscaleManagementEndToEnd(t *testing.T) {
 	checkPing(directPeer, "direct")
 	checkPing(derpPeer, "derp")
 
-	cancelledPing, err := StartTailscalePeerPing(instance, "ts", directPeer, 10000)
+	canceledPing, err := StartTailscalePeerPing(instance, "ts", directPeer, 10000)
 	if err != nil {
 		t.Fatal("cannot open cancellation diagnostic")
 	}
-	defer cancelledPing.Close()
-	if sample, err := cancelledPing.Next(5000); err != nil || sample == "" {
+	defer canceledPing.Close()
+	if sample, err := canceledPing.Next(5000); err != nil || sample == "" {
 		t.Fatal("cancellation diagnostic did not start")
 	}
-	if cancelledPing.Close() != nil || cancelledPing.Close() != nil {
+	if canceledPing.Close() != nil || canceledPing.Close() != nil {
 		t.Fatal("diagnostic cancellation failed")
 	}
-	if _, err := cancelledPing.Next(100); !errors.Is(err, context.Canceled) {
+	if _, err := canceledPing.Next(100); !errors.Is(err, context.Canceled) {
 		t.Fatal("closed diagnostic did not report cancellation")
 	}
-	cancelledObservation, err := ObserveTailscaleStatus(instance, "ts")
+	canceledObservation, err := ObserveTailscaleStatus(instance, "ts")
 	if err != nil {
 		t.Fatal("cannot open cancellation observation")
 	}
-	defer cancelledObservation.Close()
-	if snapshot, err := cancelledObservation.Next(5000); err != nil || snapshot == "" {
+	defer canceledObservation.Close()
+	if snapshot, err := canceledObservation.Next(5000); err != nil || snapshot == "" {
 		t.Fatal("cancellation observation did not start")
 	}
-	if cancelledObservation.Close() != nil || cancelledObservation.Close() != nil {
+	if canceledObservation.Close() != nil || canceledObservation.Close() != nil {
 		t.Fatal("observation cancellation failed")
 	}
-	if _, err := cancelledObservation.Next(100); !errors.Is(err, context.Canceled) {
+	if _, err := canceledObservation.Next(100); !errors.Is(err, context.Canceled) {
 		t.Fatal("closed observation did not report cancellation")
 	}
-	assertTraffic("cancelled diagnostics preserve B", sinkB)
+	assertTraffic("canceled diagnostics preserve B", sinkB)
 	restart(savedB)
 	waitExit(exitB)
 	assertTraffic("saved B restart", sinkB)

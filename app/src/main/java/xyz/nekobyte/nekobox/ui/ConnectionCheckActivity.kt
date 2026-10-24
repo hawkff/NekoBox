@@ -4,8 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
-import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -23,8 +22,10 @@ import okhttp3.OkHttpClient
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.databinding.ItemCheckMoreBinding
+import xyz.nekobyte.nekobox.databinding.ItemCheckResultBinding
+import xyz.nekobyte.nekobox.databinding.ItemCheckSectionBinding
 import xyz.nekobyte.nekobox.databinding.ItemConnectionCheckAddressBinding
-import xyz.nekobyte.nekobox.databinding.ItemConnectionCheckRowBinding
 import xyz.nekobyte.nekobox.databinding.LayoutConnectionCheckBinding
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.readableMessage
@@ -56,12 +57,10 @@ class ConnectionCheckActivity : ThemedActivity() {
     // The path the label and any results on screen belong to.
     private var shown: Path? = null
 
-    private enum class Tone { OK, WARNING, INFO }
-
-    private enum class Path(val label: Int) {
-        VPN(R.string.connection_check_path_vpn),
-        PROXY(R.string.connection_check_path_proxy),
-        DIRECT(R.string.connection_check_path_direct),
+    private enum class Path(val label: Int, val icon: Int) {
+        VPN(R.string.connection_check_path_vpn, R.drawable.ic_baseline_vpn_key_24),
+        PROXY(R.string.connection_check_path_proxy, R.drawable.ic_hardware_router),
+        DIRECT(R.string.connection_check_path_direct, R.drawable.baseline_public_24),
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,9 +95,15 @@ class ConnectionCheckActivity : ThemedActivity() {
         val path = path()
         val held = path == shown
         if (!held) hideResults()
+        showPath(path)
+        return held
+    }
+
+    private fun showPath(path: Path) {
         shown = path
         binding.connectionCheckPath.setText(path.label)
-        return held
+        val icon = ContextCompat.getDrawable(this, path.icon)?.mutate()?.apply { setTint(getColorAttr(android.R.attr.textColorSecondary)) }
+        binding.connectionCheckPath.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
     }
 
     private fun path() = when {
@@ -137,7 +142,7 @@ class ConnectionCheckActivity : ThemedActivity() {
         .build()
 
     private fun hideResults() {
-        binding.connectionCheckVerdict.isVisible = false
+        binding.connectionCheckFailure.isVisible = false
         binding.connectionCheckResults.isVisible = false
         binding.connectionCheckRows.isVisible = false
         binding.connectionCheckLookup.isVisible = false
@@ -145,8 +150,7 @@ class ConnectionCheckActivity : ThemedActivity() {
 
     private fun start() {
         val path = path()
-        shown = path
-        binding.connectionCheckPath.setText(path.label)
+        showPath(path)
         binding.connectionCheckStart.isEnabled = false
         binding.connectionCheckProgress.isVisible = true
         hideResults()
@@ -202,13 +206,17 @@ class ConnectionCheckActivity : ThemedActivity() {
         }
     }
 
-    private fun failed(e: Throwable) {
-        val message = if (e is DnsLeakTest.ServiceException) {
+    private fun failed(e: Throwable) = with(binding.connectionCheckFailure) {
+        text = if (e is DnsLeakTest.ServiceException) {
             getString(R.string.connection_check_service_error, e.message)
         } else {
             getString(R.string.connection_check_failed, e.readableMessage)
         }
-        verdict(message, R.drawable.ic_baseline_warning_24, getColorAttr(androidx.appcompat.R.attr.colorError))
+        val color = getColorAttr(androidx.appcompat.R.attr.colorError)
+        setTextColor(color)
+        val icon = ContextCompat.getDrawable(context, R.drawable.ic_baseline_warning_24)?.mutate()?.apply { setTint(color) }
+        setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
+        isVisible = true
     }
 
     private fun rows(
@@ -222,57 +230,46 @@ class ConnectionCheckActivity : ThemedActivity() {
         trace: ConnectionProbes.Trace?,
     ) {
         binding.connectionCheckRows.removeAllViews()
+        section(R.string.connection_check_section_exits)
         val v4 = (ipv4 as? ConnectionProbes.Exit.Seen)?.address
         val v6 = (ipv6 as? ConnectionProbes.Exit.Seen)?.address
         when (ipv4) {
-            is ConnectionProbes.Exit.Seen -> row(R.string.connection_check_ipv4, describe(ipv4.address), Tone.INFO)
-            ConnectionProbes.Exit.Unreachable -> row(R.string.connection_check_ipv4, getString(R.string.connection_check_ipv4_none), Tone.INFO)
-            ConnectionProbes.Exit.Unchecked -> row(R.string.connection_check_ipv4, getString(R.string.connection_check_unchecked), Tone.INFO)
+            is ConnectionProbes.Exit.Seen -> row(R.string.connection_check_ipv4, describe(ipv4.address), CheckTone.INFO)
+            ConnectionProbes.Exit.Unreachable -> row(R.string.connection_check_ipv4, getString(R.string.connection_check_ipv4_none), CheckTone.INFO)
+            ConnectionProbes.Exit.Unchecked -> row(R.string.connection_check_ipv4, getString(R.string.connection_check_unchecked), CheckTone.INFO)
         }
         val ipv6Detail = v6?.let(::describe)
         // A failed answer says nothing about whether IPv6 gets through.
         if (ipv6 == ConnectionProbes.Exit.Unchecked) {
-            row(R.string.connection_check_ipv6, getString(R.string.connection_check_unchecked), Tone.INFO)
+            row(R.string.connection_check_ipv6, getString(R.string.connection_check_unchecked), CheckTone.INFO)
         } else {
             when (ConnectionProbes.ipv6(path == Path.DIRECT, v4, v6)) {
-                ConnectionProbes.Ipv6.NONE -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_none), if (path == Path.DIRECT) Tone.INFO else Tone.OK)
-                ConnectionProbes.Ipv6.CONNECTED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_connected), Tone.INFO, ipv6Detail)
-                ConnectionProbes.Ipv6.SAME_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_same), Tone.OK, ipv6Detail)
-                ConnectionProbes.Ipv6.OTHER_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_other), Tone.WARNING, ipv6Detail)
-                ConnectionProbes.Ipv6.UNCOMPARED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_uncompared), Tone.INFO, ipv6Detail)
+                ConnectionProbes.Ipv6.NONE -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_none), if (path == Path.DIRECT) CheckTone.INFO else CheckTone.OK)
+                ConnectionProbes.Ipv6.CONNECTED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_connected), CheckTone.INFO, ipv6Detail)
+                ConnectionProbes.Ipv6.SAME_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_same), CheckTone.OK, ipv6Detail)
+                ConnectionProbes.Ipv6.OTHER_NETWORK -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_other), CheckTone.WARNING, ipv6Detail)
+                ConnectionProbes.Ipv6.UNCOMPARED -> row(R.string.connection_check_ipv6, getString(R.string.connection_check_ipv6_uncompared), CheckTone.INFO, ipv6Detail)
             }
         }
         val udpDetail = udp?.let { listOfNotNull(it.address.hostAddress, udpNetwork?.isp?.ifEmpty { null }).joinToString(" · ") }
+        // WebRTC protection drops STUN in the VPN, unless the profile brings a config of its own.
+        val webrtc = getString(R.string.webrtc_may_drop_stun).takeIf { path == Path.VPN && DataStore.webrtcLeakProtection }
         when (ConnectionProbes.udp(path != Path.PROXY, listOfNotNull(v4, v6), udp, udpNetwork)) {
-            ConnectionProbes.Udp.NOT_CHECKED -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_proxy), Tone.INFO)
-            ConnectionProbes.Udp.NO_ANSWER -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_none), Tone.INFO)
-            ConnectionProbes.Udp.SAME_ADDRESS -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same_address), Tone.OK, udpDetail)
-            ConnectionProbes.Udp.SAME_NETWORK -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same), Tone.INFO, udpDetail)
-            ConnectionProbes.Udp.OTHER_NETWORK -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_other), Tone.WARNING, udpDetail)
-            ConnectionProbes.Udp.OTHER_ADDRESS -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_other_address), Tone.INFO, udpDetail)
+            ConnectionProbes.Udp.NOT_CHECKED -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_proxy), CheckTone.INFO)
+            ConnectionProbes.Udp.NO_ANSWER -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_none), CheckTone.INFO, webrtc)
+            ConnectionProbes.Udp.SAME_ADDRESS -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same_address), CheckTone.OK, udpDetail)
+            ConnectionProbes.Udp.SAME_NETWORK -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_same), CheckTone.INFO, udpDetail)
+            ConnectionProbes.Udp.OTHER_NETWORK -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_other), CheckTone.WARNING, udpDetail)
+            ConnectionProbes.Udp.OTHER_ADDRESS -> row(R.string.connection_check_udp, getString(R.string.connection_check_udp_other_address), CheckTone.INFO, udpDetail)
         }
-        val kinds = lists.values.flatMap { it.kinds }.toSortedSet()
-        when {
-            lists.isEmpty() -> row(R.string.connection_check_lists, getString(R.string.connection_check_unchecked), Tone.INFO)
-
-            kinds.isNotEmpty() -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_found, kinds.joinToString(", ") { getString(it.label()) }), Tone.INFO)
-
-            lists.values.any { !it.complete } -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_incomplete), Tone.INFO)
-
-            else -> row(
-                R.string.connection_check_lists,
-                getString(R.string.connection_check_lists_none),
-                Tone.OK,
-                getString(R.string.connection_check_lists_tor_ipv4).takeIf { lists.values.any { AddressReputation.Kind.TOR in it.uncovered } },
-            )
-        }
+        section(R.string.connection_check_section_dns_tls)
         when (dnssec) {
-            ConnectionProbes.Dnssec.VALIDATED -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_dnssec_validated), Tone.OK)
-            ConnectionProbes.Dnssec.NOT_VALIDATED -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_dnssec_not_validated), Tone.WARNING)
-            ConnectionProbes.Dnssec.UNKNOWN -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_unchecked), Tone.INFO)
+            ConnectionProbes.Dnssec.VALIDATED -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_dnssec_validated), CheckTone.OK)
+            ConnectionProbes.Dnssec.NOT_VALIDATED -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_dnssec_not_validated), CheckTone.WARNING)
+            ConnectionProbes.Dnssec.UNKNOWN -> row(R.string.connection_check_dnssec, getString(R.string.connection_check_unchecked), CheckTone.INFO)
         }
         if (trace == null) {
-            row(R.string.connection_check_tls, getString(R.string.connection_check_tls_unknown), Tone.INFO)
+            row(R.string.connection_check_tls, getString(R.string.connection_check_tls_unknown), CheckTone.INFO)
         } else {
             val ech = when (trace.encryptedSni) {
                 true -> getString(R.string.connection_check_tls_ech)
@@ -280,7 +277,24 @@ class ConnectionCheckActivity : ThemedActivity() {
                 null -> null
             }
             val status = listOfNotNull(trace.tls?.replace("TLSv", "TLS "), ech).joinToString(" · ").ifEmpty { getString(R.string.connection_check_tls_unknown) }
-            row(R.string.connection_check_tls, status, Tone.INFO, getString(R.string.connection_check_tls_detail))
+            row(R.string.connection_check_tls, status, CheckTone.INFO, getString(R.string.connection_check_tls_detail))
+        }
+        // Last, so a proxycheck.io answer lands under it, next to the button that asks.
+        section(R.string.connection_check_section_lists)
+        val kinds = lists.values.flatMap { it.kinds }.toSortedSet()
+        when {
+            lists.isEmpty() -> row(R.string.connection_check_lists, getString(R.string.connection_check_unchecked), CheckTone.INFO)
+
+            kinds.isNotEmpty() -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_found, kinds.joinToString(", ") { getString(it.label()) }), CheckTone.INFO)
+
+            lists.values.any { !it.complete } -> row(R.string.connection_check_lists, getString(R.string.connection_check_lists_incomplete), CheckTone.INFO)
+
+            else -> row(
+                R.string.connection_check_lists,
+                getString(R.string.connection_check_lists_none),
+                CheckTone.OK,
+                getString(R.string.connection_check_lists_tor_ipv4).takeIf { lists.values.any { AddressReputation.Kind.TOR in it.uncovered } },
+            )
         }
         binding.connectionCheckRows.isVisible = true
         binding.connectionCheckLookup.isVisible = lookupAddress != null
@@ -312,67 +326,54 @@ class ConnectionCheckActivity : ThemedActivity() {
                 ).map { getString(it) }
                 val detail = listOfNotNull(result.operator?.let { getString(R.string.connection_check_proxycheck_operator, it) }, result.network).joinToString("\n")
                 if (flags.isEmpty()) {
-                    row(R.string.connection_check_proxycheck_title, getString(R.string.connection_check_proxycheck_none), Tone.OK, detail, LOOKUP)
+                    row(R.string.connection_check_proxycheck_title, getString(R.string.connection_check_proxycheck_none), CheckTone.OK, detail, LOOKUP)
                 } else {
-                    row(R.string.connection_check_proxycheck_title, getString(R.string.connection_check_proxycheck_found, flags.joinToString(", ")), Tone.INFO, detail, LOOKUP)
+                    row(R.string.connection_check_proxycheck_title, getString(R.string.connection_check_proxycheck_found, flags.joinToString(", ")), CheckTone.INFO, detail, LOOKUP)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                row(R.string.connection_check_proxycheck_title, getString(R.string.connection_check_proxycheck_failed, e.readableMessage), Tone.WARNING, null, LOOKUP)
+                row(R.string.connection_check_proxycheck_title, getString(R.string.connection_check_proxycheck_failed, e.readableMessage), CheckTone.WARNING, null, LOOKUP)
             } finally {
                 binding.connectionCheckProxycheck.isEnabled = true
             }
         }
     }
 
-    private fun row(title: Int, status: CharSequence, tone: Tone, detail: CharSequence? = null, tag: String? = null) {
+    private fun section(@StringRes title: Int) {
+        ItemCheckSectionBinding.inflate(layoutInflater, binding.connectionCheckRows, true).root.setText(title)
+    }
+
+    private fun row(@StringRes title: Int, status: CharSequence, tone: CheckTone, detail: CharSequence? = null, tag: String? = null) {
         val rows = binding.connectionCheckRows
         tag?.let { rows.findViewWithTag<View>(it)?.let(rows::removeView) }
-        ItemConnectionCheckRowBinding.inflate(layoutInflater, rows, true).apply {
+        ItemCheckResultBinding.inflate(layoutInflater, rows, true).apply {
             root.tag = tag
-            rowTitle.setText(title)
-            rowStatus.text = status
-            val (icon, color) = when (tone) {
-                Tone.OK -> R.drawable.ic_action_done to getColorAttr(androidx.appcompat.R.attr.colorPrimary)
-                Tone.WARNING -> R.drawable.ic_baseline_warning_24 to getColorAttr(androidx.appcompat.R.attr.colorError)
-                Tone.INFO -> R.drawable.ic_baseline_info_24 to getColorAttr(android.R.attr.textColorSecondary)
-            }
-            val drawable = ContextCompat.getDrawable(this@ConnectionCheckActivity, icon)?.mutate()?.apply { setTint(color) }
-            rowStatus.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
-            rowDetail.text = detail
-            rowDetail.isVisible = !detail.isNullOrEmpty()
+            showResult(title, status, tone, detail)
         }
     }
 
     private fun show(result: DnsLeakTest.Result) {
         when (result.verdict) {
-            DnsLeakTest.Verdict.CLEAN -> verdict(getString(R.string.dns_leak_none), R.drawable.ic_action_done, getColorAttr(androidx.appcompat.R.attr.colorPrimary))
+            DnsLeakTest.Verdict.CLEAN -> verdict(getString(R.string.dns_leak_none), CheckTone.OK)
 
-            DnsLeakTest.Verdict.LEAK -> verdict(getString(R.string.dns_leak_found), R.drawable.ic_baseline_warning_24, getColorAttr(androidx.appcompat.R.attr.colorError))
+            DnsLeakTest.Verdict.LEAK -> verdict(getString(R.string.dns_leak_found), CheckTone.WARNING)
 
             // Text bash.ws did not phrase as a known verdict is shown as it came.
-            DnsLeakTest.Verdict.UNKNOWN -> verdict(
-                result.conclusion ?: getString(R.string.connection_check_no_verdict),
-                R.drawable.ic_baseline_info_24,
-                getColorAttr(android.R.attr.textColorPrimary),
-            )
+            DnsLeakTest.Verdict.UNKNOWN -> verdict(result.conclusion ?: getString(R.string.connection_check_no_verdict), CheckTone.INFO)
         }
         fill(binding.connectionCheckAddresses, result.addresses)
         fill(binding.connectionCheckServers, result.servers)
         binding.connectionCheckResults.isVisible = true
     }
 
-    private fun verdict(text: CharSequence, @DrawableRes icon: Int, @ColorInt color: Int) = with(binding.connectionCheckVerdict) {
-        this.text = text
-        setTextColor(color)
-        val drawable = ContextCompat.getDrawable(context, icon)?.mutate()?.apply { setTint(color) }
-        setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
-        isVisible = true
-    }
+    private fun verdict(text: CharSequence, tone: CheckTone) = binding.connectionCheckVerdict.showVerdict(text, tone)
 
     private companion object {
         const val LOOKUP = "proxycheck"
+
+        // Public resolvers answer from a dozen addresses or more; this many show until asked for the rest.
+        const val FOLDED = 3
     }
 
     private fun fill(list: LinearLayout, addresses: List<DnsLeakTest.Address>) {
@@ -383,12 +384,24 @@ class ConnectionCheckActivity : ThemedActivity() {
                 addressDetail.isVisible = false
             }
         }
-        for (address in addresses) {
-            ItemConnectionCheckAddressBinding.inflate(layoutInflater, list, true).apply {
-                addressIp.text = address.ip
-                addressDetail.text = listOf(address.place, address.asn).filter { it.isNotEmpty() }.joinToString(" · ")
-                addressDetail.isVisible = addressDetail.text.isNotEmpty()
+        // Folding away a single address would save nothing.
+        val shown = if (addresses.size > FOLDED + 1) addresses.take(FOLDED) else addresses
+        shown.forEach { add(list, it) }
+        if (shown.size == addresses.size) return
+        ItemCheckMoreBinding.inflate(layoutInflater, list, true).root.apply {
+            text = getString(R.string.connection_check_show_more, addresses.size - shown.size)
+            setOnClickListener {
+                list.removeView(this)
+                addresses.drop(shown.size).forEach { add(list, it) }
             }
+        }
+    }
+
+    private fun add(list: LinearLayout, address: DnsLeakTest.Address) {
+        ItemConnectionCheckAddressBinding.inflate(layoutInflater, list, true).apply {
+            addressIp.text = address.ip
+            addressDetail.text = listOf(address.place, address.asn).filter { it.isNotEmpty() }.joinToString(" · ")
+            addressDetail.isVisible = addressDetail.text.isNotEmpty()
         }
     }
 }

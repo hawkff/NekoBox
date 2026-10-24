@@ -794,7 +794,7 @@ class BaseService {
 
                     lateInit()
                     attempt.complete(ConnectionOutcome.CONNECTED)
-                } catch (_: CancellationException) { // if the job was cancelled, it is canceller's responsibility to call stopRunner
+                } catch (_: CancellationException) { // if the job was canceled, it is the canceler's responsibility to call stopRunner
                 } catch (_: UnknownHostException) {
                     attempt.complete(ConnectionOutcome.DNS_ERROR)
                     stopRunner(false, getString(R.string.invalid_server))

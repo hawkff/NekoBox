@@ -7,6 +7,8 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.databinding.LayoutToolsBinding
+import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
 
 class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
 
@@ -20,6 +22,17 @@ class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
 
         val binding = LayoutToolsBinding.bind(view)
         binding.toolsPager.adapter = ToolsAdapter(tools)
+        if (Glass.enabled) {
+            // The toolbar floats clear of a bar, so the tabs float too: a glass capsule like the group tabs'.
+            val tabs = binding.toolsTab
+            Glass.styleTabs(tabs, tabs)
+            tabs.background = GlassDrawable(tabs, null, Glass.tint(requireContext())) { bounds ->
+                pane().run {
+                    rect.set(bounds)
+                    radius = rect.height() / 2
+                }
+            }
+        }
 
         TabLayoutMediator(binding.toolsTab, binding.toolsPager) { tab, position ->
             tab.text = tools[position].name()

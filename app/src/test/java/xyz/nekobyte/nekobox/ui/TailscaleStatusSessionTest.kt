@@ -507,7 +507,7 @@ class TailscaleStatusSessionTest {
         }
     }
 
-    @Test fun cancelledPingWaitsForOwnedTerminalCompletion() {
+    @Test fun canceledPingWaitsForOwnedTerminalCompletion() {
         val (session, transport) = setup()
         transport.listener.status(transport.session, 1, status())
         session.ping("peer-stable")

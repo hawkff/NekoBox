@@ -1101,7 +1101,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         lateinit var cancel: () -> Unit
         lateinit var minimize: () -> Unit
 
-        val dialogStatus = AtomicInteger(0) // 1: hidden 2: cancelled
+        val dialogStatus = AtomicInteger(0) // 1: hidden 2: canceled
         var notification: ConnectionTestNotification? = null
 
         val results: MutableSet<ProfileTestResult> = ConcurrentHashMap.newKeySet()
@@ -1373,7 +1373,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                                 profile.status = 2
                                 profile.error = e.readableMessage
                             } catch (e: Exception) {
-                                // A cancelled test (dialog cancel / teardown) kills the sidecar
+                                // A canceled test (dialog cancel / teardown) kills the sidecar
                                 // mid-handshake and throws here. Don't record that as a profile
                                 // failure - it isn't one. The pingTest path guards the same way.
                                 if (!isActive) break

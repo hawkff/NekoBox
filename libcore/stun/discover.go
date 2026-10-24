@@ -165,7 +165,7 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 	}
 	// identical used to check if it is open Internet or not.
 	if resp1.identical {
-		return nil, errors.New("Not behind a NAT.")
+		return nil, ErrNotBehindNAT
 	}
 	// use otherAddr or changedAddr
 	otherAddr := resp1.otherAddr
@@ -173,7 +173,7 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 		if resp1.changedAddr != nil {
 			otherAddr = resp1.changedAddr
 		} else {
-			return nil, errors.New("Server error: no other address and changed address.")
+			return nil, ErrNoOtherAddress
 		}
 	}
 

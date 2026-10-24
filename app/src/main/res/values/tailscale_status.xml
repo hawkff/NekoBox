@@ -42,7 +42,7 @@
     <string name="tailscale_status_exit_rolled_back">Save failed; previous live exit restored</string>
     <string name="tailscale_status_exit_conflict">The saved profile changed. Review the current saved exit before trying again.</string>
     <string name="tailscale_status_exit_diverged">Live and saved exits may differ. Review both states; the VPN has not been restarted.</string>
-    <string name="tailscale_status_exit_cancelled">Exit change cancelled before applying</string>
+    <string name="tailscale_status_exit_cancelled">Exit change canceled before applying</string>
     <string name="tailscale_status_peers">Peers</string>
     <string name="tailscale_status_no_peers">No peers reported</string>
     <string name="tailscale_status_inventory">Showing %1$d of %2$d peers — inventory incomplete</string>

@@ -237,7 +237,7 @@ class RawUpdaterNegotiationTest {
         val job = launch {
             RawUpdater.negotiate(listOf(main, backup), SubscriptionFormat.plan(AUTO, CLASH, true, "")) { _, _, _ ->
                 attempts++
-                // A blocking request returns normally even though its update was cancelled meanwhile.
+                // A blocking request returns normally even though its update was canceled meanwhile.
                 currentCoroutineContext().cancel()
                 response(one)
             }

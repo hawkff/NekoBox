@@ -233,7 +233,7 @@ fun Project.setupApp() {
     // APK output renaming. The legacy applicationVariants/BaseVariantOutputImpl API was removed in
     // AGP 9 (new DSL). Instead we react to artifact creation and copy the produced APKs into
     // build/outputs/renamed_apks/<variant> with friendly NekoBox-<version>[-<abi>].apk names.
-    // The preview flavor uses PRE_VERSION_NAME to match the previous behaviour.
+    // The preview flavor uses PRE_VERSION_NAME to match the previous behavior.
     val previewVersionName = metadata("PRE_VERSION_NAME")
     androidComponents.onVariants { variant ->
         variant.sources.jniLibs?.addGeneratedSourceDirectory(

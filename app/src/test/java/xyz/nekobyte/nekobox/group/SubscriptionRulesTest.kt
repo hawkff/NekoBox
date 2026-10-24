@@ -136,7 +136,7 @@ class SubscriptionRulesTest {
         val rules = rules(profile)
         assertEquals(listOf("Ads", "PROXY", "Auto", "RU", "RU", "DIRECT", "REJECT"), rules.map { it.name })
         assertEquals(listOf(-2L, 0L, 0L, -1L, -1L, -1L, -2L), rules.map { it.outbound })
-        // Neighbours with the same target and kind share one rule; the order between targets stays.
+        // Neighbors with the same target and kind share one rule; the order between targets stays.
         assertEquals("domain:ads.example\ngeosite:category-ads-all", rules[0].domains)
         assertEquals("full:exact.example", rules[1].domains)
         assertEquals("keyword:stream", rules[2].domains)

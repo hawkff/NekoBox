@@ -61,7 +61,7 @@ private fun StandardV2RayBean.applyECHParam(value: String) {
 /** True for Xray's dynamic form, a DoH URL instead of an inline config list. */
 private fun StandardV2RayBean.echConfigIsURL() = echConfig!!.contains("://")
 
-/** The stored ECH config as the compact base64 share links carry, without PEM armour. */
+/** The stored ECH config as the compact base64 share links carry, without PEM armor. */
 private fun StandardV2RayBean.echParam() = echConfig!!.lines().filterNot { it.startsWith("-----") }.joinToString("").trim()
 
 fun StandardV2RayBean.isTLS(): Boolean = security == "tls"

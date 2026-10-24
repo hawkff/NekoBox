@@ -404,9 +404,7 @@
     <string name="naive_insecure_concurrency_summary">使用N個並發的隧道能使網路條件較差时更加可用。但數量越多，越易被偵測，安全性越低。由於本項目致力於面對流量分析的安全性，以不安全的方式使用違背了其初忠。
 \n
 \n如一定要使用，請先嘗試 N=2，觀察其是否解決了您的問題。強烈反對於此使用多於4個隧道。</string>
-    <string name="stun_attest_loading">這可能需要數分鐘…</string>
     <string name="stun_test_summary">使用 STUN 確定用戶端的 NAT 映射行為和 RFC 5780 中定義的 NAT 篩選行為。</string>
-    <string name="start">開始</string>
     <string name="backup">備份</string>
     <string name="backup_rules">路由規則</string>
     <string name="invalid_backup_file">無效的備份檔</string>
@@ -453,7 +451,6 @@
     <string name="filter_regex">過濾（正規表示式）</string>
     <string name="subscription_expire">過期: %s</string>
     <string name="nat_stun_server_hint">Stun 伺服器</string>
-    <string name="nat_result_hint">NAT 測試結果</string>
     <string name="acquire_wake_lock">獲取喚醒鎖</string>
     <string name="release_wake_lock">釋放喚醒鎖</string>
     <string name="acquire_wake_lock_summary">保持 CPU 開啟</string>

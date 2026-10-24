@@ -30,7 +30,7 @@ object Theme {
     const val ORANGE = 16
     const val DEEP_ORANGE = 17
     const val BROWN = 18
-    const val GREY = 19
+    const val GRAY = 19
     const val BLUE_GREY = 20
     const val BLACK = 21
     const val VERDANT_MINT = 22
@@ -167,7 +167,7 @@ object Theme {
 
         BROWN -> R.style.ThemeOverlay_NekoBox_Palette_Brown
 
-        GREY -> R.style.ThemeOverlay_NekoBox_Palette_Grey
+        GRAY -> R.style.ThemeOverlay_NekoBox_Palette_Gray
 
         BLUE_GREY -> R.style.ThemeOverlay_NekoBox_Palette_BlueGrey
 

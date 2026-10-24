@@ -20,7 +20,7 @@ class ServiceStopGate {
     private val stopGeneration = AtomicLong(0)
 
     // True while a reload-induced restart (stopRunner(restart=true)) is in flight. An explicit
-    // CLOSE/user stop racing the teardown clears it so the restart is cancelled rather than
+    // CLOSE/user stop racing the teardown clears it so the restart is canceled rather than
     // reviving a service the user stopped. Touched only on the main dispatcher.
     var pendingRestart = false
         private set
@@ -49,10 +49,10 @@ class ServiceStopGate {
     /**
      * stopRunner entry. Returns true if a teardown is already in flight (caller must return).
      * If this is an explicit stop (restart=false) racing a reload-induced restart
-     * (restart=true), the pending restart is cancelled so an explicit CLOSE/user-stop wins
+     * (restart=true), the pending restart is canceled so an explicit CLOSE/user-stop wins
      * instead of being silently dropped while the in-flight stopRunner(true) goes on to call
      * startRunner(). A restart=true request merged into an in-flight teardown does NOT
-     * re-set the flag: a prior explicit stop stays cancelled. Likewise a request without
+     * re-set the flag: a prior explicit stop stays canceled. Likewise a request without
      * [hold] (an explicit stop) releases a hold the in-flight teardown took, and a held
      * request merged into a teardown never adds one.
      */

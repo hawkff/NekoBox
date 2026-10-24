@@ -430,8 +430,6 @@
     <string name="profile_traffic_statistics">配置流量统计</string>
     <string name="stun_test_summary">使用 STUN 确定客户端的 RFC 3478 中定义的 NAT 过滤行为。</string>
     <string name="stun_test">NAT 行为发现</string>
-    <string name="start">开始</string>
-    <string name="stun_attest_loading">这可能需要几分钟的时间…</string>
     <string name="route_play_store">%s Play 商店规则</string>
     <string name="route_opt_block_analysis">屏蔽跟踪器</string>
     <string name="naive_insecure_concurrency">不安全并发</string>
@@ -447,7 +445,6 @@
     <string name="backup_settings">设置</string>
     <string name="backup_not_file">不是一个备份文件，预期 .json，但 %s</string>
     <string name="backup_rules">路由规则</string>
-    <string name="nat_result_hint">NAT 测试结果</string>
     <string name="nat_stun_server_hint">Stun 服务器</string>
     <string name="invalid_backup_file">无效的备份文件</string>
     <string name="backup_import_summary">导入将覆盖现有的数据。</string>

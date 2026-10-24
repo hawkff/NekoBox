@@ -546,7 +546,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                                 .show()
                             runOnDefaultDispatcher {
                                 runCatching {
-                                    // check again whether it has been cancelled
+                                    // check again whether it has been canceled
                                     if (!isAdded) {
                                         MessageStore.showMessage(activity, R.string.restore_cancelled)
                                         return@runOnDefaultDispatcher

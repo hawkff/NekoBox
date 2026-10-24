@@ -71,7 +71,6 @@
     <string name="connection_test_error">失敗：%s</string>
     <string name="connection_test_available_http">連接成功: HTTP 握手需時 %dms</string>
     <string name="password_opt">密碼（可選）</string>
-    <string name="start">開始</string>
     <string name="quick_toggle">切換</string>
     <string name="quick_enable">啟用</string>
     <string name="quick_disable">停用</string>
