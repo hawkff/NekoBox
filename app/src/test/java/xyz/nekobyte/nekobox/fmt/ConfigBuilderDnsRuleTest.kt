@@ -95,6 +95,20 @@ class ConfigBuilderDnsRuleTest {
     }
 
     @Test
+    @Config(sdk = [27])
+    fun beforeAndroid9_theCoreTrustsMozillaRoots() {
+        assertEquals("mozilla", build().getJSONObject("certificate").getString("store"))
+        val exported = ConfigBuilderTestEnv.io { JSONObject(buildConfig(profile, forExport = true, reportHosts = emptyList()).config) }
+        assertFalse(exported.has("certificate"))
+    }
+
+    @Test
+    @Config(sdk = [28])
+    fun fromAndroid9_theCoreKeepsTheSystemStore() {
+        assertFalse(build().has("certificate"))
+    }
+
+    @Test
     fun networkSourcePortAndPrivateIpOnlyRules_remainInRouting() {
         replaceRules(
             RuleEntity(network = "udp", outbound = -1),

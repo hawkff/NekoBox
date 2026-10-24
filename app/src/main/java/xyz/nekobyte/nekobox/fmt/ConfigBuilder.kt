@@ -432,6 +432,13 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             }
         }
 
+        // Android before 9 lacks roots that current servers chain to, the default direct DNS
+        // server's among them, so the core uses its own copy of Mozilla's list there. Exported
+        // configs run on other devices.
+        if (!forExport && Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            _hack_config_map["certificate"] = mapOf("store" to "mozilla")
+        }
+
         val dns = DNSOptions().apply {
             servers = dnsServers
             rules = dnsRules
