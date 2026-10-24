@@ -138,6 +138,18 @@ class GroupPagingDeviceTest {
             settle()
             assertFalse(activity.binding.drawerLayout.isOpen)
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
+
+            // On another screen too: the drawer closes and the screen stays.
+            scenario.onActivity { it.displayFragmentWithId(R.id.nav_route) }
+            settle()
+            scenario.onActivity { it.binding.drawerLayout.open() }
+            settle()
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            settle()
+            scenario.onActivity {
+                assertFalse(it.binding.drawerLayout.isOpen)
+                assertTrue(it.supportFragmentManager.findFragmentById(R.id.fragment_holder) is RouteFragment)
+            }
         }
     }
 
