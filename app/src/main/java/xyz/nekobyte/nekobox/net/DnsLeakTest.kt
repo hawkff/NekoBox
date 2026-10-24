@@ -28,11 +28,14 @@ object DnsLeakTest {
     private const val POLLS = 40
     private val ID = Regex("[A-Za-z0-9]{1,64}")
     private val HEADER = Regex("<b>(.*?)</b>", RegexOption.DOT_MATCHES_ALL)
-    private val ROW = Regex("""<s\b([^>]*)>([^<]+)</s>.*?<div class="td">(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
+    private val ADDRESS = Regex("""<s\b([^>]*)>([^<]+)</s>""")
     private val PLACE = Regex("""data-ctrname="([^"]*)"""")
-    private val CONCLUSION = Regex("""<div class="conclusion">(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
+    private val NETWORK = Regex("""\bAS\d+\b.*""")
+    private val COUNT = Regex("""\d+""")
+    private val CONCLUSION = Regex("""<div class="[^"]*\bconclusion\b[^"]*">(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
     private val LEVEL = Regex("""^\[\w+]\s*""")
     private val TAG = Regex("<[^>]*>")
+    private val SPACE = Regex("""\s+""")
 
     /** An address bash.ws saw, with the place and network it reports for it. */
     data class Address(val ip: String, val place: String, val asn: String)
@@ -44,7 +47,7 @@ object DnsLeakTest {
         val verdict = when {
             conclusion == null -> Verdict.UNKNOWN
             listOf("not leaking", "no leak").any { conclusion.contains(it, ignoreCase = true) } -> Verdict.CLEAN
-            listOf("may be leaking", "leak detected").any { conclusion.contains(it, ignoreCase = true) } -> Verdict.LEAK
+            listOf("may be leaking", "is leaking", "leak detected").any { conclusion.contains(it, ignoreCase = true) } -> Verdict.LEAK
             else -> Verdict.UNKNOWN
         }
     }
@@ -83,7 +86,7 @@ object DnsLeakTest {
             // bash.ws ties a test to the address that started it and drops connections idle for a
             // second. Where each connection leaves from its own address, a new one would make the
             // test unknown, so the first connection is kept busy until the lookups end. The loop
-            // ends by itself: cancelling a request in flight would close that connection.
+            // ends by itself: canceling a request in flight would close that connection.
             launch {
                 while (true) {
                     delay(300)
@@ -117,22 +120,30 @@ object DnsLeakTest {
         }
     }
 
-    // Each row sits under its table's header; only the DNS server table names DNS there.
+    // Each address sits in an <s> element under its table's header, and its place and network follow
+    // it as text. Only that order is read, not the markup around it, which bash.ws changes; only the
+    // DNS server table names DNS in its header.
     internal fun parse(html: String): Result {
-        val headers = HEADER.findAll(html).toList()
+        val conclusion = CONCLUSION.find(html)
+        val end = conclusion?.range?.first ?: html.length
+        val headers = HEADER.findAll(html).filter { it.range.first < end }.map { it.range.first to text(it.groupValues[1]) }.toList()
+        val cells = ADDRESS.findAll(html).filter { it.range.first < end }.toList()
         val addresses = mutableListOf<Address>()
         val servers = mutableListOf<Address>()
-        for (row in ROW.findAll(html)) {
-            val header = headers.lastOrNull { it.range.first < row.range.first }?.groupValues?.get(1).orEmpty()
-            val place = text(PLACE.find(row.groupValues[1])?.groupValues?.get(1).orEmpty())
-            val detail = text(row.groupValues[3])
-            val address = Address(text(row.groupValues[2]), place, detail.removePrefix(place).trimStart(',', ' '))
-            if (header.contains("DNS")) servers += address else addresses += address
+        cells.forEachIndexed { i, cell ->
+            val start = cell.range.first
+            val next = minOf(cells.getOrNull(i + 1)?.range?.first ?: end, headers.firstOrNull { it.first > start }?.first ?: end)
+            val detail = text(html.substring(cell.range.last + 1, next))
+            val place = text(PLACE.find(cell.groupValues[1])?.groupValues?.get(1).orEmpty())
+            val address = Address(text(cell.groupValues[2]), place, NETWORK.find(detail)?.value.orEmpty())
+            if (headers.lastOrNull { it.first < start }?.second.orEmpty().contains("DNS")) servers += address else addresses += address
         }
-        // Without the servers behind it a verdict says nothing, e.g. once the page markup changes.
-        val conclusion = CONCLUSION.find(html)?.let { text(it.groupValues[1]).replace(LEVEL, "") }?.ifEmpty { null }?.takeIf { servers.isNotEmpty() }
-        return Result(addresses, servers, conclusion)
+        // A verdict says nothing unless lookups reached bash.ws: servers it listed, or its count of them.
+        val reported = headers.filter { it.second.contains("DNS") }.sumOf { COUNT.find(it.second)?.value?.toIntOrNull() ?: 0 }
+        val verdict = conclusion?.let { text(it.groupValues[1]).replace(LEVEL, "") }?.ifEmpty { null }?.takeIf { servers.isNotEmpty() || reported > 0 }
+        return Result(addresses, servers, verdict)
     }
 
-    private fun text(html: String) = HtmlCompat.fromHtml(html.replace(TAG, ""), HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim()
+    // Tags become spaces, so text in neighboring elements stays apart.
+    private fun text(html: String) = HtmlCompat.fromHtml(html.replace(TAG, " "), HtmlCompat.FROM_HTML_MODE_LEGACY).toString().replace(SPACE, " ").trim()
 }
