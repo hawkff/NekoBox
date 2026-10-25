@@ -592,6 +592,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     },
                 )
             }
+            // After sniffing, so a name sniffing connects by is resolved on the device too, and IP rules
+            // match it: resolve destination means names resolve here, not at the exit server.
             val resolveStrategy = genDomainStrategy(DataStore.resolveDestination)
             if (resolveStrategy.isNotEmpty()) {
                 routeRules.add(

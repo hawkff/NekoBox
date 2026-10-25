@@ -418,7 +418,7 @@
 <string name="sniff_routing">Для маршрутизации</string>
 <string name="traffic_sniffing_off_sum">Правила по доменам срабатывают, только если имя сайта уже известно, например через FakeDNS</string>
 <string name="traffic_sniffing_routing_sum">Правила по доменам срабатывают и по имени сайта, прочитанному из соединения</string>
-<string name="traffic_sniffing_connect_sum">Сервер тоже получает имя каждого сайта и ищет его сам. Если приложение перестанет работать, выберите «Для маршрутизации».</string>
+<string name="traffic_sniffing_connect_sum">Сервер тоже получает имя каждого сайта и ищет его сам, если не включено «Определить адрес назначения». Если приложение перестанет работать, выберите «Для маршрутизации».</string>
 <string name="speed">%s/с</string>
 <string name="speed_upload">Отдача %s</string>
 <string name="speed_download">Загрузка %s</string>

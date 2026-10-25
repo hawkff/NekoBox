@@ -600,6 +600,11 @@ class ConfigBuilderGoldenTest {
         assertTrue(rules[1].getBoolean("override_destination"))
         assertFalse(rules[1].has("sniffer"))
         assertTrue(isDnsProtocol(rules[2]))
+        // With resolve destination, the sniffed name is resolved on the device after the override.
+        DataStore.resolveDestination = true
+        rules = rules("connect-by-name-resolved")
+        assertTrue(rules.indexOfFirst { it.optString("action") == "sniff" } < rules.indexOfFirst { it.optString("action") == "resolve" })
+        DataStore.resolveDestination = false
 
         // In proxy mode apps reach the mixed inbound.
         DataStore.serviceMode = Key.MODE_PROXY

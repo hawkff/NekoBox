@@ -253,7 +253,7 @@ object TrafficSniffing {
     /** Read for routing: domain rules match it, and the connection keeps the address the app dialed. */
     const val ROUTING = 1
 
-    /** Read for routing and connecting: the outbound dials the name, so a proxy server resolves it. */
+    /** Read for routing and connecting: the outbound dials the name, so a proxy server resolves it, unless resolve destination resolves it on the device first. */
     const val CONNECT_BY_NAME = 2
 }
 
