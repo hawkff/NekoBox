@@ -9,10 +9,10 @@
     <!-- Declared first so the bars draw over it. It sits below them; with liquid glass it fills
          the screen and scrolls beneath them. -->
     <xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
-        android:id="@+id/group_content"
+        android:id="@+id/glass_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/group_bars">
+        android:layout_below="@+id/glass_bars">
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/group_pager"
@@ -39,7 +39,7 @@
     </xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout>
 
     <LinearLayout
-        android:id="@+id/group_bars"
+        android:id="@+id/glass_bars"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"

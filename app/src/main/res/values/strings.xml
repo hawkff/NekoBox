@@ -839,7 +839,8 @@
     <string name="domain_strategy_for_remote">Remote domain strategy</string>
     <string name="domain_strategy_for_direct">Direct domain strategy</string>
     <string name="domain_strategy_for_server">Server domain strategy</string>
-    <string name="show_bottom_bar">Show bottom bar</string>
+    <string name="show_bottom_bar">Bottom bar on every screen</string>
+    <string name="show_bottom_bar_sum">The connect button, speeds and status stay at the bottom of every screen, not only on Home</string>
     <string name="liquid_glass">Liquid glass</string>
     <string name="utls_fingerprint">uTLS fingerprint</string>
     <string name="custom_outbound_json">Custom outbound JSON</string>

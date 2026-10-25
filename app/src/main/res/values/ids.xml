@@ -4,4 +4,6 @@
     <item name="row_move_up" type="id" />
     <item name="row_move_down" type="id" />
     <item name="row_remove" type="id" />
+    <!-- A scrolling view's own top padding, kept while liquid glass adds room for the floating bars. -->
+    <item name="glass_own_padding" type="id" />
 </resources>

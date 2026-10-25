@@ -11,6 +11,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.widget.ImageButton
+import android.widget.RelativeLayout
+import android.widget.ScrollView
 import androidx.annotation.ColorInt
 import androidx.appcompat.widget.ActionMenuView
 import androidx.appcompat.widget.SearchView
@@ -19,6 +21,10 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.children
 import androidx.core.view.isNotEmpty
 import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
+import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.getColorAttr
@@ -81,6 +87,45 @@ object Glass {
             glassAlpha(surface, context.getColorAttr(android.R.attr.textColorSecondary), target = 3.0),
         )
         return ColorUtils.setAlphaComponent(surface, (alpha * 255).toInt())
+    }
+
+    /**
+     * A screen under liquid glass: [content] fills it and scrolls beneath [bars], which float over it. The
+     * toolbar's buttons, and the panes [extra] adds, refract the content passing beneath, and below the bars
+     * the content fades into the canvas. Without this the content sits below the bars. [onInset] gets the
+     * room the content keeps clear at its top, and again whenever the bars change height.
+     */
+    fun floatBars(bars: ViewGroup, content: GlassBackdropFrameLayout, toolbar: Toolbar, extra: GlassLayout.() -> Unit, onInset: (Int) -> Unit) {
+        content.updateLayoutParams<RelativeLayout.LayoutParams> { removeRule(RelativeLayout.BELOW) }
+        bars.findViewById<View>(R.id.appbar)?.background = null
+        floatToolbar(toolbar)
+        // The band fades out below the controls, inside the bars so the bars can draw it.
+        val fade = bars.resources.getDimensionPixelSize(R.dimen.glass_edge_fade)
+        bars.updatePadding(bottom = fade)
+        bars.background = GlassDrawable(bars, content.backdrop, tint(bars.context)) { bounds ->
+            toolbarPanes(bars, toolbar)
+            extra()
+            band.set(GlassBand.TOP, (bounds.bottom - fade).toFloat(), fade.toFloat())
+        }
+        bars.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) onInset(bottom - top - fade)
+        }
+    }
+
+    /** Keeps [inset] clear at the top of a scrolling [view], above its own top padding; its content scrolls into it. */
+    fun insetScroller(view: View, inset: Int) {
+        val own = view.getTag(R.id.glass_own_padding) as? Int ?: view.paddingTop.also { view.setTag(R.id.glass_own_padding, it) }
+        (view as? ViewGroup)?.clipToPadding = false
+        view.updatePadding(top = own + inset)
+    }
+
+    /** The vertical scrolling views in [root], the outermost on each branch. A pager's own list is not one: its pages are. */
+    fun verticalScrollers(root: View): List<View> = when (root) {
+        is ViewPager2 -> emptyList()
+        is RecyclerView -> if (root.layoutManager?.canScrollVertically() == true) listOf(root) else emptyList()
+        is ScrollView, is NestedScrollView -> listOf(root)
+        is ViewGroup -> root.children.flatMap { verticalScrollers(it) }.toList()
+        else -> emptyList()
     }
 
     /** An app bar whose content does not scroll beneath it: a clear bar with its buttons as glass. */
