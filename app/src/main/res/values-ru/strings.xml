@@ -1123,14 +1123,13 @@
 <string name="route_destination_dns">DNS</string>
 <string name="route_answer_udp_rule">По UDP: %1$s, правило %2$d</string>
 <string name="route_answer_udp">По UDP: %s</string>
-<string name="route_answer_maybe">Правило %1$d может сработать раньше: %2$s</string>
-<string name="route_answer_unknown">Правило %1$d нельзя проверить здесь: %2$s</string>
-<plurals name="route_answer_more">
-    <item quantity="one">и ещё %d правило до него</item>
-    <item quantity="few">и ещё %d правила до него</item>
-    <item quantity="many">и ещё %d правил до него</item>
-    <item quantity="other">и ещё %d правила до него</item>
+<plurals name="route_answer_doubts">
+    <item quantity="one">Раньше может сработать %d правило, оно отмечено ниже</item>
+    <item quantity="few">Раньше могут сработать %d правила, они отмечены ниже</item>
+    <item quantity="many">Раньше могут сработать %d правил, они отмечены ниже</item>
+    <item quantity="other">Раньше могут сработать %d правила, они отмечены ниже</item>
 </plurals>
+<string name="route_answer_show">Показать в списке</string>
 <string name="route_verdict_catches">Срабатывает</string>
 <string name="route_verdict_maybe">Может сработать: %s</string>
 <string name="route_verdict_unknown">Не проверить: %s</string>
@@ -1143,7 +1142,6 @@
 <string name="route_fallback_summary">Идёт через выбранный профиль</string>
 <string name="route_global_notice">Глобальный режим включён: эти правила пропускаются, и весь трафик идёт через выбранный профиль.</string>
 <string name="route_global_off">Выключить</string>
-<string name="route_guide">Руководство по маршрутизации</string>
 <string name="route_reset_message">Заменить все правила стандартными?</string>
 <!-- Rule editor -->
 <string name="route_editor_new">Новое правило</string>
@@ -1184,5 +1182,8 @@
 <string name="route_editor_broken">С этим правилом подключение не запустится: %s</string>
 <string name="route_editor_no_list">нет списка адресов %s</string>
 <string name="route_editor_bad_port">%s не является портом или диапазоном портов</string>
+<string name="route_editor_more">Ещё параметры</string>
+<string name="route_editor_fewer">Меньше параметров</string>
+<string name="route_editor_no_site_list">нет списка сайтов %s</string>
 <string name="route_editor_bad_list">%s: нужно rssite: или rsip:, а за ним веб-ссылка</string>
 </resources>
