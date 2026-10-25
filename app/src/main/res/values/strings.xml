@@ -434,6 +434,7 @@
     <string name="connection_diagnostics_summary">Resolve the app behind each connection and keep the last 300 closed connections in memory while the service runs. Off by default.</string>
     <string name="connections_empty_stopped">NekoBox is off. Connect to see each connection your apps open.</string>
     <string name="connections_empty_running">No connections yet.</string>
+    <string name="connections_unreadable">Could not read the connections. The list tries again in a moment.</string>
     <string name="connections_status_live">%1$d live · %2$d closed. Diagnostics %3$s.</string>
     <string name="connections_status_on">on</string>
     <string name="connections_status_off">off: app names and closed connections are not collected</string>

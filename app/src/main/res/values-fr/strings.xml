@@ -277,4 +277,7 @@
     <string name="backup_import_summary">L\'importation écrasera les données existantes.</string>
     <string name="tools_network">Réseaux</string>
     <string name="backup_importing">Importation…</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d lignes</item>
+    </plurals>
 </resources>

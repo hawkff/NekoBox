@@ -81,8 +81,11 @@ class ServiceButton @JvmOverloads constructor(
                 // Gate the UI mutation on STARTED so a delayed progress reveal doesn't run
                 // while the activity is stopped (the old launchWhenStarted suspended here).
                 owner.withStarted {
-                    isIndeterminate = true
-                    show()
+                    // A button hidden meanwhile (another screen, a scrolled list) shows its ring when it comes back.
+                    if (this@ServiceButton.isOrWillBeShown) {
+                        isIndeterminate = true
+                        show()
+                    }
                 }
             }
         }

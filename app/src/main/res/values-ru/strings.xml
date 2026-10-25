@@ -753,6 +753,7 @@
     <string name="connection_diagnostics_summary">Определять приложение для каждого соединения и хранить в памяти последние 300 закрытых соединений, пока работает сервис. По умолчанию выключено.</string>
     <string name="connections_empty_stopped">NekoBox выключен. Подключитесь, чтобы видеть соединения ваших приложений.</string>
 <string name="connections_empty_running">Соединений пока нет.</string>
+<string name="connections_unreadable">Не удалось прочитать соединения. Список попробует снова через мгновение.</string>
     <string name="connections_status_live">Активных: %1$d · закрытых: %2$d. Диагностика %3$s.</string>
     <string name="connections_status_on">включена</string>
     <string name="connections_status_off">выключена: имена приложений и закрытые соединения не собираются</string>

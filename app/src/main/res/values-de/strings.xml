@@ -32,4 +32,7 @@
     <string name="list">Liste</string>
     <string name="random">Zufällig</string>
     <string name="enable_log_sum">Für Debugging-Zwecken</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d Linien</item>
+    </plurals>
 </resources>

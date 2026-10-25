@@ -495,4 +495,7 @@
     <string name="padding">Заповнення (Padding)</string>
     <string name="network_change_reset_connections">Скидати вихідні з\'єднання при зміні мережі</string>
     <string name="wake_reset_connections">Скидати вихідні з\'єднання при виході пристрою зі сну</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d рядків</item>
+    </plurals>
 </resources>

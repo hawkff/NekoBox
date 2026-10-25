@@ -542,4 +542,7 @@
     <string name="snell_obfs_host">Obfs 호스트</string>
     <string name="snell_reuse">재사용</string>
     <string name="snell_reuse_summary">v4/v5만</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d줄</item>
+    </plurals>
 </resources>

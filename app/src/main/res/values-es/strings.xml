@@ -425,4 +425,7 @@
  
     <string name="connection_test_delete_unavailable">Borrado no disponible</string> 
 
+    <plurals name="config_lines">
+        <item quantity="other">%d líneas</item>
+    </plurals>
 </resources> 

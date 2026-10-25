@@ -124,11 +124,13 @@ class ConnectionsFragment :
             adapter.submitList(emptyList())
             return
         }
+        var unreadable = false
         val entries = withContext(Dispatchers.IO) {
             try {
                 ConnectionEntry.parse(service.connections(showClosed))
             } catch (e: Exception) {
                 Logs.w(e)
+                unreadable = true
                 emptyList()
             }
         }.sortedByDescending { it.start }
@@ -139,7 +141,7 @@ class ConnectionsFragment :
             getString(if (DataStore.connectionDiagnostics) R.string.connections_status_on else R.string.connections_status_off),
         )
         binding.connectionsStatus.isVisible = true
-        binding.connectionsEmpty.setText(R.string.connections_empty_running)
+        binding.connectionsEmpty.setText(if (unreadable) R.string.connections_unreadable else R.string.connections_empty_running)
         binding.connectionsEmpty.isVisible = entries.isEmpty()
         adapter.submitList(entries)
     }
