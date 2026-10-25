@@ -204,7 +204,7 @@ class GroupFragment :
             val sizes = groups.associate { it.id to ProfileDatabase.proxyDao.countByGroup(it.id) }
             groupListView.post {
                 groupList.clear()
-                groupList.addAll(groups)
+                groupList.addAll(groups.filter { it.id !in pending })
                 counts.clear()
                 counts.putAll(sizes)
                 notifyDataSetChanged()
@@ -258,23 +258,13 @@ class GroupFragment :
             updated.clear()
         }
 
+        // Groups taken off the list whose deletion waits for undo: a reload leaves them out.
+        private val pending = HashSet<Long>()
+
         fun remove(index: Int) {
+            pending += groupList[index].id
             groupList.removeAt(index)
             notifyItemRemoved(index)
-        }
-
-        /** Counts the listed groups' profiles again; the list itself, with a removal waiting for undo, stays as it is. */
-        fun refreshCounts() = runOnDefaultDispatcher {
-            val ids = onMainDispatcher { groupList.map { it.id } }
-            val sizes = ids.associateWith { ProfileDatabase.proxyDao.countByGroup(it) }
-            onMainDispatcher {
-                for ((id, size) in sizes) {
-                    if (counts[id] == size) continue
-                    counts[id] = size
-                    val index = groupList.indexOfFirst { it.id == id }
-                    if (index >= 0) notifyItemChanged(index)
-                }
-            }
         }
 
         /** Opens the row of [groupId], closing the one open before; again on the same row, closes it. */
@@ -289,8 +279,11 @@ class GroupFragment :
 
         override fun undo(actions: List<Pair<Int, ProxyGroup>>) {
             for ((index, item) in actions) {
-                groupList.add(index, item)
-                notifyItemInserted(index)
+                pending -= item.id
+                // The list may have been reloaded meanwhile.
+                val at = index.coerceAtMost(groupList.size)
+                groupList.add(at, item)
+                notifyItemInserted(at)
             }
         }
 
@@ -298,6 +291,7 @@ class GroupFragment :
             val groups = actions.map { it.second }
             runOnDefaultDispatcher {
                 GroupManager.deleteGroup(groups)
+                onMainDispatcher { groups.forEach { pending -= it.id } }
                 reload()
             }
         }
@@ -368,10 +362,10 @@ class GroupFragment :
         }
     }
 
-    // Profiles added elsewhere, as by the scanner, change the counts without a group event.
+    // Profiles added elsewhere, as by the scanner, change counts and can bring back a hidden group without a group event.
     override fun onResume() {
         super.onResume()
-        if (::groupAdapter.isInitialized) groupAdapter.refreshCounts()
+        if (::groupAdapter.isInitialized) runOnDefaultDispatcher { groupAdapter.reload() }
     }
 
     override fun onDestroy() {
