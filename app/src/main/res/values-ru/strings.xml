@@ -405,7 +405,8 @@
 <string name="shadowsocks_plugin_v2ray">V2Ray (плагин Shadowsocks для Android)</string>
 <string name="share">Поделиться</string>
 <string name="share_qr_nfc">QR-код</string>
-<string name="show_bottom_bar">Показать нижнюю панель</string>
+<string name="show_bottom_bar">Нижняя панель на всех экранах</string>
+<string name="show_bottom_bar_sum">Кнопка подключения, скорость и статус остаются внизу на всех экранах, а не только на главном</string>
 <string name="liquid_glass">Жидкое стекло</string>
 <string name="show_direct_speed">Показать прямую скорость</string>
 <string name="show_direct_speed_sum">Также в уведомлении показывать скорость трафика без прокси</string>

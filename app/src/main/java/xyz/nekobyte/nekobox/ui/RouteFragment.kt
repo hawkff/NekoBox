@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,6 +52,8 @@ import xyz.nekobyte.nekobox.widget.CardHighlight
 import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
+import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassLayout
 
 /**
  * The route rules in the order the core tries them, and a tester above them that says where a site,
@@ -127,7 +130,14 @@ class RouteFragment :
             true
         }
         header.answer.setOnClickListener { showMatch() }
+        if (Glass.enabled) {
+            // The field floats as a glass capsule over the rules: no box or underline of its own.
+            header.probeLayout.boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_NONE
+            header.probe.background = null
+        }
     }
+
+    override fun GlassLayout.glassPanes(bars: ViewGroup) = paneOver(bars, binding.header.probeLayout, 0f, 0f)
 
     override fun onResume() {
         super.onResume()

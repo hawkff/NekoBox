@@ -18,7 +18,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.size
-import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -174,12 +173,6 @@ class ConfigurationGroupFragment : Fragment() {
         })
     }
     lateinit var configurationListView: RecyclerView
-    private var listTopPadding = 0
-
-    /** Liquid glass: the list starts below the bars it scrolls beneath. */
-    fun setGlassInset(inset: Int) {
-        if (::configurationListView.isInitialized) configurationListView.updatePadding(top = listTopPadding + inset)
-    }
     private lateinit var emptyHint: TextView
 
     val select by lazy {
@@ -307,8 +300,6 @@ class ConfigurationGroupFragment : Fragment() {
         val binding = LayoutProfileListBinding.bind(view)
         configurationListView = binding.configurationList
         emptyHint = binding.emptyHint
-        listTopPadding = configurationListView.paddingTop
-        (parentFragment as? ConfigurationFragment)?.let { setGlassInset(it.glassTopInset) }
         setupLayoutManager()
         configurationListView.layoutManager = layoutManager
         adapter?.let {

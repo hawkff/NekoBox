@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context=".ui.ToolsFragment">
+    tools:context=".ui.LogcatFragment">
 
-    <include
-        layout="@layout/layout_appbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <LinearLayout
+    <!-- Declared first so the bars draw over it. It sits below them; with liquid glass it fills the
+         screen and the log scrolls beneath them. -->
+    <xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
+        android:id="@+id/glass_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp">
+        android:layout_below="@+id/glass_bars">
 
         <ScrollView
             android:id="@+id/scroolview"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:padding="8dp">
 
             <TextView
                 android:id="@+id/textview"
@@ -34,7 +32,21 @@
                 android:textIsSelectable="true"
                 tools:ignore="LabelFor" />
         </ScrollView>
+
+    </xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout>
+
+    <LinearLayout
+        android:id="@+id/glass_bars"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical">
+
+        <include
+            layout="@layout/layout_appbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
     </LinearLayout>
 
-
-</LinearLayout>
+</RelativeLayout>

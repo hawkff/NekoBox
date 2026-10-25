@@ -17,7 +17,6 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.activity.result.component1
 import androidx.activity.result.component2
@@ -30,7 +29,6 @@ import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.size
 import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceDataStore
@@ -117,8 +115,7 @@ import xyz.nekobyte.nekobox.ui.profile.VMessSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
-import xyz.nekobyte.nekobox.widget.glass.GlassBand
-import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
+import xyz.nekobyte.nekobox.widget.glass.GlassLayout
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -162,9 +159,7 @@ class ConfigurationFragment @JvmOverloads constructor(
     private lateinit var searchResults: RecyclerView
     private lateinit var searchEmpty: View
 
-    /** With liquid glass, the height of the bars the lists scroll beneath; 0 without. */
-    var glassTopInset = 0
-        private set
+    private var searchEmptyMargin = 0
     private var searchView: SearchView? = null
     private var searchJob: Job? = null
     private val searchResultAdapter = SearchResultAdapter()
@@ -256,34 +251,20 @@ class ConfigurationFragment @JvmOverloads constructor(
         }
     }
 
-    // The groups fill the screen and scroll beneath the floating controls: the menu button, the
-    // actions and the tabs as glass, over a band where the content fades into the canvas.
-    private fun setupGlassBars(binding: LayoutGroupListBinding) {
-        val bars = binding.groupBars
-        binding.groupContent.updateLayoutParams<RelativeLayout.LayoutParams> { removeRule(RelativeLayout.BELOW) }
-        // ToolbarFragment gave the app bar glass of its own; the bars' glass holds its buttons too.
-        bars.findViewById<View>(R.id.appbar)?.background = null
+    // The groups scroll beneath the floating controls (ToolbarFragment floats them): the tabs ride
+    // with the toolbar as a glass capsule.
+    private fun styleGlassTabs() {
         tabBar.background = null
         tabLayout.background = null
         Glass.styleTabs(tabLayout, tabBar)
-        // The band fades out below the controls, inside the bars so the bars can draw it.
-        val fade = resources.getDimensionPixelSize(R.dimen.glass_edge_fade)
-        bars.updatePadding(bottom = fade)
-        bars.background = GlassDrawable(bars, binding.groupContent.backdrop, Glass.tint(requireContext())) { bounds ->
-            with(Glass) { toolbarPanes(bars, toolbar) }
-            paneOver(bars, tabBar, 0f, 0f)
-            band.set(GlassBand.TOP, (bounds.bottom - fade).toFloat(), fade.toFloat())
-        }
         searchResults.background = null
-        searchResults.clipToPadding = false
-        val searchEmptyMargin = (searchEmpty.layoutParams as FrameLayout.LayoutParams).topMargin
-        bars.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
-            glassTopInset = bottom - top - fade
-            searchResults.updatePadding(top = glassTopInset)
-            searchEmpty.updateLayoutParams<FrameLayout.LayoutParams> { topMargin = searchEmptyMargin + glassTopInset }
-            if (::adapter.isInitialized) adapter.groupFragments.values.forEach { it.setGlassInset(glassTopInset) }
-        }
+    }
+
+    override fun GlassLayout.glassPanes(bars: ViewGroup) = paneOver(bars, tabBar, 0f, 0f)
+
+    override fun onGlassInset(content: View, inset: Int) {
+        super.onGlassInset(content, inset)
+        searchEmpty.updateLayoutParams<FrameLayout.LayoutParams> { topMargin = searchEmptyMargin + inset }
     }
 
     private fun setFavoritesShown(shown: Boolean) {
@@ -451,7 +432,8 @@ class ConfigurationFragment @JvmOverloads constructor(
         tabBar = groupListBinding.groupTabBar
         searchResults = groupListBinding.groupSearchResults
         searchEmpty = groupListBinding.groupSearchEmpty
-        if (Glass.enabled) setupGlassBars(groupListBinding)
+        searchEmptyMargin = (searchEmpty.layoutParams as FrameLayout.LayoutParams).topMargin
+        if (Glass.enabled) styleGlassTabs()
         searchResults.layoutManager = LinearLayoutManager(requireContext())
         searchResults.adapter = searchResultAdapter
         groupListBinding.groupPicker.setOnClickListener { showGroupPicker() }
