@@ -603,7 +603,8 @@ class ConfigBuilderGoldenTest {
         // With bypass LAN in core, LAN traffic, multicast included, goes direct before the refusal.
         DataStore.bypassLanInCore = true
         rules = rules("routing-lan-in-core")
-        assertTrue(rules.indexOfFirst { it.optBoolean("ip_is_private") && it.optString("outbound") == TAG_BYPASS } < rules.indexOfFirst { isMulticast(it) })
+        val bypass = rules.indexOfFirst { it.optBoolean("ip_is_private") && it.optString("outbound") == TAG_BYPASS }
+        assertTrue(bypass >= 0 && bypass < rules.indexOfFirst { isMulticast(it) })
         DataStore.bypassLanInCore = false
 
         DataStore.trafficSniffing = TrafficSniffing.CONNECT_BY_NAME
@@ -614,7 +615,8 @@ class ConfigBuilderGoldenTest {
         // With resolve destination, the sniffed name is resolved on the device after the override.
         DataStore.resolveDestination = true
         rules = rules("connect-by-name-resolved")
-        assertTrue(rules.indexOfFirst { it.optString("action") == "sniff" } < rules.indexOfFirst { it.optString("action") == "resolve" })
+        val sniffAt = rules.indexOfFirst { it.optString("action") == "sniff" }
+        assertTrue(sniffAt >= 0 && sniffAt < rules.indexOfFirst { it.optString("action") == "resolve" })
         DataStore.resolveDestination = false
 
         // In proxy mode apps reach the mixed inbound.
