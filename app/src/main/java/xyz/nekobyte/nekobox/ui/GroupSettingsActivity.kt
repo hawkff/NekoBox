@@ -41,6 +41,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
 import xyz.nekobyte.nekobox.databinding.ItemGroupChainBinding
+import xyz.nekobyte.nekobox.databinding.ItemGroupOfferBinding
 import xyz.nekobyte.nekobox.databinding.LayoutGroupEditorBinding
 import xyz.nekobyte.nekobox.group.GroupUpdater
 import xyz.nekobyte.nekobox.group.SubscriptionFormat
@@ -475,22 +476,21 @@ class GroupSettingsActivity :
     private fun showOffers() {
         binding.warning.isVisible = DataStore.subscriptionImportWarning.isNotBlank()
         binding.warning.text = DataStore.subscriptionImportWarning
-        val (title, offered) = when {
-            pendingLinkOffer.isNotEmpty() -> R.string.subscription_offered_link to pendingLinkOffer
-            pendingBackupOffer.isNotEmpty() -> R.string.subscription_offered_backup_link to pendingBackupOffer
-            else -> null to ""
-        }
-        binding.offer.isVisible = title != null
-        if (title == null) return
-        binding.offerTitle.setText(title)
-        binding.offerLink.text = offered
-        binding.offerAccept.setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(title)
-                .setMessage(getString(R.string.subscription_offer_message, offered, offered.toHttpUrlOrNull()?.host ?: offered))
-                .setPositiveButton(R.string.subscription_offer_accept) { _, _ -> accept(offered, link = title == R.string.subscription_offered_link) }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+        // A new link and a backup can both wait; each is approved on its own.
+        binding.offers.removeAllViews()
+        for ((title, offered) in listOf(R.string.subscription_offered_link to pendingLinkOffer, R.string.subscription_offered_backup_link to pendingBackupOffer)) {
+            if (offered.isEmpty()) continue
+            val card = ItemGroupOfferBinding.inflate(layoutInflater, binding.offers, true)
+            card.offerTitle.setText(title)
+            card.offerLink.text = offered
+            card.offerAccept.setOnClickListener {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(title)
+                    .setMessage(getString(R.string.subscription_offer_message, offered, offered.toHttpUrlOrNull()?.host ?: offered))
+                    .setPositiveButton(R.string.subscription_offer_accept) { _, _ -> accept(offered, link = title == R.string.subscription_offered_link) }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
         }
     }
 

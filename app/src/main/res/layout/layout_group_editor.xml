@@ -48,50 +48,12 @@
                 tools:text="56 profiles · 108 MB used of 50 GB · ends 20 Nov · updated 3 days ago"
                 tools:visibility="visible" />
 
-            <!-- A link the provider proposed, waiting for approval; never fetched before. -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/offer"
+            <!-- Links the provider proposed, each waiting for approval; never fetched before. -->
+            <LinearLayout
+                android:id="@+id/offers"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:visibility="gone"
-                app:cardCornerRadius="@dimen/profile_card_corner_radius"
-                tools:visibility="visible">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingTop="12dp">
-
-                    <TextView
-                        android:id="@+id/offer_title"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceTitleSmall"
-                        tools:text="@string/subscription_offered_link" />
-
-                    <TextView
-                        android:id="@+id/offer_link"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?android:attr/textColorSecondary"
-                        tools:text="https://backup.example.org/sub" />
-
-                    <Button
-                        android:id="@+id/offer_accept"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end"
-                        android:text="@string/subscription_offer_accept" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
+                android:orientation="vertical" />
 
             <TextView
                 android:id="@+id/warning"

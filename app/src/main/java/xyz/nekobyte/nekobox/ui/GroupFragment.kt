@@ -463,6 +463,8 @@ class GroupFragment :
             }
             binding.updateSpace.isVisible = !subscription
             binding.updateAction.isVisible = subscription && !updating
+            // The update writes the group back when it ends, so an edit saved meanwhile would be lost.
+            binding.edit.isEnabled = !updating
         }
 
         /** Shows [group]; [opening] when its row has just been opened, so the details fade in and the bar fills. */

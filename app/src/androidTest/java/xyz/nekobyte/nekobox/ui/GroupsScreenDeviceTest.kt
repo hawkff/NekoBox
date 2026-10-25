@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.view.children
 import androidx.recyclerview.widget.RecyclerView
@@ -56,6 +57,9 @@ class GroupsScreenDeviceTest {
                     lastUpdated = (now - 3 * 86_400).toInt()
                     // As providers report it: bytes up and down, the total and when it ends.
                     subscriptionUserinfo = "upload=500000; download=1000000; total=$total; expire=${now + 27 * 86_400 + 3_600}"
+                    // The provider proposes a new link and a backup, both waiting for approval.
+                    offeredLink = "https://new.example.org/s"
+                    offeredBackupLink = "https://backup.example.org/s"
                 }
             },
         )
@@ -135,6 +139,7 @@ class GroupsScreenDeviceTest {
                 val sentence = it.findViewById<TextView>(R.id.sentence).text.toString()
                 assertTrue(sentence, sentence.startsWith(context.getString(R.string.group_editor_sentence_subscription, "sub.example.org", "").substringBefore(" · ")))
                 assertEquals(View.VISIBLE, it.findViewById<View>(R.id.provider).visibility)
+                assertEquals(2, it.findViewById<ViewGroup>(R.id.offers).childCount)
                 // Nothing under More options is in use, so it stays folded.
                 assertEquals(View.GONE, it.findViewById<View>(R.id.more).visibility)
                 it.findViewById<View>(R.id.kind_own).performClick()
