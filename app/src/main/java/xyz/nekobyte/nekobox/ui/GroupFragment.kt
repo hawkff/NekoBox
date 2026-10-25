@@ -354,6 +354,12 @@ class GroupFragment :
         }
     }
 
+    // Profiles added elsewhere, as by the scanner, change the counts without a group event.
+    override fun onResume() {
+        super.onResume()
+        if (::groupAdapter.isInitialized) runOnDefaultDispatcher { groupAdapter.reload() }
+    }
+
     override fun onDestroy() {
         if (::groupAdapter.isInitialized) {
             GroupManager.removeListener(groupAdapter)

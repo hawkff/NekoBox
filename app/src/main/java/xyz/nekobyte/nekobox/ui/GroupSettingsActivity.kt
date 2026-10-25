@@ -26,6 +26,7 @@ import androidx.preference.PreferenceDataStore
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.radiobutton.MaterialRadioButton
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.parcelize.Parcelize
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.GroupType
@@ -550,6 +551,11 @@ class GroupSettingsActivity :
 
     /** What keeps the group from being saved, shown at its field; true when nothing does. */
     private fun check(): Boolean {
+        // An update under way writes the group back when it ends, over anything saved meanwhile.
+        if (DataStore.editingId in GroupUpdater.updating) {
+            snackbar(R.string.group_editor_wait_update).show()
+            return false
+        }
         if (DataStore.groupType != GroupType.SUBSCRIPTION) return true
         var fine = true
         if (DataStore.subscriptionLink.isBlank()) {
@@ -644,6 +650,8 @@ class GroupSettingsActivity :
 
         finish()
     }
+
+    override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(binding.root, text, Snackbar.LENGTH_LONG)
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.profile_config_menu, menu)
