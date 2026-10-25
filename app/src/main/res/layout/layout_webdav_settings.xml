@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fitsSystemWindows="true"
-        android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar">
+        android:theme="?actionBarTheme">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
