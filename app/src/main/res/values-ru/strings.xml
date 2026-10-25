@@ -30,7 +30,7 @@
 <string name="allow_insecure_on_request_sum">Отключить проверку сертификатов при обновлении подписок</string>
 <string name="allow_insecure_sum">Отключить проверку сертификата. При включении эта функция настолько же безопасна как передача пароля в открытом виде</string>
 <string name="alpn">Согласование протокола уровня приложений</string>
-<string name="alter_id">Изменить ID</string>
+<string name="alter_id">Alter ID</string>
 <string name="always_show_address">Всегда показывать адрес</string>
 <string name="always_show_address_sum">На карточках профилей</string>
 <string name="app_name">NekoBox</string>
@@ -479,7 +479,7 @@
 <string name="username">Имя пользователя</string>
 <string name="username_opt">Имя пользователя (необязательно)</string>
 <string name="utls_fingerprint">Отпечаток uTLS</string>
-<string name="uuid">Логин пользователя</string>
+<string name="uuid">ID пользователя (UUID)</string>
 <string name="v7_preference_off">ВЫКЛ.</string>
 <string name="v7_preference_on">ВКЛ.</string>
 <string name="vpn_connected">Подключено, нажмите для проверки подключения</string>
