@@ -15,6 +15,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.getSystemService
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
@@ -44,7 +45,6 @@ import xyz.nekobyte.nekobox.fmt.RouteVerdict
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
-import xyz.nekobyte.nekobox.ktx.launchCustomTab
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.widget.CardHighlight
@@ -148,8 +148,6 @@ class RouteFragment :
 
     override fun onMenuItemClick(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_new_route -> startActivity(Intent(context, RouteSettingsActivity::class.java))
-
             R.id.action_reset_route -> {
                 MaterialAlertDialogBuilder(requireContext())
                     .setTitle(R.string.route_reset)
@@ -168,8 +166,6 @@ class RouteFragment :
             R.id.action_manage_assets -> startActivity(Intent(requireContext(), AssetsActivity::class.java))
 
             R.id.action_routing_profiles -> startActivity(Intent(requireContext(), RoutingProfilesActivity::class.java))
-
-            R.id.action_route_guide -> requireContext().launchCustomTab(GUIDE)
         }
         return true
     }
@@ -213,16 +209,13 @@ class RouteFragment :
                 context.getString(R.string.route_answer_udp, where)
             }
         }
-        // The rules before the answer that might still catch it first.
-        val doubts = answer.verdicts.withIndex().mapNotNull { (index, verdict) ->
-            when (verdict) {
-                is RouteVerdict.CatchesIf -> context.getString(R.string.route_answer_maybe, index + 1, RuleWords.conditions(context, verdict.conditions))
-                is RouteVerdict.Unknown -> context.getString(R.string.route_answer_unknown, index + 1, RuleWords.unknown(context, verdict.reason))
-                else -> null
-            }
-        }
-        val more = (doubts.size - SHOWN_DOUBTS).takeIf { it > 0 }?.let { context.resources.getQuantityString(R.plurals.route_answer_more, it, it) }
-        val notes = listOfNotNull(app?.let { context.getString(R.string.route_test_app, it) }, udp) + doubts.take(SHOWN_DOUBTS) + listOfNotNull(more)
+        // Earlier rules that might still catch it first are marked on their rows; the answer counts them.
+        val doubts = answer.verdicts.count { it is RouteVerdict.CatchesIf || it is RouteVerdict.Unknown }
+        val notes = listOfNotNull(
+            app?.let { context.getString(R.string.route_test_app, it) },
+            udp,
+            doubts.takeIf { it > 0 }?.let { context.resources.getQuantityString(R.plurals.route_answer_doubts, it, it) },
+        )
         val verdicts = answer.verdicts.map { verdict ->
             when (verdict) {
                 RouteVerdict.Catches -> context.getString(R.string.route_verdict_catches)
@@ -256,6 +249,14 @@ class RouteFragment :
         tested = result
         val header = binding.header
         header.answer.isVisible = result != null
+        // An answer brings its deciding rule into view, and TalkBack says so; "nothing called that" leads nowhere.
+        val leads = result?.answer != null
+        header.answer.isClickable = leads
+        if (leads) {
+            ViewCompat.replaceAccessibilityAction(header.answer, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK, getString(R.string.route_answer_show), null)
+        } else {
+            ViewCompat.removeAccessibilityAction(header.answer, AccessibilityNodeInfoCompat.ACTION_CLICK)
+        }
         if (result != null) {
             header.answerDestination.isVisible = result.destination != null
             result.destination?.let { header.answerDestination.paintDestination(it, result.color) }
@@ -450,7 +451,6 @@ class RouteFragment :
             this.row = row
             binding.title.text = row.title
             binding.summary.text = row.summary
-            binding.destination.paintDestination(row.destination, row.color)
             binding.enable.isChecked = row.rule.enabled
             binding.enable.contentDescription = row.title
             show(animate)
@@ -465,11 +465,17 @@ class RouteFragment :
             val matched = decision is RouteDecision.Rule && decision.index == position
             val verdict = result?.verdicts?.getOrNull(position)
             binding.order.text = (position + 1).toString()
+            // An off rule stays readable; its label turns gray and says so, so the colored labels are the rules at work.
+            if (row.rule.enabled) {
+                binding.destination.paintDestination(row.destination, row.color)
+            } else {
+                binding.destination.paintDestination(context.getString(R.string.route_rule_off), context.getColorAttr(android.R.attr.textColorSecondary))
+            }
             binding.verdict.text = verdict
             binding.verdict.isVisible = verdict != null
             binding.verdict.setTextColor(context.getColorAttr(if (matched) R.attr.colorPrimary else android.R.attr.textColorSecondary))
             val alpha = when {
-                result == null -> if (row.rule.enabled) 1f else OFF_ALPHA
+                result == null -> 1f
                 matched || verdict != null -> 1f
                 else -> PASSED_ALPHA
             }
@@ -524,16 +530,13 @@ class RouteFragment :
         const val RULE = 0
         const val END = 1
         const val VERDICT = "verdict"
-        const val GUIDE = "https://matsuridayo.github.io/nb4a-route/"
         const val TYPING = 250L
-        const val SHOWN_DOUBTS = 2
 
         // The fade runs down the list the way the core reads it, one row after another.
         const val FADE = 160L
         const val STAGGER = 24
         const val MAX_STAGGER = 10
         const val POP = 1.12f
-        const val OFF_ALPHA = 0.5f
         const val PASSED_ALPHA = 0.38f
     }
 }

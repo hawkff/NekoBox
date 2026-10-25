@@ -206,7 +206,7 @@
     <string name="route_play_store">Play store rule for %s</string>
     <string name="route_bypass_ip">IP rule for %s</string>
     <string name="route_reset">Restore default rules</string>
-    <string name="route_manage_assets">Manage Route Assets</string>
+    <string name="route_manage_assets">Manage route assets</string>
     <string name="route_assets">Assets</string>
     <string name="route_rules_provider">Rule assets provider</string>
     <string name="route_rules_official">Official</string>
@@ -1143,12 +1143,11 @@
     <string name="route_destination_dns">DNS</string>
     <string name="route_answer_udp_rule">Over UDP: %1$s, by rule %2$d</string>
     <string name="route_answer_udp">Over UDP: %s</string>
-    <string name="route_answer_maybe">Rule %1$d might catch it first: %2$s</string>
-    <string name="route_answer_unknown">Rule %1$d can’t be checked here: %2$s</string>
-    <plurals name="route_answer_more">
-        <item quantity="one">and %d more rule before it</item>
-        <item quantity="other">and %d more rules before it</item>
+    <plurals name="route_answer_doubts">
+        <item quantity="one">%d earlier rule might catch it first; it’s marked below</item>
+        <item quantity="other">%d earlier rules might catch it first; they’re marked below</item>
     </plurals>
+    <string name="route_answer_show">Show in the list</string>
     <string name="route_verdict_catches">Catches it</string>
     <string name="route_verdict_maybe">Might catch it: %s</string>
     <string name="route_verdict_unknown">Can’t check: %s</string>
@@ -1161,7 +1160,6 @@
     <string name="route_fallback_summary">Goes through the selected profile</string>
     <string name="route_global_notice">Global mode is on, so these rules are skipped and everything goes through the selected profile.</string>
     <string name="route_global_off">Turn off</string>
-    <string name="route_guide">Routing guide</string>
     <string name="route_reset_message">Replace all rules with the default ones?</string>
     <!-- Rule editor -->
     <string name="route_editor_new">New rule</string>
@@ -1202,5 +1200,8 @@
     <string name="route_editor_broken">With this rule the connection wouldn’t start: %s</string>
     <string name="route_editor_no_list">there’s no address list named %s</string>
     <string name="route_editor_bad_port">%s isn’t a port or a range of ports</string>
+    <string name="route_editor_more">More options</string>
+    <string name="route_editor_fewer">Fewer options</string>
+    <string name="route_editor_no_site_list">there’s no site list named %s</string>
     <string name="route_editor_bad_list">%s isn’t rssite: or rsip: followed by a web link</string>
 </resources>

@@ -28,7 +28,7 @@ import xyz.nekobyte.nekobox.database.RuleEntity
 class RouteScreenDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
-    private val names = listOf("Route test sites", "Route test port", "Route test made")
+    private val names = listOf("Route test sites", "Route test port", "Route test made", "Route test off", "Route test protocol")
 
     @Before
     fun rules() {
@@ -39,6 +39,8 @@ class RouteScreenDeviceTest {
             ProfileManager.getRules()
             ProfileManager.createRule(RuleEntity(name = names[0], enabled = true, domains = "domain:example.org", outbound = -2))
             ProfileManager.createRule(RuleEntity(name = names[1], enabled = true, port = "8443", outbound = -1))
+            ProfileManager.createRule(RuleEntity(name = names[3], enabled = false, domains = "domain:example.com", outbound = -1))
+            ProfileManager.createRule(RuleEntity(name = names[4], enabled = false, domains = "example.edu", protocol = "tls", outbound = -2))
         }
     }
 
@@ -70,6 +72,21 @@ class RouteScreenDeviceTest {
 
             ask(root, "203.0.113.7:8443")
             assertEquals(context.getString(R.string.route_bypass), text(root, R.id.answer_destination))
+            // Without a port both earlier rules might catch an address first: one line counts them, the rows say how.
+            ask(root, "203.0.113.7")
+            assertEquals(context.resources.getQuantityString(R.plurals.route_answer_doubts, 2, 2), text(root, R.id.answer_notes))
+
+            // An off rule reads at full strength; its label is gray and says Off.
+            ask(root, "")
+            val off = ProfileDatabase.rulesDao.allRules().indexOfFirst { it.name == names[3] }
+            instrumentation.runOnMainSync { root.findViewById<RecyclerView>(R.id.route_list).scrollToPosition(off) }
+            settle()
+            instrumentation.runOnMainSync {
+                val list = root.findViewById<RecyclerView>(R.id.route_list)
+                val row = list.children.first { names[3] in it.contentDescription?.toString().orEmpty() }
+                assertEquals(context.getString(R.string.route_rule_off), row.findViewById<TextView>(R.id.destination).text.toString())
+                assertEquals(1f, row.findViewById<View>(R.id.title).alpha)
+            }
 
             // Not a site or an address: an app, by the name the launcher shows.
             val label = context.packageManager.getApplicationLabel(context.applicationInfo).toString()
@@ -88,7 +105,14 @@ class RouteScreenDeviceTest {
             settle()
             lateinit var root: View
             scenario.onActivity { root = it.window.decorView }
+            // A rule without detected protocols, sources, rule DNS or custom JSON keeps them folded.
             instrumentation.runOnMainSync {
+                assertEquals(View.GONE, root.findViewById<View>(R.id.more).visibility)
+                root.findViewById<View>(R.id.more_toggle).performClick()
+            }
+            settle()
+            instrumentation.runOnMainSync {
+                assertEquals(View.VISIBLE, root.findViewById<View>(R.id.more).visibility)
                 root.findViewById<EditText>(R.id.name).setText(names[2])
                 root.findViewById<View>(R.id.to_block).performClick()
                 root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
@@ -103,6 +127,19 @@ class RouteScreenDeviceTest {
         assertEquals("example.net", made.domains)
         assertEquals(-2L, made.outbound)
         assertTrue(made.enabled)
+    }
+
+    @Test
+    fun aRuleThatUsesAFoldedFieldOpensWithItShown() {
+        val rule = ProfileDatabase.rulesDao.allRules().single { it.name == names[4] }
+        val intent = Intent(context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, rule.id)
+        ActivityScenario.launch<RouteSettingsActivity>(intent).use { scenario ->
+            settle()
+            scenario.onActivity {
+                assertEquals(View.VISIBLE, it.findViewById<View>(R.id.more).visibility)
+                assertEquals("tls", it.findViewById<EditText>(R.id.protocols).text.toString())
+            }
+        }
     }
 
     private fun ask(root: View, text: String) {

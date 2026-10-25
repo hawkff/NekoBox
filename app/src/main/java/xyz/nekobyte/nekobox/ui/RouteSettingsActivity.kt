@@ -5,8 +5,10 @@ import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.transition.TransitionManager
 import android.view.Menu
 import android.view.MenuItem
+import android.view.ViewGroup
 import android.widget.EditText
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -102,7 +104,12 @@ class RouteSettingsActivity : ThemedActivity() {
 
         val savedDraft = savedInstanceState?.let { BundleCompat.getParcelable(it, DRAFT, RuleEntity::class.java) }
         val savedOriginal = savedInstanceState?.let { BundleCompat.getParcelable(it, ORIGINAL, RuleEntity::class.java) }
-        if (savedDraft != null && savedOriginal != null) return start(stored = savedOriginal, edited = savedDraft)
+        if (savedDraft != null && savedOriginal != null) {
+            start(stored = savedOriginal, edited = savedDraft)
+            // Open or folded, the section stays as the person left it.
+            if (savedInstanceState?.containsKey(MORE) == true) showMore(savedInstanceState.getBoolean(MORE), animate = false)
+            return
+        }
         lifecycleScope.launch {
             val rule = withContext(Dispatchers.IO) { if (editingId == 0L) newRule() else ProfileDatabase.rulesDao.getById(editingId) }
             if (rule == null) finish() else start(stored = rule, edited = rule.copy())
@@ -131,6 +138,7 @@ class RouteSettingsActivity : ThemedActivity() {
         if (!::draft.isInitialized) return
         outState.putParcelable(DRAFT, draft)
         outState.putParcelable(ORIGINAL, original)
+        outState.putBoolean(MORE, binding.more.isVisible)
     }
 
     private fun start(stored: RuleEntity, edited: RuleEntity) {
@@ -218,7 +226,19 @@ class RouteSettingsActivity : ThemedActivity() {
             editJson.launch(Intent(this, ConfigEditActivity::class.java))
         }
         binding.tryProbe.doAfterTextChanged { tryIt() }
+        binding.moreToggle.setOnClickListener { showMore(!binding.more.isVisible, animate = true) }
+        val usesMore = draft.protocol.isNotBlank() || draft.source.isNotBlank() || draft.sourcePort.isNotBlank() ||
+            draft.dnsThroughOutbound || draft.dnsServer.isNotBlank() || draft.config.isNotBlank()
+        showMore(usesMore, animate = false)
         changed()
+    }
+
+    /** Opens or folds what few rules need: detected protocols, where traffic starts, rule DNS and custom JSON. */
+    private fun showMore(open: Boolean, animate: Boolean) {
+        if (animate) TransitionManager.beginDelayedTransition(binding.scroll.getChildAt(0) as ViewGroup)
+        binding.more.isVisible = open
+        binding.moreToggle.setText(if (open) R.string.route_editor_fewer else R.string.route_editor_more)
+        binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)
     }
 
     /** Chips for common lists under [field]: checked while the field holds the list, and tapping one adds or removes it. */
@@ -337,10 +357,19 @@ class RouteSettingsActivity : ThemedActivity() {
         // The bundled lists are unpacked when the service first starts; until then the core checks the rest.
         val loaded = RouteChecks.settings().listsLoaded
         val sites = rule.domains.listByLineOrComma().filter { loaded || !it.startsWith("geosite:") }
+        // Each site list on its own, so that a misspelled one is named in plain words, not in the core's.
+        for (entry in sites.filter { it.startsWith("geosite:") }) {
+            try {
+                Libcore.matchRouteDestination(RouteTester.destinationJson(listOf(entry), emptyList()), "example.invalid")
+            } catch (_: Exception) {
+                return getString(R.string.route_editor_no_site_list, entry)
+            }
+        }
+        val others = sites.filterNot { it.startsWith("geosite:") }
         val checked = addresses.filter { loaded || !it.startsWith("geoip:") || it == "geoip:private" }
-        if (sites.isEmpty() && checked.isEmpty()) return null
+        if (others.isEmpty() && checked.isEmpty()) return null
         return try {
-            Libcore.matchRouteDestination(RouteTester.destinationJson(sites, checked), "example.invalid")
+            Libcore.matchRouteDestination(RouteTester.destinationJson(others, checked), "example.invalid")
             null
         } catch (e: Exception) {
             e.readableMessage
@@ -426,6 +455,7 @@ class RouteSettingsActivity : ThemedActivity() {
 
         private const val DRAFT = "draft"
         private const val ORIGINAL = "original"
+        private const val MORE = "more"
         private const val WORDS = 120L
         private const val TYPING = 250L
 
