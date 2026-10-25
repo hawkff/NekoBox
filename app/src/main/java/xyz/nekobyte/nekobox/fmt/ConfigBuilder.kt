@@ -1439,7 +1439,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
 
         if (!forTest) {
-            // DNS on port 53 goes to the core's resolver before anything reads the connection.
+            // DNS on port 53 goes to the core's resolver before anything reads the connection. DNS on
+            // other ports is left alone: sniffing would find it too, but also mDNS and LLMNR queries,
+            // whose local names do not belong at the resolver.
             routeRules.add(
                 0,
                 Rule_DefaultOptions().apply {
@@ -1447,18 +1449,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     action = "hijack-dns"
                 },
             )
-            // DNS on another port is known only once sniffed, so its rule follows the sniff rule;
-            // without sniffing it could never match.
-            val sniffAt = routeRules.indexOfFirst { it is Rule_DefaultOptions && it.action == "sniff" && it.sniffer == null }
-            if (sniffAt >= 0) {
-                routeRules.add(
-                    sniffAt + 1,
-                    Rule_DefaultOptions().apply {
-                        protocol = listOf("dns")
-                        action = "hijack-dns"
-                    },
-                )
-            }
             if (DataStore.bypassLanInCore) {
                 routeRules.add(
                     Rule_DefaultOptions().apply {
@@ -1467,11 +1457,12 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     },
                 )
             }
-            // block mcast
+            // Multicast that no rule above sent elsewhere is refused: it only works on the local
+            // network, never through a proxy. Matched by destination alone; the core requires a rule's
+            // source and destination ranges together, and no packet comes from a multicast address.
             routeRules.add(
                 Rule_DefaultOptions().apply {
                     ip_cidr = listOf("224.0.0.0/3", "ff00::/8")
-                    source_ip_cidr = listOf("224.0.0.0/3", "ff00::/8")
                     action = "reject"
                 },
             )
