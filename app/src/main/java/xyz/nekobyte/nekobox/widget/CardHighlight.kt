@@ -125,11 +125,13 @@ class CardHighlight(private val card: MaterialCardView) {
         card.setCardBackgroundColor(ColorUtils.blendARGB(surface, tint, fraction))
     }
 
-    private companion object {
-        const val DURATION = 220L
+    companion object {
+        private const val DURATION = 220L
 
         // One breath takes twice this: out to faint, back to full.
-        const val BREATH = 900L
-        const val FAINT = 0.3f
+        private const val BREATH = 900L
+
+        /** How strong the outline is at the faint end of a breath, where it holds with animations off. */
+        internal const val FAINT = 0.3f
     }
 }

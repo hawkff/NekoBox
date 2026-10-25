@@ -5,6 +5,7 @@ import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.children
 import androidx.test.core.app.ActivityScenario
@@ -14,7 +15,6 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -29,6 +29,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
+import xyz.nekobyte.nekobox.widget.CardHighlight
 
 /** The profile the service is connecting to says so, to the eye and to TalkBack, until the connection is up. */
 @RunWith(AndroidJUnit4::class)
@@ -40,6 +41,7 @@ class ConnectingOutlineDeviceTest {
     private var savedGroup = 0L
     private var savedProxy = 0L
     private var savedCurrent = 0L
+    private var savedState = BaseService.State.Stopped
 
     @Before
     fun setUp() {
@@ -49,6 +51,7 @@ class ConnectingOutlineDeviceTest {
         savedGroup = DataStore.selectedGroup
         savedProxy = DataStore.selectedProxy
         savedCurrent = DataStore.currentProfile
+        savedState = DataStore.serviceState
         group = ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "Connecting", userOrder = 1_000_000L))
         profile = ProfileDatabase.proxyDao.addProxy(
             ProxyEntity(groupId = group).putBean(
@@ -65,7 +68,7 @@ class ConnectingOutlineDeviceTest {
 
     @After
     fun tearDown() {
-        DataStore.serviceState = BaseService.State.Stopped
+        DataStore.serviceState = savedState
         ProfileDatabase.proxyDao.deleteAll(group)
         ProfileDatabase.groupDao.deleteById(group)
         DataStore.selectedGroup = savedGroup
@@ -103,8 +106,12 @@ class ConnectingOutlineDeviceTest {
                 }
                 assertTrue(changed)
             } else {
-                // Without animations it holds at the faint end, unlike the solid outline.
-                assertNotEquals(primary, first)
+                // Without animations it holds at the faint end of a breath, at the selected width.
+                instrumentation.runOnMainSync {
+                    val card = card(root)
+                    assertEquals(ColorUtils.blendARGB(card.context.getColor(R.color.card_stroke), primary, CardHighlight.FAINT), card.strokeColor)
+                    assertEquals(card.resources.getDimensionPixelSize(R.dimen.card_stroke_width_selected), card.strokeWidth)
+                }
             }
 
             state(scenario, BaseService.State.Connected)
