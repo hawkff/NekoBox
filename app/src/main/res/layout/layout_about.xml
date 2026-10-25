@@ -54,10 +54,12 @@
                 android:textColor="?android:attr/textColorSecondary" />
 
             <!-- The parts it runs on, label and value. -->
+            <!-- The values wrap when the page is narrow or the text large. -->
             <TableLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp">
+                android:layout_marginTop="28dp"
+                android:shrinkColumns="1">
 
                 <TableRow>
 
@@ -94,6 +96,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:background="?attr/selectableItemBackground"
+                android:focusable="true"
                 android:gravity="center"
                 android:minHeight="48dp"
                 android:paddingHorizontal="12dp"

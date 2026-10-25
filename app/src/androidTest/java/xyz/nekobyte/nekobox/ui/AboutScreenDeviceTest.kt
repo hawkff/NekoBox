@@ -42,6 +42,8 @@ class AboutScreenDeviceTest {
                 assertEquals(context.getString(R.string.about_edition, NekoBox.appVersionNameForDisplay), it.findViewById<TextView>(R.id.edition).text.toString())
                 val core = it.findViewById<TextView>(R.id.core).text.toString()
                 assertTrue(core, core.startsWith("sing-box "))
+                // Background use is reached from a keyboard too, on every Android version.
+                assertTrue(it.findViewById<View>(R.id.background).isFocusable)
                 // Each page says it leaves the app.
                 for (id in listOf(R.id.source, R.id.releases, R.id.license)) {
                     val page = it.findViewById<Button>(id)
