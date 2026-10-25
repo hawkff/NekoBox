@@ -26,17 +26,12 @@
     <!-- group -->
     <string name="group_name">Назва групи</string>
     <string name="group_update">Оновити</string>
-    <string name="group_subscription_link">Посилання на підписку</string>
     <string name="group_name_required">Потрібна назва групи</string>
     <string name="group_create">Створити групу</string>
     <string name="group_create_subscription">Створити підписку</string>
     <string name="update_all_subscription">Оновити всі підписки</string>
     <string name="group_edit">Редагувати групу</string>
     <string name="group_edit_subscription">Редагувати підписку</string>
-    <string name="group_status_empty">Порожня група</string>
-    <string name="group_status_empty_subscription">Ще не оновлено</string>
-    <string name="group_status_proxies">%d проксі</string>
-    <string name="group_status_proxies_subscription">%d проксі | Оновлено %s</string>
     <string name="group_no_difference">%s: Немає різниці</string>
     <string name="group_updated">%s: Оновлено %d проксі</string>
     <string name="group_show_diff">Різниця</string>
@@ -220,13 +215,11 @@
     <string name="config_settings">Налаштування конфігурації</string>
     <string name="circular_reference">Циклічне посилання</string>
     <string name="circular_reference_sum">Маршрут не може містити самого себе.</string>
-    <string name="clear_profiles">Очистити</string>
     <string name="action_create_group">Порожня група</string>
     <string name="action_from_link">З підписки</string>
     <string name="action_scan_china_apps">Сканувати китайські програми</string>
     <string name="action_export_file">Експортувати у файл</string>
     <string name="action_export_clipboard">Експортувати в буфер обміну</string>
-    <string name="action_export">Експорт</string>
     <string name="action_import">Імпортувати з буфера обміну</string>
     <string name="action_import_file">Імпортувати з файлу</string>
     <string name="action_export_msg">Експортовано успішно!</string>
@@ -326,19 +319,13 @@
     <string name="protocol_settings">Налаштування протоколу</string>
     <string name="trojan_provider">Постачальник Trojan</string>
     <string name="group_basic">Основні</string>
-    <string name="group_settings">Налаштування групи</string>
     <string name="subscription">Підписка</string>
-    <string name="subscription_settings">Налаштування підписки</string>
-    <string name="group_type">Тип групи</string>
     <string name="subscription_type">Тип підписки</string>
     <string name="delete_group_prompt">Ви впевнені, що хочете видалити цю групу?</string>
     <string name="force_resolve">Примусове визначення</string>
     <string name="force_resolve_sum">Визначати всі доменні імена в IP-адреси під час оновлення. Хост і SNI будуть автоматично додані, якщо це можливо</string>
     <string name="deduplication_sum">Видаляти дублікати конфігурацій під час оновлення</string>
     <string name="raw">Raw</string>
-    <string name="update_settings">Налаштування оновлення</string>
-    <string name="auto_update">Автоматичне оновлення</string>
-    <string name="auto_update_delay">Затримка автооновлення (у хвилинах)</string>
     <string name="update_when_connected_only">Оновлювати лише при підключенні</string>
     <string name="update_when_connected_only_sum">Запобігати витоку IP-адреси</string>
     <string name="subscription_user_agent">UserAgent</string>
@@ -359,8 +346,6 @@
     <string name="subscription_update">Оновлення підписки</string>
     <string name="subscription_update_message">Оновлення %s …</string>
     <string name="group_filter">Фільтр</string>
-    <string name="subscription_used">Використано %s</string>
-    <string name="subscription_traffic">Використано %s / Залишилося %s</string>
     <string name="subscription_expire">Закінчується: %s</string>
     <string name="subscription_import">Імпортувати підписку</string>
     <string name="subscription_import_message">Підтвердьте, що ви хочете імпортувати підписку %s? Якщо ви робите це з ненадійного джерела, це може призвести до витоку вашої IP-адреси та даних про цю дію.</string>
@@ -484,7 +469,6 @@
     <string name="landing_proxy">Проксі-призначення</string>
     <string name="action_shadowtls" translatable="false">ShadowTLS</string>
     <string name="protocol_version">Версія протоколу</string>
-    <string name="share_subscription">Поділитися підпискою</string>
     <string name="show_group_in_notification">Показувати назву групи у сповіщенні</string>
     <string name="reset_connections">Скинути з\'єднання</string>
     <string name="remove_duplicate">Видалити дублікати серверів</string>

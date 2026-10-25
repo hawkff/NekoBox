@@ -42,16 +42,11 @@
     <string name="group_show_diff">Diff</string>
     <string name="group_updated">%s : %d proxys mis à jour</string>
     <string name="group_no_difference">%s : aucune différence</string>
-    <string name="group_status_proxies_subscription">%d proxys | Mis à jour le %s</string>
-    <string name="group_status_proxies">%d proxys</string>
-    <string name="group_status_empty_subscription">Pas encore mis à jour</string>
-    <string name="group_status_empty">Groupe vide</string>
     <string name="group_edit_subscription">Modifier l\'abonnement</string>
     <string name="group_edit">Modifier le groupe</string>
     <string name="group_create_subscription">Créer un abonnement</string>
     <string name="group_create">Créer un groupe</string>
     <string name="group_name_required">Nom de groupe requis</string>
-    <string name="group_subscription_link">Lien d’abonnement</string>
     <string name="group_update">Mettre à jour</string>
     <string name="group_name">Nom du groupe</string>
     <string name="quick_toggle">Basculer</string>
@@ -96,7 +91,6 @@
     <string name="clear_traffic_statistics">Effacer les statistiques du trafic</string>
     <string name="ws_browser_forwarding">Transfert de Navigateur</string>
     <string name="group_filter">Filtre</string>
-    <string name="clear_profiles">Effacer</string>
     <string name="always_show_address">Toujours afficher l\'adresse</string>
     <string name="undo">Annuler</string>
     <string name="enable">Activer</string>
@@ -115,7 +109,6 @@
     <string name="connection_test_url">URL de test de connexion</string>
     <string name="off">Inactif</string>
     <string name="route_block">Bloquer</string>
-    <string name="action_export">Exporter</string>
     <string name="route_asset_status">Version locale : %s</string>
     <string name="plugin_disabled">Désactivé</string>
     <string name="connection_test_testing">Essai…</string>
@@ -223,11 +216,8 @@
     <string name="proxy_cat">Préférences du serveur</string>
     <string name="need_reload">Recharger le service de proxy pour appliquer les modifications</string>
     <string name="append_http_proxy">Ajouter un proxy HTTP au VPN</string>
-    <string name="subscription_settings">Préférences de souscription</string>
-    <string name="group_type">Type du groupe</string>
     <string name="subscription_type">Type de souscription</string>
     <string name="install_from_play_store">Installer depuis le Play Store</string>
-    <string name="subscription_used">%s utilisé</string>
     <string name="group_order_by_delay">Par délai</string>
     <string name="route_bypass_ip">Règle IP pour %s</string>
     <string name="config_settings">Préférences de la configuration</string>
@@ -237,7 +227,6 @@
     <string name="open_app">Ouvrir l\'appli</string>
     <string name="open_settings">Ouvrir les préférences</string>
     <string name="header_type">Type d\'entête</string>
-    <string name="group_settings">Préférences de groupe</string>
     <string name="protocol_settings">Préférences du protocole</string>
     <string name="route_bypass_domain">Règle de domaine pour %s</string>
     <string name="no_proxies_found_in_subscription">Aucun proxy trouvé dans cette souscription</string>
@@ -248,7 +237,6 @@
     <string name="uuid">ID de l\'utilisateur</string>
     <string name="ws_path">Chemin du WebSocket</string>
     <string name="select_profile">Sélectionner un profil</string>
-    <string name="update_settings">Mettre à jour les préférences</string>
     <string name="copy_label">Copier le nom</string>
     <string name="create_rule">Créer une règle</string>
     <string name="copy_success">Copie avec succès !</string>
@@ -283,9 +271,6 @@
     <string name="trojan_provider">Fournisseur de torjan</string>
     <string name="ooc_subscription_token_invalid">Jeton OOCv1 invalide</string>
     <string name="update_when_connected_only">Mettre à jour que quand connecté</string>
-    <string name="auto_update_delay">Délai de mise à jour automatique (en minutes)</string>
-    <string name="auto_update">Mise à jour auto</string>
-    <string name="subscription_traffic">%s utilisé(s) / %s restant(s)</string>
     <string name="subscription_import">Importer une souscription</string>
     <string name="profile_import">Importer un profil</string>
     <string name="warp_generate">Générer une configuration</string>

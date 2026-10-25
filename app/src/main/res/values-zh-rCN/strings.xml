@@ -16,16 +16,11 @@
     <!-- group -->
     <string name="group_name">分组名</string>
     <string name="group_update">更新</string>
-    <string name="group_subscription_link">订阅链接</string>
     <string name="group_name_required">需要分组名称</string>
     <string name="group_create">创建分组</string>
     <string name="group_create_subscription">添加订阅</string>
     <string name="group_edit">编辑分组</string>
     <string name="group_edit_subscription">编辑订阅</string>
-    <string name="group_status_empty">空</string>
-    <string name="group_status_empty_subscription">从未更新</string>
-    <string name="group_status_proxies">%d 个配置</string>
-    <string name="group_status_proxies_subscription">%d 个配置 | 更新于 %s</string>
     <string name="group_no_difference">%s: 没有变化</string>
     <string name="group_updated">%s: 更新了 %d 个节点</string>
     <string name="group_show_diff">变化</string>
@@ -230,7 +225,6 @@
     <string name="no_proxies_found_in_file">未在此文件内找到服务器配置</string>
     <string name="no_proxies_found_in_clipboard">未在剪切板内找到服务器配置</string>
     <string name="route_reset">重置</string>
-    <string name="clear_profiles">清空</string>
     <string name="file_manager_missing">您的设备缺少 Android 标准文件选择器, 请安装一个, 如 Material Files.</string>
     <string name="need_reload">重载代理服务以应用修改</string>
     <string name="theme">主题颜色</string>
@@ -310,10 +304,7 @@
     <string name="protocol_settings">协议设置</string>
     <string name="trojan_provider">Trojan 提供程序</string>
     <string name="group_basic">基本</string>
-    <string name="group_settings">分组设置</string>
     <string name="subscription">订阅</string>
-    <string name="subscription_settings">订阅设置</string>
-    <string name="group_type">分组类型</string>
     <string name="subscription_type">订阅类型</string>
     <string name="delete_group_prompt">您确定要删除该分组吗 \?</string>
     <string name="force_resolve">强制解析</string>
@@ -325,9 +316,6 @@
     <string name="filter_exclude">排除</string>
     <string name="filter_regex">过滤（正则表达式）</string>
     <string name="raw">原始</string>
-    <string name="update_settings">更新设置</string>
-    <string name="auto_update">自动更新</string>
-    <string name="auto_update_delay">自动更新间隔 (分)</string>
     <string name="update_when_connected_only">仅在连接时更新</string>
     <string name="update_when_connected_only_sum">防止 IP 地址泄漏</string>
     <string name="subscription_user_agent">用户代理</string>
@@ -347,14 +335,11 @@
     <string name="subscription_update_message">正更新 %s …</string>
     <string name="update_subscription_warning">代理未连接, 您确定要继续更新吗\?</string>
     <string name="group_filter">筛选</string>
-    <string name="subscription_used">已用 %s</string>
-    <string name="subscription_traffic">已用 %s / 剩余 %s</string>
     <string name="subscription_import">导入订阅</string>
     <string name="subscription_import_message">确认要导入订阅 %s？如果来源不可信, 您的 IP 和行为将被泄露.</string>
     <string name="profile_import">导入配置</string>
     <string name="profile_import_message">确认要导入配置 %s？</string>
     <string name="no_proxies_found_in_subscription">未在此订阅内找到服务器配置</string>
-    <string name="action_export">导出</string>
     <string name="clear_profiles_message">您确定要清空该分组吗\?</string>
     <string name="remote_dns">远程 DNS</string>
     <string name="direct_dns">直连 DNS</string>
@@ -487,7 +472,6 @@
     <string name="front_proxy">前置代理</string>
     <string name="landing_proxy">落地代理</string>
     <string name="protocol_version">协议版本</string>
-    <string name="share_subscription">分享订阅</string>
     <string name="show_group_in_notification">在通知中显示组名</string>
     <string name="reset_connections">重置连接</string>
     <string name="remove_duplicate">删除重复的服务器</string>

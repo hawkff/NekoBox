@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The group editor: what the group holds and, for a subscription, its link and how it updates;
+     the rest folded under More options. A sentence on top says what the group is. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include
+        layout="@layout/layout_appbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="24dp">
+
+            <TextView
+                android:id="@+id/sentence"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                tools:text="Subscription from example.com · updates every 1 day" />
+
+            <!-- What the provider reported at the last update. -->
+            <TextView
+                android:id="@+id/provider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone"
+                tools:text="56 profiles · 108 MB used of 50 GB · ends 20 Nov · updated 3 days ago"
+                tools:visibility="visible" />
+
+            <!-- A link the provider proposed, waiting for approval; never fetched before. -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/offer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:cardCornerRadius="@dimen/profile_card_corner_radius"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="12dp">
+
+                    <TextView
+                        android:id="@+id/offer_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?attr/textAppearanceTitleSmall"
+                        tools:text="@string/subscription_offered_link" />
+
+                    <TextView
+                        android:id="@+id/offer_link"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?android:attr/textColorSecondary"
+                        tools:text="https://backup.example.org/sub" />
+
+                    <Button
+                        android:id="@+id/offer_accept"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:text="@string/subscription_offer_accept" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:drawablePadding="12dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone"
+                app:drawableStartCompat="@drawable/ic_baseline_info_24"
+                app:drawableTint="?attr/colorError"
+                tools:text="Some profiles in this subscription could not be imported"
+                tools:visibility="visible" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.NekoBox.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/group_name"
+                app:helperText="@string/group_editor_name_help">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapSentences"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                style="@style/Widget.NekoBox.Section"
+                android:accessibilityHeading="true"
+                android:text="@string/group_editor_kind"
+                tools:targetApi="p" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/kind"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/kind_subscription"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/group_editor_kind_subscription" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/kind_own"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/group_editor_kind_own" />
+
+            </com.google.android.material.chip.ChipGroup>
+
+            <LinearLayout
+                android:id="@+id/subscription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/link_layout"
+                    style="@style/Widget.NekoBox.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/group_editor_link"
+                    app:endIconMode="clear_text"
+                    app:helperText="@string/group_editor_link_help">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/link"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:importantForAutofill="no"
+                        android:inputType="textUri"
+                        android:maxLines="3" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/auto_update"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="48dp"
+                    android:text="@string/group_editor_auto_update"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/intervals"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/interval_layout"
+                    style="@style/Widget.NekoBox.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/group_editor_interval"
+                    app:helperText="@string/group_editor_interval_help">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/interval"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLines="1" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/more_toggle"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/route_editor_more"
+                app:icon="@drawable/ic_expand_more_24" />
+
+            <LinearLayout
+                android:id="@+id/more"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    style="@style/Widget.NekoBox.Section"
+                    android:accessibilityHeading="true"
+                    android:text="@string/group_editor_profiles"
+                    tools:targetApi="p" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/order"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/order_listed"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/group_editor_order_listed" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/order_name"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/group_editor_order_name" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/order_latency"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/group_editor_order_latency" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/selector"
+                    style="@style/Widget.NekoBox.EditorSwitch"
+                    android:text="@string/use_selector" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/auto_select"
+                    style="@style/Widget.NekoBox.EditorSwitch"
+                    android:text="@string/auto_select" />
+
+                <TextView
+                    style="@style/Widget.NekoBox.EditorNote"
+                    android:text="@string/auto_select_sum" />
+
+                <include
+                    android:id="@+id/first"
+                    layout="@layout/item_group_chain" />
+
+                <include
+                    android:id="@+id/last"
+                    layout="@layout/item_group_chain" />
+
+                <LinearLayout
+                    android:id="@+id/subscription_more"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Widget.NekoBox.Section"
+                        android:accessibilityHeading="true"
+                        android:text="@string/group_editor_subscription"
+                        tools:targetApi="p" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/backups_layout"
+                        style="@style/Widget.NekoBox.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/subscription_backup_links">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/backups"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="textUri|textMultiLine" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorLabel"
+                        android:text="@string/subscription_format" />
+
+                    <RadioGroup
+                        android:id="@+id/format"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorNote"
+                        android:text="@string/subscription_format_summary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/resolve"
+                        style="@style/Widget.NekoBox.EditorSwitch"
+                        android:text="@string/force_resolve" />
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorNote"
+                        android:text="@string/force_resolve_sum" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/dedupe"
+                        style="@style/Widget.NekoBox.EditorSwitch"
+                        android:text="@string/deduplication" />
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorNote"
+                        android:text="@string/deduplication_sum" />
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorLabel"
+                        android:text="@string/filter" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/filter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/filter_off"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/filter_disabled" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/filter_keep"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/filter_include" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/filter_drop"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/filter_exclude" />
+
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/filter_regex_layout"
+                        style="@style/Widget.NekoBox.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/filter_regex">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/filter_regex"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="text|textNoSuggestions"
+                            android:maxLines="1" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/dns_layout"
+                        style="@style/Widget.NekoBox.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/subscription_custom_dns"
+                        app:helperText="@string/subscription_custom_dns_sum">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/dns"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="textUri"
+                            android:maxLines="1" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/connected_only"
+                        style="@style/Widget.NekoBox.EditorSwitch"
+                        android:text="@string/update_when_connected_only" />
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorNote"
+                        android:text="@string/update_when_connected_only_sum" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/agent_layout"
+                        style="@style/Widget.NekoBox.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/subscription_user_agent">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/agent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="text|textNoSuggestions"
+                            android:maxLines="2" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/device_id"
+                        style="@style/Widget.NekoBox.EditorSwitch"
+                        android:text="@string/subscription_send_device_id" />
+
+                    <TextView
+                        style="@style/Widget.NekoBox.EditorNote"
+                        android:text="@string/subscription_send_device_id_sum" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

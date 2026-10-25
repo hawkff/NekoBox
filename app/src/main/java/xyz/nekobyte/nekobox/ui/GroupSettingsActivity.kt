@@ -1,23 +1,31 @@
 package xyz.nekobyte.nekobox.ui
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
-import android.text.InputType
+import android.transition.TransitionManager
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.widget.Toast
+import android.view.ViewGroup
+import android.widget.EditText
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AlertDialog
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
-import androidx.preference.*
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isNotEmpty
+import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
+import androidx.core.widget.doAfterTextChanged
+import androidx.preference.EditTextPreference
+import androidx.preference.Preference
+import androidx.preference.PreferenceDataStore
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.radiobutton.MaterialRadioButton
 import kotlinx.parcelize.Parcelize
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.GroupType
@@ -25,30 +33,46 @@ import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.SubscriptionFilterMode
-import xyz.nekobyte.nekobox.database.*
+import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
+import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
+import xyz.nekobyte.nekobox.databinding.ItemGroupChainBinding
+import xyz.nekobyte.nekobox.databinding.LayoutGroupEditorBinding
 import xyz.nekobyte.nekobox.group.GroupUpdater
 import xyz.nekobyte.nekobox.group.SubscriptionFormat
 import xyz.nekobyte.nekobox.group.SubscriptionRecovery
-import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.USER_AGENT
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
-import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.OutboundPreference
 
-@Suppress("UNCHECKED_CAST")
-class GroupSettingsActivity(
-    @LayoutRes resId: Int = R.layout.layout_config_settings,
-) : ThemedActivity(resId),
+/**
+ * Makes or changes a group. The common choices come first: the name, what the group holds and,
+ * for a subscription, its link and how it updates; the rest is under More options, open when the
+ * group uses any of it. The form writes the group's settings as you go; nothing is stored until
+ * Save, and leaving with changes asks first.
+ */
+class GroupSettingsActivity :
+    ThemedActivity(),
     OnPreferenceDataStoreChangeListener {
 
-    private lateinit var frontProxyPreference: OutboundPreference
-    private lateinit var landingProxyPreference: OutboundPreference
+    private lateinit var binding: LayoutGroupEditorBinding
 
     // Links the provider proposed in its last update; shown for approval, never fetched before.
     private var pendingLinkOffer = ""
     private var pendingBackupOffer = ""
+    private var isFromClipboard = false
+
+    // The group as stored, for what the provider reported; null for a new one.
+    private var stored: ProxyGroup? = null
+
+    // Set while the form shows the settings, so that its listeners don't write them back.
+    private var filling = false
 
     fun ProxyGroup.init() {
         DataStore.groupName = name ?: ""
@@ -134,204 +158,434 @@ class GroupSettingsActivity(
         }
     }
 
-    private var isFromClipboard = false
-
     fun needSave(): Boolean = DataStore.dirty
 
-    fun PreferenceFragmentCompat.createPreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        addPreferencesFromResource(R.xml.group_preferences)
-        findPreference<Preference>(Key.SUBSCRIPTION_IMPORT_WARNING)!!.apply {
-            summary = DataStore.subscriptionImportWarning
-            isVisible = DataStore.subscriptionImportWarning.isNotBlank()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = LayoutGroupEditorBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        onBackPressedDispatcher.addCallback(this) {
+            if (needSave()) {
+                UnsavedChangesDialogFragment().apply { key() }.show(supportFragmentManager, null)
+            } else {
+                finish()
+            }
+        }
+        setSupportActionBar(findViewById(R.id.toolbar))
+        val editingId = intent.getLongExtra(EXTRA_GROUP_ID, 0L)
+        supportActionBar?.apply {
+            setTitle(if (editingId == 0L) R.string.group_editor_new else R.string.group_editor_edit)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+        }
+        val bottom = binding.scroll.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(binding.scroll) { view, insets ->
+            view.updatePadding(bottom = bottom + insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()).bottom)
+            insets
         }
 
-        val linkPreference = findPreference<EditTextPreference>(Key.SUBSCRIPTION_LINK)!!
-        val backupLinksPreference = findPreference<EditTextPreference>(Key.SUBSCRIPTION_BACKUP_LINKS)!!.apply {
-            summaryProvider = Preference.SummaryProvider<EditTextPreference> { preference ->
-                preference.text.orEmpty().trim().ifEmpty {
-                    getString(R.string.subscription_backup_links_summary, SubscriptionRecovery.MAX_BACKUP_LINKS)
+        if (savedInstanceState != null) {
+            // The settings store still holds the draft; the offers and the flag come back from the state.
+            pendingLinkOffer = savedInstanceState.getString(LINK_OFFER).orEmpty()
+            pendingBackupOffer = savedInstanceState.getString(BACKUP_OFFER).orEmpty()
+            isFromClipboard = savedInstanceState.getBoolean(EXTRA_FROM_CLIPBOARD)
+            start(open = savedInstanceState.getBoolean(MORE))
+            DataStore.profileCacheStore.registerChangeListener(this)
+            runOnDefaultDispatcher {
+                val group = DataStore.editingId.takeIf { it > 0 }?.let { ProfileDatabase.groupDao.getById(it) }
+                onMainDispatcher {
+                    stored = group
+                    showProvider()
                 }
             }
-            setOnBindEditTextListener {
-                it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            }
-            setOnPreferenceChangeListener { _, newValue ->
-                val links = (newValue as String).lines().map { it.trim() }.filter { it.isNotEmpty() }
-                val valid = links.size <= SubscriptionRecovery.MAX_BACKUP_LINKS && links.all(SubscriptionRecovery::isHttpsLink)
-                if (!valid) {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.subscription_backup_links_invalid, SubscriptionRecovery.MAX_BACKUP_LINKS),
-                        Toast.LENGTH_LONG,
-                    ).show()
+            return
+        }
+        isFromClipboard = intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false)
+        val subscriptionLink = intent.getStringExtra(EXTRA_GROUP_SUBSCRIPTION_LINK)
+        DataStore.editingId = editingId
+        runOnDefaultDispatcher {
+            var prefilled = false
+            if (editingId == 0L) {
+                ProxyGroup().init()
+                if (intent.getBooleanExtra(EXTRA_SUBSCRIPTION, false)) DataStore.groupType = GroupType.SUBSCRIPTION
+                // A link from elsewhere makes it a subscription with that link.
+                if (!subscriptionLink.isNullOrEmpty()) {
+                    DataStore.groupType = GroupType.SUBSCRIPTION
+                    DataStore.subscriptionLink = subscriptionLink
+                    prefilled = true
                 }
-                valid
+            } else {
+                val entity = ProfileDatabase.groupDao.getById(editingId)
+                if (entity == null) {
+                    onMainDispatcher { finish() }
+                    return@runOnDefaultDispatcher
+                }
+                entity.init()
+                stored = entity
+            }
+            onMainDispatcher {
+                start(open = null)
+                DataStore.dirty = prefilled
+                DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
             }
         }
-        fun backupLinks(links: List<String>, without: String) = links.map { it.trim() }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(LINK_OFFER, pendingLinkOffer)
+        outState.putString(BACKUP_OFFER, pendingBackupOffer)
+        outState.putBoolean(EXTRA_FROM_CLIPBOARD, isFromClipboard)
+        if (::binding.isInitialized) outState.putBoolean(MORE, binding.more.isVisible)
+    }
+
+    /** Shows the settings in the form and listens to it; [open] folds More options, or by what the group uses when null. */
+    private fun start(open: Boolean?) {
+        val defaults = SubscriptionBean().applyDefaultValues()
+        filling = true
+        binding.name.setText(DataStore.groupName)
+        binding.kind.check(if (DataStore.groupType == GroupType.SUBSCRIPTION) R.id.kind_subscription else R.id.kind_own)
+        binding.link.setText(DataStore.subscriptionLink)
+        binding.autoUpdate.isChecked = DataStore.subscriptionAutoUpdate
+        binding.interval.setText(DataStore.subscriptionAutoUpdateDelay.toString())
+        binding.order.check(
+            when (DataStore.groupOrder) {
+                1 -> R.id.order_name
+                2 -> R.id.order_latency
+                else -> R.id.order_listed
+            },
+        )
+        binding.selector.isChecked = DataStore.groupIsSelector
+        binding.autoSelect.isChecked = DataStore.groupAutoSelect
+        binding.backups.setText(DataStore.subscriptionBackupLinks)
+        binding.resolve.isChecked = DataStore.subscriptionForceResolve
+        binding.dedupe.isChecked = DataStore.subscriptionDeduplication
+        binding.filter.check(
+            when (DataStore.subscriptionFilterMode) {
+                SubscriptionFilterMode.INCLUDE -> R.id.filter_keep
+                SubscriptionFilterMode.EXCLUDE -> R.id.filter_drop
+                else -> R.id.filter_off
+            },
+        )
+        binding.filterRegex.setText(DataStore.subscriptionFilterRegex)
+        binding.dns.setText(DataStore.subscriptionCustomDns)
+        binding.connectedOnly.isChecked = DataStore.subscriptionUpdateWhenConnectedOnly
+        binding.agent.setText(DataStore.subscriptionUserAgent)
+        binding.agentLayout.placeholderText = USER_AGENT
+        binding.deviceId.isChecked = DataStore.subscriptionSendDeviceId
+        offerFormats()
+        offerIntervals()
+        filling = false
+
+        fun EditText.writes(write: (String) -> Unit) = doAfterTextChanged {
+            if (filling) return@doAfterTextChanged
+            write(it?.toString().orEmpty())
+            describe()
+        }
+        binding.name.writes { DataStore.groupName = it }
+        binding.link.writes {
+            DataStore.subscriptionLink = it
+            checkLink()
+        }
+        binding.interval.writes { text ->
+            binding.intervalLayout.error = null
+            // Only a valid interval is kept; Save says what is wrong with another.
+            text.toIntOrNull()?.takeIf { it >= 15 }?.let { DataStore.subscriptionAutoUpdateDelay = it }
+            showIntervals()
+        }
+        binding.backups.writes {
+            binding.backupsLayout.error = null
+            DataStore.subscriptionBackupLinks = it
+        }
+        binding.filterRegex.writes { DataStore.subscriptionFilterRegex = it }
+        binding.dns.writes {
+            binding.dnsLayout.error = null
+            DataStore.subscriptionCustomDns = it
+        }
+        binding.agent.writes { DataStore.subscriptionUserAgent = it }
+        binding.kind.setOnCheckedStateChangeListener { _, checked ->
+            if (filling) return@setOnCheckedStateChangeListener
+            DataStore.groupType = if (checked.firstOrNull() == R.id.kind_subscription) GroupType.SUBSCRIPTION else GroupType.BASIC
+            showKind(animate = true)
+        }
+        binding.autoUpdate.setOnCheckedChangeListener { _, on ->
+            if (filling) return@setOnCheckedChangeListener
+            DataStore.subscriptionAutoUpdate = on
+            showIntervals()
+            describe()
+        }
+        binding.order.setOnCheckedStateChangeListener { _, checked ->
+            if (filling) return@setOnCheckedStateChangeListener
+            DataStore.groupOrder = when (checked.firstOrNull()) {
+                R.id.order_name -> 1
+                R.id.order_latency -> 2
+                else -> 0
+            }
+        }
+        // Turning the selector off clears automatic selection, so the disabled switch shows what will be saved.
+        binding.selector.setOnCheckedChangeListener { _, on ->
+            if (filling) return@setOnCheckedChangeListener
+            DataStore.groupIsSelector = on
+            if (!on) binding.autoSelect.isChecked = false
+            binding.autoSelect.isEnabled = on
+        }
+        binding.autoSelect.isEnabled = DataStore.groupIsSelector
+        binding.autoSelect.setOnCheckedChangeListener { _, on -> if (!filling) DataStore.groupAutoSelect = on }
+        binding.resolve.setOnCheckedChangeListener { _, on -> if (!filling) DataStore.subscriptionForceResolve = on }
+        binding.dedupe.setOnCheckedChangeListener { _, on -> if (!filling) DataStore.subscriptionDeduplication = on }
+        binding.connectedOnly.setOnCheckedChangeListener { _, on -> if (!filling) DataStore.subscriptionUpdateWhenConnectedOnly = on }
+        binding.deviceId.setOnCheckedChangeListener { _, on -> if (!filling) DataStore.subscriptionSendDeviceId = on }
+        binding.filter.setOnCheckedStateChangeListener { _, checked ->
+            if (filling) return@setOnCheckedStateChangeListener
+            DataStore.subscriptionFilterMode = when (checked.firstOrNull()) {
+                R.id.filter_keep -> SubscriptionFilterMode.INCLUDE
+                R.id.filter_drop -> SubscriptionFilterMode.EXCLUDE
+                else -> SubscriptionFilterMode.DISABLED
+            }
+            binding.filterRegexLayout.isVisible = DataStore.subscriptionFilterMode != SubscriptionFilterMode.DISABLED
+        }
+        binding.filterRegexLayout.isVisible = DataStore.subscriptionFilterMode != SubscriptionFilterMode.DISABLED
+        chain(binding.first, R.string.group_editor_first, front = true)
+        chain(binding.last, R.string.group_editor_last, front = false)
+        binding.moreToggle.setOnClickListener { showMore(!binding.more.isVisible, animate = true) }
+
+        val usesMore = DataStore.groupOrder != 0 || DataStore.groupIsSelector ||
+            DataStore.frontProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt() || DataStore.landingProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt() ||
+            DataStore.subscriptionBackupLinks.isNotBlank() || DataStore.subscriptionFormat != (defaults.outputFormat ?: 0) ||
+            DataStore.subscriptionForceResolve != defaults.forceResolve || DataStore.subscriptionDeduplication != defaults.deduplication ||
+            DataStore.subscriptionFilterMode != SubscriptionFilterMode.DISABLED || DataStore.subscriptionCustomDns.isNotBlank() ||
+            DataStore.subscriptionUpdateWhenConnectedOnly != defaults.updateWhenConnectedOnly || DataStore.subscriptionUserAgent.isNotBlank() ||
+            DataStore.subscriptionSendDeviceId != defaults.sendDeviceId
+        showMore(open ?: usesMore, animate = false)
+        showOffers()
+        showKind(animate = false)
+        showIntervals()
+        checkLink()
+        showProvider()
+        describe()
+    }
+
+    /** The formats a subscription can be asked for, one radio button each. */
+    private fun offerFormats() {
+        if (binding.format.isNotEmpty()) return
+        resources.getStringArray(R.array.subscription_formats).forEachIndexed { index, label ->
+            val button = MaterialRadioButton(this).apply {
+                id = ViewCompat.generateViewId()
+                text = label
+                minHeight = (48 * resources.displayMetrics.density).toInt()
+                tag = index
+            }
+            binding.format.addView(button)
+            if (index == DataStore.subscriptionFormat) button.isChecked = true
+        }
+        binding.format.setOnCheckedChangeListener { group, id ->
+            if (!filling) DataStore.subscriptionFormat = group.findViewById<MaterialRadioButton>(id)?.tag as? Int ?: 0
+        }
+    }
+
+    /** Quick picks for how often to update, which fill in the minutes. */
+    private fun offerIntervals() {
+        if (binding.intervals.isNotEmpty()) return
+        for (minutes in INTERVALS) {
+            val chip = layoutInflater.inflate(R.layout.item_route_list_chip, binding.intervals, false) as Chip
+            chip.text = GroupWords.interval(this, minutes)
+            chip.tag = minutes
+            chip.setOnClickListener {
+                binding.interval.setText(minutes.toString())
+                binding.interval.setSelection(binding.interval.length())
+            }
+            binding.intervals.addView(chip)
+        }
+    }
+
+    private fun showIntervals() {
+        val on = DataStore.subscriptionAutoUpdate
+        binding.intervals.isVisible = on
+        binding.intervalLayout.isVisible = on
+        val minutes = binding.interval.text?.toString()?.toIntOrNull()
+        for (i in 0 until binding.intervals.childCount) {
+            val chip = binding.intervals.getChildAt(i) as Chip
+            chip.isChecked = chip.tag == minutes
+        }
+    }
+
+    private fun showKind(animate: Boolean) {
+        if (animate) TransitionManager.beginDelayedTransition(binding.scroll.getChildAt(0) as ViewGroup)
+        val subscription = DataStore.groupType == GroupType.SUBSCRIPTION
+        binding.subscription.isVisible = subscription
+        binding.subscriptionMore.isVisible = subscription
+        describe()
+    }
+
+    private fun showMore(open: Boolean, animate: Boolean) {
+        if (animate) TransitionManager.beginDelayedTransition(binding.scroll.getChildAt(0) as ViewGroup)
+        binding.more.isVisible = open
+        binding.moreToggle.setText(if (open) R.string.route_editor_fewer else R.string.route_editor_more)
+        binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)
+    }
+
+    // A line break never belongs in a link and blocks saving; a cleartext link is allowed, and the help line says what it risks.
+    private fun checkLink() {
+        val link = DataStore.subscriptionLink
+        binding.linkLayout.error = getString(R.string.group_editor_link_line).takeIf { "\n" in link }
+        binding.linkLayout.helperText = getString(if (link.startsWith("http://", ignoreCase = true)) R.string.cleartext_http_warning else R.string.group_editor_link_help)
+    }
+
+    /** The sentence on top: what the group holds and, for a subscription, where from and how it updates. */
+    private fun describe() {
+        binding.sentence.text = if (DataStore.groupType != GroupType.SUBSCRIPTION) {
+            getString(R.string.group_editor_sentence_own)
+        } else {
+            val link = DataStore.subscriptionLink.trim()
+            val updates = if (DataStore.subscriptionAutoUpdate) {
+                getString(R.string.group_editor_updates_every, GroupWords.interval(this, DataStore.subscriptionAutoUpdateDelay.coerceAtLeast(1)))
+            } else {
+                getString(R.string.group_editor_updates_manual)
+            }
+            val host = link.toHttpUrlOrNull()?.host
+            when {
+                link.toUri().scheme == "content" -> getString(R.string.group_editor_sentence_file, updates)
+                host != null -> getString(R.string.group_editor_sentence_subscription, host, updates)
+                else -> getString(R.string.group_editor_sentence_new)
+            }
+        }
+    }
+
+    /** What the provider reported at the last update, for a stored subscription. */
+    private fun showProvider() {
+        val group = stored?.takeIf { it.type == GroupType.SUBSCRIPTION }
+        val subscription = group?.subscription
+        binding.provider.isVisible = subscription != null
+        if (group == null || subscription == null) return
+        runOnDefaultDispatcher {
+            val count = ProfileDatabase.proxyDao.countByGroup(group.id).toInt()
+            onMainDispatcher {
+                val now = System.currentTimeMillis()
+                val quota = GroupWords.quota(subscription)
+                binding.provider.text = listOfNotNull(
+                    resources.getQuantityString(R.plurals.group_profiles, count, count),
+                    GroupWords.traffic(this@GroupSettingsActivity, quota),
+                    GroupWords.ends(this@GroupSettingsActivity, quota, now),
+                    GroupWords.updated(this@GroupSettingsActivity, subscription, now),
+                ).joinToString(" · ")
+            }
+        }
+    }
+
+    private fun showOffers() {
+        binding.warning.isVisible = DataStore.subscriptionImportWarning.isNotBlank()
+        binding.warning.text = DataStore.subscriptionImportWarning
+        val (title, offered) = when {
+            pendingLinkOffer.isNotEmpty() -> R.string.subscription_offered_link to pendingLinkOffer
+            pendingBackupOffer.isNotEmpty() -> R.string.subscription_offered_backup_link to pendingBackupOffer
+            else -> null to ""
+        }
+        binding.offer.isVisible = title != null
+        if (title == null) return
+        binding.offerTitle.setText(title)
+        binding.offerLink.text = offered
+        binding.offerAccept.setOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(title)
+                .setMessage(getString(R.string.subscription_offer_message, offered, offered.toHttpUrlOrNull()?.host ?: offered))
+                .setPositiveButton(R.string.subscription_offer_accept) { _, _ -> accept(offered, link = title == R.string.subscription_offered_link) }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    // Accepting fills in the link or backups like typing them would; saving the group applies it.
+    private fun accept(offered: String, link: Boolean) {
+        fun backups(links: List<String>, without: String) = links.map { it.trim() }
             .filter { it != without && SubscriptionRecovery.isHttpsLink(it) }
             .distinct()
             .take(SubscriptionRecovery.MAX_BACKUP_LINKS)
             .joinToString("\n")
-
-        // Accepting fills in the link or backups like typing them would; saving the group applies it.
-        fun offer(key: String, offered: String, accept: () -> Unit) = findPreference<Preference>(key)!!.apply {
-            isVisible = offered.isNotEmpty()
-            summary = offered
-            setOnPreferenceClickListener {
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(title)
-                    .setMessage(getString(R.string.subscription_offer_message, offered, offered.toHttpUrlOrNull()?.host ?: offered))
-                    .setPositiveButton(R.string.subscription_offer_accept) { _, _ ->
-                        accept()
-                        isVisible = false
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-                true
-            }
-        }
-        offer(Key.SUBSCRIPTION_OFFERED_LINK, pendingLinkOffer) {
+        if (link) {
             // The replaced link stays available as the first backup when it is HTTPS.
-            val previous = linkPreference.text.orEmpty()
-            linkPreference.text = pendingLinkOffer
-            backupLinksPreference.text = backupLinks(listOf(previous) + backupLinksPreference.text.orEmpty().lines(), pendingLinkOffer)
+            val previous = binding.link.text?.toString().orEmpty()
+            binding.link.setText(offered)
+            binding.backups.setText(backups(listOf(previous) + binding.backups.text.toString().lines(), offered))
+            pendingLinkOffer = ""
+        } else {
+            binding.backups.setText(backups(binding.backups.text.toString().lines() + offered, binding.link.text.toString()))
+            pendingBackupOffer = ""
         }
-        offer(Key.SUBSCRIPTION_OFFERED_BACKUP_LINK, pendingBackupOffer) {
-            backupLinksPreference.text = backupLinks(backupLinksPreference.text.orEmpty().lines() + pendingBackupOffer, linkPreference.text.orEmpty())
-        }
+        showMore(true, animate = true)
+        showOffers()
+    }
 
-        // Turning the selector off clears automatic selection so the disabled switch shows the
-        // value that will be saved.
-        val autoSelectPreference = findPreference<SwitchPreference>(Key.GROUP_AUTO_SELECT)!!
-        findPreference<SwitchPreference>(Key.GROUP_IS_SELECTOR)!!.setOnPreferenceChangeListener { _, newValue ->
-            if (newValue == false) autoSelectPreference.isChecked = false
-            true
-        }
-
-        frontProxyPreference = findPreference(Key.GROUP_FRONT_PROXY)!!
-        frontProxyPreference.apply {
-            setEntries(R.array.front_proxy_entry)
-            setEntryValues(R.array.front_proxy_value)
-            setOnPreferenceChangeListener { _, newValue ->
-                if (newValue.toString() == OutboundPreference.VALUE_SELECT_PROFILE) {
-                    selectProfileForAddFront.launch(
-                        Intent(
-                            this@GroupSettingsActivity,
-                            ProfileSelectActivity::class.java,
-                        ).apply {
-                            ProfileManager.getProfile(DataStore.frontProxy)?.let {
-                                putExtra(ProfileSelectActivity.EXTRA_SELECTED, it)
-                            }
-                        },
+    /** A row for the profile traffic goes through first or leaves through last, picked from the profiles. */
+    private fun chain(row: ItemGroupChainBinding, title: Int, front: Boolean) {
+        row.chainTitle.setText(title)
+        row.chainClear.contentDescription = getString(R.string.group_editor_clear, getString(title))
+        row.root.setOnClickListener {
+            val current = if (front) DataStore.frontProxy else DataStore.landingProxy
+            runOnDefaultDispatcher {
+                val selected = ProfileManager.getProfile(current)
+                onMainDispatcher {
+                    (if (front) selectFront else selectLanding).launch(
+                        Intent(this@GroupSettingsActivity, ProfileSelectActivity::class.java).apply { selected?.let { putExtra(ProfileSelectActivity.EXTRA_SELECTED, it) } },
                     )
-                    false
-                } else {
-                    true
                 }
             }
         }
-        landingProxyPreference = findPreference(Key.GROUP_LANDING_PROXY)!!
-        landingProxyPreference.apply {
-            setEntries(R.array.front_proxy_entry)
-            setEntryValues(R.array.front_proxy_value)
-            setOnPreferenceChangeListener { _, newValue ->
-                if (newValue.toString() == OutboundPreference.VALUE_SELECT_PROFILE) {
-                    selectProfileForAddLanding.launch(
-                        Intent(
-                            this@GroupSettingsActivity,
-                            ProfileSelectActivity::class.java,
-                        ).apply {
-                            ProfileManager.getProfile(DataStore.landingProxy)?.let {
-                                putExtra(ProfileSelectActivity.EXTRA_SELECTED, it)
-                            }
-                        },
-                    )
-                    false
-                } else {
-                    true
-                }
-            }
+        row.chainClear.setOnClickListener {
+            if (front) DataStore.frontProxyTmp = 0 else DataStore.landingProxyTmp = 0
+            showChain(row, front)
         }
+        showChain(row, front)
+    }
 
-        val groupType = findPreference<SimpleMenuPreference>(Key.GROUP_TYPE)!!
-        val groupSubscription = findPreference<PreferenceCategory>(Key.GROUP_SUBSCRIPTION)!!
-        val subscriptionUpdate = findPreference<PreferenceCategory>(Key.SUBSCRIPTION_UPDATE)!!
+    private fun showChain(row: ItemGroupChainBinding, front: Boolean) {
+        val set = (if (front) DataStore.frontProxyTmp else DataStore.landingProxyTmp) == OutboundPreference.VALUE_SELECT_PROFILE.toInt()
+        val id = if (front) DataStore.frontProxy else DataStore.landingProxy
+        row.chainClear.isVisible = set
+        if (!set) return row.chainValue.setText(R.string.group_editor_none)
+        runOnDefaultDispatcher {
+            val name = ProfileManager.getProfile(id)?.displayName() ?: getString(R.string.route_profile_missing)
+            onMainDispatcher { row.chainValue.text = name }
+        }
+    }
 
-        fun updateGroupType(groupType: Int = DataStore.groupType) {
-            val isSubscription = groupType == GroupType.SUBSCRIPTION
-            groupSubscription.isVisible = isSubscription
-            subscriptionUpdate.isVisible = isSubscription
+    /** What keeps the group from being saved, shown at its field; true when nothing does. */
+    private fun check(): Boolean {
+        if (DataStore.groupType != GroupType.SUBSCRIPTION) return true
+        var fine = true
+        if (DataStore.subscriptionLink.isBlank()) {
+            binding.linkLayout.error = getString(R.string.group_editor_link_missing)
+            fine = false
+        } else if ("\n" in DataStore.subscriptionLink) {
+            fine = false
         }
-        updateGroupType()
-        groupType.setOnPreferenceChangeListener { _, newValue ->
-            updateGroupType((newValue as String).toInt())
-            true
+        val minutes = binding.interval.text?.toString()?.toIntOrNull()
+        if (DataStore.subscriptionAutoUpdate && (minutes == null || minutes < 15)) {
+            binding.intervalLayout.error = getString(R.string.group_editor_interval_invalid)
+            fine = false
         }
-
-        val subscriptionAutoUpdate =
-            findPreference<SwitchPreference>(Key.SUBSCRIPTION_AUTO_UPDATE)!!
-        val subscriptionAutoUpdateDelay =
-            findPreference<EditTextPreference>(Key.SUBSCRIPTION_AUTO_UPDATE_DELAY)!!
-
-        subscriptionAutoUpdateDelay.isEnabled = subscriptionAutoUpdate.isChecked
-        subscriptionAutoUpdateDelay.setOnPreferenceChangeListener { _, newValue ->
-            val delay = (newValue as String).toIntOrNull()
-            if (delay == null) {
-                false
-            } else {
-                delay >= 15
-            }
+        val backups = DataStore.subscriptionBackupLinks.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        if (backups.size > SubscriptionRecovery.MAX_BACKUP_LINKS || !backups.all(SubscriptionRecovery::isHttpsLink)) {
+            binding.backupsLayout.error = getString(R.string.subscription_backup_links_invalid, SubscriptionRecovery.MAX_BACKUP_LINKS)
+            showMore(true, animate = false)
+            fine = false
         }
-        subscriptionAutoUpdate.setOnPreferenceChangeListener { _, newValue ->
-            subscriptionAutoUpdateDelay.isEnabled = (newValue as Boolean)
-            true
+        val dns = DataStore.subscriptionCustomDns.trim()
+        if (!isValidCustomDnsResolver(dns)) {
+            binding.dnsLayout.error = getString(R.string.subscription_custom_dns_invalid)
+            showMore(true, animate = false)
+            fine = false
+        } else {
+            DataStore.subscriptionCustomDns = dns
         }
-
-        val subscriptionFilterMode =
-            findPreference<SimpleMenuPreference>(Key.SUBSCRIPTION_FILTER_MODE)!!
-        val subscriptionFilterRegex =
-            findPreference<EditTextPreference>(Key.SUBSCRIPTION_FILTER_REGEX)!!
-
-        fun updateFilterMode(filterMode: Int = DataStore.subscriptionFilterMode) {
-            subscriptionFilterRegex.isVisible = filterMode != SubscriptionFilterMode.DISABLED
-        }
-        updateFilterMode()
-        subscriptionFilterMode.setOnPreferenceChangeListener { _, newValue ->
-            updateFilterMode((newValue as String).toInt())
-            true
-        }
-
-        val subscriptionCustomDns =
-            findPreference<EditTextPreference>(Key.SUBSCRIPTION_CUSTOM_DNS)!!
-        subscriptionCustomDns.setOnPreferenceChangeListener { pref, newValue ->
-            val value = (newValue as String).trim()
-            if (isValidCustomDnsResolver(value)) {
-                // Persist the normalized (trimmed) value rather than the raw input.
-                if (value != newValue) {
-                    (pref as EditTextPreference).text = value
-                    false
-                } else {
-                    true
-                }
-            } else {
-                Toast.makeText(
-                    requireContext(),
-                    R.string.subscription_custom_dns_invalid,
-                    Toast.LENGTH_LONG,
-                ).show()
-                false
-            }
-        }
+        return fine
     }
 
     class UnsavedChangesDialogFragment : AlertDialogFragment<Empty, Empty>() {
         override fun AlertDialog.Builder.prepare(listener: DialogInterface.OnClickListener) {
             setTitle(R.string.unsaved_changes_prompt)
             setPositiveButton(R.string.yes) { _, _ ->
-                runOnDefaultDispatcher {
-                    (requireActivity() as GroupSettingsActivity).saveAndExit()
-                }
+                val activity = requireActivity() as GroupSettingsActivity
+                if (activity.check()) runOnDefaultDispatcher { activity.saveAndExit() }
             }
             setNegativeButton(R.string.no) { _, _ ->
                 requireActivity().finish()
@@ -352,71 +606,6 @@ class GroupSettingsActivity(
                 requireActivity().finish()
             }
             setNegativeButton(R.string.no, null)
-        }
-    }
-
-    companion object {
-        const val EXTRA_GROUP_ID = "id"
-        const val EXTRA_FROM_CLIPBOARD = "fromClipboard"
-        const val EXTRA_GROUP_SUBSCRIPTION_LINK = "subscription_link"
-    }
-
-    @SuppressLint("CommitTransaction")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        onBackPressedDispatcher.addCallback(this) {
-            if (needSave()) {
-                UnsavedChangesDialogFragment().apply { key() }.show(supportFragmentManager, null)
-            } else {
-                finish()
-            }
-        }
-        // ViewBinding intentionally not used here: this activity sets its content via the
-        // ThemedActivity(@LayoutRes) constructor (contentLayoutId), not by inflating a binding,
-        // so the toolbar is resolved with findViewById.
-        setSupportActionBar(findViewById(R.id.toolbar))
-        supportActionBar?.apply {
-            setTitle(R.string.group_settings)
-            setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
-        }
-
-        if (savedInstanceState == null) {
-            val editingId = intent.getLongExtra(EXTRA_GROUP_ID, 0L)
-            isFromClipboard = intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false)
-            val subscriptionLink = intent.getStringExtra(EXTRA_GROUP_SUBSCRIPTION_LINK)
-            DataStore.editingId = editingId
-            runOnDefaultDispatcher {
-                if (editingId == 0L) {
-                    val group = ProxyGroup()
-                    group.init()
-
-                    // if there's a subscription link, set it to subscription type and fill in the link
-                    if (!subscriptionLink.isNullOrEmpty()) {
-                        DataStore.groupType = GroupType.SUBSCRIPTION
-                        DataStore.subscriptionLink = subscriptionLink
-                        DataStore.dirty = true
-                    }
-                } else {
-                    val entity = ProfileDatabase.groupDao.getById(editingId)
-                    if (entity == null) {
-                        onMainDispatcher {
-                            finish()
-                        }
-                        return@runOnDefaultDispatcher
-                    }
-                    entity.init()
-                }
-
-                onMainDispatcher {
-                    supportFragmentManager.beginTransaction()
-                        .replace(R.id.settings, MyPreferenceFragmentCompat())
-                        .commit()
-
-                    DataStore.dirty = false
-                    DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
-                }
-            }
         }
     }
 
@@ -456,14 +645,32 @@ class GroupSettingsActivity(
         finish()
     }
 
-    val child by lazy { supportFragmentManager.findFragmentById(R.id.settings) as MyPreferenceFragmentCompat }
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.profile_config_menu, menu)
+        // A group not saved yet has nothing to delete; closing discards it.
+        menu.findItem(R.id.action_delete)?.isVisible = intent.getLongExtra(EXTRA_GROUP_ID, 0L) != 0L
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem) = child.onOptionsItemSelected(item)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.action_apply -> if (check()) runOnDefaultDispatcher { saveAndExit() }
+
+            R.id.action_delete -> {
+                if (DataStore.editingId == 0L) {
+                    finish()
+                } else {
+                    DeleteConfirmationDialogFragment().apply {
+                        arg(GroupIdArg(DataStore.editingId))
+                        key()
+                    }.show(supportFragmentManager, null)
+                }
+            }
+
+            else -> return super.onOptionsItemSelected(item)
+        }
+        return true
+    }
 
     override fun onSupportNavigateUp(): Boolean {
         // Route the action-bar up button through the back dispatcher so it honors the
@@ -483,54 +690,21 @@ class GroupSettingsActivity(
         }
     }
 
-    class MyPreferenceFragmentCompat : PreferenceFragmentCompat() {
+    private val selectFront = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { picked(it.resultCode, it.data, front = true) }
+    private val selectLanding = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { picked(it.resultCode, it.data, front = false) }
 
-        var activity: GroupSettingsActivity? = null
-
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            preferenceManager.preferenceDataStore = DataStore.profileCacheStore
-            try {
-                activity = (requireActivity() as GroupSettingsActivity).apply {
-                    createPreferences(savedInstanceState, rootKey)
-                }
-            } catch (e: Exception) {
-                Toast.makeText(
-                    NekoBox.application,
-                    "Error on createPreferences, please try again.",
-                    Toast.LENGTH_SHORT,
-                ).show()
-                Logs.e(e)
-            }
+    private fun picked(resultCode: Int, data: Intent?, front: Boolean) {
+        if (resultCode != Activity.RESULT_OK) return
+        val id = data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0) ?: return
+        if (id <= 0) return
+        if (front) {
+            DataStore.frontProxy = id
+            DataStore.frontProxyTmp = OutboundPreference.VALUE_SELECT_PROFILE.toInt()
+        } else {
+            DataStore.landingProxy = id
+            DataStore.landingProxyTmp = OutboundPreference.VALUE_SELECT_PROFILE.toInt()
         }
-
-        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-            super.onViewCreated(view, savedInstanceState)
-
-            ViewCompat.setOnApplyWindowInsetsListener(listView, ListListener)
-        }
-
-        override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-            R.id.action_delete -> {
-                if (DataStore.editingId == 0L) {
-                    requireActivity().finish()
-                } else {
-                    DeleteConfirmationDialogFragment().apply {
-                        arg(GroupIdArg(DataStore.editingId))
-                        key()
-                    }.show(parentFragmentManager, null)
-                }
-                true
-            }
-
-            R.id.action_apply -> {
-                runOnDefaultDispatcher {
-                    activity?.saveAndExit()
-                }
-                true
-            }
-
-            else -> false
-        }
+        showChain(if (front) binding.first else binding.last, front)
     }
 
     object PasswordSummaryProvider : Preference.SummaryProvider<EditTextPreference> {
@@ -545,36 +719,20 @@ class GroupSettingsActivity(
         }
     }
 
-    val selectProfileForAddFront = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) {
-        if (it.resultCode == Activity.RESULT_OK) {
-            runOnDefaultDispatcher {
-                val profile = ProfileManager.getProfile(
-                    it.data!!.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0),
-                ) ?: return@runOnDefaultDispatcher
-                DataStore.frontProxy = profile.id
-                onMainDispatcher {
-                    frontProxyPreference.value = OutboundPreference.VALUE_SELECT_PROFILE
-                }
-            }
-        }
-    }
+    companion object {
+        const val EXTRA_GROUP_ID = "id"
+        const val EXTRA_FROM_CLIPBOARD = "fromClipboard"
+        const val EXTRA_GROUP_SUBSCRIPTION_LINK = "subscription_link"
 
-    val selectProfileForAddLanding = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) {
-        if (it.resultCode == Activity.RESULT_OK) {
-            runOnDefaultDispatcher {
-                val profile = ProfileManager.getProfile(
-                    it.data!!.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0),
-                ) ?: return@runOnDefaultDispatcher
-                DataStore.landingProxy = profile.id
-                onMainDispatcher {
-                    landingProxyPreference.value = OutboundPreference.VALUE_SELECT_PROFILE
-                }
-            }
-        }
+        /** A new group that starts as a subscription, waiting for its link. */
+        const val EXTRA_SUBSCRIPTION = "subscription"
+
+        private const val LINK_OFFER = "linkOffer"
+        private const val BACKUP_OFFER = "backupOffer"
+        private const val MORE = "more"
+
+        /** Quick picks for the update interval, in minutes: an hour, six and twelve hours, a day. */
+        private val INTERVALS = listOf(60, 360, 720, 1440)
     }
 }
 

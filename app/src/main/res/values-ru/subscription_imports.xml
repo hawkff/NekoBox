@@ -5,9 +5,7 @@
     <string name="subscription_format_auto">Авто: найти рабочий формат и оставить его</string>
     <string name="subscription_format_links">Ссылки / Base64</string>
     <string name="subscription_format_singbox">Исходящие sing-box</string>
-    <string name="subscription_format_note">Запросы формата</string>
     <string name="subscription_format_summary">Провайдеры выбирают формат по User-Agent. В режиме «Авто» приложение запрашивает формат, из которого получены текущие профили, и пробует другие, только когда он перестаёт работать. Подписка без профилей сначала запрашивает ту же ссылку в каждом формате, не больше трёх раз, и оставляет формат, из которого приложение импортировало больше всего профилей. Сохранённые профили, которым не соответствует другой формат или User-Agent, заменяются только с вашего согласия. Свой User-Agent заменяет запросы формата, и провайдер может их игнорировать. Настройки DNS и группы прокси не импортируются. Правила маршрутизации провайдера становятся профилем маршрутизации, который остаётся выключенным, пока вы не переключитесь на него.</string>
-    <string name="subscription_import_warning_title">Последнее обновление</string>
     <string name="subscription_import_failed">Импортировано профилей: %1$d. Не удалось импортировать записей: %2$d (%3$s).</string>
     <string name="subscription_import_unknown_entry">нераспознанные</string>
     <string name="subscription_import_dropped">Не используется этим приложением: %s.</string>
@@ -27,7 +25,6 @@
     <string name="subscription_peer_layout_kept">Это обновление объединяет пиры WireGuard в меньшее число профилей. Профили без соответствия сохранены: %1$d. Чтобы решить, заменять ли их, обновите эту группу вручную.</string>
     <string name="subscription_no_compatible_format">В подписке нет совместимых профилей. Запросите ссылки, узлы Clash/Mihomo или исходящие sing-box. Существующие профили сохранены.</string>
     <string name="subscription_backup_links">Резервные ссылки</string>
-    <string name="subscription_backup_links_summary">Ссылки HTTPS по одной в строке. Приложение пробует их по порядку, если основная ссылка не работает. Не больше %d.</string>
     <string name="subscription_backup_links_invalid">Укажите не больше %d URL https, по одному в строке.</string>
     <string name="subscription_offered_link">Провайдер предлагает новую ссылку</string>
     <string name="subscription_offered_backup_link">Провайдер предлагает резервную ссылку</string>

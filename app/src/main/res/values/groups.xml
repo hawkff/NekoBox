@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Groups list -->
+    <string name="group_new_title">New group</string>
+    <string name="group_new_subscription">Subscription link</string>
+    <string name="group_new_scan">Scan a subscription QR code</string>
+    <string name="group_new_empty">Group for your own profiles</string>
+    <string name="group_traffic_of">%1$s used of %2$s</string>
+    <string name="group_traffic_used">%s used</string>
+    <string name="group_ends">ends %s</string>
+    <string name="group_ended">ended %s</string>
+    <string name="group_updated_ago">updated %s</string>
+    <string name="group_not_updated">not updated yet</string>
+    <string name="group_updated_now">updated just now</string>
+    <string name="group_days_short">%d d</string>
+    <plurals name="group_days_left">
+        <item quantity="one">%d day left</item>
+        <item quantity="other">%d days left</item>
+    </plurals>
+    <string name="group_action_edit">Edit</string>
+    <string name="group_show_details">Show details</string>
+    <string name="group_hide_details">Hide details</string>
+    <string name="group_expanded">Expanded</string>
+    <string name="group_collapsed">Collapsed</string>
+    <string name="group_share_link">Copy the subscription as a link</string>
+    <string name="group_share_qr">Show it as a QR code</string>
+    <string name="group_copy_profiles">Copy the profiles</string>
+    <string name="group_save_profiles">Save the profiles to a file</string>
+    <string name="group_clear">Remove all profiles</string>
+    <string name="group_delete">Delete group</string>
+    <!-- Group editor -->
+    <string name="group_editor_new">New group</string>
+    <string name="group_editor_edit">Edit group</string>
+    <string name="group_editor_kind">What it holds</string>
+    <string name="group_editor_kind_subscription">A subscription</string>
+    <string name="group_editor_kind_own">Your own profiles</string>
+    <string name="group_editor_name_help">Leave it empty for “My group”</string>
+    <string name="group_editor_link">Subscription link</string>
+    <string name="group_editor_link_help">The address your provider gave you</string>
+    <string name="group_editor_link_missing">Enter the subscription link</string>
+    <string name="group_editor_link_line">The link has a line break in it</string>
+    <string name="group_editor_auto_update">Update automatically</string>
+    <string name="group_editor_interval">Every (minutes)</string>
+    <string name="group_editor_interval_help">15 or more</string>
+    <string name="group_editor_interval_invalid">Enter 15 minutes or more</string>
+    <string name="group_editor_profiles">Profiles in it</string>
+    <string name="group_editor_order_listed">As listed</string>
+    <string name="group_editor_order_name">By name</string>
+    <string name="group_editor_order_latency">By latency</string>
+    <string name="group_editor_first">Connect through first</string>
+    <string name="group_editor_last">Leave through last</string>
+    <string name="group_editor_none">None</string>
+    <string name="group_editor_clear">Clear %s</string>
+    <string name="group_editor_subscription">Subscription details</string>
+    <string name="group_editor_sentence_subscription">Subscription from %1$s · %2$s</string>
+    <string name="group_editor_sentence_file">Subscription from a file · %s</string>
+    <string name="group_editor_sentence_new">A subscription · paste its link</string>
+    <string name="group_editor_sentence_own">Your own profiles</string>
+    <string name="group_editor_updates_every">updates every %s</string>
+    <string name="group_editor_updates_manual">updates when you ask</string>
+    <plurals name="group_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="group_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="group_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+</resources>

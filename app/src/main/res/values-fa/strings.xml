@@ -26,17 +26,12 @@
     <!-- group -->
     <string name="group_name">نام گروه</string>
     <string name="group_update">به‌روزرسانی گروه</string>
-    <string name="group_subscription_link">لینک اشتراک</string>
     <string name="group_name_required">نام گروه را وارد کنید</string>
     <string name="group_create">ایجاد گروه</string>
     <string name="group_create_subscription">ایجاد اشتراک</string>
     <string name="update_all_subscription">به‌روزرسانی همه اشتراک‌ها</string>
     <string name="group_edit">ویرایش گروه</string>
     <string name="group_edit_subscription">ویرایش اشتراک</string>
-    <string name="group_status_empty">خالی</string>
-    <string name="group_status_empty_subscription">هنوز به‌روزرسانی نشده است</string>
-    <string name="group_status_proxies">%d پراکسی‌ها</string>
-    <string name="group_status_proxies_subscription">%d پراکسی‌ها | به‌روزرسانی شدند در %s</string>
     <string name="group_no_difference">%s: بدون تفاوت</string>
     <string name="group_updated">%s: Updated %d proxies</string>
     <string name="group_show_diff">تفاوت‌ها</string>
@@ -220,13 +215,11 @@
     <string name="config_settings">تنظیمات پیکربندی</string>
     <string name="circular_reference">ارجاع حلقه‌ای</string>
     <string name="circular_reference_sum">مسیر نمی‌تواند شامل خودش باشد.</string>
-    <string name="clear_profiles">پاک‌کردن</string>
     <string name="action_create_group">گروه خالی</string>
     <string name="action_from_link">از اشتراک</string>
     <string name="action_scan_china_apps">اسکن برنامه‌های چینی</string>
     <string name="action_export_file">صدور به صورت فایل</string>
     <string name="action_export_clipboard">صدور در بریده‌دان</string>
-    <string name="action_export">صدور</string>
     <string name="action_import">وارد کردن از بریده‌دان</string>
     <string name="action_import_file">وارد کردن از یک فایل</string>
     <string name="action_export_msg">صدور موفق</string>
@@ -332,19 +325,13 @@
     <string name="protocol_settings">تنظیمات پروتکل‌ها</string>
     <string name="trojan_provider">تأمین‌کننده Trojan</string>
     <string name="group_basic">ابتدایی</string>
-    <string name="group_settings">تنظیمات گروه</string>
     <string name="subscription">اشتراک</string>
-    <string name="subscription_settings">تنظیمات اشتراک</string>
-    <string name="group_type">نوع گروه</string>
     <string name="subscription_type">نوع اشتراک</string>
     <string name="delete_group_prompt">آیا می‌خواهید این گروه را حذف کنید؟</string>
     <string name="force_resolve">بررسی اجباری</string>
     <string name="force_resolve_sum">هنگام به‌روزرسانی گروه، همه نام‌های دامنه را به نشانی IP تفسیر کنید. میزبان و SNI در صورت امکان به صورت خودکار اضافه می‌شوند.</string>
     <string name="deduplication_sum">حذف خودکار پراکسی‌های تکراری، بعد از به‌روزرسانی</string>
     <string name="raw">خام</string>
-    <string name="update_settings">اعمال تغییرات</string>
-    <string name="auto_update">به‌روزرسانی خودکار</string>
-    <string name="auto_update_delay">به‌روزرسانی خودکار گروه (در مدت زمان مورد نظر به دقیقه)</string>
     <string name="update_when_connected_only">به‌روزرسانی هنگام متصل بودن</string>
     <string name="update_when_connected_only_sum">از افشای IP جلوگیری می‌شود.</string>
     <string name="subscription_user_agent">UserAgent</string>
@@ -365,8 +352,6 @@
     <string name="subscription_update">به‌روزرسانی اشتراک</string>
     <string name="subscription_update_message">به‌روزرسانی %s …</string>
     <string name="group_filter">پالایش</string>
-    <string name="subscription_used">%s استفاده‌شده</string>
-    <string name="subscription_traffic">%s استفاده‌شده / %s باقی‌مانده</string>
     <string name="subscription_expire">انقضا: %s</string>
     <string name="subscription_import">وارد کردن اشتراک</string>
     <string name="subscription_import_message">تأیید می‌کنید که می‌خواهید اشتراک %s را وارد کنید؟ اگر از یک منبع نامعتبر وارد کنید، ممکن است منجر به لو رفتن IP شما شود.</string>
@@ -504,7 +489,6 @@
     <string name="landing_proxy" >پراکسی در حال فرود</string>
     <string name="action_shadowtls" translatable="false">ShadowTLS</string>
     <string name="protocol_version">نسخه پروتکل</string>
-    <string name="share_subscription">اشتراک‌گذاری گروه اشتراکی</string>
     <string name="show_group_in_notification">نمایش نام گروه در نوار اعلان</string>
     <string name="reset_connections">بازنشانی اتصالات</string>
     <string name="remove_duplicate">حذف سرورهای تکراری</string>

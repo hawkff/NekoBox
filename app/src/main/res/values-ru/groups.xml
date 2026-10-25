@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Groups list -->
+    <string name="group_new_title">Новая группа</string>
+    <string name="group_new_subscription">Ссылка на подписку</string>
+    <string name="group_new_scan">Сканировать QR-код подписки</string>
+    <string name="group_new_empty">Группа для своих профилей</string>
+    <string name="group_traffic_of">Использовано %1$s из %2$s</string>
+    <string name="group_traffic_used">Использовано %s</string>
+    <string name="group_ends">до %s</string>
+    <string name="group_ended">закончилась %s</string>
+    <string name="group_updated_ago">обновлено %s</string>
+    <string name="group_updated_now">обновлено только что</string>
+    <string name="group_not_updated">ещё не обновлялась</string>
+    <string name="group_days_short">%d дн.</string>
+    <plurals name="group_days_left">
+        <item quantity="one">остался %d день</item>
+        <item quantity="few">осталось %d дня</item>
+        <item quantity="many">осталось %d дней</item>
+        <item quantity="other">осталось %d дня</item>
+    </plurals>
+    <string name="group_action_edit">Изменить</string>
+    <string name="group_show_details">Показать подробности</string>
+    <string name="group_hide_details">Скрыть подробности</string>
+    <string name="group_expanded">Развёрнуто</string>
+    <string name="group_collapsed">Свёрнуто</string>
+    <string name="group_share_link">Скопировать подписку ссылкой</string>
+    <string name="group_share_qr">Показать QR-кодом</string>
+    <string name="group_copy_profiles">Скопировать профили</string>
+    <string name="group_save_profiles">Сохранить профили в файл</string>
+    <string name="group_clear">Удалить все профили</string>
+    <string name="group_delete">Удалить группу</string>
+    <!-- Group editor -->
+    <string name="group_editor_new">Новая группа</string>
+    <string name="group_editor_edit">Изменить группу</string>
+    <string name="group_editor_kind">Что в ней</string>
+    <string name="group_editor_kind_subscription">Подписка</string>
+    <string name="group_editor_kind_own">Свои профили</string>
+    <string name="group_editor_name_help">Если оставить пустым, будет «Моя группа»</string>
+    <string name="group_editor_link">Ссылка на подписку</string>
+    <string name="group_editor_link_help">Адрес, который дал провайдер</string>
+    <string name="group_editor_link_missing">Введите ссылку на подписку</string>
+    <string name="group_editor_link_line">В ссылке есть перенос строки</string>
+    <string name="group_editor_auto_update">Обновлять автоматически</string>
+    <string name="group_editor_interval">Каждые (минут)</string>
+    <string name="group_editor_interval_help">15 или больше</string>
+    <string name="group_editor_interval_invalid">Введите 15 минут или больше</string>
+    <string name="group_editor_profiles">Профили в ней</string>
+    <string name="group_editor_order_listed">Как в списке</string>
+    <string name="group_editor_order_name">По имени</string>
+    <string name="group_editor_order_latency">По задержке</string>
+    <string name="group_editor_first">Сначала через</string>
+    <string name="group_editor_last">Выходить через</string>
+    <string name="group_editor_none">Нет</string>
+    <string name="group_editor_clear">Очистить: %s</string>
+    <string name="group_editor_subscription">Подробности подписки</string>
+    <string name="group_editor_sentence_subscription">Подписка с %1$s · %2$s</string>
+    <string name="group_editor_sentence_file">Подписка из файла · %s</string>
+    <string name="group_editor_sentence_new">Подписка · вставьте ссылку</string>
+    <string name="group_editor_sentence_own">Свои профили</string>
+    <string name="group_editor_updates_every">обновляется раз в %s</string>
+    <string name="group_editor_updates_manual">обновляется по запросу</string>
+    <plurals name="group_days">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
+    <plurals name="group_hours">
+        <item quantity="one">%d час</item>
+        <item quantity="few">%d часа</item>
+        <item quantity="many">%d часов</item>
+        <item quantity="other">%d часа</item>
+    </plurals>
+    <plurals name="group_minutes">
+        <item quantity="one">%d минуту</item>
+        <item quantity="few">%d минуты</item>
+        <item quantity="many">%d минут</item>
+        <item quantity="other">%d минуты</item>
+    </plurals>
+</resources>
