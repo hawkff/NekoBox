@@ -35,7 +35,6 @@
     <!-- group -->
     <string name="group_name">Group name</string>
     <string name="group_update">Update</string>
-    <string name="group_subscription_link">Subscription Link</string>
     <string name="group_name_required">Group name required</string>
     <string name="group_create">Create group</string>
     <string name="group_create_subscription">Create subscription</string>
@@ -55,10 +54,6 @@
     <string name="layout_single_column">Single column</string>
     <string name="layout_double_column">Double column</string>
     <string name="sort_and_layout">Sort and Layout</string>
-    <string name="group_status_empty">Empty group</string>
-    <string name="group_status_empty_subscription">Not updated yet</string>
-    <string name="group_status_proxies">%d Proxies</string>
-    <string name="group_status_proxies_subscription">%d Proxies | Updated on %s</string>
     <string name="group_no_difference">%s: No difference</string>
     <string name="group_updated">%s: Updated %d proxies</string>
     <string name="group_show_diff">Diff</string>
@@ -330,13 +325,11 @@
     <string name="share_connection_password">Password</string>
     <string name="share_connection_regenerate">Regenerate</string>
     <string name="share_connection_regenerated">New credentials: devices using the old ones lose access</string>
-    <string name="clear_profiles">Clear</string>
     <string name="action_create_group">Empty group</string>
     <string name="action_from_link">From subscription</string>
     <string name="action_scan_china_apps">Scan China apps</string>
     <string name="action_export_file">Export to file</string>
     <string name="action_export_clipboard">Export to Clipboard</string>
-    <string name="action_export">Export</string>
     <string name="action_import">Import from Clipboard</string>
     <string name="action_import_file">Import from file</string>
     <string name="scan_qr_hint">Point the camera at a QR code</string>
@@ -534,13 +527,10 @@
     <string name="protocol_settings">Protocol Settings</string>
     <string name="trojan_provider">Trojan Provider</string>
     <string name="group_basic">Basic</string>
-    <string name="group_settings">Group Settings</string>
     <string name="subscription">Subscription</string>
-    <string name="subscription_settings">Subscription Settings</string>
-    <string name="group_type">Group Type</string>
     <string name="subscription_type">Subscription Type</string>
     <string name="delete_group_prompt">Are you sure you want to remove this group?</string>
-    <string name="force_resolve">Force Resolve</string>
+    <string name="force_resolve">Force resolve</string>
     <string name="force_resolve_sum">Resolve all domain names to IP addresses when updating. Host
         and SNI will be automatically appended if possible</string>
     <string name="deduplication_sum">Remove duplicate configurations when updating</string>
@@ -555,9 +545,6 @@
     <string name="subscription_custom_dns_sum">Optional DNS used only to resolve this subscription\'s server domains. Leave empty to use the global DNS. Accepts https://, tls://, quic:// or host[:port].</string>
     <string name="subscription_custom_dns_invalid">Invalid resolver. Use https://, tls://, quic:// or host[:port], or leave empty.</string>
     <string name="raw">Raw</string>
-    <string name="update_settings">Update Settings</string>
-    <string name="auto_update">Auto Update</string>
-    <string name="auto_update_delay">Auto Update Delay (In minutes)</string>
     <string name="update_when_connected_only">Update only when connected</string>
     <string name="update_when_connected_only_sum">Prevent IP address leakage</string>
     <string name="subscription_user_agent">UserAgent</string>
@@ -583,8 +570,6 @@
     <string name="subscription_update">Subscription Update</string>
     <string name="subscription_update_message">Updating %s …</string>
     <string name="group_filter">Filter</string>
-    <string name="subscription_used">%s Used</string>
-    <string name="subscription_traffic">%s Used / %s Remaining</string>
     <string name="subscription_expire">Expire: %s</string>
     <string name="subscription_support">Support</string>
     <string name="subscription_website">Website</string>
@@ -901,7 +886,6 @@
     <string name="landing_proxy">Landing Proxy</string>
     <string name="action_shadowtls" translatable="false">ShadowTLS</string>
     <string name="protocol_version">Protocol Version</string>
-    <string name="share_subscription">Share Subscription</string>
     <string name="show_group_in_notification">Show group name in notification</string>
     <string name="reset_connections">Reset Connections</string>
     <string name="remove_duplicate">Remove duplicate servers</string>

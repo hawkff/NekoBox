@@ -2,8 +2,6 @@
 <resources>
     <string name="port_http">Proksi Port HTTP</string>
     <string name="port_proxy">Proksi Port SOCKS5</string>
-    <string name="group_status_proxies_subscription">%d Proksi | Diperbarui pada %s</string>
-    <string name="group_status_proxies">%d Proksi</string>
     <string name="protocol_param">Param Protokol</string>
     <string name="protocol">Protokol</string>
     <string name="enc_method">Metode Enkrip</string>
@@ -69,14 +67,11 @@
     <string name="group_show_diff">Diff</string>
     <string name="group_updated">%s: Diperbarui %d proxy</string>
     <string name="group_no_difference">%s: Tidak ada perbedaan</string>
-    <string name="group_status_empty">Grup kosong</string>
-    <string name="group_status_empty_subscription">Belum diperbarui</string>
     <string name="group_edit_subscription">Ubah langganan</string>
     <string name="group_edit">Ubah grup</string>
     <string name="group_create_subscription">Buat langganan</string>
     <string name="group_create">Buat grup</string>
     <string name="group_name_required">Nama grup diperlukan</string>
-    <string name="group_subscription_link">Tautan Langganan</string>
     <string name="group_update">Perbarui</string>
     <string name="group_name">Nama grup</string>
     <string name="tile_title">Pengalih</string>

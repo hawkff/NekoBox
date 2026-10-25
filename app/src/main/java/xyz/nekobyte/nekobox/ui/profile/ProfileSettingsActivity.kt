@@ -9,8 +9,6 @@ import android.os.Parcelable
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.result.component1
@@ -36,7 +34,6 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
-import xyz.nekobyte.nekobox.databinding.LayoutGroupItemBinding
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.ui.AlertDialogFragment
@@ -356,36 +353,24 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                 val ent = activity.proxyEntity!!
                 val groups = activity.moveTargetGroups
                 if (groups.isNotEmpty()) {
-                    val view = LinearLayout(context).apply {
-                        orientation = LinearLayout.VERTICAL
-
-                        groups.forEach { group ->
-                            LayoutGroupItemBinding.inflate(layoutInflater, this, true).apply {
-                                edit.isVisible = false
-                                options.isVisible = false
-                                groupName.text = group.displayName()
-                                groupUpdate.text = getString(R.string.move)
-                                groupUpdate.setOnClickListener {
-                                    runOnDefaultDispatcher {
-                                        val oldGroupId = ent.groupId
-                                        val newGroupId = group.id
-                                        ent.groupId = newGroupId
-                                        ProfileManager.updateProfile(ent)
-                                        GroupManager.postUpdate(oldGroupId) // reload
-                                        GroupManager.postUpdate(newGroupId)
-                                        DataStore.editingGroup = newGroupId // post switch animation
-                                        runOnMainDispatcher {
-                                            activity.finish()
-                                        }
-                                    }
+                    MaterialAlertDialogBuilder(activity)
+                        .setTitle(R.string.move)
+                        .setItems(groups.map { it.displayName() }.toTypedArray()) { _, which ->
+                            val group = groups[which]
+                            runOnDefaultDispatcher {
+                                val oldGroupId = ent.groupId
+                                ent.groupId = group.id
+                                ProfileManager.updateProfile(ent)
+                                GroupManager.postUpdate(oldGroupId) // reload
+                                GroupManager.postUpdate(group.id)
+                                DataStore.editingGroup = group.id // post switch animation
+                                runOnMainDispatcher {
+                                    activity.finish()
                                 }
                             }
                         }
-                    }
-                    val scrollView = ScrollView(context).apply {
-                        addView(view)
-                    }
-                    MaterialAlertDialogBuilder(activity).setView(scrollView).show()
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
                 }
                 true
             }

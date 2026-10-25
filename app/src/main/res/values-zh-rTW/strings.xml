@@ -15,16 +15,11 @@
     <!-- group -->
     <string name="group_name">群組名稱</string>
     <string name="group_update">更新</string>
-    <string name="group_subscription_link">訂閱連結</string>
     <string name="group_name_required">需要群組名稱</string>
     <string name="group_create">建立新組</string>
     <string name="group_create_subscription">建立新訂閱</string>
     <string name="group_edit">編輯</string>
     <string name="group_edit_subscription">編輯訂閱</string>
-    <string name="group_status_empty">空白群組</string>
-    <string name="group_status_empty_subscription">尚未更新</string>
-    <string name="group_status_proxies">%d 個代理</string>
-    <string name="group_status_proxies_subscription">%d 個代理 | 更新於 %s</string>
     <string name="group_no_difference">%s: 沒有變化</string>
     <string name="group_updated">%s: 更新了 %d 個代理</string>
     <string name="group_show_diff">變化</string>
@@ -246,8 +241,6 @@
     <string name="config_settings">設定檔設定</string>
     <string name="circular_reference">循環參考</string>
     <string name="circular_reference_sum">路由中不能包含自己。</string>
-    <string name="clear_profiles">清除</string>
-    <string name="action_export">匯出</string>
     <string name="insecure">不安全</string>
     <string name="deprecated">已被取代</string>
     <string name="no_proxies_found_in_subscription">未在此訂閱中找到代理</string>
@@ -297,19 +290,13 @@
     <string name="trojan_provider">Trojan 提供程式</string>
     <string name="protocol_settings">協議設定</string>
     <string name="group_basic">基本</string>
-    <string name="group_settings">群組設定</string>
     <string name="subscription">訂閱</string>
-    <string name="subscription_settings">訂閱設定</string>
-    <string name="group_type">群組類型</string>
     <string name="subscription_type">訂閱類型</string>
     <string name="delete_group_prompt">您真的希望移除此群組嗎？</string>
     <string name="force_resolve">強制解析</string>
     <string name="force_resolve_sum">在更新時將所有網域解析為 IP。主機名和伺服器名稱指示將在可能時被自動附加</string>
     <string name="deduplication_sum">在更新時移除重複的設定檔</string>
     <string name="raw">原始</string>
-    <string name="update_settings">更新設定</string>
-    <string name="auto_update">自動更新</string>
-    <string name="auto_update_delay">自動更新間隔（分鐘）</string>
     <string name="update_when_connected_only">僅在已連線時更新</string>
     <string name="update_when_connected_only_sum">防止 IP 位址洩漏</string>
     <string name="subscription_user_agent">使用者代理</string>
@@ -329,8 +316,6 @@
     <string name="subscription_update">訂閱更新</string>
     <string name="subscription_update_message">正在更新 %s …</string>
     <string name="group_filter">篩選</string>
-    <string name="subscription_used">已用 %s</string>
-    <string name="subscription_traffic">已用 %s / 剩餘 %s</string>
     <string name="subscription_import">匯入訂閱</string>
     <string name="subscription_import_message">您確定要匯入訂閱 %s 嗎？如果訂閱的來源不可信，您的 IP 和行為將被洩漏。</string>
     <string name="profile_import">匯入設定檔</string>
@@ -487,7 +472,6 @@
     <string name="front_proxy">前置代理</string>
     <string name="landing_proxy">落地代理</string>
     <string name="protocol_version">協議版本</string>
-    <string name="share_subscription">分享訂閱</string>
     <string name="show_group_in_notification">在通知中顯示組名</string>
     <string name="reset_connections">重置連線</string>
     <string name="remove_duplicate">刪除重複的伺服器</string>

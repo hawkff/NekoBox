@@ -11,7 +11,6 @@
     <string name="oss_licenses">開放源碼授權條款</string>
     <string name="menu_group">分組</string>
     <string name="group_name">分組名稱</string>
-    <string name="group_status_empty_subscription">尚未更新</string>
     <string name="group_no_difference">%s: 沒有變化</string>
     <string name="group_updated">%s: 更新了 %d 個代理</string>
     <string name="group_added">已新增：
@@ -48,7 +47,6 @@
     <string name="route_block">封鎖</string>
     <string name="add_profile_methods_scan_qr_code">掃描二維碼</string>
     <string name="install_from_play_store">從 Play Store 安裝</string>
-    <string name="auto_update">自動更新</string>
     <string name="auto_connect">自動連接</string>
     <string name="disable">禁用</string>
     <string name="auto">自動</string>
@@ -59,8 +57,6 @@
     <string name="connection_test">連接測試</string>
     <string name="group_create">創建分組</string>
     <string name="group_delete_confirm_prompt">你確定要移除這個分組嗎？</string>
-    <string name="group_status_proxies">%d 個代理</string>
-    <string name="group_status_proxies_subscription">%d 個代理 | 於 %s 更新</string>
     <string name="group_diff">變化 (%s)</string>
     <string name="group_show_diff">變化</string>
     <string name="group_duplicate">重複：

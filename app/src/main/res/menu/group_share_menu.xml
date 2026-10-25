@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_universal_clipboard"
+        android:title="@string/group_share_link" />
+    <item
+        android:id="@+id/action_universal_qr"
+        android:title="@string/group_share_qr" />
+    <item
+        android:id="@+id/action_export_clipboard"
+        android:title="@string/group_copy_profiles" />
+    <item
+        android:id="@+id/action_export_file"
+        android:title="@string/group_save_profiles" />
+</menu>

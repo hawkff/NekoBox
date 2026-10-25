@@ -13,6 +13,5 @@
     <string name="telegram">Canal de atualização do telegram</string>
     <string name="github">Código fonte</string>
     <string name="project">Projeto</string>
-    <string name="group_subscription_link">Link de inscrição</string>
     <string name="group_update">Atualizar</string>
 </resources>
