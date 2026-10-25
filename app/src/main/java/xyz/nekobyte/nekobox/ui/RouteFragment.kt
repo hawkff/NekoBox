@@ -127,8 +127,6 @@ class RouteFragment :
             true
         }
         header.answer.setOnClickListener { showMatch() }
-        // A double tap brings the deciding rule into view; TalkBack says so.
-        ViewCompat.replaceAccessibilityAction(header.answer, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK, getString(R.string.route_answer_show), null)
     }
 
     override fun onResume() {
@@ -251,6 +249,14 @@ class RouteFragment :
         tested = result
         val header = binding.header
         header.answer.isVisible = result != null
+        // An answer brings its deciding rule into view, and TalkBack says so; "nothing called that" leads nowhere.
+        val leads = result?.answer != null
+        header.answer.isClickable = leads
+        if (leads) {
+            ViewCompat.replaceAccessibilityAction(header.answer, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK, getString(R.string.route_answer_show), null)
+        } else {
+            ViewCompat.removeAccessibilityAction(header.answer, AccessibilityNodeInfoCompat.ACTION_CLICK)
+        }
         if (result != null) {
             header.answerDestination.isVisible = result.destination != null
             result.destination?.let { header.answerDestination.paintDestination(it, result.color) }

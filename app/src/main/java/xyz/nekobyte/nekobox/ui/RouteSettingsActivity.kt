@@ -106,7 +106,8 @@ class RouteSettingsActivity : ThemedActivity() {
         val savedOriginal = savedInstanceState?.let { BundleCompat.getParcelable(it, ORIGINAL, RuleEntity::class.java) }
         if (savedDraft != null && savedOriginal != null) {
             start(stored = savedOriginal, edited = savedDraft)
-            if (savedInstanceState?.getBoolean(MORE) == true) showMore(true, animate = false)
+            // Open or folded, the section stays as the person left it.
+            if (savedInstanceState?.containsKey(MORE) == true) showMore(savedInstanceState.getBoolean(MORE), animate = false)
             return
         }
         lifecycleScope.launch {
