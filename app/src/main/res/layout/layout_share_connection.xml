@@ -127,12 +127,11 @@
                             android:textAppearance="?attr/textAppearanceBody2"
                             android:textIsSelectable="true" />
 
-                        <LinearLayout
+                        <!-- The buttons wrap to a second line, end-aligned, where they do not fit side by side. -->
+                        <androidx.constraintlayout.widget.ConstraintLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:gravity="end"
-                            android:orientation="horizontal">
+                            android:layout_marginTop="8dp">
 
                             <Button
                                 android:id="@+id/share_copy_credentials"
@@ -149,7 +148,19 @@
                                 android:layout_height="wrap_content"
                                 android:text="@string/share_connection_regenerate"
                                 android:textColor="?colorPrimary" />
-                        </LinearLayout>
+
+                            <androidx.constraintlayout.helper.widget.Flow
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                app:constraint_referenced_ids="share_copy_credentials,share_regenerate"
+                                app:flow_horizontalBias="1"
+                                app:flow_horizontalStyle="packed"
+                                app:flow_wrapMode="chain"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent" />
+
+                        </androidx.constraintlayout.widget.ConstraintLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
