@@ -52,7 +52,7 @@
         <EditTextPreference
             app:icon="@drawable/ic_baseline_fingerprint_24"
             app:key="reserved"
-            app:title="Reserved"
+            app:title="@string/reserved_bytes"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogMessage="@string/wireguard_allowed_ips_hint"

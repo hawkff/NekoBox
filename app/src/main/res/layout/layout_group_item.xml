@@ -166,12 +166,12 @@
                 android:orientation="horizontal">
 
                 <!-- Narrower padding than a text button's 12 dp fits three labels in Russian; 4 + 8 keeps the
-                     first label in line with the text above. -->
-                <LinearLayout
+                     first label in line with the text above. Where they still do not fit, as with large text,
+                     the labels wrap to a second line instead of cutting one short. -->
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="horizontal"
                     android:paddingStart="4dp">
 
                     <Button
@@ -179,7 +179,6 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:ellipsize="end"
                         android:maxLines="1"
                         android:minWidth="0dp"
                         android:paddingStart="8dp"
@@ -191,7 +190,6 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:ellipsize="end"
                         android:maxLines="1"
                         android:minWidth="0dp"
                         android:paddingStart="8dp"
@@ -203,14 +201,24 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:ellipsize="end"
                         android:maxLines="1"
                         android:minWidth="0dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
                         android:text="@string/share" />
 
-                </LinearLayout>
+                    <androidx.constraintlayout.helper.widget.Flow
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:constraint_referenced_ids="update_action,edit,share"
+                        app:flow_horizontalBias="0"
+                        app:flow_horizontalStyle="packed"
+                        app:flow_wrapMode="chain"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/more"

@@ -13,6 +13,7 @@ import android.graphics.Color
 import android.os.Build
 import android.system.Os
 import android.system.OsConstants
+import android.text.format.Formatter
 import android.util.TypedValue
 import android.view.View
 import androidx.annotation.AttrRes
@@ -223,3 +224,6 @@ operator fun <K, V> MutableMap<K, V>.setValue(thisRef: K, property: KProperty<*>
         remove(thisRef)
     }
 }
+
+/** A byte count for text that wraps: the number stays on the line with its unit. */
+fun Context.byteCount(bytes: Long): String = Formatter.formatFileSize(this, bytes).replace(' ', '\u00A0')

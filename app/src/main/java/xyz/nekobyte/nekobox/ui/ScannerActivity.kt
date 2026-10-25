@@ -75,6 +75,7 @@ class ScannerActivity : ThemedActivity() {
         setContentView(binding.root)
         setSupportActionBar(findViewById<Toolbar>(R.id.toolbar))
         supportActionBar?.apply {
+            setTitle(R.string.add_profile_methods_scan_qr_code)
             setDisplayHomeAsUpEnabled(true)
             setHomeAsUpIndicator(R.drawable.ic_navigation_close)
         }

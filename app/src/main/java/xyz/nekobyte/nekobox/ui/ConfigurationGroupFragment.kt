@@ -2,7 +2,6 @@ package xyz.nekobyte.nekobox.ui
 
 import android.graphics.Rect
 import android.os.Bundle
-import android.text.format.Formatter
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.TouchDelegate
@@ -48,6 +47,7 @@ import xyz.nekobyte.nekobox.ktx.FixedGridLayoutManager
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.alert
+import xyz.nekobyte.nekobox.ktx.byteCount
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
@@ -1245,8 +1245,8 @@ class ConfigurationGroupFragment : Fragment() {
             if (showTraffic) {
                 trafficText.text = view.context.getString(
                     R.string.traffic,
-                    Formatter.formatFileSize(view.context, tx),
-                    Formatter.formatFileSize(view.context, rx),
+                    view.context.byteCount(tx),
+                    view.context.byteCount(rx),
                 )
             }
 
@@ -1258,8 +1258,8 @@ class ConfigurationGroupFragment : Fragment() {
                     trafficText,
                     view.context.getString(
                         R.string.lifetime_traffic,
-                        Formatter.formatFileSize(view.context, proxyEntity.lifetimeTx),
-                        Formatter.formatFileSize(view.context, proxyEntity.lifetimeRx),
+                        view.context.byteCount(proxyEntity.lifetimeTx),
+                        view.context.byteCount(proxyEntity.lifetimeRx),
                     ),
                 )
             } else {
@@ -1318,7 +1318,6 @@ class ConfigurationGroupFragment : Fragment() {
                 profileStatus.alpha = 1f
             }
 
-            val selectOrChain = select || proxyEntity.type == ProxyEntity.TYPE_CHAIN
             val isDoubleColumn = DataStore.groupLayoutMode == 1
 
             if (isDoubleColumn) {
@@ -1327,8 +1326,9 @@ class ConfigurationGroupFragment : Fragment() {
                 removeButton.isGone = true
                 doubleColumnMenuButton.isVisible = true
             } else {
-                shareLayout.isGone = selectOrChain
-                editButton.isGone = select || !proxyEntity.haveSettings()
+                // A button a profile lacks keeps its slot, so the buttons line up down the list.
+                shareLayout.visibility = slot(select, proxyEntity.type != ProxyEntity.TYPE_CHAIN)
+                editButton.visibility = slot(select, proxyEntity.haveSettings())
                 removeButton.isGone = select
                 doubleColumnMenuButton.isGone = true
             }
@@ -1399,3 +1399,10 @@ class ConfigurationGroupFragment : Fragment() {
 
 // A new test result fades in over this long.
 private const val STATUS_FADE = 150L
+
+// A row button: gone while picking a profile, invisible where this profile has nothing for it.
+private fun slot(picking: Boolean, has: Boolean) = when {
+    picking -> View.GONE
+    has -> View.VISIBLE
+    else -> View.INVISIBLE
+}

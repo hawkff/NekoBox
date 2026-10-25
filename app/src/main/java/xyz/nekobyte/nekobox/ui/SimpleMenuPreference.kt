@@ -44,6 +44,11 @@ open class SimpleMenuPreference
 
     private lateinit var mAdapter: SimpleMenuAdapter
 
+    // The drop-down row's layout keeps its title on one line; long titles wrap like the other rows instead.
+    init {
+        isSingleLineTitle = false
+    }
+
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
         // findViewById (not ViewBinding): binds into the AndroidX preference-row ViewHolder

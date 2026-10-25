@@ -260,7 +260,6 @@
     <string name="need_reload">Vuelva a cargar el servicio de proxy para aplicar los cambios</string>
     <string name="license">Licencia</string> 
     <string name="route_warn">Asegúrese de haber leído la documentación antes de agregar reglas personalizadas; de lo contrario, es posible que no pueda conectarse a Internet.</string> 
-    <string name="lines">%d líneas</string> 
     <string name="night_mode">Modo nocturno</string> 
     <string name="follow_system">Seguir sistema</string> 
     <string name="enable">Permitir</string> 
@@ -426,4 +425,7 @@
  
     <string name="connection_test_delete_unavailable">Borrado no disponible</string> 
 
+    <plurals name="config_lines">
+        <item quantity="other">%d líneas</item>
+    </plurals>
 </resources> 

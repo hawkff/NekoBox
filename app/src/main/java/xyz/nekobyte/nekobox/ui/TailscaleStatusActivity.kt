@@ -168,13 +168,15 @@ class TailscaleStatusActivity : ThemedActivity(R.layout.layout_tailscale_status)
         private fun render(state: TailscaleStatusUiState) {
             val status = state.status
             val node = status?.node
+            val stateText = format.state(state)
             rows.getValue("state").apply {
                 title = model.profileName.ifEmpty { getString(R.string.tailscale_status_title) }
-                summary = format.state(state)
+                summary = stateText
             }
             rows.getValue("check").isEnabled = state.canCheck
             rows.getValue("temporary").isVisible = state.temporary
-            rows.getValue("error").isVisible = state.failed
+            // The failure gets its own row only when the status line above says something else.
+            rows.getValue("error").isVisible = state.failed && stateText.toString() != getString(R.string.tailscale_status_error)
             val link = node?.authUrl?.let(TailscaleLoginLink::parse)
             rows.getValue("login").apply {
                 isVisible = node?.needsLogin == true || !node?.authUrl.isNullOrEmpty()

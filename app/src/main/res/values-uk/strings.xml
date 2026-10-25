@@ -283,7 +283,6 @@
     <string name="need_reload">Перезавантажте службу проксі, щоб застосувати зміни</string>
     <string name="license">Ліцензія</string>
     <string name="route_warn">Переконайтеся, що ви прочитали документацію перед додаванням власних правил, інакше ви можете не підключитися до Інтернету.</string>
-    <string name="lines">%d рядків</string>
     <string name="night_mode">Нічний режим</string>
     <string name="follow_system">Як у системі</string>
     <string name="enable">Увімкнути</string>
@@ -496,4 +495,7 @@
     <string name="padding">Заповнення (Padding)</string>
     <string name="network_change_reset_connections">Скидати вихідні з\'єднання при зміні мережі</string>
     <string name="wake_reset_connections">Скидати вихідні з\'єднання при виході пристрою зі сну</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d рядків</item>
+    </plurals>
 </resources>

@@ -281,7 +281,6 @@
     <string name="license">مجوز</string>
     <string name="route_warn">اطمینان حاصل کنید که مستندات فنی را قبل از افزودن قوانین سفارشی مطالعه کرده‌اید،
  در غیر این صورت ممکن است نتوانید به اینترنت وصل شوید.</string>
-    <string name="lines">%d خط</string>
     <plurals name="dns_hosts_lines">
         <item quantity="one">%d خط</item>
         <item quantity="other">%d خط</item>
@@ -614,4 +613,7 @@
     <string name="snell_obfs_host">میزبان Obfs</string>
     <string name="snell_reuse">استفادهٔ مجدد</string>
     <string name="snell_reuse_summary">فقط v4/v5</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d خط</item>
+    </plurals>
 </resources>

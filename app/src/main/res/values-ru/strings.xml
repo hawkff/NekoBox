@@ -30,7 +30,7 @@
 <string name="allow_insecure_on_request_sum">Отключить проверку сертификатов при обновлении подписок</string>
 <string name="allow_insecure_sum">Отключить проверку сертификата. При включении эта функция настолько же безопасна как передача пароля в открытом виде</string>
 <string name="alpn">Согласование протокола уровня приложений</string>
-<string name="alter_id">Изменить ID</string>
+<string name="alter_id">Alter ID</string>
 <string name="always_show_address">Всегда показывать адрес</string>
 <string name="always_show_address_sum">На карточках профилей</string>
 <string name="app_name">NekoBox</string>
@@ -48,7 +48,7 @@
 <string name="auto">Авто</string>
 <string name="auto_connect">Автоматическое подключение</string>
 <string name="auto_connect_summary">Включить прокси при запуске/обновлении приложения, если он был запущен до этого</string>
-<string name="auto_select_proxy_apps">Автоматический выбор прокси-приложений</string>
+<string name="auto_select_proxy_apps">Автовыбор приложений</string>
 <string name="auto_select_proxy_apps_message">Автоматический выбор прокси-приложений приведет к очистке текущего выбора.</string>
 <string name="backup">Бэкап</string>
 <string name="backup_groups_and_configurations">Группы и конфигурации</string>
@@ -194,7 +194,7 @@
 <string name="group_filter">Фильтр</string>
 <string name="group_name">Имя группы</string>
 <string name="group_name_required">Требуется название группы</string>
-<string name="group_no_difference">%s: Не отличаются</string>
+<string name="group_no_difference">%s: без изменений</string>
 <string name="group_not_subscription">Тип группы не является подпиской</string>
 <string name="group_order">Сортировка</string>
 <string name="group_order_by_delay">По задержке</string>
@@ -214,10 +214,10 @@
 <string name="hysteria_auth_type">Тип аутентификации</string>
 <string name="hysteria_connection_receive_window">Окно получения соединения QUIC</string>
 <string name="hysteria_disable_mtu_discovery">Отключить обнаружение MTU пути</string>
-<string name="hysteria_download_mbps">Максимальная скорость загрузки (в Мбит / с)</string>
+<string name="hysteria_download_mbps">Макс. скорость загрузки (Мбит/с)</string>
 <string name="hysteria_obfs">Обфускация пароля</string>
 <string name="hysteria_stream_receive_window">Окно приема потока QUIC</string>
-<string name="hysteria_upload_mbps">Максимальная скорость загрузки (в Мбит / с)</string>
+<string name="hysteria_upload_mbps">Макс. скорость отдачи (Мбит/с)</string>
 <string name="icon_content_description">Значок диалогового окна</string>
 <string name="ignore_battery_optimizations_sum">Снять некоторые ограничения</string>
 <string name="inbound_settings">Входящие настройки</string>
@@ -233,7 +233,6 @@
 <string name="key_opt">Ключ (необязательно)</string>
 <string name="landing_proxy">Обратный прокси</string>
 <string name="license">Лицензия</string>
-<string name="lines">%d строк</string>
 <plurals name="dns_hosts_lines">
     <item quantity="one">%d строка</item>
     <item quantity="few">%d строки</item>
@@ -282,7 +281,7 @@
 <string name="mtu_help">Удерживайте для настройки своего MTU.</string>
 <string name="mux_concurrency">Число одновременных подключений Mux</string>
 <string name="mux_preference">Мультиплекс</string>
-<string name="mux_sum">Протокол мультиплексирования предназначен для уменьшения задержки соединения TCP, а не для увеличения пропускной способности. Использование мультиплексирования для просмотра видео, загрузки или проверки скорости обычно неэффективно. Если сервер не поддерживает мультиплексирование, вы не сможете получить доступ к Интернету.</string>
+<string name="mux_sum">Мультиплексирование уменьшает задержку TCP-рукопожатия и не увеличивает пропускную способность. Для видео, загрузок и тестов скорости оно обычно только мешает. Если сервер его не поддерживает, соединения не работают.</string>
 <string name="mux_type">Протокол мультиплексирования</string>
 <string name="naive_insecure_concurrency">Небезопасный параллелизм</string>
 <string name="naive_insecure_concurrency_summary">Использовать N параллельных соединений для повышения отказоустойчивости в условиях ненадёжной сети. Большее число соединений увеличивает риск обнаружения туннелей и снижает безопасность. Этот проект стремится к максимальной защите от анализа трафика, следовательно, использование его небезопасным образом противоречит данной цели. 
@@ -480,7 +479,7 @@
 <string name="username">Имя пользователя</string>
 <string name="username_opt">Имя пользователя (необязательно)</string>
 <string name="utls_fingerprint">Отпечаток uTLS</string>
-<string name="uuid">Логин пользователя</string>
+<string name="uuid">ID пользователя (UUID)</string>
 <string name="v7_preference_off">ВЫКЛ.</string>
 <string name="v7_preference_on">ВКЛ.</string>
 <string name="vpn_connected">Подключено, нажмите для проверки подключения</string>
@@ -574,7 +573,7 @@
     <string name="save">Сохранить</string>
     <string name="resolve_server">Разрешать адрес сервера согласно политике IPv6</string>
     <string name="ech_settings">Настройки ECH</string>
-    <string name="fragment_settings">Настройки Fragment</string>
+    <string name="fragment_settings">Фрагментация TLS</string>
     <string name="enable_tls_fragment">Включить фрагментацию TLS Client Hello</string>
     <string name="fragment_length">Длина фрагмента (мин-макс)</string>
     <string name="fragment_interval">Интервал фрагмента (мин-макс)</string>
@@ -626,6 +625,9 @@
     <string name="vless_encryption">Шифрование</string>
     <string name="vless_encryption_hint">mlkem768x25519plus.native.0rtt.KEY1.KEY2...</string>
     <string name="app_list_permission_denied">Не удалось прочитать установленные приложения.\nОбычно это связано с тем, что система ограничила разрешение на чтение приложений.\nПожалуйста, предоставьте разрешения в настройках системы.</string>
+<string name="app_list_empty">Нет приложений для показа.</string>
+<string name="app_list_no_match">Ни одно приложение не подходит под «%1$s».</string>
+<string name="app_list_system_hidden">Системные приложения скрыты. Включите «Показать системные приложения», чтобы увидеть их.</string>
     <string name="open_app_settings">Открыть настройки системы</string>
     <string name="action_snell">Snell</string>
     <string name="snell_psk">Ключ</string>
@@ -749,7 +751,9 @@
     <string name="connections_show_closed">Показывать закрытые соединения</string>
     <string name="connection_diagnostics">Диагностика соединений</string>
     <string name="connection_diagnostics_summary">Определять приложение для каждого соединения и хранить в памяти последние 300 закрытых соединений, пока работает сервис. По умолчанию выключено.</string>
-    <string name="connections_status_stopped">Сервис не запущен.</string>
+    <string name="connections_empty_stopped">NekoBox выключен. Подключитесь, чтобы видеть соединения ваших приложений.</string>
+<string name="connections_empty_running">Соединений пока нет.</string>
+<string name="connections_unreadable">Не удалось прочитать соединения. Список попробует снова через мгновение.</string>
     <string name="connections_status_live">Активных: %1$d · закрытых: %2$d. Диагностика %3$s.</string>
     <string name="connections_status_on">включена</string>
     <string name="connections_status_off">выключена: имена приложений и закрытые соединения не собираются</string>
@@ -784,6 +788,7 @@
     <string name="network_rule_disconnect">Отключиться (доверенная сеть)</string>
     <string name="network_rule_ssid_permission">Без разрешения на местоположение Android скрывает имя Wi-Fi, поэтому это правило не сработает.</string>
     <string name="routing_profiles">Профили маршрутов</string>
+<string name="routing_profiles_empty">Профилей маршрутизации пока нет. Профиль хранит текущие правила, настройки DNS и приложений, чтобы переключаться между ними одним касанием.</string>
     <string name="routing_profile_save_current">Сохранить текущие как профиль</string>
     <string name="routing_profile_switch">Переключиться на этот профиль</string>
     <string name="routing_profile_rename">Переименовать профиль</string>
@@ -1167,4 +1172,43 @@
 <string name="route_editor_fewer">Меньше параметров</string>
 <string name="route_editor_no_site_list">нет списка сайтов %s</string>
 <string name="route_editor_bad_list">%s: нужно rssite: или rsip:, а за ним веб-ссылка</string>
+<plurals name="config_lines">
+    <item quantity="one">%d строка</item>
+    <item quantity="few">%d строки</item>
+    <item quantity="many">%d строк</item>
+    <item quantity="other">%d строки</item>
+</plurals>
+<string name="reality_public_key">Публичный ключ Reality</string>
+<string name="reality_short_id">Short ID Reality</string>
+<string name="reserved_bytes">Зарезервированные байты</string>
+<string name="singbox_server">Сервер sing-box</string>
+<string name="udp_over_tcp">UDP поверх TCP</string>
+<string name="awg_jc">Jc (число мусорных пакетов)</string>
+<string name="awg_jmin">Jmin (мин. размер мусорного пакета)</string>
+<string name="awg_jmax">Jmax (макс. размер мусорного пакета)</string>
+<string name="awg_s1">S1 (мусор в пакете инициации)</string>
+<string name="awg_s2">S2 (мусор в пакете ответа)</string>
+<string name="awg_s3">S3 (мусор в ответе cookie)</string>
+<string name="awg_s4">S4 (мусор в транспортном пакете)</string>
+<string name="awg_h1">H1 (заголовок пакета инициации)</string>
+<string name="awg_h2">H2 (заголовок пакета ответа)</string>
+<string name="awg_h3">H3 (заголовок пакета underload)</string>
+<string name="awg_h4">H4 (заголовок транспортного пакета)</string>
+<string name="awg_i1">I1 (особый мусор 1)</string>
+<string name="awg_i2">I2 (особый мусор 2)</string>
+<string name="awg_i3">I3 (особый мусор 3)</string>
+<string name="awg_i4">I4 (особый мусор 4)</string>
+<string name="awg_i5">I5 (особый мусор 5)</string>
+<string name="value_none">Нет</string>
+<string name="prefer_ipv4">Предпочитать IPv4</string>
+<string name="prefer_ipv6">Предпочитать IPv6</string>
+<string name="ipv4_only">Только IPv4</string>
+<string name="ipv6_only">Только IPv6</string>
+<string name="log_warning">Предупреждения</string>
+<string name="log_info">Информация</string>
+<string name="log_debug">Отладка</string>
+<string name="log_trace">Трассировка</string>
+<string name="relay_native">Нативный</string>
+<string name="utls_random_browser">Случайный браузер</string>
+<string name="utls_randomized">Рандомизированный</string>
 </resources>

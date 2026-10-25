@@ -22,7 +22,6 @@
     <string name="group_name_required">Gruppen Name benötigt</string>
     <string name="group_delete_confirm_prompt">Bist du dir sicher das du diese Gruppe entfernen möchtest\?</string>
     <string name="license">Lizenz</string>
-    <string name="lines">%d Linien</string>
     <string name="auto">Automatisch</string>
     <string name="api_port">API-Port</string>
     <string name="night_mode">Nachtmodus</string>
@@ -33,4 +32,7 @@
     <string name="list">Liste</string>
     <string name="random">Zufällig</string>
     <string name="enable_log_sum">Für Debugging-Zwecken</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d Linien</item>
+    </plurals>
 </resources>

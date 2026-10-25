@@ -6,7 +6,8 @@
     <string name="about_core">Ядро</string>
     <string name="about_plugins">Плагины</string>
     <string name="about_background_allowed">Работа в фоне разрешена</string>
-    <string name="about_background_restricted">Работа в фоне ограничена. Нажмите, чтобы разрешить.</string>
+    <string name="about_background_restricted">Работа в фоне ограничена. Android может остановить NekoBox, пока он не на экране.</string>
+    <string name="about_background_allow">Разрешить работу в фоне</string>
     <string name="about_check_updates">Проверить обновления</string>
     <string name="about_releases">Релизы</string>
     <string name="about_opens_browser">%s, откроется в браузере</string>

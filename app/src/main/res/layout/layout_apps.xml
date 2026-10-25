@@ -54,7 +54,6 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             app:selectionRequired="true"
-                            app:singleLine="true"
                             app:singleSelection="true">
 
                             <com.google.android.material.chip.Chip
@@ -78,18 +77,17 @@
 
                         </com.google.android.material.chip.ChipGroup>
 
-                        <LinearLayout
-                            android:layout_width="wrap_content"
+                        <!-- Wraps to a second line where the labels do not fit side by side. -->
+                        <com.google.android.material.chip.ChipGroup
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal">
+                            android:layout_marginBottom="4dp">
 
                             <com.google.android.material.chip.Chip
                                 android:id="@+id/show_system_apps"
                                 style="@style/Widget.Material3.Chip.Filter"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginEnd="8dp"
-                                android:layout_marginBottom="4dp"
                                 android:text="@string/show_system_apps" />
 
                             <com.google.android.material.chip.Chip
@@ -99,7 +97,7 @@
                                 android:checkable="false"
                                 android:text="@string/auto_select_proxy_apps" />
 
-                        </LinearLayout>
+                        </com.google.android.material.chip.ChipGroup>
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="match_parent"
@@ -151,5 +149,15 @@
     <include
         android:id="@+id/app_placeholder"
         layout="@layout/layout_app_placeholder" />
+
+    <!-- Covers the status bar where the header scrolls up under it; ThemedActivity sizes it to the inset.
+         Above the app bar even when it lifts, and without a shadow of its own. -->
+    <View
+        android:id="@+id/status_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="?attr/appBarBackgroundColor"
+        android:elevation="16dp"
+        android:outlineProvider="none" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

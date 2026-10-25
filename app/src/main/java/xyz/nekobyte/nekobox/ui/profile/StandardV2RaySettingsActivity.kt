@@ -138,7 +138,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
                 setEntries(R.array.xtls_flow_value)
                 setEntryValues(R.array.xtls_flow_value)
             } else {
-                setEntries(R.array.vmess_encryption_value)
+                setEntries(R.array.vmess_encryption_entry)
                 setEntryValues(R.array.vmess_encryption_value)
             }
         }

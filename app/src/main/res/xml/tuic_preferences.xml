@@ -40,7 +40,7 @@
             app:useSimpleSummaryProvider="true" />
         <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="https"
-            app:entries="@array/tuic_udp_relay_mode_value"
+            app:entries="@array/tuic_udp_relay_mode_entry"
             app:entryValues="@array/tuic_udp_relay_mode_value"
             app:icon="@drawable/ic_baseline_add_road_24"
             app:key="serverUDPRelayMode"
@@ -48,7 +48,7 @@
             app:useSimpleSummaryProvider="true" />
         <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue="https"
-            app:entries="@array/tuic_congestion_controller_value"
+            app:entries="@array/tuic_congestion_controller_entry"
             app:entryValues="@array/tuic_congestion_controller_value"
             app:icon="@drawable/ic_baseline_compare_arrows_24"
             app:key="serverCongestionController"

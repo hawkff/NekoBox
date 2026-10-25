@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.text.format.Formatter
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -309,8 +308,8 @@ class ChainSettingsActivity : ProfileSettingsActivity<ChainBean>(R.layout.layout
             if (showTraffic) {
                 trafficText.text = itemView.context.getString(
                     R.string.traffic,
-                    Formatter.formatFileSize(itemView.context, tx),
-                    Formatter.formatFileSize(itemView.context, rx),
+                    itemView.context.byteCount(tx),
+                    itemView.context.byteCount(rx),
                 )
             }
 

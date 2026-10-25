@@ -256,7 +256,6 @@
     <string name="allow_insecure_sum">禁用证书检查. 启用后该配置安全性相当于明文</string>
     <string name="config_type">配置类型</string>
     <string name="edit_config">编辑配置</string>
-    <string name="lines">%d 行</string>
     <plurals name="dns_hosts_lines">
         <item quantity="other">%d 行</item>
     </plurals>
@@ -568,4 +567,7 @@
     <string name="snell_network">协议</string>
     <string name="snell_obfs_mode">Obfs 模式</string>
     <string name="snell_obfs_host">Obfs 主机</string>
+    <plurals name="config_lines">
+        <item quantity="other">%d 行</item>
+    </plurals>
 </resources>

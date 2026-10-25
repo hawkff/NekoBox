@@ -22,6 +22,17 @@
                 android:clipToPadding="false"
                 android:paddingBottom="8dp" />
 
+            <TextView
+                android:id="@+id/connections_empty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:paddingHorizontal="32dp"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone" />
+
         </xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout>
 
         <!-- The summary rides with the toolbar while the connections scroll. -->
