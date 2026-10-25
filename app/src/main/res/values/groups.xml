@@ -34,6 +34,7 @@
     <string name="group_editor_kind">What it holds</string>
     <string name="group_editor_kind_subscription">A subscription</string>
     <string name="group_editor_kind_own">Your own profiles</string>
+    <string name="group_default_name">My group</string>
     <string name="group_editor_name_help">Leave it empty for “My group”</string>
     <string name="group_editor_link">Subscription link</string>
     <string name="group_editor_link_help">The address your provider gave you</string>

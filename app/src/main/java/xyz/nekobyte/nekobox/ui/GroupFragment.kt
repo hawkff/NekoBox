@@ -193,7 +193,13 @@ class GroupFragment :
         // Profiles per group, read with the groups.
         val counts = HashMap<Long, Long>()
 
+        // Groups taken off the list while their deletion waits for undo: a reload leaves them out. Each finished
+        // deletion counts, so that a reload that read the database before it is dropped for a fresh one.
+        private val pending = HashSet<Long>()
+        private var deletions = 0
+
         suspend fun reload() {
+            val started = onMainDispatcher { deletions }
             val groups = ProfileDatabase.groupDao.allGroups().toMutableList()
             val ungrouped = groups.find { it.ungrouped }
             if (groups.size > 1 && ungrouped != null &&
@@ -203,8 +209,13 @@ class GroupFragment :
             }
             val sizes = groups.associate { it.id to ProfileDatabase.proxyDao.countByGroup(it.id) }
             groupListView.post {
+                // Read before a deletion finished: read again.
+                if (started != deletions) {
+                    runOnDefaultDispatcher { reload() }
+                    return@post
+                }
                 groupList.clear()
-                groupList.addAll(groups.filter { it.id !in removed })
+                groupList.addAll(groups.filter { it.id !in pending })
                 counts.clear()
                 counts.putAll(sizes)
                 notifyDataSetChanged()
@@ -258,12 +269,8 @@ class GroupFragment :
             updated.clear()
         }
 
-        // Groups taken off the list, waiting for undo or deleted: every reload leaves them out, even one that read the
-        // group before its deletion. Group ids are never reused, so a deleted one stays here; undo takes it back.
-        private val removed = HashSet<Long>()
-
         fun remove(index: Int) {
-            removed += groupList[index].id
+            pending += groupList[index].id
             groupList.removeAt(index)
             notifyItemRemoved(index)
         }
@@ -280,7 +287,7 @@ class GroupFragment :
 
         override fun undo(actions: List<Pair<Int, ProxyGroup>>) {
             for ((index, item) in actions) {
-                removed -= item.id
+                pending -= item.id
                 // The list may have been reloaded meanwhile.
                 val at = index.coerceAtMost(groupList.size)
                 groupList.add(at, item)
@@ -292,6 +299,10 @@ class GroupFragment :
             val groups = actions.map { it.second }
             runOnDefaultDispatcher {
                 GroupManager.deleteGroup(groups)
+                onMainDispatcher {
+                    deletions++
+                    groups.forEach { pending -= it.id }
+                }
                 reload()
             }
         }

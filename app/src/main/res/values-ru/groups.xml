@@ -36,6 +36,7 @@
     <string name="group_editor_kind">Что в ней</string>
     <string name="group_editor_kind_subscription">Подписка</string>
     <string name="group_editor_kind_own">Свои профили</string>
+    <string name="group_default_name">Моя группа</string>
     <string name="group_editor_name_help">Если оставить пустым, будет «Моя группа»</string>
     <string name="group_editor_link">Ссылка на подписку</string>
     <string name="group_editor_link_help">Адрес, который дал провайдер</string>

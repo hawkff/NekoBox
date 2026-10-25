@@ -110,7 +110,7 @@ class GroupSettingsActivity :
     }
 
     fun ProxyGroup.serialize() {
-        name = DataStore.groupName.takeIf { it.isNotBlank() } ?: "My group"
+        name = DataStore.groupName.takeIf { it.isNotBlank() } ?: getString(R.string.group_default_name)
         type = DataStore.groupType
         order = DataStore.groupOrder
         isSelector = DataStore.groupIsSelector
@@ -230,6 +230,16 @@ class GroupSettingsActivity :
                 DataStore.dirty = prefilled
                 DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
             }
+        }
+    }
+
+    // Android sets the fields' text back after a rotation; that is not an edit.
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        filling = true
+        try {
+            super.onRestoreInstanceState(savedInstanceState)
+        } finally {
+            filling = false
         }
     }
 
