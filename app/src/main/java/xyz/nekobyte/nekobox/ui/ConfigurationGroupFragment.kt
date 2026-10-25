@@ -14,6 +14,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.BundleCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.size
@@ -442,6 +443,7 @@ class ConfigurationGroupFragment : Fragment() {
                 contentStamp,
                 host?.isSelectedProfile(profileId) == true,
                 host?.isRunningProfile(profileId) == true,
+                host?.isConnectingProfile(profileId) == true,
             )
         }
 
@@ -1344,9 +1346,13 @@ class ConfigurationGroupFragment : Fragment() {
             val running = pf.isRunningProfile(proxyEntity.id)
             editButton.isEnabled = !running
             removeButton.isEnabled = !running
-            // Screen readers say "selected"; the highlight is for the eye.
+            // Screen readers say "selected", and "Connecting…" while the service connects to this profile;
+            // the outline is for the eye, and breathes until the connection is up.
+            val connecting = pf.isConnectingProfile(proxyEntity.id)
             card.isSelected = selected
-            highlight.show(selected, animate = same)
+            ViewCompat.setStateDescription(card, getString(R.string.connecting).takeIf { connecting })
+            highlight.show(selected || connecting, animate = same)
+            highlight.breathe(connecting)
         }
 
         private fun showCode(link: String, name: String) {

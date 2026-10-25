@@ -1,14 +1,11 @@
 package xyz.nekobyte.nekobox.widget
 
 import android.animation.TimeAnimator
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
-import android.os.Build
-import android.provider.Settings
 import android.util.AttributeSet
 import android.view.View
 import androidx.annotation.ColorInt
@@ -16,6 +13,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withRotation
 import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import kotlin.math.PI
@@ -79,7 +77,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
     private val oval = RectF()
 
-    private var motion = motionOn()
+    private var motion = context.animationsOn()
     private var time = 0f
     private val clock = TimeAnimator().apply {
         setTimeListener { _, total, _ ->
@@ -108,16 +106,10 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         super.onWindowVisibilityChanged(visibility)
         // Animations may have been switched on or off while the page was away.
         if (visibility == VISIBLE) {
-            motion = motionOn()
+            motion = context.animationsOn()
             invalidate()
         }
         updateClock()
-    }
-
-    private fun motionOn() = if (Build.VERSION.SDK_INT >= 26) {
-        ValueAnimator.areAnimatorsEnabled()
-    } else {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
     }
 
     private fun updateClock() {

@@ -1,14 +1,18 @@
 package xyz.nekobyte.nekobox.widget
 
 import android.animation.ValueAnimator
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.card.MaterialCardView
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 
 /**
  * The look of a picked-out card: a thicker outline in the primary color over a faint tint of it, as
- * the selected profile has, faded in and out. One per card; it remembers where it stopped.
+ * the selected profile has, faded in and out. One per card; it remembers where it stopped. While
+ * work is under way for the card, its outline can breathe.
  */
 class CardHighlight(private val card: MaterialCardView) {
     private val context = card.context
@@ -23,6 +27,27 @@ class CardHighlight(private val card: MaterialCardView) {
     private var lit = -1f
     private var aim = -1f
     private var animator: ValueAnimator? = null
+
+    // How strong the outline is while it breathes: 1 at rest.
+    private var strength = 1f
+    private var breathing = false
+    private var breath: ValueAnimator? = null
+
+    init {
+        // A card off screen stops breathing, and picks it up again when it comes back.
+        card.addOnAttachStateChangeListener(
+            object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(view: View) {
+                    if (breathing && breath == null) startBreath()
+                }
+
+                override fun onViewDetachedFromWindow(view: View) {
+                    breath?.cancel()
+                    breath = null
+                }
+            },
+        )
+    }
 
     /** Lights the card up or down; without [animate], or the first time, at once. */
     fun show(on: Boolean, animate: Boolean, delay: Long = 0) {
@@ -46,14 +71,53 @@ class CardHighlight(private val card: MaterialCardView) {
         }
     }
 
+    /**
+     * While [on], the outline fades slowly between full and faint and back, until the work is done.
+     * With animations off it holds at the faint end, which still differs from the solid outline.
+     */
+    fun breathe(on: Boolean) {
+        if (on == breathing) return
+        breathing = on
+        breath?.cancel()
+        breath = null
+        if (!on) {
+            strength = 1f
+        } else if (card.isAttachedToWindow) {
+            startBreath()
+        }
+        paint(lit.coerceAtLeast(0f))
+    }
+
+    private fun startBreath() {
+        if (!context.animationsOn()) {
+            strength = FAINT
+            return paint(lit.coerceAtLeast(0f))
+        }
+        breath = ValueAnimator.ofFloat(1f, FAINT).apply {
+            duration = BREATH
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener {
+                strength = it.animatedValue as Float
+                paint(lit.coerceAtLeast(0f))
+            }
+            start()
+        }
+    }
+
     private fun paint(fraction: Float) {
         lit = fraction
         card.strokeWidth = (thin + (thick - thin) * fraction).toInt()
-        card.strokeColor = ColorUtils.blendARGB(stroke, primary, fraction)
+        card.strokeColor = ColorUtils.blendARGB(stroke, primary, fraction * strength)
         card.setCardBackgroundColor(ColorUtils.blendARGB(surface, tint, fraction))
     }
 
     private companion object {
         const val DURATION = 220L
+
+        // One breath takes twice this: out to faint, back to full.
+        const val BREATH = 900L
+        const val FAINT = 0.3f
     }
 }
