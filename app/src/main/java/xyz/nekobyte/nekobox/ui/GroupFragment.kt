@@ -263,6 +263,20 @@ class GroupFragment :
             notifyItemRemoved(index)
         }
 
+        /** Counts the listed groups' profiles again; the list itself, with a removal waiting for undo, stays as it is. */
+        fun refreshCounts() = runOnDefaultDispatcher {
+            val ids = onMainDispatcher { groupList.map { it.id } }
+            val sizes = ids.associateWith { ProfileDatabase.proxyDao.countByGroup(it) }
+            onMainDispatcher {
+                for ((id, size) in sizes) {
+                    if (counts[id] == size) continue
+                    counts[id] = size
+                    val index = groupList.indexOfFirst { it.id == id }
+                    if (index >= 0) notifyItemChanged(index)
+                }
+            }
+        }
+
         /** Opens the row of [groupId], closing the one open before; again on the same row, closes it. */
         fun toggle(groupId: Long) {
             val before = openGroup
@@ -357,7 +371,7 @@ class GroupFragment :
     // Profiles added elsewhere, as by the scanner, change the counts without a group event.
     override fun onResume() {
         super.onResume()
-        if (::groupAdapter.isInitialized) runOnDefaultDispatcher { groupAdapter.reload() }
+        if (::groupAdapter.isInitialized) groupAdapter.refreshCounts()
     }
 
     override fun onDestroy() {
