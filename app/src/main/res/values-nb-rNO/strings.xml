@@ -75,7 +75,6 @@
     <string name="menu_about">Om</string>
     <string name="menu_group">Gruppe</string>
     <string name="logcat">Eksporter avlusingsinfo</string>
-    <string name="version_x">Versjon (%s)</string>
     <string name="app_version">Versjon</string>
     <string name="oss_licenses">Friproglisenser</string>
     <string name="telegram">Telegram-oppdateringskanal</string>
@@ -169,7 +168,6 @@
     <string name="plugin_unknown">Ukjent plugin %s</string>
     <string name="plugin_disabled">Funksjonshemmet</string>
     <string name="plugin">Plugg inn</string>
-    <string name="ignore_battery_optimizations">Ignorer batterioptimaliseringer</string>
     <string name="donate_info">Jeg elsker penger</string>
     <string name="deduplication">Deduplisering</string>
     <string name="no_proxies_found_in_clipboard">Ingen fullmakter ble funnet i utklippstavlen</string>
@@ -320,7 +318,6 @@
     <string name="quick_enable">Aktiver</string>
     <string name="quick_disable">Deaktiver</string>
     <string name="menu_configuration">Konfigurasjon</string>
-    <string name="app_desc">Den universelle proxy -verktøykjeden for Android, skrevet i Kotlin.</string>
     <string name="group_filter">Raffinering</string>
     <string name="standard">Standard</string>
     <string name="obfs">Obfs</string>

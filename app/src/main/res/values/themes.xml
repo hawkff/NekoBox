@@ -702,6 +702,22 @@
         <item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
     </style>
 
+    <!-- About's facts: a label in secondary text, its value beside it. -->
+    <style name="Widget.NekoBox.AboutLabel" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">end</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyMedium</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+
+    <style name="Widget.NekoBox.AboutValue" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyMedium</item>
+    </style>
+
     <!-- The overflow button keeps a 48 dp touch target; AppCompat's is narrower. -->
     <style name="Widget.NekoBox.ActionButton.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
         <item name="android:minWidth">48dp</item>

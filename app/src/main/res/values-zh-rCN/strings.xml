@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_desc">适用于 Android 之通用代理工具, 使用 Kotlin 编写。</string>
     <string name="project">项目</string>
     <string name="github">源代码</string>
     <string name="telegram">Telegram 更新频道</string>
@@ -205,7 +204,6 @@
     <string name="group_duplicate">重复:
         \n%s</string>
     <string name="deduplication">去重</string>
-    <string name="version_x">版本 (%s)</string>
     <string name="show_stop">显示停止按钮</string>
     <string name="show_stop_sum">如果您不想使用快捷图块</string>
     <string name="ss_cat">Shadowsocks 设置</string>
@@ -249,7 +247,6 @@
     <string name="connection_test_available_http">连接成功: HTTP 握手耗时 %dms</string>
     <string name="certificates">证书 (链)</string>
     <string name="bypass_lan_in_core">在核心中绕过 LAN</string>
-    <string name="ignore_battery_optimizations">忽略电池优化</string>
     <string name="ignore_battery_optimizations_sum">移除一些限制</string>
     <string name="document">文档</string>
     <string name="early_data_header_name">前置数据标头</string>
@@ -567,8 +564,6 @@
     <string name="sort_and_layout">排序与布局</string>
     <string name="connection_test_timeout">测试超时（ms）</string>
     <string name="preview_version_hint">本应用为预览版，可能存在诸多问题。若您不愿参与测试，请前往GitHub下载正式发布版本！</string>
-    <string name="check_update_preview">检查预览版更新</string>
-    <string name="check_update_release">检查正式版更新</string>
     <string name="update_dialog_title">发现新版本</string>
     <string name="update_dialog_message">当前版本：%1$s\n可升级版本：%2$s\n是否前往下载？</string>
     <string name="check_update_no">检查成功，但没有更新。</string>

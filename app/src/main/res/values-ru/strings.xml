@@ -34,7 +34,6 @@
 <string name="alter_id">Изменить ID</string>
 <string name="always_show_address">Всегда показывать адрес</string>
 <string name="always_show_address_sum">На карточках профилей</string>
-<string name="app_desc">Универсальный набор инструментов прокси для Android, написанный на Kotlin.</string>
 <string name="app_name">NekoBox</string>
 <string name="app_name_long">NekoBox для Android</string>
 <string name="app_tls_version">Минимальная версия TLS протокола</string>
@@ -78,8 +77,6 @@
 <string name="character_counter_content_description">Введено символов: %1$d из %2$d</string>
 <string name="character_counter_overflowed_content_description">Превышено ограничение на количество символов (%1$d из %2$d)</string>
 <string name="check_update_no">Обновления не найдены.</string>
-<string name="check_update_preview">Проверить наличие обновлений предварительной версии</string>
-<string name="check_update_release">Проверить наличие обновлений релизнойной версии</string>
 <string name="circular_reference">Циклическая ссылка</string>
 <string name="circular_reference_sum">Маршрут не может содержать сам себя.</string>
 <string name="clear_logcat">Очистить журнал</string>
@@ -233,7 +230,6 @@
 <string name="hysteria_stream_receive_window">Окно приема потока QUIC</string>
 <string name="hysteria_upload_mbps">Максимальная скорость загрузки (в Мбит / с)</string>
 <string name="icon_content_description">Значок диалогового окна</string>
-<string name="ignore_battery_optimizations">Игнорировать оптимизации батареи</string>
 <string name="ignore_battery_optimizations_sum">Снять некоторые ограничения</string>
 <string name="inbound_settings">Входящие настройки</string>
 <string name="insecure">Ненадежный</string>
@@ -499,7 +495,6 @@
 <string name="uuid">Логин пользователя</string>
 <string name="v7_preference_off">ВЫКЛ.</string>
 <string name="v7_preference_on">ВКЛ.</string>
-<string name="version_x">Версия (%s)</string>
 <string name="vpn_connected">Подключено, нажмите для проверки подключения</string>
 <string name="vpn_permission_denied">Отказано в разрешении на создание службы VPN</string>
 <string name="wake_reset_connections">Сбросить исходящие соединения при выходе из спящего режима</string>
@@ -741,8 +736,6 @@
     <string name="format">Форматировать</string>
     <string name="insert_tab">Вставить табуляцию</string>
     <string name="more_options">Ещё</string>
-    <string name="battery_optimization_enabled">Включено: приложение может работать в фоне без ограничений</string>
-    <string name="battery_optimization_disabled">Выключено: нажмите, чтобы разрешить работу в фоне</string>
     <string name="plugin_signer_unreadable">не читается</string>
     <string name="plugin_signer_rejected">Пакет плагина %1$s с подписью %2$s заблокирован. Подключитесь снова, чтобы проверить его.</string>
     <string name="plugin_approval_title">Одобрить пакет плагина?</string>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- About -->
+    <string name="about_edition">for Android · %s</string>
+    <string name="about_line">One client for every proxy protocol, on the sing-box core.</string>
+    <string name="about_core">Core</string>
+    <string name="about_plugins">Plugins</string>
+    <string name="about_background_allowed">Background use allowed</string>
+    <string name="about_background_restricted">Background use restricted. Tap to allow it.</string>
+    <string name="about_check_updates">Check for updates</string>
+    <string name="about_releases">Releases</string>
+    <string name="about_opens_browser">%s, opens in the browser</string>
+</resources>
