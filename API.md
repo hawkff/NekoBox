@@ -131,6 +131,8 @@ The API requires confirmation before enabling LAN sharing, insecure TLS options,
 
 Settings and routing changes report whether a reload or restart is needed. Use `service.reload` to apply core configuration, `ui.recreate` for appearance, or `app.restart` for process-level settings such as logging. Restart requires `confirm: true` and a stopped service. Changes to `hideFromRecentApps` take effect at once for both true and false.
 
+`rules.create` and `rules.update` refuse an enabled rule that the core would refuse to start with, and say why: a port that is not a number or a range, a downloaded list without `rssite:` or `rsip:` and a link, an address list that is not a country code, a broken pattern or address, a site list the bundled lists lack, or rule DNS the rule can't use. A disabled rule is stored as given and checked when it is turned on.
+
 Use `automation.set` to replace the network-rule list. Each rule has `kind`, `action`, and optional `ssid` and `profileId`. Kinds are `MOBILE`, `WIFI`, `SSID` and `ETHERNET`; actions are `CONNECT` and `DISCONNECT`. Enable or disable automation through `settings.set`.
 
 `ui.status` lists the available screen names. `ui.navigate` accepts one of those names. Launch the main activity first if the API reports `ui_unavailable`. Screen navigation never opens the web dashboard or another browser.

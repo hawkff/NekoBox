@@ -30,7 +30,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import libcore.Libcore
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -38,7 +37,6 @@ import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.RuleEntity
 import xyz.nekobyte.nekobox.databinding.ItemRouteListChipBinding
 import xyz.nekobyte.nekobox.databinding.LayoutRouteEditorBinding
-import xyz.nekobyte.nekobox.fmt.RouteTester
 import xyz.nekobyte.nekobox.fmt.RouteVerdict
 import xyz.nekobyte.nekobox.fmt.validateDnsRouting
 import xyz.nekobyte.nekobox.ktx.readableMessage
@@ -344,38 +342,6 @@ class RouteSettingsActivity : ThemedActivity() {
         }
     }
 
-    /** What would keep the core from starting with [rule], in words; null when nothing would. */
-    private fun problem(rule: RuleEntity): String? {
-        for (entry in rule.port.listByLineOrComma() + rule.sourcePort.listByLineOrComma()) {
-            if (!isPorts(entry)) return getString(R.string.route_editor_bad_port, entry)
-        }
-        val addresses = rule.ip.listByLineOrComma()
-        addresses.firstOrNull { it.startsWith("geoip:") && it != "geoip:private" && it.removePrefix("geoip:").uppercase() !in Locale.getISOCountries() }?.let {
-            return getString(R.string.route_editor_no_list, it)
-        }
-        rule.ruleset.listByLineOrComma().firstOrNull { !isDownloadedList(it) }?.let { return getString(R.string.route_editor_bad_list, it) }
-        // The bundled lists are unpacked when the service first starts; until then the core checks the rest.
-        val loaded = RouteChecks.settings().listsLoaded
-        val sites = rule.domains.listByLineOrComma().filter { loaded || !it.startsWith("geosite:") }
-        // Each site list on its own, so that a misspelled one is named in plain words, not in the core's.
-        for (entry in sites.filter { it.startsWith("geosite:") }) {
-            try {
-                Libcore.matchRouteDestination(RouteTester.destinationJson(listOf(entry), emptyList()), "example.invalid")
-            } catch (_: Exception) {
-                return getString(R.string.route_editor_no_site_list, entry)
-            }
-        }
-        val others = sites.filterNot { it.startsWith("geosite:") }
-        val checked = addresses.filter { loaded || !it.startsWith("geoip:") || it == "geoip:private" }
-        if (others.isEmpty() && checked.isEmpty()) return null
-        return try {
-            Libcore.matchRouteDestination(RouteTester.destinationJson(others, checked), "example.invalid")
-            null
-        } catch (e: Exception) {
-            e.readableMessage
-        }
-    }
-
     // Set from the first Save until the screen closes or says what to fix, so that a second tap can't store the rule twice.
     private var saving = false
 
@@ -390,7 +356,7 @@ class RouteSettingsActivity : ThemedActivity() {
                 return@launch tell(R.string.empty_route, getString(R.string.empty_route_notice))
             }
             runCatching { rule.validateDnsRouting() }.exceptionOrNull()?.let { return@launch tell(R.string.route_dns_error, it.readableMessage) }
-            withContext(Dispatchers.Default) { problem(rule) }?.let { return@launch tell(R.string.error_title, getString(R.string.route_editor_broken, it)) }
+            withContext(Dispatchers.Default) { RouteChecks.problem(this@RouteSettingsActivity, rule) }?.let { return@launch tell(R.string.error_title, getString(R.string.route_editor_broken, it)) }
             withContext(Dispatchers.IO) { if (rule.id == 0L) ProfileManager.createRule(rule) else ProfileManager.updateRule(rule) }
             if (intent.hasExtra(EXTRA_PACKAGE_NAME)) setResult(RESULT_OK, Intent())
             finish()
@@ -462,22 +428,5 @@ class RouteSettingsActivity : ThemedActivity() {
         /** Lists to offer: an entry and its label, or null for the name of its country. */
         private val SITE_LISTS = listOf("geosite:category-ads-all" to R.string.route_editor_ads, "geosite:cn" to null, "geosite:category-ir" to null, "geosite:category-ru" to null)
         private val ADDRESS_LISTS = listOf("geoip:private" to R.string.route_words_local_network, "geoip:cn" to null, "geoip:ir" to null, "geoip:ru" to null)
-
-        /** Whether [entry] is a downloaded list as ConfigBuilder reads one: rssite: or rsip: and a web link. */
-        fun isDownloadedList(entry: String): Boolean {
-            val link = entry.removePrefix("rssite:").removePrefix("rsip:")
-            return link != entry && (link.startsWith("https://") || link.startsWith("http://"))
-        }
-
-        /** Whether [entry] is a port or a range of ports as the core reads them: 443, 1000:2000, :1024 or 8000:. */
-        fun isPorts(entry: String): Boolean {
-            fun port(text: String) = text.toIntOrNull()?.takeIf { it in 1..65535 }
-            if (':' !in entry) return port(entry) != null
-            val (low, high) = entry.split(':', limit = 2)
-            if (low.isEmpty() && high.isEmpty()) return false
-            val from = if (low.isEmpty()) 1 else port(low) ?: return false
-            val to = if (high.isEmpty()) 65535 else port(high) ?: return false
-            return from <= to
-        }
     }
 }

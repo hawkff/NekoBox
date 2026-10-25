@@ -26,6 +26,7 @@ import xyz.nekobyte.nekobox.fmt.hysteria.isHysteria1
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.isUsableChainHop
 import xyz.nekobyte.nekobox.fmt.tailscale.profilesForBackup
+import xyz.nekobyte.nekobox.fmt.validateDnsRouting
 import xyz.nekobyte.nekobox.fmt.wireguard.checkWireGuardLimits
 import xyz.nekobyte.nekobox.group.GroupUpdater
 import xyz.nekobyte.nekobox.ktx.parseProxies
@@ -34,11 +35,17 @@ import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ui.BackupFormatV2
 import xyz.nekobyte.nekobox.ui.BackupRestoreOperations
 import xyz.nekobyte.nekobox.ui.DatabaseBackupRestoreOperations
+import xyz.nekobyte.nekobox.ui.RouteChecks
 import xyz.nekobyte.nekobox.ui.restoreBackup
 import java.io.File
 import java.util.UUID
 
-internal class AppApi(private val context: Context, private val runtime: ApiRuntime) : LocalAPIHandler {
+internal class AppApi(
+    private val context: Context,
+    private val runtime: ApiRuntime,
+    // The core's matcher for the rule checks; tests run without the core.
+    private val matchRoute: (json: String, host: String) -> Boolean = Libcore::matchRouteDestination,
+) : LocalAPIHandler {
     private companion object {
         // Listener replacement must not let a new token overlap an accepted command.
         val commandGate = Mutex()
@@ -881,6 +888,12 @@ internal class AppApi(private val context: Context, private val runtime: ApiRunt
         requireApi(result.outbound >= -2, "Invalid outbound")
         if (result.outbound > 0) profile(result.outbound)
         if (result.config.isNotBlank()) requireApi(runCatching { JSONObject(result.config) }.isSuccess, "config must be a JSON object")
+        // An enabled rule the core would refuse is refused here too, with the editor's reason; a disabled
+        // one is stored as given and checked when it is turned on.
+        if (result.enabled) {
+            runCatching { result.validateDnsRouting() }.exceptionOrNull()?.let { reject("invalid_parameters", it.readableMessage) }
+            RouteChecks.problem(context, result, match = matchRoute)?.let { reject("invalid_parameters", it) }
+        }
         return result
     }
     private fun orderedIds(array: JSONArray, expected: List<Long>): List<Long> {

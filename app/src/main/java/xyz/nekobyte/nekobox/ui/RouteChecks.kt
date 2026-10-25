@@ -1,14 +1,21 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.content.Context
 import libcore.Libcore
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.RuleEntity
 import xyz.nekobyte.nekobox.fmt.RouteProbe
 import xyz.nekobyte.nekobox.fmt.RouteSettings
 import xyz.nekobyte.nekobox.fmt.RouteTester
 import xyz.nekobyte.nekobox.ktx.app
+import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.utils.PackageCache
+import xyz.nekobyte.nekobox.utils.listByLineOrComma
 import java.io.File
+import java.util.Locale
 
 /** The route tester on this phone, for the rule list and the rule editor. Call off the main thread. */
 object RouteChecks {
@@ -39,5 +46,66 @@ object RouteChecks {
             ?: apps.filter { (_, label) -> label.lowercase().startsWith(name) }.minByOrNull { (_, label) -> label.length }
             ?: return null
         return RouteProbe(packageName = packageName) to label
+    }
+
+    /**
+     * What would keep the core from starting with [rule], in words; null when nothing would. The rule
+     * editor's Save and the app API both ask. [match] is the core's matcher, which also checks patterns,
+     * addresses and site lists; the bundled lists are checked once the service has unpacked them.
+     */
+    fun problem(
+        context: Context,
+        rule: RuleEntity,
+        listsLoaded: Boolean = settings().listsLoaded,
+        match: (json: String, host: String) -> Boolean = Libcore::matchRouteDestination,
+    ): String? {
+        for (entry in rule.port.listByLineOrComma() + rule.sourcePort.listByLineOrComma()) {
+            if (!isPorts(entry)) return context.getString(R.string.route_editor_bad_port, entry)
+        }
+        val addresses = rule.ip.listByLineOrComma()
+        addresses.firstOrNull { it.startsWith("geoip:") && it != "geoip:private" && it.removePrefix("geoip:").uppercase() !in Locale.getISOCountries() }?.let {
+            return context.getString(R.string.route_editor_no_list, it)
+        }
+        rule.ruleset.listByLineOrComma().firstOrNull { !isDownloadedList(it) }?.let { return context.getString(R.string.route_editor_bad_list, it) }
+        // The bundled lists are unpacked when the service first starts; until then the core checks the rest.
+        val sites = rule.domains.listByLineOrComma().filter { listsLoaded || !it.startsWith("geosite:") }
+        // Each site list on its own, so that a misspelled one is named in plain words, not in the core's.
+        for (entry in sites.filter { it.startsWith("geosite:") }) {
+            try {
+                match(RouteTester.destinationJson(listOf(entry), emptyList()), "example.invalid")
+            } catch (_: Exception) {
+                return context.getString(R.string.route_editor_no_site_list, entry)
+            }
+        }
+        val others = sites.filterNot { it.startsWith("geosite:") }
+        val checked = addresses.filter { listsLoaded || !it.startsWith("geoip:") || it == "geoip:private" }
+        if (others.isEmpty() && checked.isEmpty()) return null
+        return try {
+            match(RouteTester.destinationJson(others, checked), "example.invalid")
+            null
+        } catch (e: Exception) {
+            e.readableMessage
+        }
+    }
+
+    /** Whether [entry] is a downloaded list as ConfigBuilder reads one: rssite: or rsip:, once, then a web link to a host. */
+    fun isDownloadedList(entry: String): Boolean {
+        val link = when {
+            entry.startsWith("rssite:") -> entry.removePrefix("rssite:")
+            entry.startsWith("rsip:") -> entry.removePrefix("rsip:")
+            else -> return false
+        }
+        return !link.toHttpUrlOrNull()?.host.isNullOrEmpty()
+    }
+
+    /** Whether [entry] is a port or a range of ports as the core reads them: 443, 1000:2000, :1024 or 8000:. */
+    fun isPorts(entry: String): Boolean {
+        fun port(text: String) = text.toIntOrNull()?.takeIf { it in 1..65535 }
+        if (':' !in entry) return port(entry) != null
+        val (low, high) = entry.split(':', limit = 2)
+        if (low.isEmpty() && high.isEmpty()) return false
+        val from = if (low.isEmpty()) 1 else port(low) ?: return false
+        val to = if (high.isEmpty()) 65535 else port(high) ?: return false
+        return from <= to
     }
 }

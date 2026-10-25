@@ -37,6 +37,12 @@ class AppApiTest {
     private lateinit var api: AppApi
     private val logSink = Logs.sink
 
+    // Stands in for the core's matcher, which needs the native library: only an unclosed pattern is broken.
+    private val core = { json: String, _: String ->
+        require("(?i)(\"" !in json) { "domain_regex: missing closing )" }
+        false
+    }
+
     @Before
     fun setup() {
         ConfigBuilderTestEnv.reset()
@@ -50,7 +56,7 @@ class AppApiTest {
         service = ApiServiceFixture(context)
         runtime = ApiRuntime(service.context)
         runtime.connect()
-        api = AppApi(context, runtime)
+        api = AppApi(context, runtime, core)
     }
 
     @After
@@ -218,6 +224,24 @@ class AppApiTest {
     }
 
     @Test
+    fun enabledRulesTheCoreWouldRefuseAreRefused() {
+        for (values in listOf(
+            params("port" to "http"),
+            params("sourcePort" to "2000:1000"),
+            params("ruleset" to "https://example.org/list.srs"),
+            params("ip" to "geoip:nowhere"),
+            params("domains" to "regexp:("),
+        )) {
+            error("invalid_parameters", "rules.create", params("values" to values))
+        }
+        // Off, a rule is stored as given; turning it on checks it, and a fixed one turns on.
+        val off = objectResult("rules.create", params("values" to params("port" to "http", "enabled" to false))).getLong("id")
+        error("invalid_parameters", "rules.update", params("id" to off, "values" to params("enabled" to true)))
+        objectResult("rules.update", params("id" to off, "values" to params("port" to "80", "enabled" to true)))
+        objectResult("rules.delete", params("id" to off, "confirm" to true))
+    }
+
+    @Test
     fun rulesProtectReferencedProfilesAndValidatePatches() {
         val group = group()
         val profile = profile(group).getLong("id")
@@ -283,7 +307,7 @@ class AppApiTest {
         assertTrue(DataStore.helpToImprove)
         assertTrue(DataStore.helpToImproveAnswered)
         error("invalid_parameters", "settings.set", params("values" to params(Key.HELP_TO_IMPROVE to "false")))
-        api = AppApi(RuntimeEnvironment.getApplication(), runtime)
+        api = AppApi(RuntimeEnvironment.getApplication(), runtime, core)
         assertTrue(objectResult("settings.get").getBoolean(Key.HELP_TO_IMPROVE))
         assertEquals(BaseService.State.Connected, DataStore.serviceState)
     }
@@ -478,7 +502,7 @@ class AppApiTest {
         try {
             val accepted = async(Dispatchers.IO) { api.response("groups.create", params("name" to "paused").toString()) }
             withContext(Dispatchers.IO) { withTimeout(5000) { entered.await() } }
-            val replacement = AppApi(RuntimeEnvironment.getApplication(), runtime)
+            val replacement = AppApi(RuntimeEnvironment.getApplication(), runtime, core)
             val rejected = withContext(Dispatchers.IO) { replacement.response("groups.create", params("name" to "overlap").toString()) }
             assertEquals("busy", rejected.getJSONObject("error").getString("code"))
             assertEquals(1, ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.allGroups().size })
