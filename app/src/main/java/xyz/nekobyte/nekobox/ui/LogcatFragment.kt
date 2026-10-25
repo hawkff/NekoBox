@@ -1,7 +1,6 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -49,11 +48,11 @@ class LogcatFragment :
         // per-connection-id color, ...).
         val rendered = AnsiLog.render(String(SendLog.getNekoLog(50 * 1024)))
         val span = SpannableString(rendered.text)
-        // Dim default for lines the core emits without an ANSI color (e.g. plain
-        // go-log lines), matching the previous viewer's gray fallback.
+        // Lines the core emits without an ANSI color (e.g. plain go-log lines) take the theme's secondary
+        // text: a fixed gray fell under 4.5:1 on the palettes' lighter canvases.
         if (rendered.text.isNotEmpty()) {
             span.setSpan(
-                ForegroundColorSpan(Color.GRAY),
+                ForegroundColorSpan(requireContext().getColorAttr(android.R.attr.textColorSecondary)),
                 0,
                 rendered.text.length,
                 SPAN_EXCLUSIVE_EXCLUSIVE,
