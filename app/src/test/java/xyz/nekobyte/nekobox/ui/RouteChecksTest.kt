@@ -16,7 +16,8 @@ class RouteChecksTest {
     fun downloadedListsNeedTheirKindAndALink() {
         assertTrue(RouteChecks.isDownloadedList("rssite:https://example.org/sites.srs"))
         assertTrue(RouteChecks.isDownloadedList("rsip:http://example.org/addresses.json"))
-        for (entry in listOf("https://example.org/list.srs", "rssite:example.org/list.srs", "rsip:", "geosite:cn")) {
+        // The core strips one prefix and downloads the rest, so a second prefix or a link without a host fails there.
+        for (entry in listOf("https://example.org/list.srs", "rssite:example.org/list.srs", "rsip:", "geosite:cn", "rssite:https://", "rssite:rsip:https://example.org/list.srs")) {
             assertFalse(entry, RouteChecks.isDownloadedList(entry))
         }
     }

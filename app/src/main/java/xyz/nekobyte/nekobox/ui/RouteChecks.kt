@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.ui
 
 import android.content.Context
 import libcore.Libcore
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
@@ -87,10 +88,14 @@ object RouteChecks {
         }
     }
 
-    /** Whether [entry] is a downloaded list as ConfigBuilder reads one: rssite: or rsip: and a web link. */
+    /** Whether [entry] is a downloaded list as ConfigBuilder reads one: rssite: or rsip:, once, then a web link to a host. */
     fun isDownloadedList(entry: String): Boolean {
-        val link = entry.removePrefix("rssite:").removePrefix("rsip:")
-        return link != entry && (link.startsWith("https://") || link.startsWith("http://"))
+        val link = when {
+            entry.startsWith("rssite:") -> entry.removePrefix("rssite:")
+            entry.startsWith("rsip:") -> entry.removePrefix("rsip:")
+            else -> return false
+        }
+        return !link.toHttpUrlOrNull()?.host.isNullOrEmpty()
     }
 
     /** Whether [entry] is a port or a range of ports as the core reads them: 443, 1000:2000, :1024 or 8000:. */
