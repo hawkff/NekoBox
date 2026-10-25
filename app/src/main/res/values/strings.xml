@@ -895,8 +895,11 @@
     <string name="tls_camouflage_settings">TLS Camouflage Settings</string>
     <string name="test_concurrency">Test concurrency</string>
     <string name="mux_type">Mux protocol</string>
-    <string name="sniff_routing">Sniff result for routing</string>
-    <string name="sniff_override">Sniff result for destination</string>
+    <string name="sniff_routing">For routing</string>
+    <string name="sniff_override">For routing and connecting</string>
+    <string name="traffic_sniffing_off_sum">Domain rules match a site only when its name is already known, for example through FakeDNS</string>
+    <string name="traffic_sniffing_routing_sum">Domain rules also match the site name read from each connection</string>
+    <string name="traffic_sniffing_connect_sum">The server also gets each site\'s name and looks it up itself, unless Resolve destination is on. If an app stops working, choose “For routing”.</string>
     <string name="resolve_server">Resolve the server address according to the IPv6 policy</string>
     <string name="auto_select_proxy_apps">Auto select proxy apps</string>
     <string name="auto_select_proxy_apps_message">Auto select proxy apps, this will clear your

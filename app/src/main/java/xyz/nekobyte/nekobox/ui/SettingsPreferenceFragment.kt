@@ -22,6 +22,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.TrafficSniffing
 import xyz.nekobyte.nekobox.api.LocalApiAccess
 import xyz.nekobyte.nekobox.bg.LocationSpoofing
 import xyz.nekobyte.nekobox.bg.LocationTurnOffReceiver
@@ -388,6 +389,16 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             Key.IPV6_MODE,
         )) {
             findPreference<Preference>(key)?.onPreferenceChangeListener = reloadListener
+        }
+        // The choice's name alone does not say what it changes, so the summary does.
+        findPreference<SimpleMenuPreference>(Key.TRAFFIC_SNIFFING)?.summaryProvider = Preference.SummaryProvider<SimpleMenuPreference> { preference ->
+            preference.context.getString(
+                when (preference.value?.toIntOrNull()) {
+                    TrafficSniffing.OFF -> R.string.traffic_sniffing_off_sum
+                    TrafficSniffing.CONNECT_BY_NAME -> R.string.traffic_sniffing_connect_sum
+                    else -> R.string.traffic_sniffing_routing_sum
+                },
+            )
         }
 
         val rulesGeositeUrl = findPreference<EditTextPreference>(Key.RULES_GEOSITE_URL)

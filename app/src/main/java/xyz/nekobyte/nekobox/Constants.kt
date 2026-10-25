@@ -245,6 +245,18 @@ object SubscriptionFilterMode {
     const val EXCLUDE = 2
 }
 
+/** What the core does with the site name it reads from a connection's first bytes (TLS, HTTP, QUIC and others). */
+object TrafficSniffing {
+    /** Not read: domain rules match only names already known, from FakeDNS or a proxy client that sends them. */
+    const val OFF = 0
+
+    /** Read for routing: domain rules match it, and the connection keeps the address the app dialed. */
+    const val ROUTING = 1
+
+    /** Read for routing and connecting: the outbound dials the name, so a proxy server resolves it, unless resolve destination resolves it on the device first. */
+    const val CONNECT_BY_NAME = 2
+}
+
 object Action {
     const val SERVICE = "xyz.nekobyte.nekobox.SERVICE"
     const val CLOSE = "xyz.nekobyte.nekobox.CLOSE"

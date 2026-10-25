@@ -218,8 +218,7 @@
             app:entryValues="@array/int_array_3"
             app:icon="@drawable/ic_baseline_manage_search_24"
             app:key="trafficSniffing"
-            app:title="@string/traffic_sniffing"
-            app:useSimpleSummaryProvider="true" />
+            app:title="@string/traffic_sniffing" />
         <SwitchPreference
             app:icon="@drawable/baseline_wrap_text_24"
             app:key="resolveDestination"

@@ -634,14 +634,6 @@ class SingBoxOptions {
         @JvmField var stack: String? = null
 
         @JvmField var platform: TunPlatformOptions? = null
-
-        @JvmField var sniff: Boolean? = null
-
-        @JvmField var sniff_override_destination: Boolean? = null
-
-        @JvmField var sniff_timeout: Long? = null
-
-        @JvmField var domain_strategy: String? = null
     }
 
     class Inbound_DirectOptions : Inbound() {
@@ -662,14 +654,6 @@ class SingBoxOptions {
         @JvmField var proxy_protocol_accept_no_header: Boolean? = null
 
         @JvmField var detour: String? = null
-
-        @JvmField var sniff: Boolean? = null
-
-        @JvmField var sniff_override_destination: Boolean? = null
-
-        @JvmField var sniff_timeout: Long? = null
-
-        @JvmField var domain_strategy: String? = null
 
         @JvmField var network: String? = null
 
@@ -696,14 +680,6 @@ class SingBoxOptions {
         @JvmField var proxy_protocol_accept_no_header: Boolean? = null
 
         @JvmField var detour: String? = null
-
-        @JvmField var sniff: Boolean? = null
-
-        @JvmField var sniff_override_destination: Boolean? = null
-
-        @JvmField var sniff_timeout: Long? = null
-
-        @JvmField var domain_strategy: String? = null
 
         @JvmField var users: List<User>? = null
 
@@ -1574,6 +1550,9 @@ class SingBoxOptions {
         @JvmField var sniffer: List<String>? = null
 
         @JvmField var timeout: String? = null
+
+        // Dial the sniffed domain instead of the address the client dialed (hawkff/sing-box fork).
+        @JvmField var override_destination: Boolean? = null
 
         // action = "resolve"
         @JvmField var strategy: String? = null

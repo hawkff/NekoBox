@@ -304,7 +304,7 @@
 <string name="not_set">Не указано</string>
 <string name="obfs">Obfs</string>
 <string name="obfs_param">Параметры Obfs</string>
-<string name="off">Выключенный</string>
+<string name="off">Выключено</string>
 <string name="on">Включено</string>
 <string name="only">Исключительно</string>
 <string name="ooc_warning">Предупреждение</string>
@@ -414,8 +414,11 @@
 <string name="show_system_apps">Показать системные приложения</string>
 <string name="side_sheet_accessibility_pane_title">Боковая панель</string>
 <string name="sni">SNI (индикация имени сервера)</string>
-<string name="sniff_override">Результат проверки для адрес назначения</string>
-<string name="sniff_routing">Перехватывать результат для Маршрутизации</string>
+<string name="sniff_override">Для маршрутизации и подключения</string>
+<string name="sniff_routing">Для маршрутизации</string>
+<string name="traffic_sniffing_off_sum">Правила по доменам срабатывают, только если имя сайта уже известно, например через FakeDNS</string>
+<string name="traffic_sniffing_routing_sum">Правила по доменам срабатывают и по имени сайта, прочитанному из соединения</string>
+<string name="traffic_sniffing_connect_sum">Сервер тоже получает имя каждого сайта и ищет его сам, если не включено «Определить адрес назначения». Если приложение перестанет работать, выберите «Для маршрутизации».</string>
 <string name="speed">%s/с</string>
 <string name="speed_upload">Отдача %s</string>
 <string name="speed_download">Загрузка %s</string>
@@ -455,7 +458,7 @@
 <string name="tls">Использовать TLS</string>
 <string name="tls_camouflage_settings">Настройки защиты TLS</string>
 <string name="tools_network">Сеть</string>
-<string name="traffic_sniffing">Включить анализ трафика</string>
+<string name="traffic_sniffing">Сниффинг трафика</string>
 <string name="trojan_provider">Провайдер Trojan</string>
 <string name="tuic_congestion_controller">Контроллер перегрузки</string>
 <string name="tuic_disable_sni">Отключить SNI</string>
