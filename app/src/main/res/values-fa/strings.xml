@@ -2,13 +2,11 @@
 <resources>
     <string name="app_name" translatable="false">NekoBox</string>
     <string name="app_name_long" translatable="false">NekoBox for Android</string>
-    <string name="app_desc">مجموعه ابزار جامع پراکسی برای اندروید، نوشته‌شده با کاتلین.</string>
     <string name="project">پروژه</string>
     <string name="github">کد منبع</string>
     <string name="telegram">کانال دریافت نسخه‌های به‌روز در تلگرام</string>
     <string name="oss_licenses">مجوزهای متن‌باز</string>
     <string name="app_version">نسخه برنامه</string>
-    <string name="version_x">نسخه (%s)</string>
     <string name="logcat">صدور اطلاعات عیب‌یابی</string>
     <string name="menu_configuration">پیکربندی</string>
     <string name="menu_group">گروه‌ها</string>
@@ -272,7 +270,6 @@
     <string name="deduplication">حذف موارد تکراری</string>
     <string name="donate">حمایت از برنامه‌نویس</string>
     <string name="donate_info">عاشق پول هستم!</string>
-    <string name="ignore_battery_optimizations">بهینه‌سازی باتری را برای این برنامه غیرفعال کنید</string>
     <string name="ignore_battery_optimizations_sum">چند محدودیت برداشته می‌شود</string>
     <!-- plugin -->
     <string name="plugin">افزونه</string>
@@ -610,8 +607,6 @@
     <string name="concurrent_dial_summary">فعال‌سازی اتصال‌های هم‌زمان برای برقراری سریع‌تر شبکه؛ ممکن است مصرف باتری را افزایش دهد</string>
     <string name="connection_test_timeout">مهلت آزمایش (ms)</string>
     <string name="preview_version_hint">این برنامه نسخهٔ پیش‌نمایش است و ممکن است مشکلات زیادی داشته باشد. اگر نمی‌خواهید آن را آزمایش کنید، لطفاً برای دانلود نسخهٔ Release به GitHub بروید!</string>
-    <string name="check_update_preview">بررسی به‌روزرسانی نسخهٔ پیش‌نمایش</string>
-    <string name="check_update_release">بررسی به‌روزرسانی نسخهٔ Release</string>
     <string name="update_dialog_title">نسخهٔ جدید در دسترس است</string>
     <string name="update_dialog_message">نسخهٔ فعلی: %1$s\nنسخهٔ موجود: %2$s\nآیا می‌خواهید آن را دانلود کنید؟</string>
     <string name="check_update_no">بررسی موفق بود، اما به‌روزرسانی‌ای نیست.</string>

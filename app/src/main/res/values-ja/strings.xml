@@ -44,13 +44,11 @@
     <string name="menu_group">グループ</string>
     <string name="menu_configuration">設定</string>
     <string name="logcat">デバッグ情報のエクスポート</string>
-    <string name="version_x">バージョン (%s)</string>
     <string name="app_version">バージョン</string>
     <string name="oss_licenses">オープンソースライセンス</string>
     <string name="telegram">Telegram 更新チャンネル</string>
     <string name="github">ソースコード</string>
     <string name="project">プロジェクト</string>
-    <string name="app_desc">Kotlinで記述されたAndroid用のユニバーサルプロキシツールチェーン。</string>
     <string name="cag_dns">DNS設定</string>
     <string name="speed">%s/s</string>
     <string name="traffic">%1$s↑ %2$s↓</string>
@@ -257,7 +255,6 @@
     <string name="deduplication">重複排除</string>
     <string name="donate">寄付</string>
     <string name="donate_info">お金が大好きです</string>
-    <string name="ignore_battery_optimizations">バッテリー最適化を無視</string>
     <string name="ignore_battery_optimizations_sum">一部の制限を解除</string>
     <string name="plugin">プラグイン</string>
     <string name="plugin_configure">設定…</string>
@@ -545,8 +542,6 @@
     <string name="concurrent_dial_summary">ネットワーク確立を高速化するため同時接続を有効にします。バッテリー消費が増加する可能性があります</string>
     <string name="connection_test_timeout">テストタイムアウト (ms)</string>
     <string name="preview_version_hint">このアプリはプレビュー版であり、多くの問題が含まれている可能性があります。テストしたくない場合は、GitHub にアクセスして Release 版をダウンロードしてください！</string>
-    <string name="check_update_preview">プレビュー版の更新を確認</string>
-    <string name="check_update_release">リリース版の更新を確認</string>
     <string name="update_dialog_title">新しいバージョンが利用可能です</string>
     <string name="update_dialog_message">現在のバージョン: %1$s\n利用可能なバージョン: %2$s\nダウンロードしますか？</string>
     <string name="check_update_no">確認に成功しましたが、更新はありません。</string>

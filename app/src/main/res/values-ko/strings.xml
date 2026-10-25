@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="logcat">디버그 정보 내보내기</string>
-    <string name="version_x">버전(%s)</string>
     <string name="app_version">버전</string>
     <string name="oss_licenses">오픈 소스 라이선스</string>
     <string name="telegram">텔레그램 업데이트 채널</string>
     <string name="github">소스 코드</string>
     <string name="project">프로젝트</string>
-    <string name="app_desc">코틀린에 기록 된 안드로이드에 대한 보편적 인 프록시 도구 체인.</string>
     <string name="quick_toggle">비녀장</string>
     <string name="quick_enable">활성화</string>
     <string name="quick_disable">비활성화</string>
@@ -251,7 +249,6 @@
     <string name="deduplication">중복 제거</string>
     <string name="donate">기부</string>
     <string name="donate_info">저는 돈을 사랑합니다</string>
-    <string name="ignore_battery_optimizations">배터리 최적화 무시</string>
     <string name="ignore_battery_optimizations_sum">일부 제한 해제</string>
     <string name="plugin">플러그인</string>
     <string name="plugin_configure">구성…</string>
@@ -539,8 +536,6 @@
     <string name="concurrent_dial_summary">더 빠른 네트워크 연결을 위해 동시 연결을 활성화합니다. 배터리 사용량이 증가할 수 있습니다</string>
     <string name="connection_test_timeout">테스트 시간 초과 (ms)</string>
     <string name="preview_version_hint">이 앱은 미리 보기 버전이며 많은 문제가 포함될 수 있습니다. 테스트하지 않으려면 GitHub에서 Release 버전을 다운로드하세요!</string>
-    <string name="check_update_preview">미리 보기 버전 업데이트 확인</string>
-    <string name="check_update_release">릴리스 버전 업데이트 확인</string>
     <string name="update_dialog_title">새 버전 사용 가능</string>
     <string name="update_dialog_message">현재 버전: %1$s\n사용 가능한 버전: %2$s\n다운로드하시겠습니까?</string>
     <string name="check_update_no">확인에 성공했지만 업데이트가 없습니다.</string>

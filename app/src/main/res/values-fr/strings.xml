@@ -10,7 +10,6 @@
     <string name="donate">Faire un don</string>
     <string name="plugin">Greffon</string>
     <string name="ignore_battery_optimizations_sum">Retirer certaines restrictions</string>
-    <string name="ignore_battery_optimizations">Ignorer l\'optimisation de la batterie</string>
     <string name="donate_info">J\'adore l\'argent</string>
     <string name="apply">Appliquer</string>
     <string name="no">Non</string>
@@ -65,13 +64,11 @@
     <string name="menu_group">Groupe</string>
     <string name="menu_configuration">Configuration</string>
     <string name="logcat">Exporter les informations de débogage</string>
-    <string name="version_x">Version (%s)</string>
     <string name="app_version">Version</string>
     <string name="oss_licenses">Licences à code source ouvert</string>
     <string name="telegram">Canal de mise à jour Telegram</string>
     <string name="github">Code source</string>
     <string name="project">Projet</string>
-    <string name="app_desc">La chaîne d\'outils proxy universelle pour Android, écrite en Kotlin.</string>
     <string name="hysteria_upload_mbps">Vitesse maximale de téléversement (en Mb/s)</string>
     <string name="hysteria_download_mbps">Vitesse de téléchargement maximale (en Mb/s)</string>
     <string name="group_deleted">Supprimé :

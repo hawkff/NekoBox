@@ -2,10 +2,8 @@
 <resources>
     <string name="github">源碼</string>
     <string name="app_version">版本</string>
-    <string name="version_x">版本 (%s)</string>
     <string name="menu_about">關於</string>
     <string name="telegram">Telegram 更新頻道</string>
-    <string name="app_desc">以 Kotlin 編寫的 Android 通用代理工具鏈。</string>
     <string name="group_update">更新</string>
     <string name="theme">主題</string>
     <string name="document">文件</string>

@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <resources> 
-    <string name="app_desc">La cadena de herramientas proxy universal para Android, escrita en Kotlin.</string>
     <string name="project">Proyecto</string> 
     <string name="github">Código fuente</string> 
     <string name="telegram">Canal de actualización de Telegram</string> 
     <string name="oss_licenses">Licencias de código abierto</string> 
     <string name="app_version">Versión</string> 
-    <string name="version_x">Versión (%s)</string> 
     <string name="logcat">Exportar información de depuración</string>
     <string name="menu_configuration">Configuración</string>
     <string name="menu_group">Grupo</string> 
@@ -252,7 +250,6 @@
     <string name="deduplication">Deduplicación</string> 
     <string name="donate">Donar</string> 
     <string name="donate_info">Amo el dinero</string> 
-    <string name="ignore_battery_optimizations">Ignorar optimizaciones de batería</string> 
     <string name="ignore_battery_optimizations_sum">Eliminar algunas restricciones</string> 
     <!-- plugin --> 
     <string name="plugin">Complemento</string> 
