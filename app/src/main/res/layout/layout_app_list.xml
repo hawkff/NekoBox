@@ -16,6 +16,7 @@
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            app:layout_scrollFlags="scroll|enterAlways"
             app:titleEnabled="false">
 
             <com.google.android.material.appbar.MaterialToolbar
@@ -113,5 +114,15 @@
     <include
         android:id="@+id/app_placeholder"
         layout="@layout/layout_app_placeholder" />
+
+    <!-- Covers the status bar where the header scrolls up under it; ThemedActivity sizes it to the inset.
+         Above the app bar even when it lifts, and without a shadow of its own. -->
+    <View
+        android:id="@+id/status_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="?attr/appBarBackgroundColor"
+        android:elevation="16dp"
+        android:outlineProvider="none" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

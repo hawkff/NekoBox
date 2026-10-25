@@ -137,7 +137,14 @@ class AppListActivity : ThemedActivity() {
             filteredApps = result
             @Suppress("NotifyDataSetChanged")
             notifyDataSetChanged()
-            if (apps.isNotEmpty()) binding.appPlaceholder.showNoMatch(result.isEmpty(), binding.search.text ?: "", !sysApps)
+            if (apps.isNotEmpty() && result.isEmpty()) {
+                val query = binding.search.text ?: ""
+                // The hint helps only when showing system apps would bring one up.
+                val systemWouldMatch = !sysApps && filterApps(apps, query, includeSystem = true).any { it.sys }
+                binding.appPlaceholder.showNoMatch(true, query, systemWouldMatch)
+            } else if (apps.isNotEmpty()) {
+                binding.appPlaceholder.showNoMatch(false, "", false)
+            }
         }
 
         override fun getPopupText(view: View, position: Int): CharSequence = filteredApps[position].name.firstOrNull()?.toString() ?: ""

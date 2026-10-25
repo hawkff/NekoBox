@@ -15,6 +15,7 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.color.DynamicColors
@@ -64,6 +65,8 @@ abstract class ThemedActivity : AppCompatActivity {
             findViewById<AppBarLayout>(R.id.appbar)?.apply {
                 updatePadding(top = bars.top)
             }
+            // An app bar that scrolls away moves its status bar padding with it: the scrim stays there.
+            findViewById<View>(R.id.status_scrim)?.updateLayoutParams { height = bars.top }
             // Lift the bottom bar (and the FAB docked into it, plus the FAB's
             // progress ring anchored to the FAB) above the navigation bar so the
             // ring isn't clipped by the system inset under edge-to-edge.
