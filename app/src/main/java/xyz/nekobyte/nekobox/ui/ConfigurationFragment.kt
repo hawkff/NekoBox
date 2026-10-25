@@ -59,6 +59,7 @@ import xyz.nekobyte.nekobox.Protocols
 import xyz.nekobyte.nekobox.Protocols.getProtocolColor
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
+import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.proto.UrlTest
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
@@ -174,15 +175,18 @@ class ConfigurationFragment @JvmOverloads constructor(
     private var selectedProfileSnapshot = 0L
     private var currentProfileSnapshot = 0L
     private var serviceStartedSnapshot = false
+    private var connectingSnapshot = false
 
     private fun syncProfileState() {
         val selectedProfile = selectedItem?.id ?: DataStore.selectedProxy
         val currentProfile = DataStore.currentProfile
         val serviceStarted = DataStore.serviceState.started
+        val connecting = DataStore.serviceState == BaseService.State.Connecting
         if (
             selectedProfileSnapshot == selectedProfile &&
             currentProfileSnapshot == currentProfile &&
-            serviceStartedSnapshot == serviceStarted
+            serviceStartedSnapshot == serviceStarted &&
+            connectingSnapshot == connecting
         ) {
             return
         }
@@ -197,6 +201,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         selectedProfileSnapshot = selectedProfile
         currentProfileSnapshot = currentProfile
         serviceStartedSnapshot = serviceStarted
+        connectingSnapshot = connecting
 
         if (!::adapter.isInitialized || changedIds.isEmpty()) return
         adapter.groupFragments.values.forEach { fragment ->
@@ -211,6 +216,12 @@ class ConfigurationFragment @JvmOverloads constructor(
     internal fun isSelectedProfile(profileId: Long) = selectedProfileSnapshot == profileId
 
     internal fun isRunningProfile(profileId: Long) = serviceStartedSnapshot && currentProfileSnapshot == profileId
+
+    /**
+     * Whether the service is connecting to [profileId] right now: it starts the selected profile, and names it
+     * current once up. A picker's selection is its own choice, so a picker shows no connection.
+     */
+    internal fun isConnectingProfile(profileId: Long) = !select && connectingSnapshot && selectedProfileSnapshot == profileId
 
     fun getCurrentGroupFragment(): ConfigurationGroupFragment? = try {
         childFragmentManager.findFragmentByTag("f" + DataStore.selectedGroup) as ConfigurationGroupFragment?
