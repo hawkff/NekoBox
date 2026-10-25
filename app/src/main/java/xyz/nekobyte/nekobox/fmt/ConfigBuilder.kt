@@ -6,6 +6,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.SingBoxOptions.*
+import xyz.nekobyte.nekobox.TrafficSniffing
 import xyz.nekobyte.nekobox.bg.VpnService
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -384,7 +385,11 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val dnsHosts = if (forTest) emptyMap() else parseDnsHosts(DataStore.dnsHosts)
     val enableDnsRouting = DataStore.enableDnsRouting
     val useFakeDns = DataStore.enableFakeDns && !forTest
-    val needSniff = DataStore.trafficSniffing > 0
+    val sniffing = DataStore.trafficSniffing
+    val needSniff = sniffing != TrafficSniffing.OFF
+    // The inbounds apps reach. Plugin mapping inbounds are not among them: they forward a plugin's
+    // own connection to the user's server, which must not be sniffed and sent somewhere else.
+    val appInbounds = listOfNotNull("tun-in".takeIf { isVPN && !forTest }, TAG_MIXED.takeIf { keepMixedInbound })
     val externalIndexMap = ArrayList<IndexEntity>()
     val ipv6Mode = if (forTest) IPv6Mode.ENABLE else DataStore.ipv6Mode
 
@@ -541,19 +546,16 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             concurrent_dial = DataStore.concurrentDial
             default_domain_resolver = dnsResolver("dns-direct", directStrategy)
 
-            // sing-box 1.13 moved sniffing + domain resolution off inbounds onto route
-            // rule actions. Emit them first so behavior matches the old inbound fields.
-            // sniff: previously inbound.sniff (trafficSniffing > 0). The old
-            //   sniff_override_destination (trafficSniffing == 2) toggle has no 1.13
-            //   equivalent - the sniff action overrides the destination by default, so the
-            //   override mode is preserved without a separate flag.
-            // resolve: previously inbound.domain_strategy, which ran whenever a non-empty
-            //   strategy was configured - independent of sniff-override. Gate on the
-            //   strategy string being non-empty (orthogonal to sniffing).
-            if (needSniff) {
+            // Sniffing and destination resolution are rule actions, first so that every rule after
+            // them sees their result. Sniffing reads the site name from a connection's first bytes,
+            // so domain rules match connections an app opened by address. Connecting by name also
+            // hands that name to the outbound, which dials it, so a proxy server resolves it itself.
+            if (needSniff && appInbounds.isNotEmpty()) {
                 routeRules.add(
                     Rule_DefaultOptions().apply {
+                        inbound = appInbounds
                         action = "sniff"
+                        if (sniffing == TrafficSniffing.CONNECT_BY_NAME) override_destination = true
                     },
                 )
             }
@@ -565,7 +567,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             // Scoped to the app-facing inbounds: the plugin mapping inbounds forward to the
             // user's own server, which may itself listen on one of these ports.
             if (!forTest && isVPN && DataStore.webrtcLeakProtection) {
-                val appInbounds = listOfNotNull("tun-in", TAG_MIXED.takeIf { keepMixedInbound })
                 if (!needSniff) {
                     routeRules.add(
                         Rule_DefaultOptions().apply {
@@ -1436,14 +1437,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
 
         if (!forTest) {
-            // built-in DNS rules
-            routeRules.add(
-                0,
-                Rule_DefaultOptions().apply {
-                    protocol = listOf("dns")
-                    action = "hijack-dns"
-                },
-            )
+            // DNS on port 53 goes to the core's resolver before anything reads the connection.
             routeRules.add(
                 0,
                 Rule_DefaultOptions().apply {
@@ -1451,6 +1445,18 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     action = "hijack-dns"
                 },
             )
+            // DNS on another port is known only once sniffed, so its rule follows the sniff rule;
+            // without sniffing it could never match.
+            val sniffAt = routeRules.indexOfFirst { it is Rule_DefaultOptions && it.action == "sniff" && it.sniffer == null }
+            if (sniffAt >= 0) {
+                routeRules.add(
+                    sniffAt + 1,
+                    Rule_DefaultOptions().apply {
+                        protocol = listOf("dns")
+                        action = "hijack-dns"
+                    },
+                )
+            }
             if (DataStore.bypassLanInCore) {
                 routeRules.add(
                     Rule_DefaultOptions().apply {

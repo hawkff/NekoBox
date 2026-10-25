@@ -7,6 +7,7 @@ import xyz.nekobyte.nekobox.CONNECTION_TEST_URL
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.IPv6Mode
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.TrafficSniffing
 import xyz.nekobyte.nekobox.TunImplementation
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.VpnService
@@ -146,7 +147,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var appLanguage by configurationStore.string(Key.APP_LANGUAGE) { "" }
     var serviceMode by configurationStore.string(Key.SERVICE_MODE) { Key.MODE_VPN }
 
-    var trafficSniffing by configurationStore.stringToInt(Key.TRAFFIC_SNIFFING) { 1 }
+    var trafficSniffing by configurationStore.stringToInt(Key.TRAFFIC_SNIFFING) { TrafficSniffing.ROUTING }
     var resolveDestination by configurationStore.boolean(Key.RESOLVE_DESTINATION)
 
     var mtu by configurationStore.stringToInt(Key.MTU) { 1500 }

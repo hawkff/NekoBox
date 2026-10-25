@@ -14,6 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.TrafficSniffing
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
@@ -28,6 +29,7 @@ import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
@@ -559,6 +561,52 @@ class ConfigBuilderGoldenTest {
 
         DataStore.serviceMode = Key.MODE_PROXY
         assertTrue(stunRules(rules()).isEmpty())
+    }
+
+    @Test
+    fun trafficSniffing_readsNamesForRoutingAndConnectsByNameOnlyWhenAsked() {
+        val profile = addSocks(addGroup(), "192.0.2.81", 1080, "sniffing")
+        val directory = File("build/generated-core-configs/sniffing").apply { mkdirs() }
+        fun rules(name: String): List<JSONObject> {
+            val config = build(profile).config
+            // The core loads each of these in libcore's generated-config check.
+            directory.resolve("$name.json").writeText(config)
+            return objects(JSONObject(config).getJSONObject("route").getJSONArray("rules"))
+        }
+        fun isPort53(rule: JSONObject) = rule.optString("action") == "hijack-dns" && rule.optJSONArray("port")?.getInt(0) == 53
+        fun isDnsProtocol(rule: JSONObject) = rule.optString("action") == "hijack-dns" && strings(rule.optJSONArray("protocol") ?: JSONArray()) == listOf("dns")
+
+        // Off: plain DNS is still hijacked by port; nothing reads connections, so no protocol rule either.
+        DataStore.serviceMode = Key.MODE_VPN
+        DataStore.trafficSniffing = TrafficSniffing.OFF
+        var rules = rules("off")
+        assertTrue(isPort53(rules.first()))
+        assertTrue(rules.none { it.optString("action") == "sniff" || isDnsProtocol(it) })
+
+        // Port 53 first, then sniffing, then DNS found by sniffing: a protocol rule matches only after a sniff.
+        DataStore.trafficSniffing = TrafficSniffing.ROUTING
+        rules = rules("routing")
+        assertTrue(isPort53(rules[0]))
+        assertEquals("sniff", rules[1].getString("action"))
+        assertFalse(rules[1].has("override_destination"))
+        // Only what apps reach: a plugin's mapping inbound forwards to the user's own server.
+        assertEquals(listOf("tun-in"), strings(rules[1].getJSONArray("inbound")))
+        assertTrue(isDnsProtocol(rules[2]))
+        assertEquals(1, rules.count { it.optString("action") == "sniff" })
+
+        DataStore.trafficSniffing = TrafficSniffing.CONNECT_BY_NAME
+        rules = rules("connect-by-name")
+        assertEquals("sniff", rules[1].getString("action"))
+        assertTrue(rules[1].getBoolean("override_destination"))
+        assertFalse(rules[1].has("sniffer"))
+        assertTrue(isDnsProtocol(rules[2]))
+
+        // In proxy mode apps reach the mixed inbound.
+        DataStore.serviceMode = Key.MODE_PROXY
+        rules = rules("connect-by-name-proxy")
+        val sniff = rules.single { it.optString("action") == "sniff" }
+        assertEquals(listOf(TAG_MIXED), strings(sniff.getJSONArray("inbound")))
+        assertTrue(sniff.getBoolean("override_destination"))
     }
 
     @Test
