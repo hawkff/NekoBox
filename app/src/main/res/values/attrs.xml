@@ -7,6 +7,8 @@
     <!-- Accent for text-like uses, falling back to the text colors on neutral
          palettes (Black): dialog buttons, checked chip text, swipe-refresh spinner. -->
     <attr name="primaryOrTextPrimary" format="color" />
+    <!-- A selected choice chip's text: the accent where it reads on the chip's tint, plain text where it does not. -->
+    <attr name="chipCheckedTextColor" format="color" />
     <!-- Same, secondary weight: the connect-FAB progress ring. -->
     <attr name="primaryOrTextSecondary" format="color" />
     <attr name="fabColorBackground" format="color" />

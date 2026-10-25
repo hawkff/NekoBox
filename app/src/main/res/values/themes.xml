@@ -91,6 +91,7 @@
              Night mode switches them to the bright primary/accent (values-night). -->
         <item name="colorPrimaryText">?colorPrimaryDark</item>
         <item name="primaryOrTextPrimary">?attr/colorPrimaryText</item>
+        <item name="chipCheckedTextColor">?attr/primaryOrTextPrimary</item>
         <item name="primaryOrTextSecondary">?attr/colorPrimaryText</item>
         <item name="protocolColor">?attr/colorPrimaryText</item>
 
@@ -411,6 +412,8 @@
         <item name="colorOutlineVariant">@color/draculam3_outline_variant</item>
         <item name="primaryOrTextSecondary">@color/draculam3_primary</item>
         <item name="primaryOrTextPrimary">@color/draculam3_primary</item>
+        <!-- The purple reaches 3.3:1 on its own 24% tint; the text color reaches 4.5:1 and more. -->
+        <item name="chipCheckedTextColor">@color/draculam3_on_surface</item>
         <item name="protocolColor">@color/draculam3_green</item>
         <item name="profileNameColor">@color/draculam3_yellow</item>
         <item name="statusConnectedColor">@color/draculam3_green</item>
@@ -463,6 +466,8 @@
         <item name="colorOutlineVariant">@color/nord_outline_variant</item>
         <item name="primaryOrTextSecondary">@color/nord_primary</item>
         <item name="primaryOrTextPrimary">@color/nord_primary</item>
+        <!-- Frost reaches 3.2:1 on its own 24% tint; the text color reaches 4.5:1 and more. -->
+        <item name="chipCheckedTextColor">@color/nord_on_surface</item>
         <item name="protocolColor">@color/nord_green</item>
         <item name="profileNameColor">@color/nord_on_surface</item>
         <item name="statusConnectedColor">@color/nord_green</item>
