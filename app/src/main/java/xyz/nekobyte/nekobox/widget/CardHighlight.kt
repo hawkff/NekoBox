@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.widget
 
 import android.animation.ValueAnimator
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.card.MaterialCardView
@@ -33,15 +34,26 @@ class CardHighlight(private val card: MaterialCardView) {
     private var breathing = false
     private var breath: ValueAnimator? = null
 
+    // Animations may be switched on or off while the app is away: the breath follows when the window is back.
+    private val focus = ViewTreeObserver.OnWindowFocusChangeListener { focused ->
+        if (!focused || !breathing) return@OnWindowFocusChangeListener
+        breath?.cancel()
+        breath = null
+        strength = 1f
+        startBreath()
+    }
+
     init {
         // A card off screen stops breathing, and picks it up again when it comes back.
         card.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(view: View) {
+                    view.viewTreeObserver.addOnWindowFocusChangeListener(focus)
                     if (breathing && breath == null) startBreath()
                 }
 
                 override fun onViewDetachedFromWindow(view: View) {
+                    view.viewTreeObserver.removeOnWindowFocusChangeListener(focus)
                     breath?.cancel()
                     breath = null
                 }

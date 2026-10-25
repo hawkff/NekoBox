@@ -11,8 +11,10 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -25,6 +27,7 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 
 /** The profile the service is connecting to says so, to the eye and to TalkBack, until the connection is up. */
@@ -79,11 +82,29 @@ class ConnectingOutlineDeviceTest {
             DataStore.currentProfile = profile
             val connecting = instrumentation.targetContext.getString(R.string.connecting)
 
+            // From the card: the window's own context lacks the app's chosen theme.
+            var primary = 0
+            instrumentation.runOnMainSync { primary = MaterialColors.getColor(card(root), R.attr.colorPrimary) }
             state(scenario, BaseService.State.Connecting)
+            var first = 0
             instrumentation.runOnMainSync {
                 val card = card(root)
                 assertEquals(connecting, ViewCompat.getStateDescription(card)?.toString())
                 assertTrue(card.isSelected)
+                first = card.strokeColor
+            }
+            if (instrumentation.targetContext.animationsOn()) {
+                // The outline breathes: it changes within a breath. Two lone samples could land either side of a peak.
+                var changed = false
+                val until = System.currentTimeMillis() + 2000
+                while (!changed && System.currentTimeMillis() < until) {
+                    Thread.sleep(50)
+                    instrumentation.runOnMainSync { changed = card(root).strokeColor != first }
+                }
+                assertTrue(changed)
+            } else {
+                // Without animations it holds at the faint end, unlike the solid outline.
+                assertNotEquals(primary, first)
             }
 
             state(scenario, BaseService.State.Connected)
@@ -91,6 +112,7 @@ class ConnectingOutlineDeviceTest {
                 val card = card(root)
                 assertNull(ViewCompat.getStateDescription(card))
                 assertTrue(card.isSelected)
+                assertEquals(primary, card.strokeColor)
             }
         }
     }

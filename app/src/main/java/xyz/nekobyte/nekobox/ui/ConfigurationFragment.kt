@@ -217,8 +217,8 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     internal fun isRunningProfile(profileId: Long) = serviceStartedSnapshot && currentProfileSnapshot == profileId
 
-    /** Whether the service is connecting to [profileId] right now. */
-    internal fun isConnectingProfile(profileId: Long) = connectingSnapshot && currentProfileSnapshot == profileId
+    /** Whether the service is connecting to [profileId] right now: it starts the selected profile, and names it current once up. */
+    internal fun isConnectingProfile(profileId: Long) = connectingSnapshot && selectedProfileSnapshot == profileId
 
     fun getCurrentGroupFragment(): ConfigurationGroupFragment? = try {
         childFragmentManager.findFragmentByTag("f" + DataStore.selectedGroup) as ConfigurationGroupFragment?
