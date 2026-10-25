@@ -574,16 +574,22 @@ class ConfigBuilderGoldenTest {
             return objects(JSONObject(config).getJSONObject("route").getJSONArray("rules"))
         }
         fun isPort53(rule: JSONObject) = rule.optString("action") == "hijack-dns" && rule.optJSONArray("port")?.getInt(0) == 53
-        fun isDnsProtocol(rule: JSONObject) = rule.optString("action") == "hijack-dns" && strings(rule.optJSONArray("protocol") ?: JSONArray()) == listOf("dns")
+        fun isDnsProtocol(rule: JSONObject) = rule.optJSONArray("protocol")?.let { strings(it) } == listOf("dns")
+        fun isMulticast(rule: JSONObject) = rule.optJSONArray("ip_cidr")?.let { strings(it) } == listOf("224.0.0.0/3", "ff00::/8")
 
-        // Off: plain DNS is still hijacked by port; nothing reads connections, so no protocol rule either.
+        // Plain DNS is hijacked by port only, in every mode: a protocol rule after sniffing would also
+        // catch mDNS and LLMNR queries.
         DataStore.serviceMode = Key.MODE_VPN
         DataStore.trafficSniffing = TrafficSniffing.OFF
         var rules = rules("off")
         assertTrue(isPort53(rules.first()))
         assertTrue(rules.none { it.optString("action") == "sniff" || isDnsProtocol(it) })
+        // Multicast nothing else routed is refused, last, by destination alone.
+        assertTrue(isMulticast(rules.last { isMulticast(it) || it.has("outbound") }))
+        assertEquals("reject", rules.single { isMulticast(it) }.getString("action"))
+        assertFalse(rules.single { isMulticast(it) }.has("source_ip_cidr"))
 
-        // Port 53 first, then sniffing, then DNS found by sniffing: a protocol rule matches only after a sniff.
+        // Port 53 first, then sniffing.
         DataStore.trafficSniffing = TrafficSniffing.ROUTING
         rules = rules("routing")
         assertTrue(isPort53(rules[0]))
@@ -591,15 +597,20 @@ class ConfigBuilderGoldenTest {
         assertFalse(rules[1].has("override_destination"))
         // Only what apps reach: a plugin's mapping inbound forwards to the user's own server.
         assertEquals(listOf("tun-in"), strings(rules[1].getJSONArray("inbound")))
-        assertTrue(isDnsProtocol(rules[2]))
+        assertTrue(rules.none { isDnsProtocol(it) })
         assertEquals(1, rules.count { it.optString("action") == "sniff" })
+
+        // With bypass LAN in core, LAN traffic, multicast included, goes direct before the refusal.
+        DataStore.bypassLanInCore = true
+        rules = rules("routing-lan-in-core")
+        assertTrue(rules.indexOfFirst { it.optBoolean("ip_is_private") && it.optString("outbound") == TAG_BYPASS } < rules.indexOfFirst { isMulticast(it) })
+        DataStore.bypassLanInCore = false
 
         DataStore.trafficSniffing = TrafficSniffing.CONNECT_BY_NAME
         rules = rules("connect-by-name")
         assertEquals("sniff", rules[1].getString("action"))
         assertTrue(rules[1].getBoolean("override_destination"))
         assertFalse(rules[1].has("sniffer"))
-        assertTrue(isDnsProtocol(rules[2]))
         // With resolve destination, the sniffed name is resolved on the device after the override.
         DataStore.resolveDestination = true
         rules = rules("connect-by-name-resolved")
