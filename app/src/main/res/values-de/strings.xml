@@ -22,7 +22,6 @@
     <string name="group_name_required">Gruppen Name benötigt</string>
     <string name="group_delete_confirm_prompt">Bist du dir sicher das du diese Gruppe entfernen möchtest\?</string>
     <string name="license">Lizenz</string>
-    <string name="lines">%d Linien</string>
     <string name="auto">Automatisch</string>
     <string name="api_port">API-Port</string>
     <string name="night_mode">Nachtmodus</string>

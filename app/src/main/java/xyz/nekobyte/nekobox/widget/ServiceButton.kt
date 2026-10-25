@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.unwrap
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
@@ -89,13 +90,15 @@ class ServiceButton @JvmOverloads constructor(
     private val iconConnected by lazy {
         AnimatedState(R.drawable.ic_service_connected) {
             delayedAnimation?.cancel()
-            setProgressCompat(1, true)
+            // The ring fills, and the end of the fill hides it. With animations off nothing fills, so it goes now.
+            if (context.animationsOn()) setProgressCompat(1, true) else hide()
         }
     }
     private val iconStopping by lazy { AnimatedState(R.drawable.ic_service_stopping) }
     private val animationQueue = ArrayDeque<AnimatedState>()
 
     private var checked = false
+    private var state = BaseService.State.Idle
     private var glass: GlassDrawable? = null
     private var glassTint = 0
     private val glassBounds = Rect()
@@ -125,6 +128,20 @@ class ServiceButton @JvmOverloads constructor(
     }
 
     override fun verifyDrawable(who: Drawable) = who == glass || super.verifyDrawable(who)
+
+    // The ring is part of the button: it leaves with it, on the other screens and while a list scrolls.
+    override fun hide(listener: FloatingActionButton.OnVisibilityChangedListener?) {
+        super.hide(listener)
+        if (::progress.isInitialized) hideProgress()
+    }
+
+    override fun show(listener: FloatingActionButton.OnVisibilityChangedListener?) {
+        super.show(listener)
+        if (::progress.isInitialized && state == BaseService.State.Connecting) {
+            progress.isIndeterminate = true
+            progress.show()
+        }
+    }
     private var delayedAnimation: Job? = null
     private lateinit var progress: BaseProgressIndicator<*>
     fun initProgress(progress: BaseProgressIndicator<*>) {
@@ -158,6 +175,7 @@ class ServiceButton @JvmOverloads constructor(
     }
 
     fun changeState(state: BaseService.State, previousState: BaseService.State, animate: Boolean) {
+        this.state = state
         when (state) {
             BaseService.State.Connecting -> changeState(iconConnecting, animate)
 

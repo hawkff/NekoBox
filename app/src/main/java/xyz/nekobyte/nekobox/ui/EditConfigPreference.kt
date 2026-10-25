@@ -56,7 +56,7 @@ class EditConfigPreference : Preference {
         return if (config.isBlank()) {
             return app.resources.getString(androidx.preference.R.string.not_set)
         } else {
-            app.resources.getString(R.string.lines, config.split('\n').size)
+            config.split('\n').size.let { app.resources.getQuantityString(R.plurals.config_lines, it, it) }
         }
     }
 

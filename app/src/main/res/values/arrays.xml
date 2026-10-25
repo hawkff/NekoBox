@@ -362,7 +362,7 @@
     </string-array>
 
     <string-array name="xhttp_mode_entry">
-        <item>auto</item>
+        <item>@string/auto</item>
         <item>packet-up</item>
         <item>stream-up</item>
         <item>stream-one</item>
@@ -523,9 +523,9 @@
     </string-array>
 
     <string-array name="packet_encoding_entry">
-        <item>none</item>
-        <item>packet</item>
-        <item>xudp</item>
+        <item>@string/value_none</item>
+        <item>Packet</item>
+        <item>XUDP</item>
     </string-array>
 
     <string-array name="mtu_select">
@@ -596,11 +596,11 @@
     </string-array>
 
     <string-array name="log_level" translatable="false">
-        <item>none</item>
-        <item>warn</item>
-        <item>info</item>
-        <item>debug</item>
-        <item>trace</item>
+        <item>@string/value_none</item>
+        <item>@string/log_warning</item>
+        <item>@string/log_info</item>
+        <item>@string/log_debug</item>
+        <item>@string/log_trace</item>
     </string-array>
 
     <string-array name="shadowtls_version_value">
@@ -661,4 +661,71 @@
         <item>@string/wireguard_dns_mode_domains</item>
     </string-array>
 
+    <!-- What lists show for values the core reads raw. -->
+    <string-array name="dns_strategy_entry">
+        <item>@string/auto</item>
+        <item>@string/prefer_ipv6</item>
+        <item>@string/prefer_ipv4</item>
+        <item>@string/ipv4_only</item>
+        <item>@string/ipv6_only</item>
+    </string-array>
+
+    <string-array name="networks_entry">
+        <item>TCP</item>
+        <item>mKCP</item>
+        <item>WebSocket</item>
+        <item>HTTP</item>
+        <item>QUIC</item>
+        <item>gRPC</item>
+        <item>HTTPUpgrade</item>
+        <item>XHTTP</item>
+    </string-array>
+
+    <string-array name="transport_layer_encryption_entry">
+        <item>@string/value_none</item>
+        <item>TLS</item>
+    </string-array>
+
+    <string-array name="kcp_headers_entry">
+        <item>@string/value_none</item>
+        <item>SRTP</item>
+        <item>uTP</item>
+        <item>WeChat video</item>
+        <item>DTLS</item>
+        <item>WireGuard</item>
+        <item>DNS</item>
+    </string-array>
+
+    <string-array name="tuic_udp_relay_mode_entry">
+        <item>@string/relay_native</item>
+        <item>QUIC</item>
+    </string-array>
+
+    <string-array name="tuic_congestion_controller_entry">
+        <item>CUBIC</item>
+        <item>NewReno</item>
+        <item>BBR</item>
+    </string-array>
+
+    <string-array name="utls_fingerprint_display">
+        <item>@string/not_set</item>
+        <item>Chrome</item>
+        <item>Firefox</item>
+        <item>Edge</item>
+        <item>Safari</item>
+        <item>360</item>
+        <item>QQ</item>
+        <item>iOS</item>
+        <item>Android</item>
+        <item>@string/utls_random_browser</item>
+        <item>@string/utls_randomized</item>
+    </string-array>
+
+    <string-array name="vmess_encryption_entry">
+        <item>ChaCha20-Poly1305</item>
+        <item>AES-128-GCM</item>
+        <item>@string/auto</item>
+        <item>@string/value_none</item>
+        <item>Zero</item>
+    </string-array>
 </resources>

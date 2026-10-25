@@ -864,6 +864,14 @@
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Button</item>
     </style>
 
+    <style name="Widget.NekoBox.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Button</item>
+    </style>
+
+    <style name="Widget.NekoBox.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Button</item>
+    </style>
+
     <style name="ShapeAppearance.NekoBox.NavItem" parent="ShapeAppearance.Material3.SmallComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/nav_item_corner_radius</item>

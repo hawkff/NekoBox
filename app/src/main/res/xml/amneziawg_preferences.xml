@@ -52,7 +52,7 @@
         <EditTextPreference
             app:icon="@drawable/ic_baseline_fingerprint_24"
             app:key="reserved"
-            app:title="Reserved"
+            app:title="@string/reserved_bytes"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogMessage="@string/wireguard_allowed_ips_hint"
@@ -114,67 +114,67 @@
         <EditTextPreference
             app:icon="@drawable/ic_baseline_fingerprint_24"
             app:key="jc"
-            app:title="Jc (junk packet count)"
+            app:title="@string/awg_jc"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="jmin"
-            app:title="Jmin (junk packet min size)"
+            app:title="@string/awg_jmin"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="jmax"
-            app:title="Jmax (junk packet max size)"
+            app:title="@string/awg_jmax"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="s1"
-            app:title="S1 (init packet junk size)"
+            app:title="@string/awg_s1"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="s2"
-            app:title="S2 (response packet junk size)"
+            app:title="@string/awg_s2"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="s3"
-            app:title="S3 (cookie reply packet junk size)"
+            app:title="@string/awg_s3"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="s4"
-            app:title="S4 (transport packet junk size)"
+            app:title="@string/awg_s4"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="h1"
-            app:title="H1 (init packet magic header)"
+            app:title="@string/awg_h1"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="h2"
-            app:title="H2 (response packet magic header)"
+            app:title="@string/awg_h2"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="h3"
-            app:title="H3 (underload packet magic header)"
+            app:title="@string/awg_h3"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="h4"
-            app:title="H4 (transport packet magic header)"
+            app:title="@string/awg_h4"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="i1"
-            app:title="I1 (special junk 1)"
+            app:title="@string/awg_i1"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="i2"
-            app:title="I2 (special junk 2)"
+            app:title="@string/awg_i2"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="i3"
-            app:title="I3 (special junk 3)"
+            app:title="@string/awg_i3"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="i4"
-            app:title="I4 (special junk 4)"
+            app:title="@string/awg_i4"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:key="i5"
-            app:title="I5 (special junk 5)"
+            app:title="@string/awg_i5"
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 

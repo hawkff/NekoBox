@@ -146,6 +146,7 @@ class AppManagerActivity : ThemedActivity() {
             filteredApps = result
             @Suppress("NotifyDataSetChanged")
             notifyDataSetChanged()
+            if (apps.isNotEmpty()) binding.appPlaceholder.showNoMatch(result.isEmpty(), binding.search.text ?: "", !sysApps)
         }
 
         override fun getPopupText(view: View, position: Int): CharSequence = filteredApps[position].name.firstOrNull()?.toString() ?: ""
@@ -200,6 +201,7 @@ class AppManagerActivity : ThemedActivity() {
             applyFilter()
             if (apps.isEmpty()) {
                 binding.list.visibility = View.GONE
+                binding.appPlaceholder.showUnreadable()
                 binding.appPlaceholder.root.crossFadeFrom(loading)
             } else {
                 binding.list.crossFadeFrom(loading)

@@ -8,6 +8,7 @@ import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -43,6 +44,7 @@ class RoutingProfilesActivity : ThemedActivity() {
         }
         binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
         binding.recyclerView.adapter = adapter
+        binding.emptySave.setOnClickListener { saveCurrent() }
         adapter.reload()
     }
 
@@ -53,19 +55,18 @@ class RoutingProfilesActivity : ThemedActivity() {
         return true
     }
 
+    private fun saveCurrent() = askName(getString(R.string.routing_profile_save_current), "") { name ->
+        runOnDefaultDispatcher {
+            RoutingProfiles.saveLiveAs(name)
+            onMainDispatcher { adapter.reload() }
+        }
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_save_current -> askName(getString(R.string.routing_profile_save_current), "") { name ->
-                runOnDefaultDispatcher {
-                    RoutingProfiles.saveLiveAs(name)
-                    onMainDispatcher { adapter.reload() }
-                }
-            }
-
+            R.id.action_save_current -> saveCurrent()
             R.id.action_import_file -> importFile.launch("*/*")
-
             R.id.action_import_clipboard -> importText(NekoBox.getClipboardText())
-
             else -> return super.onOptionsItemSelected(item)
         }
         return true
@@ -217,6 +218,7 @@ class RoutingProfilesActivity : ThemedActivity() {
             profiles.clear()
             profiles.addAll(RoutingProfiles.list())
             notifyDataSetChanged()
+            binding.empty.isVisible = profiles.isEmpty()
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ProfileHolder(LayoutTwoLineItemBinding.inflate(layoutInflater, parent, false))

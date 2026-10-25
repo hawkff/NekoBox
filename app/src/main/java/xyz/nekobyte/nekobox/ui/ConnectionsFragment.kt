@@ -2,13 +2,13 @@ package xyz.nekobyte.nekobox.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.format.Formatter
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -28,6 +28,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutConnectionsBinding
 import xyz.nekobyte.nekobox.databinding.LayoutTwoLineItemBinding
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.byteCount
 import xyz.nekobyte.nekobox.utils.PackageCache
 import xyz.nekobyte.nekobox.widget.ListListener
 
@@ -117,7 +118,9 @@ class ConnectionsFragment :
         val activity = activity as? MainActivity ?: return
         val service = activity.connection.service?.takeIf { DataStore.serviceState.connected }
         if (service == null) {
-            binding.connectionsStatus.setText(R.string.connections_status_stopped)
+            binding.connectionsStatus.isVisible = false
+            binding.connectionsEmpty.setText(R.string.connections_empty_stopped)
+            binding.connectionsEmpty.isVisible = true
             adapter.submitList(emptyList())
             return
         }
@@ -135,6 +138,9 @@ class ConnectionsFragment :
             entries.count { it.closed },
             getString(if (DataStore.connectionDiagnostics) R.string.connections_status_on else R.string.connections_status_off),
         )
+        binding.connectionsStatus.isVisible = true
+        binding.connectionsEmpty.setText(R.string.connections_empty_running)
+        binding.connectionsEmpty.isVisible = entries.isEmpty()
         adapter.submitList(entries)
     }
 
@@ -162,7 +168,7 @@ class ConnectionsFragment :
         else -> "?"
     }
 
-    private fun traffic(entry: ConnectionEntry) = "↑ ${Formatter.formatFileSize(requireContext(), entry.upload)} ↓ ${Formatter.formatFileSize(requireContext(), entry.download)}"
+    private fun traffic(entry: ConnectionEntry) = requireContext().let { "↑\u00A0${it.byteCount(entry.upload)} ↓\u00A0${it.byteCount(entry.download)}" }
 
     private fun showDetails(anchor: View, entry: ConnectionEntry) {
         MaterialAlertDialogBuilder(requireContext())

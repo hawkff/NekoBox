@@ -143,7 +143,6 @@
     <string name="auto">Automatisk</string>
     <string name="disable">Deaktiver</string>
     <string name="enable">Muliggjøre</string>
-    <string name="lines">%d linjer</string>
     <string name="route_warn">Sørg for at du har lest dokumentasjonen før du legger til egendefinerte regler, hvis ikke kan du ikke koble deg til Internett.</string>
     <string name="need_reload">Last inn proxy -tjenesten på nytt for å bruke endringer</string>
     <string name="unsaved_changes_prompt">Endringene er ikke lagret. Vil du spare\?</string>

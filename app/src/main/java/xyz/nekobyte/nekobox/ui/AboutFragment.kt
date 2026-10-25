@@ -59,6 +59,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
         binding.core.text = listOfNotNull(core.firstOrNull()?.replace("sing-box: ", "sing-box "), core.getOrNull(1)?.substringBefore('@')).joinToString(" · ")
         binding.cat.pose = CheckCat.Pose.CONTENT
         binding.background.setOnClickListener { askForBackgroundUse() }
+        binding.allowBackground.setOnClickListener { askForBackgroundUse() }
         binding.checkUpdates.setOnClickListener { checkUpdate() }
         for ((page, link) in listOf(binding.source to SOURCE, binding.releases to "$SOURCE/releases", binding.license to "$SOURCE/blob/main/LICENSE")) {
             page.contentDescription = getString(R.string.about_opens_browser, page.text)
@@ -76,7 +77,12 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
     private fun ignoringBatteryOptimizations() = (app.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(app.packageName)
 
     private fun showBackground() {
-        binding.background.setText(if (ignoringBatteryOptimizations()) R.string.about_background_allowed else R.string.about_background_restricted)
+        val allowed = ignoringBatteryOptimizations()
+        binding.background.setText(if (allowed) R.string.about_background_allowed else R.string.about_background_restricted)
+        // Restricted, the button asks; the line only explains. Allowed, the line opens the system list to change it.
+        binding.background.isClickable = allowed
+        binding.background.isFocusable = allowed
+        binding.allowBackground.isVisible = !allowed
     }
 
     // Persistent connections need the exemption, which the user grants and revokes in the system's screens.

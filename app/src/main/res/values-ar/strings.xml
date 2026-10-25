@@ -274,7 +274,6 @@
     <string name="enable">مكن</string>
     <string name="follow_system">اتبع النظام</string>
     <string name="night_mode">وضع الليل</string>
-    <string name="lines">%d سطور</string>
     <string name="route_warn">تأكد من قراءة الوثائق قبل إضافة القواعد المخصصة، وإلا فقد لا تتمكن من الاتصال بالإنترنت.</string>
     <string name="license">الرخصة</string>
     <string name="need_reload">أعد تحميل خدمة البروکسی لتطبيق التغييرات</string>

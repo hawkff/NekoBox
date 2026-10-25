@@ -55,7 +55,7 @@
             app:title="@string/allow_insecure" />
         <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
             app:defaultValue=""
-            app:entries="@array/utls_fingerprint_entry"
+            app:entries="@array/utls_fingerprint_display"
             app:entryValues="@array/utls_fingerprint_entry"
             app:icon="@drawable/ic_baseline_fingerprint_24"
             app:key="utlsFingerprint"

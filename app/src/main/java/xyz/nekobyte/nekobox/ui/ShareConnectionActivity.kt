@@ -218,7 +218,7 @@ class ShareConnectionActivity :
         }
     }
 
-    private fun textButton(textRes: Int, onClick: () -> Unit) = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+    private fun textButton(textRes: Int, onClick: () -> Unit) = MaterialButton(this, null, R.attr.borderlessButtonStyle).apply {
         setText(textRes)
         setOnClickListener { onClick() }
     }

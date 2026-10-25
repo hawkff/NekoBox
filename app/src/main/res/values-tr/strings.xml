@@ -228,7 +228,6 @@
     <string name="enable">Etkinleştir</string>
     <string name="follow_system">Sistemi Takip Et</string>
     <string name="night_mode">Gece Modu</string>
-    <string name="lines">%d Satır</string>
     <string name="route_warn">Kişisel kurallar eklemeden önce dökümanı okuduğunuza emin olun, yoksa Internet\'e bağlanamayabilirsiniz.</string>
     <string name="license">Lisans</string>
     <string name="need_reload">Değişiklikleri uygulamak için vekil sunucu servisini yeniden başlatın</string>

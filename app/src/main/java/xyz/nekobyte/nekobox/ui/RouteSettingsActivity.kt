@@ -296,7 +296,7 @@ class RouteSettingsActivity : ThemedActivity() {
 
     private fun showJson() {
         val lines = draft.config.lines().count { it.isNotBlank() }
-        binding.customJsonSummary.text = if (lines == 0) getString(androidx.preference.R.string.not_set) else getString(R.string.lines, lines)
+        binding.customJsonSummary.text = if (lines == 0) getString(androidx.preference.R.string.not_set) else resources.getQuantityString(R.plurals.config_lines, lines, lines)
     }
 
     /** After every edit: the chips, the sentence on top and the try field follow the draft. */
@@ -379,6 +379,8 @@ class RouteSettingsActivity : ThemedActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.profile_config_menu, menu)
+        // A rule not saved yet has nothing to delete; closing discards it, as in the group editor.
+        menu.findItem(R.id.action_delete)?.isVisible = intent.getLongExtra(EXTRA_ROUTE_ID, 0L) != 0L
         return true
     }
 

@@ -2,7 +2,6 @@ package xyz.nekobyte.nekobox.ui.profile
 
 import android.content.Context
 import android.text.format.DateUtils
-import android.text.format.Formatter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -19,6 +18,7 @@ import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
+import xyz.nekobyte.nekobox.ktx.byteCount
 
 /** Shows the handshake state of the edited WireGuard or AmneziaWG profile while the service runs it. */
 internal class WireGuardStatusLoader(private val activity: AppCompatActivity) :
@@ -89,8 +89,8 @@ internal fun describeWireGuardStatus(context: Context, json: String?, now: Long,
                 }
                 val traffic = context.getString(
                     R.string.wireguard_status_traffic,
-                    Formatter.formatFileSize(context, peer.rxBytes),
-                    Formatter.formatFileSize(context, peer.txBytes),
+                    context.byteCount(peer.rxBytes),
+                    context.byteCount(peer.txBytes),
                 )
                 add("${peer.endpoint.ifEmpty { peer.publicKey }}: $handshake, $traffic")
             }
