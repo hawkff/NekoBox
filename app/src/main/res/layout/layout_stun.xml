@@ -67,11 +67,19 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/nat_start"
-                style="@style/Widget.NekoBox.Button.Check"
-                android:text="@string/connection_check_start"
-                app:icon="@drawable/ic_baseline_nat_24" />
+            <xyz.nekobyte.nekobox.widget.CheckButton
+                android:id="@+id/nat_start_frame"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/nat_start"
+                    style="@style/Widget.NekoBox.Button.Check"
+                    android:text="@string/connection_check_start"
+                    app:icon="@drawable/ic_baseline_nat_24" />
+
+            </xyz.nekobyte.nekobox.widget.CheckButton>
 
             <TextView
                 android:id="@+id/nat_verdict"

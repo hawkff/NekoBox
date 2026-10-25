@@ -707,19 +707,21 @@
         <item name="android:minWidth">48dp</item>
     </style>
 
-    <!-- The button that runs a network check: medium size, with an icon; its corners tighten
-         under a finger. It also says aloud when a check runs and when it is done. -->
+    <!-- The button that runs a network check, inside a CheckButton: a capsule with an icon that
+         squeezes under a finger. It also says aloud when a check runs and when it is done. -->
     <style name="Widget.NekoBox.Button.Check" parent="@style/Widget.NekoBox.Button">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">20dp</item>
         <item name="android:minHeight">56dp</item>
+        <!-- The drawn capsule fills the button's height, so the spinner it turns into is a circle. -->
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
         <item name="android:paddingStart">24dp</item>
         <item name="android:paddingEnd">28dp</item>
         <item name="android:textSize">16sp</item>
         <item name="android:stateListAnimator">@animator/check_button_press</item>
         <item name="android:accessibilityLiveRegion">polite</item>
-        <item name="cornerRadius">@dimen/check_button_corner_radius</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Capsule</item>
         <item name="iconGravity">textStart</item>
         <item name="iconPadding">10dp</item>
     </style>
@@ -784,6 +786,11 @@
     <style name="ShapeAppearanceOverlay.NekoBox.Dialog" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/dialog_corner_radius</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.NekoBox.Capsule" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
 
     <style name="ShapeAppearanceOverlay.NekoBox.Input" parent="">

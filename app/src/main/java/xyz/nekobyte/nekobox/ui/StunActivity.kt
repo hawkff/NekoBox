@@ -102,13 +102,15 @@ class StunActivity : ThemedActivity() {
 
     private fun render(state: NatTest.State) {
         val running = state == NatTest.State.Running
-        binding.natStart.isEnabled = !running
-        binding.natStart.setText(
-            when (state) {
-                NatTest.State.Idle -> R.string.connection_check_start
-                NatTest.State.Running -> R.string.check_running
-                else -> R.string.check_again
-            },
+        binding.natStartFrame.show(
+            running,
+            getString(
+                when (state) {
+                    NatTest.State.Idle -> R.string.connection_check_start
+                    NatTest.State.Running -> R.string.check_running
+                    else -> R.string.check_again
+                },
+            ),
         )
         binding.natVerdict.isVisible = false
         binding.natVerdictDetail.isVisible = false
