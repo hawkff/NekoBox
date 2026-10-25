@@ -48,11 +48,19 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?android:attr/textColorSecondary" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/connection_check_start"
-                style="@style/Widget.NekoBox.Button.Check"
-                android:text="@string/connection_check_start"
-                app:icon="@drawable/ic_baseline_security_24" />
+            <xyz.nekobyte.nekobox.widget.CheckButton
+                android:id="@+id/connection_check_start_frame"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/connection_check_start"
+                    style="@style/Widget.NekoBox.Button.Check"
+                    android:text="@string/connection_check_start"
+                    app:icon="@drawable/ic_baseline_security_24" />
+
+            </xyz.nekobyte.nekobox.widget.CheckButton>
 
             <!-- What bash.ws saw, shown as soon as it answers. -->
             <LinearLayout

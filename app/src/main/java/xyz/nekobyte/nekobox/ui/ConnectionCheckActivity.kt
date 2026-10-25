@@ -18,6 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
@@ -156,7 +157,8 @@ class ConnectionCheckActivity : ThemedActivity() {
         binding.connectionCheckRows.isVisible = false
         binding.connectionCheckLookup.isVisible = false
         binding.connectionCheckCat.pose = CheckCat.Pose.WAITING
-        binding.connectionCheckStart.setText(R.string.connection_check_start)
+        // A running check keeps its spinner; the button resets when it ends.
+        if (check?.isActive != true) binding.connectionCheckStartFrame.show(running = false, getString(R.string.connection_check_start))
         alarming = false
     }
 
@@ -164,13 +166,13 @@ class ConnectionCheckActivity : ThemedActivity() {
         val path = path()
         showPath(path)
         hideResults()
-        binding.connectionCheckStart.isEnabled = false
-        binding.connectionCheckStart.setText(R.string.check_running)
+        binding.connectionCheckStartFrame.show(running = true, getString(R.string.check_running))
         binding.connectionCheckStart.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         binding.connectionCheckCat.pose = CheckCat.Pose.RUNNING
         check?.cancel()
         lookup?.cancel()
         check = lifecycleScope.launch {
+            val mine = coroutineContext.job
             try {
                 val client = client(path)
 
@@ -214,11 +216,11 @@ class ConnectionCheckActivity : ThemedActivity() {
             } catch (e: Exception) {
                 if (path() == path) failed(e)
             } finally {
-                binding.connectionCheckStart.isEnabled = true
-                // A check cut short by a change of path leaves nothing behind to judge.
-                if (path() == path) {
-                    binding.connectionCheckStart.setText(R.string.check_again)
-                    binding.connectionCheckCat.pose = if (alarming) CheckCat.Pose.ALERT else CheckCat.Pose.CONTENT
+                // A check started since owns the button. One cut short by a change of path leaves nothing to judge.
+                if (check === mine) {
+                    val held = path() == path
+                    binding.connectionCheckStartFrame.show(running = false, getString(if (held) R.string.check_again else R.string.connection_check_start))
+                    if (held) binding.connectionCheckCat.pose = if (alarming) CheckCat.Pose.ALERT else CheckCat.Pose.CONTENT
                 }
             }
         }
