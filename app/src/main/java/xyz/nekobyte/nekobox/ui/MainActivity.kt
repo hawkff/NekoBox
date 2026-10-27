@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.ui
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -89,6 +90,7 @@ class MainActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MessageStore.setCurrentActivity(this)
+        backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 
         binding = LayoutMainBinding.inflate(layoutInflater)
         binding.fab.initProgress(binding.fabProgress)
@@ -596,7 +598,12 @@ class MainActivity :
             .setMessage(R.string.background_use_prompt_message)
             .setView(prompt.root)
             .setPositiveButton(R.string.background_use_prompt_allow) { _, _ ->
-                startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:$packageName".toUri()))
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:$packageName".toUri()))
+                } catch (_: ActivityNotFoundException) {
+                    // Some builds lack the request screen but keep the list of apps; a few have neither.
+                    runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+                }
             }
             .setNegativeButton(R.string.background_use_prompt_later, null)
             // A dialog that goes with a recreated activity is not dismissed, so the new one asks again.
@@ -607,7 +614,15 @@ class MainActivity :
             .show()
     }
 
+    // Set once the prompt is answered and kept across recreation: reconnects and server switches in
+    // this launch don't ask again.
+    private var backgroundUseAsked = false
     private var backgroundUsePrompt: AlertDialog? = null
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(BACKGROUND_USE_ASKED, backgroundUseAsked)
+    }
 
     val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
     override fun onServiceConnected(service: INekoBoxService) = changeState(
@@ -744,8 +759,7 @@ class MainActivity :
     }
 }
 
-// Set once the prompt is answered: reconnects and server switches in the same process don't ask again.
-private var backgroundUseAsked = false
+private const val BACKGROUND_USE_ASKED = "backgroundUseAsked"
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a
