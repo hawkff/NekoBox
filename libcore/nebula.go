@@ -105,7 +105,10 @@ func parseNebulaConfig(raw string, l *slog.Logger) (*nebulaParsed, error) {
 	if err = cert.VerifyPrivateKey(curve, key); err != nil {
 		return nil, E.Cause(err, "pki.key does not belong to pki.cert")
 	}
-	rawRoutes, _ := config.Get("tun.unsafe_routes").([]any)
+	rawRoutes, ok := config.Get("tun.unsafe_routes").([]any)
+	if !ok && config.IsSet("tun.unsafe_routes") {
+		return nil, E.New("tun.unsafe_routes must be a list")
+	}
 	var routes []nebulaRoute
 	for i, rawRoute := range rawRoutes {
 		route, _ := rawRoute.(map[string]any)

@@ -143,7 +143,10 @@ class VpnService :
     }
 
     private fun nebulaRoutes(ipv6: Boolean): List<Subnet> {
-        if (data.proxy?.config?.nebula != true) return emptyList()
+        // Before the profile is built, as in the kill switch's blocking VPN, the setting stands in.
+        val proxy = data.proxy
+        val joins = if (proxy != null && proxy.isInitialized()) proxy.config.nebula else DataStore.nebulaEnabled && DataStore.nebulaConfig.isNotBlank()
+        if (!joins) return emptyList()
         return try {
             Libcore.readNebulaConfig(DataStore.nebulaConfig).networks.lines().mapNotNull { Subnet.fromString(it) }
                 .filter { ipv6 || it.address is Inet4Address }

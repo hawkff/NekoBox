@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import libcore.Libcore
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -163,6 +164,11 @@ internal class ApiSettings(private val context: Context, private val serviceStat
                 ) {
                     reject("permission_required", "Mock-location authorization and notifications are required, with no stale simulated location")
                 }
+            }
+
+            // The check the Nebula screen runs on import; a blank config switches the network off.
+            Key.NEBULA_CONFIG -> if ((value as String).isNotBlank()) {
+                runCatching { Libcore.readNebulaConfig(value) }.onFailure { reject("invalid_parameters", "nebulaConfig: ${it.message}") }
             }
 
             Key.GLOBAL_CUSTOM_CONFIG -> if ((value as String).isNotBlank()) {

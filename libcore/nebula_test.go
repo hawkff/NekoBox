@@ -166,6 +166,9 @@ func TestNebulaConfigNeedsItsPKIInlineAndReadsUnsafeRoutes(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "pki.ca must hold the PEM itself") {
 		t.Fatalf("a config with key files was read: %v", err)
 	}
+	if _, err = ReadNebulaConfig(phone[:strings.Index(phone, "tun:")] + "tun: {unsafe_routes: 192.168.1.0/24}\n"); err == nil || !strings.Contains(err.Error(), "must be a list") {
+		t.Fatalf("unsafe routes that are not a list were read: %v", err)
+	}
 	// Another network's key, or its CA, does not fit this certificate.
 	lighthouse, other := nebulaTestConfigs(4242, "")
 	keyAt, caEnd := strings.Index(phone, "  key: |"), strings.Index(phone, "  cert: |")

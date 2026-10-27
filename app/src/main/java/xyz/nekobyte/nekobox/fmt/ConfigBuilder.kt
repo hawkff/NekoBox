@@ -308,7 +308,11 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val globalOutbounds = HashMap<Long, String>()
     // Per-port credentials for authenticated external-plugin SOCKS loopbacks (#1166).
     val localProxyCredentials = HashMap<Int, Pair<String, String>>()
-    val readableNames = mutableSetOf(TAG_DIRECT, TAG_BYPASS, TAG_BLOCK, TAG_FRAGMENT, TAG_MIXED, TAG_PROXY, TAG_NEBULA)
+    // The Nebula network runs beside whatever profile is selected. Exports leave it out: its config
+    // holds this device's key.
+    val joinNebula = !forTest && !forExport && DataStore.nebulaEnabled && DataStore.nebulaConfig.isNotBlank()
+    val readableNames = mutableSetOf(TAG_DIRECT, TAG_BYPASS, TAG_BLOCK, TAG_FRAGMENT, TAG_MIXED, TAG_PROXY)
+    if (joinNebula) readableNames += TAG_NEBULA
     val lookupCache = BuildLookupCache()
     val group = lookupCache.group(proxy.groupId)
 
@@ -1061,9 +1065,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             )
         }
 
-        // The Nebula network runs beside whatever profile is selected; its overlay and unsafe-route
-        // networks are its preferred routes. Exports leave it out: its config holds this device's key.
-        if (!forTest && !forExport && DataStore.nebulaEnabled && DataStore.nebulaConfig.isNotBlank()) {
+        // Nebula's overlay and unsafe-route networks are its preferred routes.
+        if (joinNebula) {
             endpointList.add(
                 Endpoint_NebulaOptions().apply {
                     type = "nebula"
@@ -1614,7 +1617,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             tailscaleEndpoints,
             profileTailscaleNodes,
             wireguardInstances,
-            endpointList.any { it is Endpoint_NebulaOptions },
+            joinNebula,
         )
     }
 }
