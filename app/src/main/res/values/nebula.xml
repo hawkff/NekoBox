@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nebula" translatable="false">Nebula</string>
+    <string name="nebula_enabled">Connect to Nebula</string>
+    <string name="nebula_enabled_summary">Alongside the selected profile</string>
+    <string name="nebula_config">Config</string>
+    <string name="nebula_config_none">Import a config.yml with the CA, certificate and key inline</string>
+    <!-- Certificate name, address, expiry date -->
+    <string name="nebula_config_summary">%1$s · %2$s · until %3$s</string>
+    <string name="nebula_config_expired">%1$s · %2$s · expired %3$s</string>
+    <string name="nebula_networks">Reached through Nebula</string>
+    <string name="nebula_config_unusable">Can\'t use this config</string>
+    <string name="nebula_config_too_big">The file is too big for a Nebula config</string>
+</resources>

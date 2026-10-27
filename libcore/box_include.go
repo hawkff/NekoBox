@@ -101,6 +101,7 @@ func nekoboxAndroidEndpointRegistry() *endpoint.Registry {
 
 	wireguard.RegisterEndpoint(registry)
 	tailscale.RegisterEndpoint(registry)
+	registerNebulaEndpoint(registry)
 
 	return registry
 }

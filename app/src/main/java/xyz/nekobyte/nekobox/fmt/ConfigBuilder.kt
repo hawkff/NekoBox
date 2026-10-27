@@ -168,6 +168,7 @@ const val TAG_PROXY = "proxy"
 const val TAG_DIRECT = "direct"
 const val TAG_BYPASS = "bypass"
 const val TAG_BLOCK = "block"
+const val TAG_NEBULA = "nebula"
 const val TAG_FRAGMENT = "fragment"
 const val TAG_DNS_HOSTS = "dns-hosts"
 
@@ -207,6 +208,8 @@ class ConfigBuildResult(
     // WireGuard/AmneziaWG profile id -> its outbounds. A profile that is a hop of several chains
     // runs once per chain, each instance with its own handshakes.
     val wireguardInstances: Map<Long, List<WireGuardInstance>> = emptyMap(),
+    // The config joins the Nebula network; full custom configs run as written, without it.
+    val nebula: Boolean = false,
 ) {
     data class IndexEntity(var chain: LinkedHashMap<Int, ProxyEntity>)
 
@@ -305,7 +308,11 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val globalOutbounds = HashMap<Long, String>()
     // Per-port credentials for authenticated external-plugin SOCKS loopbacks (#1166).
     val localProxyCredentials = HashMap<Int, Pair<String, String>>()
+    // The Nebula network runs beside whatever profile is selected. Exports leave it out: its config
+    // holds this device's key.
+    val joinNebula = !forTest && !forExport && DataStore.nebulaEnabled && DataStore.nebulaConfig.isNotBlank()
     val readableNames = mutableSetOf(TAG_DIRECT, TAG_BYPASS, TAG_BLOCK, TAG_FRAGMENT, TAG_MIXED, TAG_PROXY)
+    if (joinNebula) readableNames += TAG_NEBULA
     val lookupCache = BuildLookupCache()
     val group = lookupCache.group(proxy.groupId)
 
@@ -1058,13 +1065,25 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             )
         }
 
-        // Tailnet destinations (peer addresses, advertised subnets, MagicDNS names) go to the
-        // node that knows them, even when another outbound is the final one. The exit node's
-        // default route is not a preferred route, so ordinary traffic is unaffected. Added after
-        // the user's rules so an explicit block or detour of a tailnet address still wins.
-        val tailscaleTags = endpointList.map { it._hack_config_map["tag"] as String }
+        // Nebula's overlay and unsafe-route networks are its preferred routes.
+        if (joinNebula) {
+            endpointList.add(
+                Endpoint_NebulaOptions().apply {
+                    type = "nebula"
+                    _hack_config_map["tag"] = TAG_NEBULA
+                    config = DataStore.nebulaConfig
+                },
+            )
+        }
+
+        // Tailnet and Nebula destinations (peer addresses, advertised subnets, MagicDNS names) go
+        // to the endpoint that knows them, even when another outbound is the final one. The exit
+        // node's default route is not a preferred route, so ordinary traffic is unaffected. Added
+        // after the user's rules so an explicit block or detour of such an address still wins.
+        val endpointTags = endpointList.map { it._hack_config_map["tag"] as String }
+        val tailscaleTags = endpointList.filterIsInstance<Endpoint_TailscaleOptions>().map { it._hack_config_map["tag"] as String }
         fun addTailnetRouteRules() {
-            tailscaleTags.forEach { tag ->
+            endpointTags.forEach { tag ->
                 routeRules.add(
                     Rule_DefaultOptions().apply {
                         _hack_config_map["preferred_by"] = listOf(tag)
@@ -1598,6 +1617,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             tailscaleEndpoints,
             profileTailscaleNodes,
             wireguardInstances,
+            joinNebula,
         )
     }
 }

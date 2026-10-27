@@ -1074,6 +1074,11 @@ class SingBoxOptions {
     // Endpoints share the outbound tag/type shape but live in the top-level "endpoints" array.
     open class Endpoint : Outbound()
 
+    // NekoBox's own endpoint (libcore/nebula.go): Nebula's YAML config, with the CA, certificate and key inline.
+    class Endpoint_NebulaOptions : Endpoint() {
+        @JvmField var config: String? = null
+    }
+
     class Endpoint_TailscaleOptions : Endpoint() {
         @JvmField var detour: String? = null
 

@@ -105,6 +105,8 @@ object Key {
     const val SHOW_BOTTOM_BAR = "showBottomBar"
     const val CONFIRM_PROFILE_DELETE = "confirmProfileDelete"
     const val ASK_FOR_BACKGROUND_USE = "askForBackgroundUse"
+    const val NEBULA_ENABLED = "nebulaEnabled"
+    const val NEBULA_CONFIG = "nebulaConfig"
     const val GROUP_LAYOUT_MODE = "groupLayoutMode"
 
     const val ALLOW_INSECURE_ON_REQUEST = "allowInsecureOnRequest"

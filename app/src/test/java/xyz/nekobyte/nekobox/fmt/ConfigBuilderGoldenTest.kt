@@ -628,6 +628,32 @@ class ConfigBuilderGoldenTest {
     }
 
     @Test
+    fun nebula_joinsBesideTheProfileWithItsNetworksAsPreferredRoutes() {
+        val profile = addSocks(addGroup(), "192.0.2.70", 1080, "nebula-beside")
+        DataStore.nebulaEnabled = true
+        DataStore.nebulaConfig = "pki: {}"
+
+        val result = build(profile)
+        assertTrue(result.nebula)
+        val config = JSONObject(result.config)
+        val nebula = objects(config.getJSONArray("endpoints")).single()
+        assertEquals("nebula", nebula.getString("type"))
+        assertEquals(TAG_NEBULA, nebula.getString("tag"))
+        assertEquals("pki: {}", nebula.getString("config"))
+        val rules = objects(config.getJSONObject("route").getJSONArray("rules"))
+        assertTrue(rules.any { it.optString("outbound") == TAG_NEBULA && it.optJSONArray("preferred_by")?.let(::strings) == listOf(TAG_NEBULA) })
+        // MagicDNS servers belong to Tailscale endpoints alone.
+        assertTrue(objects(config.getJSONObject("dns").getJSONArray("servers")).none { it.optString("type") == "tailscale" })
+
+        // A profile's URL test and an export leave the network out, as does turning it off.
+        assertFalse(JSONObject(build(profile, forTest = true).config).has("endpoints"))
+        assertFalse(JSONObject(build(profile, forExport = true).config).has("endpoints"))
+        DataStore.nebulaEnabled = false
+        assertFalse(JSONObject(build(profile).config).has("endpoints"))
+        DataStore.nebulaConfig = ""
+    }
+
+    @Test
     fun blankDnsHosts_omitsHostsServer() {
         val profile = addSocks(addGroup(), "192.0.2.60", 1080, "blank-hosts")
 

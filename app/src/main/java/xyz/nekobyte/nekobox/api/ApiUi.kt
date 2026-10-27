@@ -24,6 +24,7 @@ internal object ApiUi {
         "groups" to R.id.nav_group,
         "routes" to R.id.nav_route,
         "tailscale" to R.id.nav_tailscale,
+        "nebula" to R.id.nav_nebula,
         "settings" to R.id.nav_settings,
         "connections" to R.id.nav_connections,
         "tools" to R.id.nav_tools,

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import libcore.Libcore
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -62,6 +63,8 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         result[Key.CONNECTION_TEST_TIMEOUT] = Setting("integer", 3000)
         result["connectionTestConcurrent"] = Setting("integer", 5)
         result[Key.LOG_BUF_SIZE] = Setting("integer", 0)
+        result[Key.NEBULA_ENABLED] = Setting("boolean", false)
+        result[Key.NEBULA_CONFIG] = Setting("string", "")
         result["webdavServer"] = Setting("string", "")
         result["webdavUsername"] = Setting("string", "")
         result["webdavPassword"] = Setting("string", "")
@@ -79,7 +82,8 @@ internal class ApiSettings(private val context: Context, private val serviceStat
     fun get(includeSecrets: Boolean) = JSONObject().apply {
         val store = DataStore.configurationStore
         settings.forEach { (key, setting) ->
-            if (!includeSecrets && key.startsWith("webdav")) {
+            // WebDAV credentials and the Nebula config's private key.
+            if (!includeSecrets && (key.startsWith("webdav") || key == Key.NEBULA_CONFIG)) {
                 put(key, JSONObject.NULL)
             } else {
                 put(
@@ -160,6 +164,11 @@ internal class ApiSettings(private val context: Context, private val serviceStat
                 ) {
                     reject("permission_required", "Mock-location authorization and notifications are required, with no stale simulated location")
                 }
+            }
+
+            // The check the Nebula screen runs on import; a blank config switches the network off.
+            Key.NEBULA_CONFIG -> if ((value as String).isNotBlank()) {
+                runCatching { Libcore.readNebulaConfig(value) }.onFailure { reject("invalid_parameters", "nebulaConfig: ${it.message}") }
             }
 
             Key.GLOBAL_CUSTOM_CONFIG -> if ((value as String).isNotBlank()) {
