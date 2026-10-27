@@ -2,20 +2,26 @@ package xyz.nekobyte.nekobox.ui
 
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.RemoteException
+import android.provider.Settings
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.IdRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
@@ -40,6 +46,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.RoutingProfiles
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
+import xyz.nekobyte.nekobox.databinding.LayoutDontShowAgainBinding
 import xyz.nekobyte.nekobox.databinding.LayoutMainBinding
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.KryoConverters
@@ -83,6 +90,7 @@ class MainActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MessageStore.setCurrentActivity(this)
+        backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 
         binding = LayoutMainBinding.inflate(layoutInflater)
         binding.fab.initProgress(binding.fabProgress)
@@ -165,6 +173,9 @@ class MainActivity :
         LocalApiAccess.sync(this)
 
         applyHideFromRecentApps(DataStore.hideFromRecentApps)
+        // A connect that finished while the app was away asks now. Lifecycle reports RESUMED only
+        // after onResume returns, which is why the prompt needs no more than STARTED.
+        if (DataStore.serviceState.connected) askForBackgroundUse()
     }
 
     // Liquid glass: the connect button and the stats bar float as glass over the profiles; the
@@ -559,6 +570,7 @@ class MainActivity :
         binding.fab.changeState(state, DataStore.serviceState, animate)
         binding.stats.changeState(state)
         if (msg != null) snackbar(getString(R.string.vpn_error, msg)).show()
+        if (state == BaseService.State.Connected) askForBackgroundUse()
     }
 
     override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(binding.coordinator, text, Snackbar.LENGTH_LONG).apply {
@@ -569,6 +581,47 @@ class MainActivity :
 
     override fun stateChanged(state: BaseService.State, profileName: String?, msg: String?) {
         changeState(state, msg, true)
+    }
+
+    // Android's battery limits can stop a connection that is up: while connected with the app on
+    // screen, ask once per launch until background use is allowed or the user opts out.
+    @SuppressLint("BatteryLife")
+    private fun askForBackgroundUse() {
+        if (backgroundUseAsked || backgroundUsePrompt?.isShowing == true) return
+        if (!DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
+        if (NekoBox.power.isIgnoringBatteryOptimizations(packageName)) return
+        val dialog = MaterialAlertDialogBuilder(this)
+        // The dialog's own theme, so the box and its label take the dialog's colors.
+        val prompt = LayoutDontShowAgainBinding.inflate(LayoutInflater.from(dialog.context))
+        backgroundUsePrompt = dialog
+            .setTitle(R.string.background_use_prompt_title)
+            .setMessage(R.string.background_use_prompt_message)
+            .setView(prompt.root)
+            .setPositiveButton(R.string.background_use_prompt_allow) { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:$packageName".toUri()))
+                } catch (_: ActivityNotFoundException) {
+                    // Some builds lack the request screen but keep the list of apps; a few have neither.
+                    runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+                }
+            }
+            .setNegativeButton(R.string.background_use_prompt_later, null)
+            // A dialog that goes with a recreated activity is not dismissed, so the new one asks again.
+            .setOnDismissListener {
+                backgroundUseAsked = true
+                if (prompt.dontShowAgain.isChecked) DataStore.askForBackgroundUse = false
+            }
+            .show()
+    }
+
+    // Set once the prompt is answered and kept across recreation: reconnects and server switches in
+    // this launch don't ask again.
+    private var backgroundUseAsked = false
+    private var backgroundUsePrompt: AlertDialog? = null
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(BACKGROUND_USE_ASKED, backgroundUseAsked)
     }
 
     val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
@@ -705,6 +758,8 @@ class MainActivity :
         return fragment != null && fragment.onKeyDown(keyCode, event)
     }
 }
+
+private const val BACKGROUND_USE_ASKED = "backgroundUseAsked"
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a
