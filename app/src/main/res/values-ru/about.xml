@@ -6,10 +6,10 @@
     <string name="about_core">Ядро</string>
     <string name="about_plugins">Плагины</string>
     <string name="about_background_allowed">Работа в фоне разрешена</string>
-    <string name="about_background_restricted">Работа в фоне ограничена. Android может остановить NekoBox, пока он не на экране.</string>
+    <string name="about_background_restricted">Работа в фоне ограничена. Android может прерывать соединения NekoBox для экономии заряда.</string>
     <string name="about_background_allow">Разрешить работу в фоне</string>
     <string name="background_use_prompt_title">Разрешить работу в фоне?</string>
-    <string name="background_use_prompt_message">Android может остановить NekoBox, когда он не на экране, и соединение оборвётся.</string>
+    <string name="background_use_prompt_message">Android может прерывать соединения NekoBox для экономии заряда.</string>
     <string name="background_use_prompt_allow">Разрешить</string>
     <string name="background_use_prompt_later">Не сейчас</string>
     <string name="dont_show_again">Больше не показывать</string>

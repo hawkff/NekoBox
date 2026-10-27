@@ -6,11 +6,11 @@
     <string name="about_core">Core</string>
     <string name="about_plugins">Plugins</string>
     <string name="about_background_allowed">Background use allowed</string>
-    <string name="about_background_restricted">Background use restricted. Android may stop NekoBox while it is not on screen.</string>
+    <string name="about_background_restricted">Background use restricted. Android may interrupt NekoBox connections to save battery.</string>
     <string name="about_background_allow">Allow background use</string>
     <!-- Asked after connecting while Android restricts background use -->
     <string name="background_use_prompt_title">Allow background use?</string>
-    <string name="background_use_prompt_message">Android may stop NekoBox when it\'s not on screen, and your connection drops.</string>
+    <string name="background_use_prompt_message">Android may interrupt NekoBox connections to save battery.</string>
     <string name="background_use_prompt_allow">Allow</string>
     <string name="background_use_prompt_later">Not now</string>
     <string name="dont_show_again">Don\'t show again</string>
