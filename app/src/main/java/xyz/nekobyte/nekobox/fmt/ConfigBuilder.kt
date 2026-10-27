@@ -168,6 +168,7 @@ const val TAG_PROXY = "proxy"
 const val TAG_DIRECT = "direct"
 const val TAG_BYPASS = "bypass"
 const val TAG_BLOCK = "block"
+const val TAG_NEBULA = "nebula"
 const val TAG_FRAGMENT = "fragment"
 const val TAG_DNS_HOSTS = "dns-hosts"
 
@@ -1058,13 +1059,26 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             )
         }
 
-        // Tailnet destinations (peer addresses, advertised subnets, MagicDNS names) go to the
-        // node that knows them, even when another outbound is the final one. The exit node's
-        // default route is not a preferred route, so ordinary traffic is unaffected. Added after
-        // the user's rules so an explicit block or detour of a tailnet address still wins.
-        val tailscaleTags = endpointList.map { it._hack_config_map["tag"] as String }
+        // The Nebula network runs beside whatever profile is selected; its overlay and unsafe-route
+        // networks are its preferred routes.
+        if (!forTest && DataStore.nebulaEnabled && DataStore.nebulaConfig.isNotBlank()) {
+            endpointList.add(
+                Endpoint_NebulaOptions().apply {
+                    type = "nebula"
+                    _hack_config_map["tag"] = TAG_NEBULA
+                    config = DataStore.nebulaConfig
+                },
+            )
+        }
+
+        // Tailnet and Nebula destinations (peer addresses, advertised subnets, MagicDNS names) go
+        // to the endpoint that knows them, even when another outbound is the final one. The exit
+        // node's default route is not a preferred route, so ordinary traffic is unaffected. Added
+        // after the user's rules so an explicit block or detour of such an address still wins.
+        val endpointTags = endpointList.map { it._hack_config_map["tag"] as String }
+        val tailscaleTags = endpointList.filterIsInstance<Endpoint_TailscaleOptions>().map { it._hack_config_map["tag"] as String }
         fun addTailnetRouteRules() {
-            tailscaleTags.forEach { tag ->
+            endpointTags.forEach { tag ->
                 routeRules.add(
                     Rule_DefaultOptions().apply {
                         _hack_config_map["preferred_by"] = listOf(tag)

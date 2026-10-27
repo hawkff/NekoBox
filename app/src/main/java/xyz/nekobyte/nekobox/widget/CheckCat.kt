@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
@@ -24,8 +25,9 @@ import kotlin.math.sin
 
 /**
  * The cat of the network checks: it sniffs a bowl of ramen while nothing runs, runs while a check
- * runs, and sits back when the answer is in, its eyes closed when all is well. Flat shapes in the
- * theme's colors; still when animations are off, and paused while hidden.
+ * runs, and sits back when the answer is in, its eyes closed when all is well. A tap makes a sitting
+ * cat hop and flick its tail, or blink when animations are off. Flat shapes in the theme's colors;
+ * still when animations are off, and paused while hidden.
  */
 class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
@@ -79,10 +81,31 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private var motion = context.animationsOn()
     private var time = 0f
+
+    // When the last hop began, on the clock's time; a tap with animations off blinks instead.
+    private var hopStart = Float.NaN
+    private var blinking = false
     private val clock = TimeAnimator().apply {
         setTimeListener { _, total, _ ->
             time = total / 1000f
             invalidate()
+        }
+    }
+
+    init {
+        setOnClickListener {
+            if (drawn == Pose.RUNNING) return@setOnClickListener
+            performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+            if (motion && clock.isStarted) {
+                hopStart = time
+            } else {
+                blinking = true
+                invalidate()
+                postDelayed({
+                    blinking = false
+                    invalidate()
+                }, BLINK_MS)
+            }
         }
     }
 
@@ -134,11 +157,14 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private fun sitting(canvas: Canvas, t: Float) {
         stroke(canvas, GROUND, onSurface, 1.5f, 0.14f)
+        val hop = ((t - hopStart) / HOP).takeIf { it in 0f..1f }
         val sway = when (drawn) {
             Pose.ALERT -> 0f
             Pose.CONTENT -> 8 * sin(2 * PI.toFloat() * t / 4.8f)
             else -> 6 * sin(2 * PI.toFloat() * t / 3.6f)
-        }
+        } + (hop?.let { 24 * sin(2 * PI.toFloat() * it) } ?: 0f)
+        canvas.save()
+        hop?.let { canvas.translate(0f, -12 * sin(PI.toFloat() * it)) }
         canvas.withRotation(sway, 74f, 104f) { stroke(this, TAIL_SIT, cat, 7f) }
         fill(canvas, BODY_SIT, cat)
         stroke(canvas, LEG_LINE, ink, 1.4f, 0.5f)
@@ -154,7 +180,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             fill(this, EAR_SIT_RIGHT, cat)
             stroke(this, EAR_SIT_RIGHT, cat, 3f)
             ellipse(this, 106f, 44f, 19f, 16f, cat)
-            if (drawn == Pose.CONTENT) {
+            if (drawn == Pose.CONTENT || hop != null || blinking) {
                 stroke(this, CLOSED_EYES, ink, 1.6f)
             } else {
                 val r = if (drawn == Pose.ALERT) 2.9f else 2.4f
@@ -166,6 +192,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             stroke(this, MOUTH, ink, 1.1f)
             stroke(this, WHISKERS_SIT, cat, 1.3f)
         }
+        canvas.restore()
         for (i in 0..2) {
             val phase = (t / 2.4f + i / 3f) % 1f
             canvas.withTranslation(STEAM_X[i], 72 - 14 * phase) {
@@ -263,6 +290,10 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         const val STILL = 0.105f
 
         const val LEG = 25f
+
+        /** Seconds a hop lasts, and milliseconds a blink. */
+        const val HOP = 0.45f
+        const val BLINK_MS = 600L
 
         val STEAM_X = floatArrayOf(160f, 172f, 184f)
 

@@ -545,6 +545,8 @@ class MainActivity :
 
             R.id.nav_tailscale -> displayFragment(TailscaleFragment())
 
+            R.id.nav_nebula -> displayFragment(NebulaFragment())
+
             R.id.nav_settings -> displayFragment(SettingsFragment())
 
             R.id.nav_connections -> displayFragment(ConnectionsFragment())

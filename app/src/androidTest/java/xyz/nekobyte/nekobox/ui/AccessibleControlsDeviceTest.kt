@@ -83,6 +83,7 @@ class AccessibleControlsDeviceTest {
             R.id.nav_group,
             R.id.nav_route,
             R.id.nav_tailscale,
+            R.id.nav_nebula,
             R.id.nav_settings,
             R.id.nav_logcat,
             R.id.nav_connections,

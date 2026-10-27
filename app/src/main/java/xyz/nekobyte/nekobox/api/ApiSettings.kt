@@ -62,6 +62,8 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         result[Key.CONNECTION_TEST_TIMEOUT] = Setting("integer", 3000)
         result["connectionTestConcurrent"] = Setting("integer", 5)
         result[Key.LOG_BUF_SIZE] = Setting("integer", 0)
+        result[Key.NEBULA_ENABLED] = Setting("boolean", false)
+        result[Key.NEBULA_CONFIG] = Setting("string", "")
         result["webdavServer"] = Setting("string", "")
         result["webdavUsername"] = Setting("string", "")
         result["webdavPassword"] = Setting("string", "")
@@ -79,7 +81,8 @@ internal class ApiSettings(private val context: Context, private val serviceStat
     fun get(includeSecrets: Boolean) = JSONObject().apply {
         val store = DataStore.configurationStore
         settings.forEach { (key, setting) ->
-            if (!includeSecrets && key.startsWith("webdav")) {
+            // WebDAV credentials and the Nebula config's private key.
+            if (!includeSecrets && (key.startsWith("webdav") || key == Key.NEBULA_CONFIG)) {
                 put(key, JSONObject.NULL)
             } else {
                 put(

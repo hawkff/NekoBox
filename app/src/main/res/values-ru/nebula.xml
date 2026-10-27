@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nebula_enabled">Подключаться к Nebula</string>
+    <string name="nebula_enabled_summary">Вместе с выбранным профилем</string>
+    <string name="nebula_config">Конфигурация</string>
+    <string name="nebula_config_none">Импортируйте config.yml, где CA, сертификат и ключ записаны прямо в файле</string>
+    <string name="nebula_config_summary">%1$s · %2$s · до %3$s</string>
+    <string name="nebula_config_expired">%1$s · %2$s · истёк %3$s</string>
+    <string name="nebula_networks">Доступно через Nebula</string>
+    <string name="nebula_config_unusable">Эту конфигурацию нельзя использовать</string>
+    <string name="nebula_config_too_big">Файл слишком большой для конфигурации Nebula</string>
+</resources>

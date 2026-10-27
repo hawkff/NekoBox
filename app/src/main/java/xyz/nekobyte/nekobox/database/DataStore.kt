@@ -119,6 +119,10 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var showBottomBar by configurationStore.boolean(Key.SHOW_BOTTOM_BAR)
     var confirmProfileDelete by configurationStore.boolean(Key.CONFIRM_PROFILE_DELETE) { true }
     var askForBackgroundUse by configurationStore.boolean(Key.ASK_FOR_BACKGROUND_USE) { true }
+
+    // One Nebula network joined alongside the selected profile; its config holds the PKI inline.
+    var nebulaEnabled by configurationStore.boolean(Key.NEBULA_ENABLED)
+    var nebulaConfig by configurationStore.string(Key.NEBULA_CONFIG)
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { 0 }
 
     // Profiles pinned to the Favorites tab, in the order they were pinned.

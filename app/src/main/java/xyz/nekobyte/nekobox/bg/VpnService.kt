@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import libcore.Libcore
 import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.fmt.LOCALHOST
@@ -18,6 +19,7 @@ import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.ui.VpnRequestActivity
 import xyz.nekobyte.nekobox.utils.Subnet
+import java.net.Inet4Address
 import android.net.VpnService as BaseVpnService
 
 class VpnService :
@@ -140,6 +142,17 @@ class VpnService :
         else -> NetworkAutomation.otherVpnActive()
     }
 
+    private fun nebulaRoutes(ipv6: Boolean): List<Subnet> {
+        if (!DataStore.nebulaEnabled || DataStore.nebulaConfig.isBlank()) return emptyList()
+        return try {
+            Libcore.readNebulaConfig(DataStore.nebulaConfig).networks.lines().mapNotNull { Subnet.fromString(it) }
+                .filter { ipv6 || it.address is Inet4Address }
+        } catch (_: Exception) {
+            // The core reports a broken config when it starts.
+            emptyList()
+        }
+    }
+
     private fun refuseUnattendedStart(reason: NetworkAutomation.Blocked) {
         if (DataStore.networkAutomation) NetworkAutomation.blocked = reason
         answerForegroundDemand()
@@ -214,6 +227,8 @@ class VpnService :
                 val subnet = Subnet.fromString(it)!!
                 builder.addRoute(subnet.address.hostAddress!!, subnet.prefixSize)
             }
+            // A Nebula network on private addresses would fall outside the routes above.
+            nebulaRoutes(ipv6Mode != IPv6Mode.DISABLE).forEach { builder.addRoute(it.address, it.prefixSize) }
             builder.addRoute(PRIVATE_VLAN4_ROUTER, 32)
             builder.addRoute(FAKEDNS_VLAN4_CLIENT, 15)
             // https://issuetracker.google.com/issues/149636790
