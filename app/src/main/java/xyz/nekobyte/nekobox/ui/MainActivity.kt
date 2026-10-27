@@ -170,6 +170,9 @@ class MainActivity :
         LocalApiAccess.sync(this)
 
         applyHideFromRecentApps(DataStore.hideFromRecentApps)
+        // A connect that finished while the app was away asks now. Lifecycle reports RESUMED only
+        // after onResume returns, which is why the prompt needs no more than STARTED.
+        if (DataStore.serviceState.connected) askForBackgroundUse()
     }
 
     // Liquid glass: the connect button and the stats bar float as glass over the profiles; the
@@ -564,6 +567,7 @@ class MainActivity :
         binding.fab.changeState(state, DataStore.serviceState, animate)
         binding.stats.changeState(state)
         if (msg != null) snackbar(getString(R.string.vpn_error, msg)).show()
+        if (state == BaseService.State.Connected) askForBackgroundUse()
     }
 
     override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(binding.coordinator, text, Snackbar.LENGTH_LONG).apply {
@@ -574,14 +578,13 @@ class MainActivity :
 
     override fun stateChanged(state: BaseService.State, profileName: String?, msg: String?) {
         changeState(state, msg, true)
-        if (state == BaseService.State.Connected) askForBackgroundUse()
     }
 
-    // Android's battery limits can stop a connection that is up: after a connect on screen, ask
-    // once per launch until background use is allowed or the user opts out.
+    // Android's battery limits can stop a connection that is up: while connected with the app on
+    // screen, ask once per launch until background use is allowed or the user opts out.
     @SuppressLint("BatteryLife")
     private fun askForBackgroundUse() {
-        if (backgroundUseAsked || !DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (backgroundUseAsked || !DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
         if (NekoBox.power.isIgnoringBatteryOptimizations(packageName)) return
         backgroundUseAsked = true
         val dialog = MaterialAlertDialogBuilder(this)
