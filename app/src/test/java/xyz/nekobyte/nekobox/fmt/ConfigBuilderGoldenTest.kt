@@ -633,7 +633,9 @@ class ConfigBuilderGoldenTest {
         DataStore.nebulaEnabled = true
         DataStore.nebulaConfig = "pki: {}"
 
-        val config = JSONObject(build(profile).config)
+        val result = build(profile)
+        assertTrue(result.nebula)
+        val config = JSONObject(result.config)
         val nebula = objects(config.getJSONArray("endpoints")).single()
         assertEquals("nebula", nebula.getString("type"))
         assertEquals(TAG_NEBULA, nebula.getString("tag"))

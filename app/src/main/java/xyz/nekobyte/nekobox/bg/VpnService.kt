@@ -143,7 +143,7 @@ class VpnService :
     }
 
     private fun nebulaRoutes(ipv6: Boolean): List<Subnet> {
-        if (!DataStore.nebulaEnabled || DataStore.nebulaConfig.isBlank()) return emptyList()
+        if (data.proxy?.config?.nebula != true) return emptyList()
         return try {
             Libcore.readNebulaConfig(DataStore.nebulaConfig).networks.lines().mapNotNull { Subnet.fromString(it) }
                 .filter { ipv6 || it.address is Inet4Address }

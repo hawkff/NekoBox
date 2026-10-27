@@ -181,7 +181,8 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 fill(this, EAR_SIT_RIGHT, cat)
                 stroke(this, EAR_SIT_RIGHT, cat, 3f)
                 ellipse(this, 106f, 44f, 19f, 16f, cat)
-                if (drawn == Pose.CONTENT || hop != null || blinking) {
+                // A content cat's eyes are closed already: its blink opens them for a moment.
+                if (hop != null || (drawn == Pose.CONTENT) != blinking) {
                     stroke(this, CLOSED_EYES, ink, 1.6f)
                 } else {
                     val r = if (drawn == Pose.ALERT) 2.9f else 2.4f

@@ -208,6 +208,8 @@ class ConfigBuildResult(
     // WireGuard/AmneziaWG profile id -> its outbounds. A profile that is a hop of several chains
     // runs once per chain, each instance with its own handshakes.
     val wireguardInstances: Map<Long, List<WireGuardInstance>> = emptyMap(),
+    // The config joins the Nebula network; full custom configs run as written, without it.
+    val nebula: Boolean = false,
 ) {
     data class IndexEntity(var chain: LinkedHashMap<Int, ProxyEntity>)
 
@@ -1612,6 +1614,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             tailscaleEndpoints,
             profileTailscaleNodes,
             wireguardInstances,
+            endpointList.any { it is Endpoint_NebulaOptions },
         )
     }
 }

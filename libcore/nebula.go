@@ -2,6 +2,7 @@ package libcore
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -87,6 +88,22 @@ func parseNebulaConfig(raw string, l *slog.Logger) (*nebulaParsed, error) {
 	cert, _, err := nebulacert.UnmarshalCertificateFromPEM([]byte(config.GetString("pki.cert", "")))
 	if err != nil {
 		return nil, E.Cause(err, "read pki.cert")
+	}
+	// The pieces must fit together, so a broken file never replaces a working config. Expiry is
+	// left to the settings screen, which shows it.
+	cas, err := nebulacert.NewCAPoolFromPEM([]byte(config.GetString("pki.ca", "")))
+	if err != nil && !errors.Is(err, nebulacert.ErrExpired) {
+		return nil, E.Cause(err, "read pki.ca")
+	}
+	if signer, err := cas.GetCAForCert(cert); err != nil || !cert.CheckSignature(signer.Certificate.PublicKey()) {
+		return nil, E.New("pki.cert is not signed by a CA in pki.ca")
+	}
+	key, _, curve, err := nebulacert.UnmarshalPrivateKeyFromPEM([]byte(config.GetString("pki.key", "")))
+	if err != nil {
+		return nil, E.Cause(err, "read pki.key")
+	}
+	if err = cert.VerifyPrivateKey(curve, key); err != nil {
+		return nil, E.Cause(err, "pki.key does not belong to pki.cert")
 	}
 	rawRoutes, _ := config.Get("tun.unsafe_routes").([]any)
 	var routes []nebulaRoute

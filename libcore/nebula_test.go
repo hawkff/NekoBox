@@ -166,4 +166,16 @@ func TestNebulaConfigNeedsItsPKIInlineAndReadsUnsafeRoutes(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "pki.ca must hold the PEM itself") {
 		t.Fatalf("a config with key files was read: %v", err)
 	}
+	// Another network's key, or its CA, does not fit this certificate.
+	lighthouse, other := nebulaTestConfigs(4242, "")
+	keyAt, caEnd := strings.Index(phone, "  key: |"), strings.Index(phone, "  cert: |")
+	otherKeyAt, otherKeyEnd := strings.Index(other, "  key: |"), strings.Index(other, "firewall:")
+	mixed := phone[:keyAt] + other[otherKeyAt:otherKeyEnd] + phone[strings.Index(phone, "firewall:"):]
+	if _, err = ReadNebulaConfig(mixed); err == nil || !strings.Contains(err.Error(), "pki.key does not belong to pki.cert") {
+		t.Fatalf("a key of another certificate was read: %v", err)
+	}
+	mixed = lighthouse[:strings.Index(lighthouse, "  cert: |")] + phone[caEnd:]
+	if _, err = ReadNebulaConfig(mixed); err == nil || !strings.Contains(err.Error(), "not signed by a CA in pki.ca") {
+		t.Fatalf("a certificate of another CA was read: %v", err)
+	}
 }
