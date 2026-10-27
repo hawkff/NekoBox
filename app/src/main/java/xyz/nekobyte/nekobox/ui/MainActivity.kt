@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.RemoteException
 import android.provider.Settings
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.addCallback
@@ -583,8 +584,10 @@ class MainActivity :
         if (backgroundUseAsked || !DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
         if (NekoBox.power.isIgnoringBatteryOptimizations(packageName)) return
         backgroundUseAsked = true
-        val prompt = LayoutDontShowAgainBinding.inflate(layoutInflater)
-        MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
+        // The dialog's own theme, so the box and its label take the dialog's colors.
+        val prompt = LayoutDontShowAgainBinding.inflate(LayoutInflater.from(dialog.context))
+        dialog
             .setTitle(R.string.background_use_prompt_title)
             .setMessage(R.string.background_use_prompt_message)
             .setView(prompt.root)

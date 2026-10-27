@@ -2,7 +2,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingHorizontal="12dp">
+    android:paddingHorizontal="18dp">
+
+    <!-- The checkbox insets its box by 6dp: 18dp lines the box up with the message's 24dp margin. -->
 
     <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/dont_show_again"
