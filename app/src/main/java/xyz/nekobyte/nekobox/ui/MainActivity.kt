@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.RemoteException
+import android.provider.Settings
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
@@ -15,7 +16,9 @@ import androidx.activity.addCallback
 import androidx.annotation.IdRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
@@ -40,6 +43,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.RoutingProfiles
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
+import xyz.nekobyte.nekobox.databinding.LayoutDontShowAgainBinding
 import xyz.nekobyte.nekobox.databinding.LayoutMainBinding
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.KryoConverters
@@ -569,6 +573,27 @@ class MainActivity :
 
     override fun stateChanged(state: BaseService.State, profileName: String?, msg: String?) {
         changeState(state, msg, true)
+        if (state == BaseService.State.Connected) askForBackgroundUse()
+    }
+
+    // Android's battery limits can stop a connection that is up: after a connect on screen, ask
+    // once per launch until background use is allowed or the user opts out.
+    @SuppressLint("BatteryLife")
+    private fun askForBackgroundUse() {
+        if (backgroundUseAsked || !DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (NekoBox.power.isIgnoringBatteryOptimizations(packageName)) return
+        backgroundUseAsked = true
+        val prompt = LayoutDontShowAgainBinding.inflate(layoutInflater)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.background_use_prompt_title)
+            .setMessage(R.string.background_use_prompt_message)
+            .setView(prompt.root)
+            .setPositiveButton(R.string.background_use_prompt_allow) { _, _ ->
+                startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:$packageName".toUri()))
+            }
+            .setNegativeButton(R.string.background_use_prompt_later, null)
+            .setOnDismissListener { if (prompt.dontShowAgain.isChecked) DataStore.askForBackgroundUse = false }
+            .show()
     }
 
     val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
@@ -705,6 +730,9 @@ class MainActivity :
         return fragment != null && fragment.onKeyDown(keyCode, event)
     }
 }
+
+// Once per process, so reconnects and server switches in one session don't ask again.
+private var backgroundUseAsked = false
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a

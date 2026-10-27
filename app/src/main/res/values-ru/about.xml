@@ -8,6 +8,11 @@
     <string name="about_background_allowed">Работа в фоне разрешена</string>
     <string name="about_background_restricted">Работа в фоне ограничена. Android может остановить NekoBox, пока он не на экране.</string>
     <string name="about_background_allow">Разрешить работу в фоне</string>
+    <string name="background_use_prompt_title">Разрешить работу в фоне?</string>
+    <string name="background_use_prompt_message">Android может остановить NekoBox, когда он не на экране, и соединение оборвётся.</string>
+    <string name="background_use_prompt_allow">Разрешить</string>
+    <string name="background_use_prompt_later">Не сейчас</string>
+    <string name="dont_show_again">Больше не показывать</string>
     <string name="about_check_updates">Проверить обновления</string>
     <string name="about_releases">Релизы</string>
     <string name="about_opens_browser">%s, откроется в браузере</string>
