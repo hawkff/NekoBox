@@ -15,6 +15,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.IdRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -584,13 +585,13 @@ class MainActivity :
     // screen, ask once per launch until background use is allowed or the user opts out.
     @SuppressLint("BatteryLife")
     private fun askForBackgroundUse() {
-        if (backgroundUseAsked || !DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
+        if (backgroundUseAsked || backgroundUsePrompt?.isShowing == true) return
+        if (!DataStore.askForBackgroundUse || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
         if (NekoBox.power.isIgnoringBatteryOptimizations(packageName)) return
-        backgroundUseAsked = true
         val dialog = MaterialAlertDialogBuilder(this)
         // The dialog's own theme, so the box and its label take the dialog's colors.
         val prompt = LayoutDontShowAgainBinding.inflate(LayoutInflater.from(dialog.context))
-        dialog
+        backgroundUsePrompt = dialog
             .setTitle(R.string.background_use_prompt_title)
             .setMessage(R.string.background_use_prompt_message)
             .setView(prompt.root)
@@ -598,9 +599,15 @@ class MainActivity :
                 startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:$packageName".toUri()))
             }
             .setNegativeButton(R.string.background_use_prompt_later, null)
-            .setOnDismissListener { if (prompt.dontShowAgain.isChecked) DataStore.askForBackgroundUse = false }
+            // A dialog that goes with a recreated activity is not dismissed, so the new one asks again.
+            .setOnDismissListener {
+                backgroundUseAsked = true
+                if (prompt.dontShowAgain.isChecked) DataStore.askForBackgroundUse = false
+            }
             .show()
     }
+
+    private var backgroundUsePrompt: AlertDialog? = null
 
     val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
     override fun onServiceConnected(service: INekoBoxService) = changeState(
@@ -737,7 +744,7 @@ class MainActivity :
     }
 }
 
-// Once per process, so reconnects and server switches in one session don't ask again.
+// Set once the prompt is answered: reconnects and server switches in the same process don't ask again.
 private var backgroundUseAsked = false
 
 /**
