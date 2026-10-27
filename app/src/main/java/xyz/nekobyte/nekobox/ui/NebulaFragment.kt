@@ -94,7 +94,8 @@ class NebulaFragment : ToolbarFragment(R.layout.layout_config_settings) {
             } ?: getString(R.string.nebula_config_none)
             networks.isVisible = info != null
             networks.summary = info?.networks?.lines()?.joinToString(", ")
-            enabled.isEnabled = info != null
+            // A config that stopped reading, such as one set through the API, can still be turned off.
+            enabled.isEnabled = info != null || enabled.isChecked
         }
 
         private suspend fun import(uri: Uri) {

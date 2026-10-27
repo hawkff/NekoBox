@@ -643,8 +643,9 @@ class ConfigBuilderGoldenTest {
         // MagicDNS servers belong to Tailscale endpoints alone.
         assertTrue(objects(config.getJSONObject("dns").getJSONArray("servers")).none { it.optString("type") == "tailscale" })
 
-        // A profile's URL test leaves the network out, as does turning it off.
+        // A profile's URL test and an export leave the network out, as does turning it off.
         assertFalse(JSONObject(build(profile, forTest = true).config).has("endpoints"))
+        assertFalse(JSONObject(build(profile, forExport = true).config).has("endpoints"))
         DataStore.nebulaEnabled = false
         assertFalse(JSONObject(build(profile).config).has("endpoints"))
         DataStore.nebulaConfig = ""
