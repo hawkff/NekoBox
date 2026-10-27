@@ -13,6 +13,7 @@
 - [Download](#download)
 - [Protocols](#protocols)
   - [Tailscale](#tailscale)
+  - [Nebula](#nebula)
 - [Subscriptions](#subscriptions)
   - [Provider metadata](#provider-metadata)
 - [Routing](#routing)
@@ -70,6 +71,14 @@ Choose an exit node from the tailnet to send internet traffic through it. Withou
 Open Tailscale status from the profile editor to see this node and its peers, ping a peer or change the exit node without restarting the VPN. With the service off, the screen can also check a saved profile or sign it in.
 
 To put other proxies in front of Tailscale in a chain, turn on Always use DERP. Otherwise direct peer connections leave from the device and skip those proxies.
+
+### Nebula
+
+The Nebula screen joins one [Nebula](https://github.com/slackhq/nebula) network alongside the selected profile. Hosts on the network stay reachable while other traffic follows the profile and your rules.
+
+Import a `config.yml` whose `pki` section holds the CA, this device's certificate and its key inline rather than as file paths. The app saves it only if the CA signed the certificate and the key belongs to it. Overlay addresses and `tun.unsafe_routes` go through Nebula, private ranges included when Bypass LAN is on. Each unsafe route takes a single `via` gateway, and that gateway's firewall needs `default_local_cidr_any: true` or a `local_cidr` rule to let the traffic in.
+
+The app turns off the config's SSH server, metrics and lighthouse DNS. Exports and full custom configs leave the network out.
 
 ## Subscriptions
 
