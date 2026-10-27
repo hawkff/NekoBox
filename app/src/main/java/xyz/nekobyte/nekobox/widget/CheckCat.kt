@@ -12,6 +12,7 @@ import android.view.View
 import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withRotation
+import androidx.core.graphics.withSave
 import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.animationsOn
@@ -163,36 +164,36 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             Pose.CONTENT -> 8 * sin(2 * PI.toFloat() * t / 4.8f)
             else -> 6 * sin(2 * PI.toFloat() * t / 3.6f)
         } + (hop?.let { 24 * sin(2 * PI.toFloat() * it) } ?: 0f)
-        canvas.save()
-        hop?.let { canvas.translate(0f, -12 * sin(PI.toFloat() * it)) }
-        canvas.withRotation(sway, 74f, 104f) { stroke(this, TAIL_SIT, cat, 7f) }
-        fill(canvas, BODY_SIT, cat)
-        stroke(canvas, LEG_LINE, ink, 1.4f, 0.5f)
-        // Waiting, the cat sniffs the bowl twice every few seconds; done, it looks up.
-        val angle = when (drawn) {
-            Pose.ALERT -> -8f
-            Pose.CONTENT -> -4f
-            else -> 14 + 4 * (pulse(t % 3.2f, 0f) + pulse(t % 3.2f, 0.36f))
-        }
-        canvas.withRotation(angle, 98f, 58f) {
-            fill(this, EAR_SIT_LEFT, cat)
-            stroke(this, EAR_SIT_LEFT, cat, 3f)
-            fill(this, EAR_SIT_RIGHT, cat)
-            stroke(this, EAR_SIT_RIGHT, cat, 3f)
-            ellipse(this, 106f, 44f, 19f, 16f, cat)
-            if (drawn == Pose.CONTENT || hop != null || blinking) {
-                stroke(this, CLOSED_EYES, ink, 1.6f)
-            } else {
-                val r = if (drawn == Pose.ALERT) 2.9f else 2.4f
-                eye(this, 105f, 43f, r)
-                eye(this, 116f, 43f, r)
+        canvas.withSave {
+            hop?.let { translate(0f, -12 * sin(PI.toFloat() * it)) }
+            withRotation(sway, 74f, 104f) { stroke(this, TAIL_SIT, cat, 7f) }
+            fill(this, BODY_SIT, cat)
+            stroke(this, LEG_LINE, ink, 1.4f, 0.5f)
+            // Waiting, the cat sniffs the bowl twice every few seconds; done, it looks up.
+            val angle = when (drawn) {
+                Pose.ALERT -> -8f
+                Pose.CONTENT -> -4f
+                else -> 14 + 4 * (pulse(t % 3.2f, 0f) + pulse(t % 3.2f, 0.36f))
             }
-            fill(this, NOSE_SIT, ink)
-            stroke(this, NOSE_SIT, ink, 0.8f)
-            stroke(this, MOUTH, ink, 1.1f)
-            stroke(this, WHISKERS_SIT, cat, 1.3f)
+            withRotation(angle, 98f, 58f) {
+                fill(this, EAR_SIT_LEFT, cat)
+                stroke(this, EAR_SIT_LEFT, cat, 3f)
+                fill(this, EAR_SIT_RIGHT, cat)
+                stroke(this, EAR_SIT_RIGHT, cat, 3f)
+                ellipse(this, 106f, 44f, 19f, 16f, cat)
+                if (drawn == Pose.CONTENT || hop != null || blinking) {
+                    stroke(this, CLOSED_EYES, ink, 1.6f)
+                } else {
+                    val r = if (drawn == Pose.ALERT) 2.9f else 2.4f
+                    eye(this, 105f, 43f, r)
+                    eye(this, 116f, 43f, r)
+                }
+                fill(this, NOSE_SIT, ink)
+                stroke(this, NOSE_SIT, ink, 0.8f)
+                stroke(this, MOUTH, ink, 1.1f)
+                stroke(this, WHISKERS_SIT, cat, 1.3f)
+            }
         }
-        canvas.restore()
         for (i in 0..2) {
             val phase = (t / 2.4f + i / 3f) % 1f
             canvas.withTranslation(STEAM_X[i], 72 - 14 * phase) {
