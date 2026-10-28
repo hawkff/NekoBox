@@ -15,6 +15,8 @@ import androidx.core.graphics.withRotation
 import androidx.core.graphics.withSave
 import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.EaseIn
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.widget.glass.Glass
@@ -46,10 +48,10 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 return
             }
             // A quick cross-fade, so the cat does not jump between poses.
-            animate().alpha(0f).setDuration(90).withEndAction {
+            animate().alpha(0f).setDuration(90).setInterpolator(EaseIn).withEndAction {
                 drawn = value
                 invalidate()
-                animate().alpha(1f).setDuration(160).start()
+                animate().alpha(1f).setDuration(160).setInterpolator(EaseOut).start()
             }.start()
         }
 

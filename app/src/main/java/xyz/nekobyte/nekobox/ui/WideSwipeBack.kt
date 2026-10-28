@@ -5,10 +5,10 @@ import android.view.VelocityTracker
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import android.widget.AbsSeekBar
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.slider.Slider
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import kotlin.math.abs
 import kotlin.math.exp
 
@@ -100,7 +100,7 @@ internal class WideSwipeBack(private val activity: ThemedActivity) {
     }
 
     private fun settle() {
-        content.animate().translationX(0f).setDuration(200).setInterpolator(DecelerateInterpolator(2f)).start()
+        content.animate().translationX(0f).setDuration(200).setInterpolator(EaseOut).start()
     }
 
     private fun reset() {

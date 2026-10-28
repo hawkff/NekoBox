@@ -13,6 +13,8 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.CircularProgressIndicatorSpec
+import com.google.android.material.progressindicator.IndeterminateDrawable
 import libcore.Libcore
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.BuildConfig
@@ -42,6 +44,9 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
     private var _binding: LayoutAboutBinding? = null
     private val binding get() = _binding!!
 
+    // The update check's spinner; its animator runs until it is hidden, so it is stopped when the check ends.
+    private var updateSpinner: IndeterminateDrawable<CircularProgressIndicatorSpec>? = null
+
     private val requestIgnoreBatteryOptimizations = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         // The battery screens report RESULT_CANCELED even when the exemption was granted: read it again.
         if (_binding != null) showBackground()
@@ -54,9 +59,10 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
         toolbar.setTitle(R.string.menu_about)
 
         binding.edition.text = getString(R.string.about_edition, NekoBox.appVersionNameForDisplay)
-        // sing-box and the Go it was built with; the build tags stay out of a colophon.
+        // sing-box and the Go it was built with; the build tags stay out of a colophon. When the value
+        // wraps, the separator moves down with the Go version instead of ending the first line.
         val core = Libcore.versionBox().lines()
-        binding.core.text = listOfNotNull(core.firstOrNull()?.replace("sing-box: ", "sing-box "), core.getOrNull(1)?.substringBefore('@')).joinToString(" · ")
+        binding.core.text = listOfNotNull(core.firstOrNull()?.replace("sing-box: ", "sing-box "), core.getOrNull(1)?.substringBefore('@')).joinToString(" ·\u00A0")
         binding.cat.pose = CheckCat.Pose.CONTENT
         binding.background.setOnClickListener { askForBackgroundUse() }
         binding.allowBackground.setOnClickListener { askForBackgroundUse() }
@@ -70,6 +76,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
     }
 
     override fun onDestroyView() {
+        stopUpdateSpinner()
         _binding = null
         super.onDestroyView()
     }
@@ -113,6 +120,13 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
 
     private fun checkUpdate() {
         binding.checkUpdates.isEnabled = false
+        // The icon turns into a spinner while the check runs, so the tap shows it did something.
+        binding.checkUpdates.icon = requireContext().let { context ->
+            IndeterminateDrawable.createCircularDrawable(
+                context,
+                CircularProgressIndicatorSpec(context, null, 0, com.google.android.material.R.style.Widget_Material3_CircularProgressIndicator_ExtraSmall),
+            )
+        }.also { updateSpinner = it }
         runOnIoDispatcher {
             val found = try {
                 val client = Libcore.newHttpClient().apply {
@@ -130,9 +144,11 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 Result.failure(e)
             }
             runOnMainDispatcher {
+                stopUpdateSpinner()
                 // The check may outlive the page.
                 val binding = _binding ?: return@runOnMainDispatcher
                 binding.checkUpdates.isEnabled = true
+                binding.checkUpdates.setIconResource(R.drawable.ic_baseline_update_24)
                 found.onFailure { Toast.makeText(app, it.readableMessage, Toast.LENGTH_SHORT).show() }
                 found.onSuccess { update ->
                     if (update == null) return@onSuccess Toast.makeText(app, R.string.check_update_no, Toast.LENGTH_SHORT).show()
@@ -147,6 +163,11 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 }
             }
         }
+    }
+
+    private fun stopUpdateSpinner() {
+        updateSpinner?.setVisible(false, false)
+        updateSpinner = null
     }
 
     private companion object {

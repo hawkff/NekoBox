@@ -7,6 +7,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.card.MaterialCardView
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 
@@ -78,6 +79,7 @@ class CardHighlight(private val card: MaterialCardView) {
         animator = ValueAnimator.ofFloat(lit, target).apply {
             startDelay = delay
             duration = DURATION
+            interpolator = EaseOut
             addUpdateListener { paint(it.animatedValue as Float) }
             start()
         }

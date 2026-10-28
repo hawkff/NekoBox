@@ -43,6 +43,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutRouteItemBinding
 import xyz.nekobyte.nekobox.fmt.RouteAnswer
 import xyz.nekobyte.nekobox.fmt.RouteDecision
 import xyz.nekobyte.nekobox.fmt.RouteVerdict
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
@@ -495,7 +496,7 @@ class RouteFragment :
                 // A pop cut short never runs its end action.
                 view.scaleX = 1f
                 view.scaleY = 1f
-                if (animate) view.animate().alpha(alpha).setStartDelay(delay).setDuration(FADE).start() else view.alpha = alpha
+                if (animate) view.animate().alpha(alpha).setStartDelay(delay).setDuration(FADE).setInterpolator(EaseOut).start() else view.alpha = alpha
             }
             highlight.show(matched, animate, delay)
             if (animate && matched) {

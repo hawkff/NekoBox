@@ -49,6 +49,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
+                    android:breakStrategy="balanced"
                     android:gravity="center"
                     android:maxWidth="320dp"
                     android:text="@string/about_line"
@@ -114,7 +115,7 @@
                     android:text="@string/about_background_allow"
                     android:visibility="gone" />
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/check_updates"
                     style="@style/Widget.Material3.Button.TextButton.Icon"
                     android:layout_width="wrap_content"
