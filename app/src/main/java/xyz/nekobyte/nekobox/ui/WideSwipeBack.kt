@@ -8,9 +8,9 @@ import android.view.ViewGroup
 import android.widget.AbsSeekBar
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.slider.Slider
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import kotlin.math.abs
 import kotlin.math.exp
-import xyz.nekobyte.nekobox.ktx.EaseOut
 
 /**
  * Back from anywhere in the left part of the window, not only from its edge: a quick, clearly
