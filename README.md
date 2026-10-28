@@ -171,7 +171,7 @@ The local control API lets scripts on the device, or on a computer through ADB, 
 
 The Help to improve switch, under Settings > Advanced, turns PostHog and Sentry reporting on or off together. The app asks once at first start and sends nothing until you answer. A build without PostHog or Sentry settings sends nothing to that service and never asks.
 
-Reports leave out exception messages, profiles, credentials, traffic, logs, and account or hardware identifiers. Session replay, screenshots, performance tracing and native crash capture stay off.
+Reports leave out exception messages, profiles, credentials, traffic, logs, and account or hardware identifiers. Session replay, screenshots, performance tracing and native crash capture stay off. The official build sends reports to a server run by the developer, which passes them on to PostHog and Sentry, so the services see that server's address rather than the one the reports came from.
 
 Turning reporting off stops it in the app and VPN processes without restarting the VPN. A request already in flight may still arrive. The app deletes PostHog's event queue when you turn reporting off. It starts a new queue each time reporting starts, so it does not send events left from an earlier session. Sentry keeps reports in memory and loses unsent ones when the process exits. Crashes still go to the app's own log.
 

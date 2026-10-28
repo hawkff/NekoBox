@@ -61,6 +61,9 @@ object Theme {
 
     private fun defaultTheme() = DARK_HIGH_CONTRAST
 
+    /** A fresh install has no theme set and gets the default, which is dark-only. */
+    fun darkOnly(theme: Int = DataStore.appTheme) = (if (theme in RED..CATPPUCCIN) theme else defaultTheme()) in DARK_ONLY_THEMES
+
     /**
      * Metadata for a theme shown in the modern named picker.
      *
@@ -198,8 +201,11 @@ object Theme {
         if (currentNightMode == -1) {
             currentNightMode = DataStore.nightTheme
         }
-        return getNightMode(currentNightMode)
+        return nightMode(DataStore.appTheme, currentNightMode)
     }
+
+    // A dark-only palette has no light canvas, so it stays dark whatever the night setting says.
+    fun nightMode(theme: Int, setting: Int) = if (darkOnly(theme)) AppCompatDelegate.MODE_NIGHT_YES else getNightMode(setting)
 
     fun getNightMode(mode: Int): Int = when (mode) {
         0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
@@ -208,7 +214,7 @@ object Theme {
         else -> AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY
     }
 
-    fun usingNightMode(): Boolean = when (DataStore.nightTheme) {
+    fun usingNightMode(): Boolean = darkOnly() || when (DataStore.nightTheme) {
         1 -> true
         2 -> false
         else -> (app.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
