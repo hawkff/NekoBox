@@ -44,6 +44,9 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
     private var _binding: LayoutAboutBinding? = null
     private val binding get() = _binding!!
 
+    // The update check's spinner; its animator runs until it is hidden, so it is stopped when the check ends.
+    private var updateSpinner: IndeterminateDrawable<CircularProgressIndicatorSpec>? = null
+
     private val requestIgnoreBatteryOptimizations = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         // The battery screens report RESULT_CANCELED even when the exemption was granted: read it again.
         if (_binding != null) showBackground()
@@ -73,6 +76,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
     }
 
     override fun onDestroyView() {
+        stopUpdateSpinner()
         _binding = null
         super.onDestroyView()
     }
@@ -122,7 +126,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 context,
                 CircularProgressIndicatorSpec(context, null, 0, com.google.android.material.R.style.Widget_Material3_CircularProgressIndicator_ExtraSmall),
             )
-        }
+        }.also { updateSpinner = it }
         runOnIoDispatcher {
             val found = try {
                 val client = Libcore.newHttpClient().apply {
@@ -140,6 +144,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 Result.failure(e)
             }
             runOnMainDispatcher {
+                stopUpdateSpinner()
                 // The check may outlive the page.
                 val binding = _binding ?: return@runOnMainDispatcher
                 binding.checkUpdates.isEnabled = true
@@ -158,6 +163,11 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 }
             }
         }
+    }
+
+    private fun stopUpdateSpinner() {
+        updateSpinner?.setVisible(false, false)
+        updateSpinner = null
     }
 
     private companion object {
