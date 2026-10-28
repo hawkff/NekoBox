@@ -2,8 +2,6 @@
 
 package xyz.nekobyte.nekobox.ktx
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -160,22 +158,14 @@ fun RecyclerView.scrollTo(index: Int, force: Boolean = false) {
 
 val app get() = NekoBox.application
 
-val shortAnimTime by lazy {
-    app.resources.getInteger(android.R.integer.config_shortAnimTime).toLong()
-}
-
+/** Fades this view in where [other] was, which fades out sooner and then goes. */
 fun View.crossFadeFrom(other: View) {
-    clearAnimation()
-    other.clearAnimation()
     if (isVisible && other.isGone) return
     alpha = 0F
     visibility = View.VISIBLE
-    animate().alpha(1F).duration = shortAnimTime
-    other.animate().alpha(0F).setListener(object : AnimatorListenerAdapter() {
-        override fun onAnimationEnd(animation: Animator) {
-            other.visibility = View.GONE
-        }
-    }).duration = shortAnimTime
+    animate().alpha(1F).setDuration(210).setInterpolator(EaseOut).start()
+    // An end action runs once; a listener would stay on the view's animator and hide it after its next fade in.
+    other.animate().alpha(0F).setDuration(90).setInterpolator(EaseIn).withEndAction { other.visibility = View.GONE }.start()
 }
 
 fun Context.getColorAttr(@AttrRes resId: Int): Int {

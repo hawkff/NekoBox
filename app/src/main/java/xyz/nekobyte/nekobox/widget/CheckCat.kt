@@ -28,9 +28,10 @@ import kotlin.math.sin
 
 /**
  * The cat of the network checks: it sniffs a bowl of ramen while nothing runs, runs while a check
- * runs, and sits back when the answer is in, its eyes closed when all is well. A tap makes a sitting
- * cat hop and flick its tail, or blink when animations are off. Flat shapes in the theme's colors;
- * still when animations are off, and paused while hidden.
+ * runs, and sits back when the answer is in, its eyes closed when all is well. A tap on a sitting cat
+ * opens its eyes for a moment, or shuts them if they were open, and makes it hop and flick its tail;
+ * with animations off only the eyes answer. Flat shapes in the theme's colors; still when animations
+ * are off, and paused while hidden.
  */
 class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
@@ -85,7 +86,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private var motion = context.animationsOn()
     private var time = 0f
 
-    // When the last hop began, on the clock's time; a tap with animations off blinks instead.
+    // When the last hop began, on the clock's time; with animations off a tap only blinks.
     private var hopStart = Float.NaN
     private var blinking = false
     private val clock = TimeAnimator().apply {
@@ -97,7 +98,8 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     init {
         setOnClickListener {
-            if (drawn == Pose.RUNNING) return@setOnClickListener
+            // A tap in the air would drop the cat to the ground to hop again; one mid-blink would cut the blink short.
+            if (drawn == Pose.RUNNING || blinking || time - hopStart < HOP) return@setOnClickListener
             performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             if (motion && clock.isStarted) {
                 hopStart = time
@@ -107,7 +109,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 postDelayed({
                     blinking = false
                     invalidate()
-                }, BLINK_MS)
+                }, (BLINK * 1000).toLong())
             }
         }
     }
@@ -118,7 +120,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     override fun onDetachedFromWindow() {
-        clock.end()
+        stopClock()
         animate().cancel()
         super.onDetachedFromWindow()
     }
@@ -143,8 +145,14 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         if (run && !clock.isStarted) {
             clock.start()
         } else if (!run && clock.isStarted) {
-            clock.end()
+            stopClock()
         }
+    }
+
+    // The clock starts again from zero, where a hop from before would play once more.
+    private fun stopClock() {
+        clock.end()
+        hopStart = Float.NaN
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -161,6 +169,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private fun sitting(canvas: Canvas, t: Float) {
         stroke(canvas, GROUND, onSurface, 1.5f, 0.14f)
         val hop = ((t - hopStart) / HOP).takeIf { it in 0f..1f }
+        val blink = blinking || t - hopStart in 0f..BLINK
         val sway = when (drawn) {
             Pose.ALERT -> 0f
             Pose.CONTENT -> 8 * sin(2 * PI.toFloat() * t / 4.8f)
@@ -184,7 +193,7 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                 stroke(this, EAR_SIT_RIGHT, cat, 3f)
                 ellipse(this, 106f, 44f, 19f, 16f, cat)
                 // A content cat's eyes are closed already: its blink opens them for a moment.
-                if (hop != null || (drawn == Pose.CONTENT) != blinking) {
+                if ((drawn == Pose.CONTENT) != blink) {
                     stroke(this, CLOSED_EYES, ink, 1.6f)
                 } else {
                     val r = if (drawn == Pose.ALERT) 2.9f else 2.4f
@@ -295,9 +304,9 @@ class CheckCat @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         const val LEG = 25f
 
-        /** Seconds a hop lasts, and milliseconds a blink. */
+        /** Seconds a hop lasts, and a blink, which with a hop runs a little past the landing. */
         const val HOP = 0.45f
-        const val BLINK_MS = 600L
+        const val BLINK = 0.6f
 
         val STEAM_X = floatArrayOf(160f, 172f, 184f)
 

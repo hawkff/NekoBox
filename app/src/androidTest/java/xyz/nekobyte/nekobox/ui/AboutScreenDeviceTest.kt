@@ -1,8 +1,10 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.Manifest
+import android.content.Context
 import android.graphics.Rect
 import android.os.Build
+import android.os.PowerManager
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
@@ -42,8 +44,9 @@ class AboutScreenDeviceTest {
                 assertEquals(context.getString(R.string.about_edition, NekoBox.appVersionNameForDisplay), it.findViewById<TextView>(R.id.edition).text.toString())
                 val core = it.findViewById<TextView>(R.id.core).text.toString()
                 assertTrue(core, core.startsWith("sing-box "))
-                // Background use is reached from a keyboard too, on every Android version.
-                assertTrue(it.findViewById<View>(R.id.background).isFocusable)
+                // Background use is reached from a keyboard too, on every Android version: the line while it is allowed, else the button that asks.
+                val allowed = (context.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(context.packageName)
+                assertTrue(it.findViewById<View>(if (allowed) R.id.background else R.id.allow_background).isFocusable)
                 // Each page says it leaves the app.
                 for (id in listOf(R.id.source, R.id.releases, R.id.license)) {
                     val page = it.findViewById<Button>(id)

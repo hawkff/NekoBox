@@ -5,7 +5,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
-import android.transition.TransitionManager
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
@@ -49,6 +48,7 @@ import xyz.nekobyte.nekobox.group.SubscriptionFormat
 import xyz.nekobyte.nekobox.group.SubscriptionRecovery
 import xyz.nekobyte.nekobox.ktx.USER_AGENT
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
+import xyz.nekobyte.nekobox.ktx.beginFold
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.widget.OutboundPreference
@@ -422,7 +422,7 @@ class GroupSettingsActivity :
     }
 
     private fun showKind(animate: Boolean) {
-        if (animate) TransitionManager.beginDelayedTransition(binding.scroll.getChildAt(0) as ViewGroup)
+        if (animate) (binding.scroll.getChildAt(0) as ViewGroup).beginFold(binding.kind)
         val subscription = DataStore.groupType == GroupType.SUBSCRIPTION
         binding.subscription.isVisible = subscription
         binding.subscriptionMore.isVisible = subscription
@@ -430,7 +430,7 @@ class GroupSettingsActivity :
     }
 
     private fun showMore(open: Boolean, animate: Boolean) {
-        if (animate) TransitionManager.beginDelayedTransition(binding.scroll.getChildAt(0) as ViewGroup)
+        if (animate) (binding.scroll.getChildAt(0) as ViewGroup).beginFold(binding.moreToggle)
         binding.more.isVisible = open
         binding.moreToggle.setText(if (open) R.string.route_editor_fewer else R.string.route_editor_more)
         binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)

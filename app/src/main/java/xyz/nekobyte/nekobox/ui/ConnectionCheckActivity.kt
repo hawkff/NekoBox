@@ -2,7 +2,6 @@ package xyz.nekobyte.nekobox.ui
 
 import android.os.Build
 import android.os.Bundle
-import android.transition.TransitionManager
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.LinearLayout
@@ -30,6 +29,7 @@ import xyz.nekobyte.nekobox.databinding.ItemCheckResultBinding
 import xyz.nekobyte.nekobox.databinding.ItemCheckSectionBinding
 import xyz.nekobyte.nekobox.databinding.ItemConnectionCheckAddressBinding
 import xyz.nekobyte.nekobox.databinding.LayoutConnectionCheckBinding
+import xyz.nekobyte.nekobox.ktx.beginFold
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.net.AddressReputation
@@ -424,7 +424,7 @@ class ConnectionCheckActivity : ThemedActivity() {
             text = getString(R.string.connection_check_show_more, addresses.size - shown.size)
             setOnClickListener {
                 // The page grows smoothly around the rest of the list.
-                TransitionManager.beginDelayedTransition(binding.connectionCheckScroll)
+                binding.connectionCheckScroll.beginFold()
                 list.removeView(this)
                 addresses.drop(shown.size).forEach { add(list, it) }
             }
