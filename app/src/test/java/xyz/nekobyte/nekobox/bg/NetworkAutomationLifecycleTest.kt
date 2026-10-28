@@ -694,7 +694,7 @@ class NetworkAutomationLifecycleTest {
     fun answeringTheForegroundDemandLeavesNoNotice() = assertForegroundDemandLeavesNoNotice()
 
     @Test
-    @Config(sdk = [23, 33])
+    @Config(sdk = [24, 33])
     fun answeringTheForegroundDemandLeavesNoNoticeBeforeAndroid14() = assertForegroundDemandLeavesNoNotice()
 
     private fun assertForegroundDemandLeavesNoNotice() = withVpnService { service ->

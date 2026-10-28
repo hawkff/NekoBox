@@ -21,7 +21,7 @@ import java.io.File
 import java.util.Base64
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [23, 35], application = Application::class)
+@Config(sdk = [24, 35], application = Application::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class ApiAccessTest {
     private val token = "0123456789abcdef".repeat(4)

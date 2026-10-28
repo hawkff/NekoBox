@@ -182,12 +182,7 @@ class VpnService :
         } catch (e: RuntimeException) {
             Logs.w("VPN service stopped before reaching the foreground", e)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
     inner class NullConnectionException :

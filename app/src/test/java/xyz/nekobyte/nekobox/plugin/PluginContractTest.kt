@@ -31,7 +31,7 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [23], application = Application::class)
+@Config(sdk = [24], application = Application::class)
 class PluginContractTest {
     @get:Rule
     val folder = TemporaryFolder()

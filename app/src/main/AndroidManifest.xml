@@ -390,8 +390,7 @@
             android:label="@string/tile_title"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:process=":bg"
-            tools:ignore="ForegroundServicePermission"
-            tools:targetApi="n">
+            tools:ignore="ForegroundServicePermission">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>

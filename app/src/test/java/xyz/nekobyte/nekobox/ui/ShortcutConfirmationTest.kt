@@ -15,7 +15,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [23, 35], application = android.app.Application::class)
+@Config(sdk = [24, 35], application = android.app.Application::class)
 class ShortcutConfirmationTest {
     @Before fun setup() = ConfigBuilderTestEnv.reset()
 

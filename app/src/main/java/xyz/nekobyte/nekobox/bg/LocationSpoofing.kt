@@ -442,7 +442,6 @@ class LocationSpoofing internal constructor(
         // Android keeps test providers until the device restarts. The boot count tells a later
         // process whether a record can still name providers.
         private fun bootMarker(context: Context): String? {
-            if (Build.VERSION.SDK_INT < 24) return null
             val count = runCatching {
                 Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
             }.getOrDefault(-1)
@@ -488,7 +487,7 @@ class LocationSpoofing internal constructor(
         private fun mayConcernTestProviders(op: String?) = op == null || op == AppOpsManager.OPSTR_MOCK_LOCATION
 
         /**
-         * Spoofing needs the boot count, which Android 6.0 and some systems do not provide.
+         * Spoofing needs the boot count, which some systems do not provide.
          * Without it the app could not tell after a restart whether its record still applies.
          */
         fun supported(context: Context) = bootMarker(context) != null

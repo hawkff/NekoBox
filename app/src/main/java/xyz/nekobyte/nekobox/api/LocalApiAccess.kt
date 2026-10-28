@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.PersistableBundle
 import android.util.AtomicFile
 import android.widget.Toast
@@ -95,9 +94,7 @@ internal object LocalApiAccess {
                     dialog.setMessage(activity.getString(R.string.local_api_enabled, config.port))
                         .setPositiveButton(R.string.local_api_copy_token) { _, _ ->
                             val clip = ClipData.newPlainText(activity.getString(R.string.local_api_title), config.token)
-                            if (Build.VERSION.SDK_INT >= 24) {
-                                clip.description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-                            }
+                            clip.description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
                             activity.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
                             Toast.makeText(activity, R.string.local_api_token_copied, Toast.LENGTH_SHORT).show()
                         }
