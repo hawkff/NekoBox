@@ -56,9 +56,10 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
         toolbar.setTitle(R.string.menu_about)
 
         binding.edition.text = getString(R.string.about_edition, NekoBox.appVersionNameForDisplay)
-        // sing-box and the Go it was built with; the build tags stay out of a colophon.
+        // sing-box and the Go it was built with; the build tags stay out of a colophon. When the value
+        // wraps, the separator moves down with the Go version instead of ending the first line.
         val core = Libcore.versionBox().lines()
-        binding.core.text = listOfNotNull(core.firstOrNull()?.replace("sing-box: ", "sing-box "), core.getOrNull(1)?.substringBefore('@')).joinToString(" · ")
+        binding.core.text = listOfNotNull(core.firstOrNull()?.replace("sing-box: ", "sing-box "), core.getOrNull(1)?.substringBefore('@')).joinToString(" ·\u00A0")
         binding.cat.pose = CheckCat.Pose.CONTENT
         binding.background.setOnClickListener { askForBackgroundUse() }
         binding.allowBackground.setOnClickListener { askForBackgroundUse() }
