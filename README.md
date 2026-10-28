@@ -169,7 +169,7 @@ The local control API lets scripts on the device, or on a computer through ADB, 
 
 ## Usage and crash reporting
 
-The Help to improve switch, under Settings > Advanced, turns PostHog and Sentry reporting on or off together. It is on by default. A build without PostHog or Sentry settings sends nothing to that service.
+The Help to improve switch, under Settings > Advanced, turns PostHog and Sentry reporting on or off together. The app asks once at first start and sends nothing until you answer. A build without PostHog or Sentry settings sends nothing to that service and never asks.
 
 Reports leave out exception messages, profiles, credentials, traffic, logs, and account or hardware identifiers. Session replay, screenshots, performance tracing and native crash capture stay off.
 
