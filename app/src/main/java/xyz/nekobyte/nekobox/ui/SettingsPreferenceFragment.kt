@@ -105,6 +105,12 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
     private fun setupAppearance() {
         val nightTheme = findPreference<SimpleMenuPreference>(Key.NIGHT_THEME)
+        // A dark-only theme ignores the night setting; a theme change recreates this screen.
+        if (Theme.darkOnly()) {
+            nightTheme?.isEnabled = false
+            nightTheme?.summaryProvider = null
+            nightTheme?.setSummary(R.string.night_mode_dark_only)
+        }
         findPreference<ThemePickerPreference>(Key.APP_THEME)?.setOnPreferenceChangeListener { _, newTheme ->
             if (DataStore.serviceState.started) {
                 NekoBox.reloadService()

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="help_to_improve">Help improve the app</string>
-    <string name="help_to_improve_summary">When on, PostHog receives app opens, connection results with the protocol and the kind of failure, startup times and subscription import counts, and Sentry receives crash and error reports, including crashes of the core. Servers, profile names, credentials, traffic and logs are never sent. Reports leave only while a VPN is connected, so they travel inside the tunnel; the services still see the IP address of the server they arrive from.</string>
+    <string name="help_to_improve_summary">When on, PostHog receives app opens, connection results with the protocol and the kind of failure, startup times and subscription import counts, and Sentry receives crash and error reports, including crashes of the core. Servers, profile names, credentials, traffic and logs are never sent. Reports leave only while a VPN is connected, so they travel inside the tunnel. The official build sends them to a server run by the developer, which passes them on to PostHog and Sentry; the services see that server\'s address, never yours.</string>
     <string name="help_to_improve_prompt_title">Help improve NekoBox?</string>
-    <string name="help_to_improve_prompt_message">NekoBox can send anonymous reports: app and Android version, whether connections succeed, the protocol used, the kind of failure and crash reports. It never sends servers, profile names, keys, traffic or logs. Reports leave only while a VPN is connected. You can change this later in Settings, Advanced.</string>
+    <string name="help_to_improve_prompt_message">NekoBox can send anonymous reports: app and Android version, whether connections succeed, the protocol used, the kind of failure and crash reports. It never sends servers, profile names, keys, traffic or logs. Reports leave only while a VPN is connected; the official build passes them through a server run by the developer. You can change this later in Settings, Advanced.</string>
     <string name="help_to_improve_prompt_allow">Send reports</string>
     <string name="help_to_improve_prompt_deny">Don\'t send</string>
 </resources>
