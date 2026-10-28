@@ -349,7 +349,6 @@
     <string name="group_order_by_delay">以延遲</string>
     <string name="group_order_by_name">以名稱</string>
     <string name="group_order_origin">原始</string>
-    <string name="group_order">順序</string>
     <string name="hysteria_disable_mtu_discovery">停用路徑 MTU 探索</string>
     <string name="hysteria_connection_receive_window">QUIC 連線接收視窗</string>
     <string name="hysteria_stream_receive_window">QUIC 串流接收視窗</string>
@@ -402,7 +401,6 @@
     <string name="action_copy">複製</string>
     <string name="action_open">開啟</string>
     <string name="update_all_subscription">更新所有訂閱</string>
-    <string name="layout">佈局</string>
     <string name="layout_single_column">單列</string>
     <string name="layout_double_column">雙列</string>
     <string name="sort_and_layout">排序與佈局</string>

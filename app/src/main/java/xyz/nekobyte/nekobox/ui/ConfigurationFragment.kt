@@ -25,6 +25,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.net.toUri
+import androidx.core.view.MenuCompat
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.size
@@ -143,11 +144,17 @@ class ConfigurationFragment @JvmOverloads constructor(
         const val KEY_EXIT_PROXY_BASE = "exitProxyBase"
         const val MAX_SEARCH_RESULTS = 500
 
-        // Actions on the open group; Favorites is no group, so they hide there.
+        // Actions on the open group; Favorites is no group, so they hide there. Update subscription
+        // is decided as the menu opens.
         val GROUP_ACTIONS = listOf(
-            R.id.action_update_subscription, R.id.action_clear_traffic_statistics, R.id.action_remove_duplicate,
-            R.id.action_connection_tcp_ping, R.id.action_connection_icmp_ping, R.id.action_connection_url_test,
-            R.id.action_connection_test_clear_results, R.id.action_connection_test_delete_unavailable, R.id.action_order_layout,
+            R.id.action_clear_traffic_statistics,
+            R.id.action_remove_duplicate,
+            R.id.action_connection_tcp_ping,
+            R.id.action_connection_icmp_ping,
+            R.id.action_connection_url_test,
+            R.id.action_connection_test_clear_results,
+            R.id.action_connection_test_delete_unavailable,
+            R.id.action_order_layout,
         )
     }
 
@@ -393,6 +400,7 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         if (!select) {
             toolbar.inflateMenu(R.menu.add_profile_menu)
+            MenuCompat.setGroupDividerEnabled(toolbar.menu, true)
             toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
             toolbar.setOnMenuItemClickListener(this)
         } else {
@@ -736,6 +744,22 @@ class ConfigurationFragment @JvmOverloads constructor(
         return chain
     }
 
+    // Names up to 20 of the profiles and asks before removing them; says so when there are none.
+    private fun confirmRemove(profiles: List<ProxyEntity>, noneText: Int) {
+        if (!isAdded) return
+        if (profiles.isEmpty()) {
+            snackbar(noneText).show()
+            return
+        }
+        val names = profiles.take(20).joinToString("\n") { it.displayName() }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getQuantityString(R.plurals.remove_profiles, profiles.size, profiles.size))
+            .setMessage(if (profiles.size > 20) "$names\n…" else names)
+            .setPositiveButton(R.string.delete) { _, _ -> deleteProfilesFromGroup(profiles.first().groupId, profiles) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun deleteProfilesFromGroup(groupId: Long, profiles: List<ProxyEntity>) {
         val profileIds = profiles.map { it.id }
         runOnDefaultDispatcher {
@@ -988,61 +1012,18 @@ class ConfigurationFragment @JvmOverloads constructor(
             R.id.action_connection_test_delete_unavailable -> {
                 runOnDefaultDispatcher {
                     val profiles = ProfileDatabase.proxyDao.getByGroup(DataStore.currentGroupId())
-                    val toClear = mutableListOf<ProxyEntity>()
-                    if (profiles.isNotEmpty()) {
-                        for (profile in profiles) {
-                            if (profile.status != 0 && profile.status != 1) {
-                                toClear.add(profile)
-                            }
-                        }
-                    }
-                    if (toClear.isNotEmpty()) {
-                        onMainDispatcher {
-                            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.confirm)
-                                .setMessage(R.string.delete_confirm_prompt)
-                                .setPositiveButton(R.string.yes) { _, _ ->
-                                    deleteProfilesFromGroup(toClear.first().groupId, toClear)
-                                }
-                                .setNegativeButton(R.string.no, null)
-                                .show()
-                        }
-                    }
+                    // Status 0 is untested, 1 available; the rest failed their last test.
+                    val failed = profiles.filter { it.status != 0 && it.status != 1 }
+                    onMainDispatcher { confirmRemove(failed, R.string.no_unavailable_profiles) }
                 }
             }
 
             R.id.action_remove_duplicate -> {
                 runOnDefaultDispatcher {
                     val profiles = ProfileDatabase.proxyDao.getByGroup(DataStore.currentGroupId())
-                    val toClear = mutableListOf<ProxyEntity>()
-                    val uniqueProxies = LinkedHashSet<Protocols.Deduplication>()
-                    for (pf in profiles) {
-                        val proxy = Protocols.Deduplication(pf.requireBean())
-                        if (!uniqueProxies.add(proxy)) {
-                            toClear += pf
-                        }
-                    }
-                    if (toClear.isNotEmpty()) {
-                        onMainDispatcher {
-                            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.confirm)
-                                .setMessage(
-                                    getString(R.string.delete_confirm_prompt) + "\n" +
-                                        toClear.mapIndexedNotNull { index, proxyEntity ->
-                                            if (index < 20) {
-                                                proxyEntity.displayName()
-                                            } else if (index == 20) {
-                                                "......"
-                                            } else {
-                                                null
-                                            }
-                                        }.joinToString("\n"),
-                                )
-                                .setPositiveButton(R.string.yes) { _, _ ->
-                                    deleteProfilesFromGroup(toClear.first().groupId, toClear)
-                                }
-                                .setNegativeButton(R.string.no, null)
-                                .show()
-                        }
-                    }
+                    val seen = HashSet<Protocols.Deduplication>()
+                    val duplicates = profiles.filterNot { seen.add(Protocols.Deduplication(it.requireBean())) }
+                    onMainDispatcher { confirmRemove(duplicates, R.string.no_duplicate_profiles) }
                 }
             }
 
@@ -1056,6 +1037,13 @@ class ConfigurationFragment @JvmOverloads constructor(
 
             R.id.action_connection_url_test -> {
                 urlTest()
+            }
+
+            R.id.action_misc -> {
+                // The menu is opening: only an open subscription group can update.
+                val open = adapter.groupList.getOrNull(groupPager.currentItem)
+                val update = item.subMenu?.findItem(R.id.action_update_subscription)
+                update?.isVisible = open?.type == GroupType.SUBSCRIPTION
             }
 
             R.id.action_global_mode -> {
@@ -1560,6 +1548,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                 if (disposed) return@post
                 val index = groupList.indexOfFirst { it.id == group.id }
                 if (index == -1) return@post
+                // Keep the type current too: the menu reads it.
+                groupList[index] = group
                 tabLayout.getTabAt(index)?.text = group.displayName()
             }
         }

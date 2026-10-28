@@ -50,7 +50,6 @@
         <item quantity="other">%d profiles</item>
     </plurals>
     <string name="group_edit_subscription">Edit subscription</string>
-    <string name="layout">Layout</string>
     <string name="layout_single_column">Single column</string>
     <string name="layout_double_column">Double column</string>
     <string name="sort_and_layout">Sort and layout</string>
@@ -346,6 +345,12 @@
     <string name="profile_config">Profile config</string>
     <string name="delete">Remove</string>
     <string name="delete_confirm_prompt">Are you sure you want to remove this profile?</string>
+    <plurals name="remove_profiles">
+        <item quantity="one">Remove %d profile?</item>
+        <item quantity="other">Remove %d profiles?</item>
+    </plurals>
+    <string name="no_duplicate_profiles">No duplicate profiles</string>
+    <string name="no_unavailable_profiles">No unavailable profiles</string>
     <string name="confirm_profile_delete">Confirm before deleting profiles</string>
     <string name="share_qr_nfc">QR code</string>
     <string name="add_profile_methods_scan_qr_code">Scan QR code</string>
@@ -508,11 +513,11 @@
     <string name="clear_traffic_statistics">Clear traffic statistics</string>
     <string name="connection_test">Connection test</string>
     <string name="connection_test_clear_results">Clear test results</string>
-    <string name="connection_test_tcp_ping" translatable="false">TCPing</string>
-    <string name="connection_test_tcp_ping_unavailable">TCPing unavailable</string>
-    <string name="connection_test_icmp_ping" translatable="false">ICMPing</string>
-    <string name="connection_test_icmp_ping_unavailable">ICMPing unavailable</string>
-    <string name="connection_test_url_test" translatable="false">URL Test</string>
+    <string name="connection_test_tcp_ping">TCP ping</string>
+    <string name="connection_test_tcp_ping_unavailable">TCP ping unavailable</string>
+    <string name="connection_test_icmp_ping">ICMP ping</string>
+    <string name="connection_test_icmp_ping_unavailable">ICMP ping unavailable</string>
+    <string name="connection_test_url_test">URL test</string>
     <string name="connection_test_domain_not_found">Domain not found</string>
     <string name="connection_test_refused">Connection refused</string>
     <string name="connection_test_unreachable">Unreachable</string>
@@ -602,8 +607,7 @@
     <string name="hysteria_stream_receive_window">QUIC stream receive window</string>
     <string name="hysteria_connection_receive_window">QUIC connection receive window</string>
     <string name="hysteria_disable_mtu_discovery">Disable path MTU discovery</string>
-    <string name="group_order">Order</string>
-    <string name="group_order_origin">Origin</string>
+    <string name="group_order_origin">Original order</string>
     <string name="group_order_by_name">By name</string>
     <string name="group_order_by_delay">By delay</string>
     <string name="plugin_exists_but_on_shit_system">Profile %s requires the %s plugin, but your
@@ -832,7 +836,7 @@
         update!</string>
     <string name="please_update_force">Your APP is too old (%s). And has been stopped working at %s.
         Please update!</string>
-    <string name="connection_test_delete_unavailable">Clear unavailable</string>
+    <string name="connection_test_delete_unavailable">Remove unavailable</string>
     <string name="move">Move</string>
     <string name="create_shortcut">Create shortcut</string>
     <string name="app_tls_version">Minimum TLS version for subscriptions</string>
@@ -890,7 +894,7 @@
     <string name="protocol_version">Protocol version</string>
     <string name="show_group_in_notification">Show group name in notification</string>
     <string name="reset_connections">Reset connections</string>
-    <string name="remove_duplicate">Remove duplicate servers</string>
+    <string name="remove_duplicate">Remove duplicates</string>
     <string name="mtu_help">Long press the preference to set custom MTU.</string>
     <string name="log_level_help">Long press the preference to set the buffer size.</string>
     <string name="tls_camouflage_settings">TLS camouflage settings</string>
@@ -911,7 +915,7 @@
     <string name="ech_config">ECH config</string>
     <string name="http_upgrade_host">HTTPUpgrade host</string>
     <string name="http_upgrade_path">HTTPUpgrade path</string>
-    <string name="update_current_subscription">Update this group\'s subscription</string>
+    <string name="update_current_subscription">Update subscription</string>
     <string name="group_not_subscription">Group type is not subscription</string>
     <string name="allow_insecure_on_request_sum">Skip certificate checks when updating subscriptions</string>
     <string name="global_allow_insecure">Always allow insecure</string>

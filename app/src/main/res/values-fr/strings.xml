@@ -187,7 +187,6 @@
     <string name="ooc_warning">Notice</string>
     <string name="install_from_fdroid">Installer depuis F-Droid</string>
     <string name="subscription_update_message">Mise à jour de %s…</string>
-    <string name="group_order">Ordre</string>
     <string name="group_order_origin">Origine</string>
     <string name="tcp_connections">%d connexions TCP</string>
     <string name="udp_connections">%d connexions UDP</string>

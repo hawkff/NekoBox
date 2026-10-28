@@ -338,7 +338,6 @@
     <string name="experimental_settings">Experimental</string>
     <string name="hysteria_stream_receive_window">Ventana de recepción de transmisión QUIC</string>
     <string name="hysteria_connection_receive_window">Ventana de recepción de conexión QUIC</string> 
-    <string name="group_order">Orden</string> 
     <string name="group_order_origin">Origen</string> 
     <string name="group_order_by_name">Por nombre</string> 
     <string name="group_order_by_delay">Por retraso</string> 

@@ -363,7 +363,6 @@
     <string name="hysteria_stream_receive_window">QUIC 流接收窗口</string>
     <string name="hysteria_connection_receive_window">QUIC 连接接收窗口</string>
     <string name="hysteria_disable_mtu_discovery">禁用路径最大传输单元发现</string>
-    <string name="group_order">排序</string>
     <string name="group_order_origin">原始</string>
     <string name="group_order_by_name">以名称</string>
     <string name="group_order_by_delay">以延时</string>
@@ -541,7 +540,6 @@
     <string name="clear_cache_failed">清理缓存失败: %s</string>
     <string name="concurrent_dial">并发拨号</string>
     <string name="concurrent_dial_summary">启用并发连接以更快地建立网络，可能会增加电池使用量</string>
-    <string name="layout">布局</string>
     <string name="layout_single_column">单列</string>
     <string name="layout_double_column">双列</string>
     <string name="sort_and_layout">排序与布局</string>

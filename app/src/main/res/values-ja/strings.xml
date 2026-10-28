@@ -97,7 +97,6 @@
     <string name="action_copy">コピー</string>
     <string name="action_open">開く</string>
     <string name="update_all_subscription">すべてのサブスクリプションを更新</string>
-    <string name="layout">レイアウト</string>
     <string name="layout_single_column">1列</string>
     <string name="layout_double_column">2列</string>
     <string name="sort_and_layout">並べ替えとレイアウト</string>
@@ -351,7 +350,6 @@
     <string name="hysteria_stream_receive_window">QUIC ストリーム受信ウィンドウ</string>
     <string name="hysteria_connection_receive_window">QUIC 接続受信ウィンドウ</string>
     <string name="hysteria_disable_mtu_discovery">パス MTU ディスカバリーを無効化</string>
-    <string name="group_order">並び順</string>
     <string name="group_order_origin">元の順</string>
     <string name="group_order_by_name">名前順</string>
     <string name="group_order_by_delay">遅延順</string>
