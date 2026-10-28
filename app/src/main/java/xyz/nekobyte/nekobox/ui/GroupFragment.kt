@@ -27,6 +27,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutGroupBinding
 import xyz.nekobyte.nekobox.databinding.LayoutGroupItemBinding
 import xyz.nekobyte.nekobox.fmt.toUniversalLink
 import xyz.nekobyte.nekobox.group.GroupUpdater
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.getColorAttr
@@ -526,7 +527,7 @@ class GroupFragment :
             binding.details.alpha = 1f
             if (opening && open) {
                 binding.details.alpha = 0f
-                binding.details.animate().alpha(1f).setDuration(OPEN_FADE).start()
+                binding.details.animate().alpha(1f).setDuration(OPEN_FADE).setInterpolator(EaseOut).start()
                 if (used != null) {
                     binding.trafficMeter.progress = 0
                     binding.trafficMeter.setProgressCompat(used, true)

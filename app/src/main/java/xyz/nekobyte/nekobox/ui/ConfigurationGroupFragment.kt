@@ -43,6 +43,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileListBinding
 import xyz.nekobyte.nekobox.fmt.toUniversalLink
+import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.FixedGridLayoutManager
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -1311,7 +1312,7 @@ class ConfigurationGroupFragment : Fragment() {
             if (failed) profileStatus.post { card.touchDelegate = statusTarget() }
             if (same && profileStatus.text.toString() != shownStatus) {
                 profileStatus.alpha = 0f
-                profileStatus.animate().alpha(1f).setDuration(STATUS_FADE).start()
+                profileStatus.animate().alpha(1f).setDuration(STATUS_FADE).setInterpolator(EaseOut).start()
             } else if (!same) {
                 // A card shown for another profile ends the last one's fade.
                 profileStatus.animate().cancel()

@@ -13,6 +13,8 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.CircularProgressIndicatorSpec
+import com.google.android.material.progressindicator.IndeterminateDrawable
 import libcore.Libcore
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.BuildConfig
@@ -113,6 +115,13 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
 
     private fun checkUpdate() {
         binding.checkUpdates.isEnabled = false
+        // The icon turns into a spinner while the check runs, so the tap shows it did something.
+        binding.checkUpdates.icon = requireContext().let { context ->
+            IndeterminateDrawable.createCircularDrawable(
+                context,
+                CircularProgressIndicatorSpec(context, null, 0, com.google.android.material.R.style.Widget_Material3_CircularProgressIndicator_ExtraSmall),
+            )
+        }
         runOnIoDispatcher {
             val found = try {
                 val client = Libcore.newHttpClient().apply {
@@ -133,6 +142,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 // The check may outlive the page.
                 val binding = _binding ?: return@runOnMainDispatcher
                 binding.checkUpdates.isEnabled = true
+                binding.checkUpdates.setIconResource(R.drawable.ic_baseline_update_24)
                 found.onFailure { Toast.makeText(app, it.readableMessage, Toast.LENGTH_SHORT).show() }
                 found.onSuccess { update ->
                     if (update == null) return@onSuccess Toast.makeText(app, R.string.check_update_no, Toast.LENGTH_SHORT).show()

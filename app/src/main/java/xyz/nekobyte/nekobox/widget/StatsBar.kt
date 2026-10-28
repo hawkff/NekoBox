@@ -100,7 +100,7 @@ class StatsBar @JvmOverloads constructor(
     private fun setStatus(text: CharSequence) {
         if (statusText.isShown && statusText.text.toString() != text.toString()) {
             statusText.alpha = STATUS_FROM
-            statusText.animate().alpha(1f).setDuration(STATUS_FADE).start()
+            statusText.animate().alpha(1f).setDuration(STATUS_FADE).setInterpolator(EaseOut).start()
         }
         statusText.text = text
         TooltipCompat.setTooltipText(this, text)
