@@ -240,7 +240,14 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
     internal fun reportHosts(
         postHogHost: String? = BuildConfig.POSTHOG_HOST.takeIf { BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() },
         sentryDsn: String = BuildConfig.SENTRY_DSN,
-    ) = listOfNotNull(postHogHost, sentryDsn).mapNotNull { it.toHttpUrlOrNull()?.host }.distinct()
+    ) = listOfNotNull(postHogHost, postHogHost?.let(::postHogAssetsHost), sentryDsn).mapNotNull { it.toHttpUrlOrNull()?.host }.distinct()
+
+    // On PostHog's own hosts the SDK fetches its remote config from a separate assets host.
+    private fun postHogAssetsHost(host: String) = when (host.removeSuffix("/")) {
+        PostHogConfig.DEFAULT_US_HOST -> PostHogConfig.DEFAULT_US_ASSETS_HOST
+        PostHogConfig.DEFAULT_EU_HOST -> PostHogConfig.DEFAULT_EU_ASSETS_HOST
+        else -> null
+    }
 
     internal fun importOutcome(format: ImportFormat?, preview: ImportPreview) = diagnostic {
         analytics?.capture(
