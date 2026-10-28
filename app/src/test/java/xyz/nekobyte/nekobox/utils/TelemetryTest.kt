@@ -58,9 +58,12 @@ class TelemetryTest {
     @Test
     fun reportHostsComeFromTheConfiguredServices() {
         assertEquals(
-            listOf("us.i.posthog.com", "o1.ingest.us.sentry.io"),
+            listOf("us.i.posthog.com", "us-assets.i.posthog.com", "o1.ingest.us.sentry.io"),
             Telemetry.reportHosts("https://us.i.posthog.com", "https://key@o1.ingest.us.sentry.io/2"),
         )
+        // PostHog's own hosts serve the SDK's remote config from an assets host; other hosts serve it themselves.
+        assertEquals(listOf("eu.i.posthog.com", "eu-assets.i.posthog.com"), Telemetry.reportHosts("https://eu.i.posthog.com/", ""))
+        assertEquals(listOf("relay.example"), Telemetry.reportHosts("https://relay.example", "https://key@relay.example/2"))
         // Without a key a service gets no rule.
         assertEquals(emptyList<String>(), Telemetry.reportHosts(null, ""))
     }
