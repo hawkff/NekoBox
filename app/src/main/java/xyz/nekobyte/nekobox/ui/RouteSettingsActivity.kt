@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
-import android.transition.TransitionManager
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
@@ -39,6 +38,7 @@ import xyz.nekobyte.nekobox.databinding.ItemRouteListChipBinding
 import xyz.nekobyte.nekobox.databinding.LayoutRouteEditorBinding
 import xyz.nekobyte.nekobox.fmt.RouteVerdict
 import xyz.nekobyte.nekobox.fmt.validateDnsRouting
+import xyz.nekobyte.nekobox.ktx.beginFold
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ui.profile.ConfigEditActivity
 import xyz.nekobyte.nekobox.utils.PackageCache
@@ -233,7 +233,7 @@ class RouteSettingsActivity : ThemedActivity() {
 
     /** Opens or folds what few rules need: detected protocols, where traffic starts, rule DNS and custom JSON. */
     private fun showMore(open: Boolean, animate: Boolean) {
-        if (animate) TransitionManager.beginDelayedTransition(binding.scroll.getChildAt(0) as ViewGroup)
+        if (animate) (binding.scroll.getChildAt(0) as ViewGroup).beginFold(binding.moreToggle)
         binding.more.isVisible = open
         binding.moreToggle.setText(if (open) R.string.route_editor_fewer else R.string.route_editor_more)
         binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)
