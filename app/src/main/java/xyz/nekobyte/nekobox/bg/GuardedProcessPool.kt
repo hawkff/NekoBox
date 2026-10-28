@@ -75,10 +75,6 @@ class GuardedProcessPool(private val onFatal: suspend (IOException) -> Unit) : C
 
         private suspend fun terminateProcess(exitChannel: Channel<Int>): Int? = withContext(NonCancellable) {
             exitChannel.tryReceive().getOrNull()?.let { return@withContext it }
-            if (Build.VERSION.SDK_INT < 24) {
-                signalProcess(OsConstants.SIGTERM)
-                withTimeoutOrNull(500) { exitChannel.receive() }?.let { return@withContext it }
-            }
             process.destroy()
             withTimeoutOrNull(1000) { exitChannel.receive() }?.let { return@withContext it }
             if (Build.VERSION.SDK_INT >= 26) {

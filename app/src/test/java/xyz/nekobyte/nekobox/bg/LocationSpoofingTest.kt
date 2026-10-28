@@ -904,26 +904,3 @@ class LocationSpoofingTest {
         }
     }
 }
-
-@OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [23], application = Application::class)
-class LocationSpoofingApi23Test {
-    @Test
-    fun withoutABootCountNothingStartsEvenWithCoordinates() = runTest {
-        val context = RuntimeEnvironment.getApplication()
-        // Notices use the NekoBox context; attach it without native initialization.
-        NekoBox::class.java.getDeclaredMethod("attachBaseContext", Context::class.java).apply {
-            isAccessible = true
-            invoke(NekoBox(), context)
-        }
-        val access = FakeAccess(context)
-        assertFalse(LocationSpoofing.supported(context))
-        LocationSpoofing(context, access, backgroundScope, { testScheduler.currentTime }).start("1,1", null, { "" }) { error("unused") }
-        advanceTimeBy(10_000)
-        assertTrue(access.installed.isEmpty())
-        assertEquals(0, access.pushes)
-        val notice = checkNotNull(noticeOf(context))
-        assertEquals(context.getString(R.string.gps_spoofing_unsupported_title), notice.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
-    }
-}

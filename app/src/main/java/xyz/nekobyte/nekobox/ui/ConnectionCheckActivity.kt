@@ -1,6 +1,5 @@
 package xyz.nekobyte.nekobox.ui
 
-import android.os.Build
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
 import android.view.View
@@ -38,12 +37,7 @@ import xyz.nekobyte.nekobox.net.DnsLeakTest
 import xyz.nekobyte.nekobox.widget.CheckCat
 import java.net.InetSocketAddress
 import java.net.Proxy
-import java.security.KeyStore
-import java.security.cert.CertificateFactory
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
 
 /**
  * What this connection shows to the internet: the bash.ws DNS leak test, the IPv4 and IPv6 exits, the UDP
@@ -136,18 +130,6 @@ class ConnectionCheckActivity : ThemedActivity() {
                 response.request.takeIf { it.header("Proxy-Authorization") == null }?.newBuilder()
                     ?.header("Proxy-Authorization", Credentials.basic(Key.MIXED_USERNAME, DataStore.mixedSecret))?.build()
             }
-        }
-        .apply {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) return@apply
-            // Android 6 reads no network security config, so the root bash.ws chains to is added here,
-            // next to the system and user certificates Android 6 trusts by default.
-            val store = KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null) }
-            val system = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
-            for (alias in system.aliases()) store.setCertificateEntry(alias, system.getCertificate(alias))
-            resources.openRawResource(R.raw.isrg_root_x1).use { store.setCertificateEntry("isrg_root_x1", CertificateFactory.getInstance("X.509").generateCertificate(it)) }
-            val trust = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(store) }
-                .trustManagers.filterIsInstance<X509TrustManager>().single()
-            sslSocketFactory(SSLContext.getInstance("TLS").apply { init(null, arrayOf(trust), null) }.socketFactory, trust)
         }
         .build()
 

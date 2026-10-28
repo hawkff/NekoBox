@@ -2,7 +2,7 @@
 
 # NekoBox for Android
 
-![Android 6.0+](https://img.shields.io/badge/Android-6.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
+![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-0A7BBB?style=flat-square)](LICENSE)
 
 </div>

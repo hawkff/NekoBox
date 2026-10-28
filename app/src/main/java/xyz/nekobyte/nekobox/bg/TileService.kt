@@ -2,13 +2,11 @@ package xyz.nekobyte.nekobox.bg
 
 import android.graphics.drawable.Icon
 import android.service.quicksettings.Tile
-import androidx.annotation.RequiresApi
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import android.service.quicksettings.TileService as BaseTileService
 
-@RequiresApi(24)
 class TileService :
     BaseTileService(),
     NekoBoxConnection.Callback {

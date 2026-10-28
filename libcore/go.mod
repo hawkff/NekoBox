@@ -8,15 +8,15 @@ require (
 	github.com/miekg/dns v1.1.73
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/sagernet/gomobile v0.1.13
-	github.com/sagernet/quic-go v0.61.0-sing-box-mod.10
-	github.com/sagernet/sing v0.9.7-0.20260929150544-0ad23b637bd4
+	github.com/sagernet/quic-go v0.61.0-sing-box-mod.12
+	github.com/sagernet/sing v0.9.7-0.20261023115459-5dc452e537bf
 	github.com/sagernet/sing-box v1.0.0 // replaced
-	github.com/sagernet/sing-tun v0.9.7-0.20261009020158-bca4bf029237
-	github.com/sagernet/tailscale v1.102.1-sing-box-1.14-mod.5
+	github.com/sagernet/sing-tun v0.9.7-0.20261023115432-040db71fcd33
+	github.com/sagernet/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261019070639-79c1732442a9
 	github.com/slackhq/nebula v1.11.2
 	github.com/ulikunitz/xz v0.5.17
 	golang.org/x/crypto v0.58.0
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/sys v0.49.0
 )
 
@@ -49,7 +49,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gaissmai/bart v0.28.0 // indirect
-	github.com/go-chi/chi/v5 v5.3.0 // indirect
+	github.com/go-chi/chi/v5 v5.4.0 // indirect
 	github.com/go-chi/render v1.0.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
@@ -102,20 +102,20 @@ require (
 	github.com/sagernet/bbolt v0.0.0-20260915102804-500ee1e84832 // indirect
 	github.com/sagernet/cors v1.2.1 // indirect
 	github.com/sagernet/fswatch v0.1.2 // indirect
-	github.com/sagernet/gliderssh v0.3.4-0.20260531100337-2194faca5648 // indirect
+	github.com/sagernet/gliderssh v0.3.4-0.20261023092853-e0cad6d28647 // indirect
 	github.com/sagernet/gvisor v0.0.0-20260727.0-sing-box-mod.1 // indirect
 	github.com/sagernet/netlink v0.0.0-20260814022025-64455d367bbf // indirect
 	github.com/sagernet/nftables v0.3.0-mod.4 // indirect
 	github.com/sagernet/sing-mux v0.3.10-0.20260929204512-caf09fe32475 // indirect
-	github.com/sagernet/sing-quic v0.7.2-0.20261002084117-75c3ac4fa12b // indirect
+	github.com/sagernet/sing-quic v0.7.2-0.20261020082049-7e0a5869a5f4 // indirect
 	github.com/sagernet/sing-shadowsocks v0.2.9-0.20260929204512-65740e0f0e3e // indirect
 	github.com/sagernet/sing-shadowsocks2 v0.2.2-0.20260929152114-a69d1086332b // indirect
 	github.com/sagernet/sing-shadowtls v0.2.2-0.20260928201441-a9c0127d5c99 // indirect
 	github.com/sagernet/sing-snell v0.0.0-20260904135315-bc5a12ac736f // indirect
 	github.com/sagernet/sing-usbip v0.0.0-20260817040617-28bd42667eca // indirect
-	github.com/sagernet/sing-vmess v0.2.9-0.20260929152519-9b95ab8c9478 // indirect
+	github.com/sagernet/sing-vmess v0.2.9-0.20261019223527-a0c58542bd9d // indirect
 	github.com/sagernet/smux v1.5.50-sing-box-mod.1 // indirect
-	github.com/sagernet/wireguard-go v0.0.8-0.20260929150556-6731c7387c81 // indirect
+	github.com/sagernet/wireguard-go v0.0.8-0.20261022215841-e4d85ef2ed38 // indirect
 	github.com/sagernet/ws v0.0.0-20231204124109-acfe8907c854 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
@@ -147,8 +147,8 @@ require (
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20230325221338-052af4a8072b // indirect
 	golang.zx2c4.com/wireguard/windows v1.0.1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
-	google.golang.org/grpc v1.84.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
+	google.golang.org/grpc v1.85.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gvisor.dev/gvisor v0.0.0-20250606233247-e3c4c4cad86f // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
@@ -164,9 +164,9 @@ replace github.com/dyhkwong/sing-juicity => github.com/exclavenetwork/sing-juici
 replace github.com/reF1nd/sing-snell => github.com/reF1nd/sing-snell-reF1nd v0.0.8
 
 // AmneziaWG for Tailscale nodes, as in the sing-box fork.
-replace github.com/sagernet/wireguard-go => github.com/hawkff/wireguard-go v0.0.8-0.20261017033643-bae70cebfb2d
+replace github.com/sagernet/wireguard-go => github.com/hawkff/wireguard-go v0.0.8-0.20261028195059-3c5a73645a5b
 
-replace github.com/sagernet/tailscale => github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261017014144-a62453cd1d3f
+replace github.com/sagernet/tailscale => github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b
 
 // The AmneziaWG device with the timer race fix of amnezia-vpn/amneziawg-go#205, until upstream merges it.
 replace github.com/amnezia-vpn/amneziawg-go/v3 => github.com/hawkff/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604

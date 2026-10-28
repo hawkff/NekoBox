@@ -21,6 +21,7 @@ import (
 	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
+	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
 )
@@ -246,15 +247,17 @@ func (b *BoxInstance) SelectOutbound(tag string) bool {
 	return false
 }
 
-// SelectedOutbound returns the member tag the "proxy" group (selector or urltest) currently
-// routes through, or "" when the config has no such group or urltest has not picked one yet.
+// SelectedOutbound returns the member tag the "proxy" group (selector or urltest) routes TCP
+// through, or "" when the config has no such group.
 func (b *BoxInstance) SelectedOutbound() string {
 	proxy, ok := b.Outbound().Outbound("proxy")
 	if !ok {
 		return ""
 	}
 	if outboundGroup, ok := proxy.(adapter.OutboundGroup); ok {
-		return outboundGroup.Now()
+		if selected := outboundGroup.Selected(N.NetworkTCP); selected != nil {
+			return selected.Tag()
+		}
 	}
 	return ""
 }

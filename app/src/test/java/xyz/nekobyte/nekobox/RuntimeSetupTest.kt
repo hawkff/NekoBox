@@ -19,7 +19,7 @@ import org.robolectric.shadows.ShadowNetwork
 import xyz.nekobyte.nekobox.utils.DefaultNetworkListener
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [23, 24, 26, 28, 31, 35])
+@Config(application = Application::class, sdk = [24, 26, 28, 31, 35])
 class RuntimeSetupTest {
     @Before
     fun attachApplicationWithoutNativeInitialization() {

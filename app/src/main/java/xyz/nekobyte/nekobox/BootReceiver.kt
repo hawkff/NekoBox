@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.bg.NetworkAutomationService
 import xyz.nekobyte.nekobox.bg.SubscriptionUpdater
@@ -68,7 +67,7 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_LOCKED_BOOT_COMPLETED -> false
 
             // DataStore.directBootAware
-            else -> Build.VERSION.SDK_INT < 24 || NekoBox.user.isUserUnlocked
+            else -> NekoBox.user.isUserUnlocked
         }
         if (unlocked) restore(context)
     }

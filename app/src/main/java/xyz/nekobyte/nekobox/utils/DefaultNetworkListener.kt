@@ -75,10 +75,6 @@ object DefaultNetworkListener {
     private val request = NetworkRequest.Builder().apply {
         addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
-        if (Build.VERSION.SDK_INT == 23) { // workarounds for OEM bugs
-            removeCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-            removeCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
-        }
     }.build()
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -117,13 +113,7 @@ object DefaultNetworkListener {
                 Build.VERSION.SDK_INT >= 26 ->
                     NekoBox.connectivity.registerDefaultNetworkCallback(Callback, mainHandler)
 
-                Build.VERSION.SDK_INT >= 24 ->
-                    NekoBox.connectivity.registerDefaultNetworkCallback(Callback)
-
-                else -> {
-                    NekoBox.connectivity.requestNetwork(request, Callback)
-                    // known bug on API 23: https://stackoverflow.com/a/33509180/2245107
-                }
+                else -> NekoBox.connectivity.registerDefaultNetworkCallback(Callback)
             }
         }.onFailure {
             Logs.w(it)

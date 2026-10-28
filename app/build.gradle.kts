@@ -76,14 +76,11 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.appcompat:appcompat:1.8.0")
-    // WorkManager 2.12 requires minSdk 24; this app supports API 23.
-    //noinspection GradleDependency
-    implementation("androidx.work:work-runtime:2.11.2")
-    //noinspection GradleDependency
-    implementation("androidx.work:work-multiprocess:2.11.2")
+    implementation("androidx.work:work-runtime:2.12.0")
+    implementation("androidx.work:work-multiprocess:2.12.0")
 
     implementation("com.google.android.material:material:1.14.0")
-    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.code.gson:gson:2.15.0")
 
     // Bundle the scanner model for offline use without Google Play Services.
     implementation("androidx.camera:camera-core:1.6.2")
@@ -101,8 +98,8 @@ dependencies {
     compileOnly("org.eclipse.jdt:org.eclipse.jdt.annotation:2.4.100")
 
     // Minimal SDK modules; automatic capture is configured explicitly.
-    implementation("com.posthog:posthog:6.47.4")
-    implementation("io.sentry:sentry-android-core:8.61.1")
+    implementation("com.posthog:posthog:6.47.7")
+    implementation("io.sentry:sentry-android-core:8.62.0")
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.yaml:snakeyaml:2.7")
     implementation("com.jakewharton:process-phoenix:3.0.0")
@@ -124,9 +121,8 @@ dependencies {
         // room-migration 2.8.5 ships serializers compiled against kotlinx-serialization
         // 1.8.1 (JVM default methods). The transitive core from savedstate/lifecycle is
         // older and lands in the app APK, so the test APK's copy is dropped and the
-        // migration tests die with AbstractMethodError unless the app resolves 1.8.1 too.
-        //noinspection NewerVersionAvailable
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+        // migration tests die with AbstractMethodError unless the app resolves at least 1.8.1.
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.12.0")
     }
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")

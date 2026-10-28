@@ -306,8 +306,13 @@ class LocationSpoofingDeviceTest {
         }
     }
 
+    private var askedForBackgroundUse = true
+
     @Before
     fun allow() {
+        // A connected app on screen asks for background use, and that dialog would cover the notices.
+        askedForBackgroundUse = DataStore.askForBackgroundUse
+        DataStore.askForBackgroundUse = false
         shell("pm grant ${context.packageName} ${Manifest.permission.ACCESS_FINE_LOCATION}")
         if (Build.VERSION.SDK_INT >= 33) shell("pm grant ${context.packageName} ${Manifest.permission.POST_NOTIFICATIONS}")
         shell("appops set ${context.packageName} ACTIVATE_VPN allow")
@@ -325,10 +330,14 @@ class LocationSpoofingDeviceTest {
 
     @After
     fun reset() {
-        mockLocationAppOp("allow")
-        onMain { LocationSpoofing(context).removeConfirmed() }
-        mockLocationAppOp("default")
-        shell("appops set ${context.packageName} ACTIVATE_VPN default")
+        try {
+            mockLocationAppOp("allow")
+            onMain { LocationSpoofing(context).removeConfirmed() }
+            mockLocationAppOp("default")
+            shell("appops set ${context.packageName} ACTIVATE_VPN default")
+        } finally {
+            DataStore.askForBackgroundUse = askedForBackgroundUse
+        }
     }
 
     @Test
@@ -436,6 +445,8 @@ class LocationSpoofingDeviceTest {
         val packageWatch = AppOpsManager.OnOpChangedListener { op, packageName -> Log.i(TAG, "package watch reported $op for $packageName") }
         appOps.startWatchingMode(AppOpsManager.OPSTR_MOCK_LOCATION, context.packageName, packageWatch)
         val uidOf = { packageName: String -> runCatching { context.packageManager.getPackageUid(packageName, 0) }.getOrDefault(-1) }
+        // Picture-in-picture has an op from Android 8; the overlay op exists on every supported version.
+        val otherOp = if (Build.VERSION.SDK_INT >= 26) "PICTURE_IN_PICTURE" else "SYSTEM_ALERT_WINDOW"
         Log.i(
             TAG,
             "watching from uid ${Process.myUid()}; ${context.packageName} uid ${uidOf(context.packageName)}, " +
@@ -445,8 +456,8 @@ class LocationSpoofingDeviceTest {
             // Another op of this app changes: spoofing goes on, and its providers go without asking.
             var spoofing = spoof()
             await(LocationManager.GPS_PROVIDER) { injected(it) }
-            shell("appops set ${context.packageName} PICTURE_IN_PICTURE deny")
-            awaitTrue({ "picture-in-picture op unchanged" }) { "deny" in shell("appops get ${context.packageName} PICTURE_IN_PICTURE") }
+            shell("appops set ${context.packageName} $otherOp deny")
+            awaitTrue({ "$otherOp op unchanged" }) { "deny" in shell("appops get ${context.packageName} $otherOp") }
             Thread.sleep(5_000)
             Log.i(TAG, "watch reported after another op changed: ${reported.toList()}")
             assertTrue("reported ${reported.toList()}", reported.isEmpty())
@@ -471,7 +482,7 @@ class LocationSpoofingDeviceTest {
         } finally {
             appOps.stopWatchingMode(watch)
             appOps.stopWatchingMode(packageWatch)
-            shell("appops set ${context.packageName} PICTURE_IN_PICTURE default")
+            shell("appops set ${context.packageName} $otherOp default")
             shell("appops set com.android.shell android:mock_location default")
         }
     }

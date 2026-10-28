@@ -51,7 +51,7 @@ fun Project.setupCommon() {
             }
         }
         defaultConfig {
-            minSdk = 23
+            minSdk = 24
             targetSdk = 35
         }
         buildTypes {
