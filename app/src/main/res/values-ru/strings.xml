@@ -293,6 +293,7 @@
 <string name="network">Сеть</string>
 <string name="network_change_reset_connections">Сбросить исходящие соединения при изменении сети</string>
 <string name="night_mode">Ночной режим</string>
+<string name="night_mode_dark_only">С этой темой всегда тёмный</string>
 <string name="no">Нет</string>
 <string name="no_proxies_found">В ссылке не найдено прокси-серверов</string>
 <string name="no_proxies_found_in_clipboard">В буфере обмена не найдено ни одного прокси</string>
