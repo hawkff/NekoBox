@@ -81,6 +81,22 @@ class BottomBarRoomDeviceTest {
         }
     }
 
+    @Test
+    fun theConnectButtonStaysOffSettingsAfterTheScreenIsRecreated() {
+        DataStore.showBottomBar = false
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.displayFragmentWithId(R.id.nav_settings) }
+            instrumentation.waitForIdleSync()
+            // A theme or glass change recreates the activity the same way.
+            scenario.recreate()
+            instrumentation.waitForIdleSync()
+            Thread.sleep(1500)
+            scenario.onActivity { activity ->
+                assertFalse("the connect button shows over Settings", activity.findViewById<View>(R.id.fab).isShown)
+            }
+        }
+    }
+
     private fun scrollToEnd(scroller: View) {
         when (scroller) {
             is RecyclerView -> scroller.adapter?.itemCount?.takeIf { it > 0 }?.let {
