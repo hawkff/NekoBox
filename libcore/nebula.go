@@ -232,7 +232,7 @@ func (e *nebulaEndpoint) Start(stage adapter.StartStage, scope *adapter.Scope) e
 	stack, err := wireguard.NewDevice(wireguard.DeviceOptions{
 		Context: e.ctx,
 		Logger:  e.logger,
-		MTU:     uint32(config.GetInt("tun.mtu", 1300)),
+		MTU:     nebulaMTU(config),
 		Address: device.Networks(),
 	})
 	if err != nil {
@@ -332,6 +332,11 @@ func (d *nebulaDevice) RoutesFor(address netip.Addr) routing.Gateways {
 		}
 	}
 	return d.UserDevice.RoutesFor(address)
+}
+
+// nebulaMTU is tun.mtu under Nebula's own cap: a bigger packet would not fit its underlay buffers once relayed.
+func nebulaMTU(config *nebulaconfig.C) uint32 {
+	return uint32(min(config.GetInt("tun.mtu", overlay.DefaultMTU), overlay.MaxMTU))
 }
 
 // setNebulaValue sets a value in a parsed Nebula config, creating the sections on its path.
