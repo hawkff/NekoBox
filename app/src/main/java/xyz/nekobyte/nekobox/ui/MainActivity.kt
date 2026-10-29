@@ -106,6 +106,9 @@ class MainActivity :
 
         if (savedInstanceState == null) {
             displayFragmentWithId(R.id.nav_configuration)
+        } else {
+            // A recreated activity, after a theme or glass change, restores its screen without displayFragment.
+            (supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment)?.let(::fitBottomBar)
         }
         onBackPressedDispatcher.addCallback {
             val current = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
@@ -505,14 +508,7 @@ class MainActivity :
 
     @SuppressLint("CommitTransaction")
     fun displayFragment(fragment: ToolbarFragment) {
-        if (fragment is ConfigurationFragment) {
-            binding.stats.allowShow = true
-            binding.fab.show()
-        } else if (!DataStore.showBottomBar) {
-            binding.stats.allowShow = false
-            binding.stats.performHide()
-            binding.fab.hide()
-        }
+        fitBottomBar(fragment)
         val transaction = supportFragmentManager.beginTransaction()
         // The drawer's destinations are peers: one fades through to the next, as Material moves between them.
         // The first screen just appears.
@@ -521,6 +517,19 @@ class MainActivity :
         }
         transaction.replace(R.id.fragment_holder, fragment).commitAllowingStateLoss()
         binding.drawerLayout.closeDrawers()
+    }
+
+    /** The connect button and the stats bar show on Home, and on every screen while the user wants them there. */
+    private fun fitBottomBar(screen: ToolbarFragment) {
+        if (screen is ConfigurationFragment) {
+            binding.stats.allowShow = true
+            binding.fab.show()
+        } else if (!DataStore.showBottomBar) {
+            binding.stats.allowShow = false
+            // The bar slides away by its own height, which it has only once laid out.
+            binding.stats.post { binding.stats.performHide() }
+            binding.fab.hide()
+        }
     }
 
     private fun refreshConfigurationProfileState() {

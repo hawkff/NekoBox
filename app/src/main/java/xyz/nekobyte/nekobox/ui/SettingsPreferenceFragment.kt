@@ -157,10 +157,13 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             Theme.applyNightTheme()
             true
         }
-        // The glass layers are set up when an activity starts; the change is saved before the recreation runs.
-        findPreference<SwitchPreference>(Key.LIQUID_GLASS)?.setOnPreferenceChangeListener { _, _ ->
-            ActivityCompat.recreate(requireActivity())
-            true
+        // The glass layers are set up when an activity starts, and the bottom bar and each list's room for it
+        // when a screen does; the change is saved before the recreation runs.
+        for (key in listOf(Key.LIQUID_GLASS, Key.SHOW_BOTTOM_BAR)) {
+            findPreference<SwitchPreference>(key)?.setOnPreferenceChangeListener { _, _ ->
+                ActivityCompat.recreate(requireActivity())
+                true
+            }
         }
         findPreference<ChoicePreference>(Key.APP_LANGUAGE)?.setOnPreferenceChangeListener { _, newValue ->
             AppLocale.apply(newValue as String)
