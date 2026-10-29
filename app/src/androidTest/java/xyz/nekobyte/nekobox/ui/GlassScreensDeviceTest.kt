@@ -40,7 +40,7 @@ class GlassScreensDeviceTest {
 
     @Test
     fun everyDrawerScreenScrollsBeneathItsFloatingBars() {
-        val screens = listOf(R.id.nav_configuration, R.id.nav_group, R.id.nav_route, R.id.nav_settings, R.id.nav_logcat, R.id.nav_connections, R.id.nav_tools, R.id.nav_about)
+        val screens = listOf(R.id.nav_configuration, R.id.nav_group, R.id.nav_route, R.id.nav_settings, R.id.nav_logcat, R.id.nav_connections, R.id.nav_tools, R.id.nav_local_api, R.id.nav_about)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             for (screen in screens) {
                 scenario.onActivity { it.displayFragmentWithId(screen) }
@@ -57,11 +57,14 @@ class GlassScreensDeviceTest {
                     assertEquals(name, 0, content.top)
                     val fade = activity.resources.getDimensionPixelSize(R.dimen.glass_edge_fade)
                     assertEquals(name, bars.height - fade, fragment.glassInset)
-                    // Its lists start below the bars and scroll up beneath them.
+                    // Its lists start below the bars and scroll up beneath them; the log opens at its end.
                     val pages = fragment.childFragmentManager.fragments.mapNotNull { it.view }
                     val scrollers = (listOf(content) + pages).flatMap { Glass.verticalScrollers(it) }.distinct()
                     assertFalse(name, scrollers.isEmpty())
-                    for (scroller in scrollers) assertTrue("$name: ${scroller.javaClass.simpleName}", scroller.paddingTop >= fragment.glassInset)
+                    for (scroller in scrollers) {
+                        assertTrue("$name: ${scroller.javaClass.simpleName}", scroller.paddingTop >= fragment.glassInset)
+                        if (screen != R.id.nav_logcat) assertFalse("$name opens scrolled", scroller.canScrollVertically(-1))
+                    }
                 }
             }
         }

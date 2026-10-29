@@ -120,7 +120,9 @@ object Glass {
         val atTop = !view.canScrollVertically(-1)
         (view as? ViewGroup)?.clipToPadding = false
         view.updatePadding(top = own + inset)
-        if (atTop && view is RecyclerView) view.scrollToPosition(0) else if (atTop) view.scrollTo(view.scrollX, 0)
+        if (atTop) {
+            if (view is RecyclerView) view.scrollToPosition(0) else view.scrollTo(view.scrollX, 0)
+        }
     }
 
     /** The vertical scrolling views in [root], the outermost on each branch. A pager's own list is not one: its pages are. */
