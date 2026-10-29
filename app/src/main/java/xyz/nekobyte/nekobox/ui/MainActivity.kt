@@ -523,6 +523,8 @@ class MainActivity :
     private fun fitBottomBar(screen: ToolbarFragment) {
         if (screen is ConfigurationFragment) {
             binding.stats.allowShow = true
+            // Another screen may have slid the bar away; while connected it belongs on Home.
+            if (DataStore.serviceState.connected) binding.stats.performShow()
             binding.fab.show()
         } else if (!DataStore.showBottomBar) {
             binding.stats.allowShow = false
