@@ -143,6 +143,22 @@ func echoUDP(device *overlay.UserDevice) {
 	}
 }
 
+func TestNebulaMTUStaysUnderNebulasCap(t *testing.T) {
+	for raw, want := range map[string]uint32{
+		"listen: {port: 0}": overlay.DefaultMTU,
+		"tun: {mtu: 1400}":  1400,
+		"tun: {mtu: 9001}":  uint32(overlay.MaxMTU),
+	} {
+		config := nebulaconfig.NewC(slog.New(slog.DiscardHandler))
+		if err := config.LoadString(raw); err != nil {
+			t.Fatal(err)
+		}
+		if got := nebulaMTU(config); got != want {
+			t.Fatalf("%q: MTU %d, want %d", raw, got, want)
+		}
+	}
+}
+
 func TestNebulaConfigNeedsItsPKIInlineAndReadsUnsafeRoutes(t *testing.T) {
 	_, phone := nebulaTestConfigs(4242, "tun:\n  unsafe_routes: [{route: 192.168.1.0/24, via: 10.99.0.1}]\n")
 	info, err := ReadNebulaConfig(phone)
