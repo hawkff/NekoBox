@@ -306,15 +306,7 @@
 
 
 
-    <string-array name="front_proxy_entry">
-        <item>@string/ssh_auth_type_none</item>
-        <item>@string/route_profile</item>
-    </string-array>
 
-    <string-array name="front_proxy_value">
-        <item>0</item>
-        <item>3</item>
-    </string-array>
 
     <string-array name="networks_value">
         <item>tcp</item>
@@ -394,16 +386,7 @@
         <item>10000</item>
     </string-array>
 
-    <string-array name="domain_strategy">
-        <item>AsIs</item>
-        <item>IPIfNonMatch</item>
-        <item>IPOnDemand</item>
-    </string-array>
 
-    <string-array name="transproxy_mode">
-        <item>REDIRECT</item>
-        <item>TPROXY</item>
-    </string-array>
 
     <string-array name="mieru_protocol">
         <item>TCP</item>
@@ -448,25 +431,9 @@
         <item>@string/rules_provider_custom_summary</item>
     </string-array>
 
-    <string-array name="balancer_type">
-        <item>@string/list</item>
-        <item>@string/menu_group</item>
-    </string-array>
-
-    <string-array name="balancer_strategy_entry">
-        <item>@string/random</item>
-        <item>@string/leastPing</item>
-    </string-array>
-    <string-array name="balancer_strategy_value">
-        <item />
-        <item>leastPing</item>
-    </string-array>
 
 
-    <string-array name="group_types">
-        <item>@string/group_basic</item>
-        <item>@string/subscription</item>
-    </string-array>
+
 
     <string-array name="hysteria2_obfs_type">
         <item>@string/plugin_disabled</item>
@@ -479,10 +446,6 @@
         <item>2</item>
     </string-array>
 
-    <string-array name="tuic_version">
-        <item>5</item>
-        <item>4</item>
-    </string-array>
 
     <string-array name="socks_versions">
         <item>SOCKS4</item>
@@ -490,22 +453,8 @@
         <item>SOCKS5</item>
     </string-array>
 
-    <string-array name="simple_obfs">
-        <item>http</item>
-        <item>tls</item>
-    </string-array>
 
-    <string-array name="group_orders">
-        <item>@string/group_order_origin</item>
-        <item>@string/group_order_by_name</item>
-        <item>@string/group_order_by_delay</item>
-    </string-array>
 
-    <string-array name="filter_modes">
-        <item>@string/filter_disabled</item>
-        <item>@string/filter_include</item>
-        <item>@string/filter_exclude</item>
-    </string-array>
 
     <string-array name="ssh_auth_type">
         <item>@string/ssh_auth_type_none</item>
@@ -546,7 +495,6 @@
         <item>@string/mtu_custom_summary</item>
     </string-array>
 
-    <string-array name="mux_select_init" />
 
     <string-array name="mux_type">
         <item>h2mux</item>

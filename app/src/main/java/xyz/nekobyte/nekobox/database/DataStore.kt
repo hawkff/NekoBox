@@ -285,7 +285,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var appendHttpProxy by configurationStore.boolean(Key.APPEND_HTTP_PROXY)
     var httpProxyBypass by configurationStore.string(Key.HTTP_PROXY_BYPASS) { DEFAULT_HTTP_PROXY_BYPASS }
     var dnsHosts by configurationStore.string(Key.DNS_HOSTS) { "" }
-    var strictRoute by configurationStore.boolean(Key.STRICT_ROUTE) { true }
     var connectionTestURL by configurationStore.string(Key.CONNECTION_TEST_URL) { CONNECTION_TEST_URL }
     var connectionTestConcurrent by configurationStore.int("connectionTestConcurrent") { 5 }
     var connectionTestTimeout by configurationStore.int(Key.CONNECTION_TEST_TIMEOUT) { 3000 }

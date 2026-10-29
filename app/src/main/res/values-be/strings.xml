@@ -2,13 +2,9 @@
 <resources>
     <string name="logcat">Экспартаваць інфармацыю пра адладку</string>
     <string name="app_version">Версія</string>
-    <string name="oss_licenses">Ліцэнзіі з адкрытым зыходным кодам</string>
-    <string name="telegram">Канал абнаўлення тэлеграм</string>
     <string name="github">Зыходны код</string>
-    <string name="project">Праект</string>
     <string name="ws_path">Шлях WebSocket</string>
     <string name="ws_host">Хост WebSocket</string>
-    <string name="header_type">Тып загалоўка</string>
     <string name="network">Сетка</string>
     <string name="security">Шыфраванне транспартнага ўзроўню</string>
     <string name="alter_id">Змяніць ID</string>
@@ -19,7 +15,6 @@
     <string name="protocol">Пратакол</string>
     <string name="enc_method">Метад шыфравання</string>
     <string name="password">Пароль</string>
-    <string name="key_opt">Ключ (неабавязкова)</string>
     <string name="password_opt">Пароль (неабавязкова)</string>
     <string name="username_opt">Імя карыстальніка (неабавязкова)</string>
     <string name="username">Імя карыстальніка</string>
@@ -27,10 +22,7 @@
     <string name="server_address">Сервер</string>
     <string name="profile_name">Імя профілю</string>
     <string name="connection_test_url">Тэст URL падлучэння</string>
-    <string name="transproxy_mode">Рэжым Transproxy</string>
-    <string name="require_transproxy">Уключыць Transproxy Уваходныя</string>
     <string name="inbound_settings">Уключыць Transproxy Уваходныя</string>
-    <string name="port_local_dns">Лакальны порт DNS</string>
     <string name="dns_hosts">Перапісаць дамен</string>
     <string name="fakedns_message">Можа выклікаць перазапуск іншых прыкладанняў для паўторнага падлучэння да сеткі пасля спынення проксі</string>
     <string name="enable_fakedns">Уключыць FakeDNS</string>
@@ -39,8 +31,6 @@
     <string name="direct_dns">Прамы DNS</string>
     <string name="remote_dns">Аддалены DNS</string>
     <string name="cag_dns">Налады DNS</string>
-    <string name="connection_test_error_status_code">Код памылкі: #%d</string>
-    <string name="connection_test_fail">Інтэрнэт недаступны</string>
     <string name="connection_test_error">Не атрымалася: %s</string>
     <string name="connection_test_available_http">Поспех: поціск рукі HTTP заняў %dms</string>
     <string name="connection_test_available">Поспех: поціск рукі HTTPS заняў %dms</string>
@@ -53,18 +43,10 @@
     <string name="security_settings">Налады бяспекі</string>
     <string name="show_direct_speed_sum">У апавяшчэнні таксама паказвайце хуткасць руху без проксі</string>
     <string name="show_direct_speed">Паказаць прамую хуткасць</string>
-    <string name="show_stop_sum">Калі вы не хочаце выкарыстоўваць кнопку панэлі апавяшчэнняў у якасці пераключальніка злучэння</string>
-    <string name="show_stop">Паказаць кнопку прыпынку</string>
     <string name="speed_interval">Інтэрвал абнаўлення апавяшчэнняў аб хуткасці</string>
-    <string name="ws_browser_forwarding_sum">Перадайце адпаведныя WebSockets праз браўзэр.</string>
-    <string name="ws_browser_forwarding">Пераадрасацыя браўзэра</string>
     <string name="cag_ws">Налады WebSocket</string>
-    <string name="require_http">Уключыць увод HTTP</string>
     <string name="allow_access_sum">Прывязаць уваходныя серверы да 0.0.0.0</string>
     <string name="allow_access">Дазволіць злучэнне з лакальнай сеткі</string>
-    <string name="cag_route">Налады маршруту</string>
-    <string name="port_transproxy">Transproxy порт</string>
-    <string name="port_http">Проксі -порт HTTP</string>
     <string name="port_proxy">Порт проксі -сервера SOCKS5</string>
     <string name="service_mode_proxy">Толькі проксі</string>
     <string name="service_mode">Рэжым абслугоўвання</string>
@@ -76,25 +58,18 @@
 \n%s</string>
     <string name="group_added">Дададзена:
 \n%s</string>
-    <string name="group_delete_confirm_prompt">Вы ўпэўненыя, што хочаце выдаліць гэтую групу\?</string>
     <string name="group_diff">Розніца (%s)</string>
-    <string name="group_show_diff">Розніца</string>
     <string name="group_updated">%s: Абноўлены %d проксі</string>
     <string name="group_no_difference">%s: няма розніцы</string>
-    <string name="group_edit_subscription">Рэдагаваць падпіску</string>
     <string name="group_edit">Рэдагаваць групу</string>
-    <string name="group_create_subscription">Стварыць падпіску</string>
     <string name="group_create">Стварыць групу</string>
-    <string name="group_name_required">Патрабуецца назва групы</string>
     <string name="group_update">Абнаўленне</string>
     <string name="group_name">Назва групы</string>
-    <string name="menu_traffic">Трафік</string>
     <string name="tile_title">Перамыкач</string>
     <string name="quick_toggle">Пераключыць</string>
     <string name="quick_enable">Уключыць</string>
     <string name="quick_disable">Выключыць</string>
     <string name="group_default">Разгрупаваны</string>
-    <string name="document">Дакумент</string>
     <string name="theme">Тэма</string>
     <string name="menu_about">Пра</string>
     <string name="menu_group">Група</string>

@@ -197,7 +197,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         for (key in listOf(
             Key.TUN_IMPLEMENTATION,
             Key.MTU,
-            Key.STRICT_ROUTE,
             Key.ACQUIRE_WAKE_LOCK,
         )) {
             findPreference<Preference>(key)?.onPreferenceChangeListener = reloadListener
