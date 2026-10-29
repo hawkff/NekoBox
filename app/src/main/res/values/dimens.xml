@@ -1,6 +1,8 @@
 <resources>
     <dimen name="qrcode_size">264dp</dimen>
     <dimen name="main_list_padding_bottom">88dp</dimen>
+    <!-- Room a list keeps below its last row so the connect button and stats bar never cover it. -->
+    <dimen name="bottom_bar_room">168dp</dimen>
     <dimen name="bottom_sheet_padding">8dp</dimen>
 
     <dimen name="card_corner_radius">16dp</dimen>

@@ -6,10 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
 import xyz.nekobyte.nekobox.widget.glass.GlassLayout
@@ -49,6 +51,12 @@ open class ToolbarFragment : Fragment {
         } else {
             view.findViewById<View>(R.id.appbar)?.let(Glass::styleAppBar)
         }
+        // With the connect button on every screen, every list ends above it, as Home's does. Posted: a
+        // screen gives its lists their layout after this runs.
+        if (DataStore.showBottomBar) {
+            view.post { clearBottomBar(view) }
+            childFragmentManager.registerFragmentLifecycleCallbacks(bottomBarChildren, false)
+        }
         toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
         toolbar.setNavigationContentDescription(R.string.open_menu)
         toolbar.setNavigationOnClickListener {
@@ -71,8 +79,25 @@ open class ToolbarFragment : Fragment {
         }
     }
 
+    // Screens inside this one, such as settings pages and tool tabs, end above the button too.
+    private val bottomBarChildren = object : FragmentManager.FragmentLifecycleCallbacks() {
+        override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+            if (f !is DialogFragment) clearBottomBar(v)
+        }
+    }
+
+    /** Lets the last row of each list in [root] scroll above the connect button; lists with that room already keep it. */
+    private fun clearBottomBar(root: View) {
+        val room = resources.getDimensionPixelSize(R.dimen.bottom_bar_room)
+        for (scroller in Glass.verticalScrollers(root)) {
+            (scroller as? ViewGroup)?.clipToPadding = false
+            scroller.updatePadding(bottom = maxOf(scroller.paddingBottom, room))
+        }
+    }
+
     override fun onDestroyView() {
         childFragmentManager.unregisterFragmentLifecycleCallbacks(glassChildren)
+        childFragmentManager.unregisterFragmentLifecycleCallbacks(bottomBarChildren)
         super.onDestroyView()
     }
 
