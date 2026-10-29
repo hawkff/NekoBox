@@ -326,7 +326,6 @@
     <string name="translate_platform">Oversettelsesplattform</string>
     <string name="route_need_vpn">Rutingsregelen %s avhenger av at VPN er operativ, så den ignoreres.</string>
     <string name="group_order_origin">Opprinnelse</string>
-    <string name="group_order">Rekkefølge</string>
     <string name="tcp_connections">%d TCP-tilkoblinger</string>
     <string name="group_order_by_delay">Etter forsinkelse</string>
     <string name="group_order_by_name">Etter navn</string>

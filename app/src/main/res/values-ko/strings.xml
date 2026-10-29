@@ -28,7 +28,6 @@
     <string name="update_all_subscription">모든 구독 업데이트</string>
     <string name="group_edit">그룹 편집</string>
     <string name="group_edit_subscription">구독 편집</string>
-    <string name="layout">레이아웃</string>
     <string name="layout_single_column">단일 열</string>
     <string name="layout_double_column">이중 열</string>
     <string name="sort_and_layout">정렬 및 레이아웃</string>
@@ -345,7 +344,6 @@
     <string name="hysteria_stream_receive_window">QUIC 스트림 수신 윈도우</string>
     <string name="hysteria_connection_receive_window">QUIC 연결 수신 윈도우</string>
     <string name="hysteria_disable_mtu_discovery">경로 MTU 검색 비활성화</string>
-    <string name="group_order">정렬</string>
     <string name="group_order_origin">원래 순서</string>
     <string name="group_order_by_name">이름순</string>
     <string name="group_order_by_delay">지연순</string>

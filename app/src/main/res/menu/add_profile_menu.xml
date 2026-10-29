@@ -97,74 +97,76 @@
         android:icon="@drawable/ic_baseline_more_vert_24"
         android:title="@string/more_options"
         app:showAsAction="always">
+        <!-- Dividers part the groups (ConfigurationFragment enables them): the tests, the open group,
+             clean-up with the removals last, then the connection. -->
         <menu>
-            <item
-                android:id="@+id/action_add_exit_proxy"
-                android:title="@string/action_add_exit_proxy" />
-            <item
-                android:id="@+id/action_share_connection"
-                android:title="@string/share_connection" />
-            <item
-                android:id="@+id/action_update_subscription"
-                android:title="@string/update_current_subscription" />
-            <item
-                android:id="@+id/action_clear_traffic_statistics"
-                android:title="@string/clear_traffic_statistics" />
-            <item
-                android:id="@+id/action_remove_duplicate"
-                android:title="@string/remove_duplicate" />
-            <item
-                android:id="@+id/action_connection_tcp_ping"
-                android:title="@string/connection_test_tcp_ping" />
-            <item
-                android:id="@+id/action_connection_icmp_ping"
-                android:title="@string/connection_test_icmp_ping" />
-            <item
-                android:id="@+id/action_connection_url_test"
-                android:title="@string/connection_test_url_test" />
-            <item
-                android:id="@+id/action_connection_test_clear_results"
-                android:title="@string/connection_test_clear_results" />
-            <item
-                android:id="@+id/action_connection_test_delete_unavailable"
-                android:title="@string/connection_test_delete_unavailable" />
-            <item
-                android:id="@+id/action_global_mode"
-                android:title="@string/global_mode"
-                android:checkable="true"
-                android:checked="false"
-                app:showAsAction="never" />
-            <item
-                android:id="@+id/action_order_layout"
-                android:title="@string/sort_and_layout">
-                <menu>
-                    <item
-                        android:title="@string/group_order"
-                        android:enabled="false" />
-                    <group android:id="@+id/order_group" android:checkableBehavior="single">
-                        <item
-                            android:id="@+id/action_order_origin"
-                            android:title="@string/group_order_origin" />
-                        <item
-                            android:id="@+id/action_order_by_name"
-                            android:title="@string/group_order_by_name" />
-                        <item
-                            android:id="@+id/action_order_by_delay"
-                            android:title="@string/group_order_by_delay" />
-                    </group>
-                    <item
-                        android:title="@string/layout"
-                        android:enabled="false" />
-                    <group android:id="@+id/layout_group" android:checkableBehavior="single">
-                        <item
-                            android:id="@+id/action_layout_single"
-                            android:title="@string/layout_single_column" />
-                        <item
-                            android:id="@+id/action_layout_double"
-                            android:title="@string/layout_double_column" />
-                    </group>
-                </menu>
-            </item>
+            <group android:id="@+id/group_tests">
+                <item
+                    android:id="@+id/action_connection_url_test"
+                    android:title="@string/connection_test_url_test" />
+                <item
+                    android:id="@+id/action_connection_tcp_ping"
+                    android:title="@string/connection_test_tcp_ping" />
+                <item
+                    android:id="@+id/action_connection_icmp_ping"
+                    android:title="@string/connection_test_icmp_ping" />
+            </group>
+            <group android:id="@+id/group_open_group">
+                <item
+                    android:id="@+id/action_update_subscription"
+                    android:title="@string/update_current_subscription" />
+                <item
+                    android:id="@+id/action_order_layout"
+                    android:title="@string/sort_and_layout">
+                    <menu>
+                        <group android:id="@+id/order_group" android:checkableBehavior="single">
+                            <item
+                                android:id="@+id/action_order_origin"
+                                android:title="@string/group_order_origin" />
+                            <item
+                                android:id="@+id/action_order_by_name"
+                                android:title="@string/group_order_by_name" />
+                            <item
+                                android:id="@+id/action_order_by_delay"
+                                android:title="@string/group_order_by_delay" />
+                        </group>
+                        <group android:id="@+id/layout_group" android:checkableBehavior="single">
+                            <item
+                                android:id="@+id/action_layout_single"
+                                android:title="@string/layout_single_column" />
+                            <item
+                                android:id="@+id/action_layout_double"
+                                android:title="@string/layout_double_column" />
+                        </group>
+                    </menu>
+                </item>
+            </group>
+            <group android:id="@+id/group_clean_up">
+                <item
+                    android:id="@+id/action_connection_test_clear_results"
+                    android:title="@string/connection_test_clear_results" />
+                <item
+                    android:id="@+id/action_clear_traffic_statistics"
+                    android:title="@string/clear_traffic_statistics" />
+                <item
+                    android:id="@+id/action_remove_duplicate"
+                    android:title="@string/remove_duplicate" />
+                <item
+                    android:id="@+id/action_connection_test_delete_unavailable"
+                    android:title="@string/connection_test_delete_unavailable" />
+            </group>
+            <group android:id="@+id/group_connection">
+                <item
+                    android:id="@+id/action_add_exit_proxy"
+                    android:title="@string/action_add_exit_proxy" />
+                <item
+                    android:id="@+id/action_share_connection"
+                    android:title="@string/share_connection" />
+                <item
+                    android:id="@+id/action_global_mode"
+                    android:title="@string/global_mode"
+                    android:checkable="true" />
+            </group>
         </menu>
     </item>
 

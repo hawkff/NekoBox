@@ -281,11 +281,8 @@
     <string name="clear_traffic_statistics">Borrar estadísticas de tráfico</string> 
     <string name="connection_test">Prueba de conexión</string> 
     <string name="connection_test_clear_results">Borrar resultados de la prueba</string> 
-    <string name="connection_test_tcp_ping" translatable="false">TCPing</string> 
     <string name="connection_test_tcp_ping_unavailable">TCPing no disponible</string> 
-    <string name="connection_test_icmp_ping" translatable="false">ICMPing</string> 
     <string name="connection_test_icmp_ping_unavailable">ICMPing no disponible</string> 
-    <string name="connection_test_url_test" translatable="false">URL Test</string> 
     <string name="connection_test_domain_not_found">Dominio no encontrado</string> 
     <string name="connection_test_refused">Conexión denegada</string> 
     <string name="connection_test_unreachable">Inalcanzable</string> 
@@ -338,7 +335,6 @@
     <string name="experimental_settings">Experimental</string>
     <string name="hysteria_stream_receive_window">Ventana de recepción de transmisión QUIC</string>
     <string name="hysteria_connection_receive_window">Ventana de recepción de conexión QUIC</string> 
-    <string name="group_order">Orden</string> 
     <string name="group_order_origin">Origen</string> 
     <string name="group_order_by_name">Por nombre</string> 
     <string name="group_order_by_delay">Por retraso</string> 

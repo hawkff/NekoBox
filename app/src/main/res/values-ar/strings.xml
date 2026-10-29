@@ -343,7 +343,6 @@
     <string name="group_order_by_delay">عن طريق التأخير</string>
     <string name="group_order_by_name">بالاسم</string>
     <string name="group_order_origin">أصل</string>
-    <string name="group_order">ترتيب</string>
     <string name="hysteria_disable_mtu_discovery">تعطيل اكتشاف MTU للمسار</string>
     <string name="hysteria_connection_receive_window">نافذة تلقي اتصال QUIC</string>
     <string name="hysteria_stream_receive_window">نافذة تلقي دفق QUIC</string>

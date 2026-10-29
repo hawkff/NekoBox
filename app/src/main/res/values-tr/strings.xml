@@ -163,7 +163,6 @@
     <string name="group_order_by_delay">Gecikme</string>
     <string name="group_order_by_name">İsim</string>
     <string name="group_order_origin">Köken</string>
-    <string name="group_order">Sıralama</string>
     <string name="experimental_settings">Deneysel</string>
     <string name="hysteria_download_mbps">En Fazla İndirme Hızı (Mbps cinsinden)</string>
     <string name="hysteria_upload_mbps">En Fazla Yükleme Hızı (Mbps cinsinden)</string>

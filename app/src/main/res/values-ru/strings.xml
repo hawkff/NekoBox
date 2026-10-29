@@ -94,15 +94,16 @@
 <string name="connection_test_delete_unavailable">Удалить недоступные</string>
 <string name="connection_test_domain_not_found">Домен не найден</string>
 <string name="connection_test_error">Ошибка: %s</string>
-<string name="connection_test_icmp_ping_unavailable">ICMPing недоступен</string>
+<string name="connection_test_icmp_ping">ICMP-пинг</string>
+<string name="connection_test_icmp_ping_unavailable">ICMP-пинг недоступен</string>
 <string name="connection_test_refused">В соединении отказано</string>
-<string name="connection_test_tcp_ping">TCP Пинг</string>
-<string name="connection_test_tcp_ping_unavailable">TCPing недоступен</string>
+<string name="connection_test_tcp_ping">TCP-пинг</string>
+<string name="connection_test_tcp_ping_unavailable">TCP-пинг недоступен</string>
 <string name="connection_test_testing">Тестирование…</string>
 <string name="connection_test_timeout_error">Тайм-аут</string>
 <string name="connection_test_unreachable">Недоступен</string>
 <string name="connection_test_url">URL-адрес проверки подключения</string>
-<string name="connection_test_url_test">URL Тест</string>
+<string name="connection_test_url_test">URL-тест</string>
 <string name="copy">Копировать</string>
 <string name="copy_toast_msg">Ссылка скопирована в буфер обмена.</string>
 <string name="create_shortcut">Создать ярлык</string>
@@ -113,6 +114,14 @@
 <string name="deduplication_sum">Удалить повторяющиеся конфигурации при обновлении</string>
 <string name="delete">Удалить</string>
 <string name="delete_confirm_prompt">Вы уверены, что хотите удалить этот профиль?</string>
+<plurals name="remove_profiles">
+    <item quantity="one">Удалить %d профиль?</item>
+    <item quantity="few">Удалить %d профиля?</item>
+    <item quantity="many">Удалить %d профилей?</item>
+    <item quantity="other">Удалить %d профиля?</item>
+</plurals>
+<string name="no_duplicate_profiles">Дубликатов нет</string>
+<string name="no_unavailable_profiles">Недоступных профилей нет</string>
 <string name="delete_group_prompt">Вы уверены, что хотите удалить эту группу?</string>
 <string name="delete_route_prompt">Вы уверены, что хотите удалить этот маршрут?</string>
 <string name="direct_boot_aware">Разрешить переключение на экране блокировки</string>
@@ -196,10 +205,9 @@
 <string name="group_name_required">Требуется название группы</string>
 <string name="group_no_difference">%s: без изменений</string>
 <string name="group_not_subscription">Тип группы не является подпиской</string>
-<string name="group_order">Сортировка</string>
 <string name="group_order_by_delay">По задержке</string>
 <string name="group_order_by_name">По имени</string>
-<string name="group_order_origin">По источнику</string>
+<string name="group_order_origin">Исходный порядок</string>
 <string name="group_show_diff">Сравнить группы</string>
 <string name="group_update">Обновить</string>
 <string name="group_updated">%s: обновлено %d прокси</string>
@@ -351,7 +359,7 @@
 <string name="reboot_required">Не удалось запустить службу VPN. Возможно, вам потребуется перезагрузить устройство.</string>
 <string name="release_wake_lock">Отключить WakeLock</string>
 <string name="remote_dns">Удаленный DNS</string>
-<string name="remove_duplicate">Удалить дубликаты серверов</string>
+<string name="remove_duplicate">Удалить дубликаты</string>
 <string name="reset_connections">Сбросить соединения</string>
 <string name="reset_settings">Восстановить настройки по умолчанию</string>
 <string name="reset_settings_message">Восстановить настройки по умолчанию, такие данные, как узлы и группы, будут сохранены. Для полной очистки данных, очистите данные приложения непосредственно в системных настройках.</string>
@@ -470,7 +478,7 @@
 <string name="undo">Отменить</string>
 <string name="unsaved_changes_prompt">Есть несохраненные изменения. Сохранить?</string>
 <string name="update_all_subscription">Обновить все подписки</string>
-<string name="update_current_subscription">Обновить подписку текущей группы</string>
+<string name="update_current_subscription">Обновить подписку</string>
 <string name="update_dialog_message">Текущая версия: %1$s\nДоступная версия: %2$s\nХотите загрузить её?</string>
 <string name="update_dialog_title">Доступна новая версия</string>
 <string name="update_subscription_warning">Прокси-сервер не подключен, вы уверены, что хотите продолжить обновление?</string>
@@ -500,7 +508,6 @@
 <string name="yes">Да</string>
     <string name="action_copy">Копировать</string>
     <string name="action_open">Открыть</string>
-    <string name="layout">Макет</string>
     <string name="layout_single_column">Один столбец</string>
     <string name="layout_double_column">Два столбца</string>
     <string name="sort_and_layout">Сортировка и макет</string>
