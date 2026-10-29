@@ -232,7 +232,8 @@ func (e *nebulaEndpoint) Start(stage adapter.StartStage, scope *adapter.Scope) e
 	stack, err := wireguard.NewDevice(wireguard.DeviceOptions{
 		Context: e.ctx,
 		Logger:  e.logger,
-		MTU:     uint32(config.GetInt("tun.mtu", 1300)),
+		// Nebula's own cap: a bigger packet would not fit its underlay buffers once relayed.
+		MTU:     uint32(min(config.GetInt("tun.mtu", overlay.DefaultMTU), overlay.MaxMTU)),
 		Address: device.Networks(),
 	})
 	if err != nil {
