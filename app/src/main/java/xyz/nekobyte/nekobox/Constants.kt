@@ -71,7 +71,6 @@ object Key {
     const val APPEND_HTTP_PROXY = "appendHttpProxy"
     const val HTTP_PROXY_BYPASS = "httpProxyBypass"
     const val DNS_HOSTS = "dnsHosts"
-    const val STRICT_ROUTE = "strictRoute"
 
     const val CONNECTION_TEST_URL = "connectionTestURL"
     const val CONNECTION_TEST_TIMEOUT = "connectionTestTimeout"
@@ -157,7 +156,6 @@ object Key {
     const val SERVER_HY2_OBFS_TYPE = "serverHy2ObfsType"
     const val SERVER_HY2_GECKO_MIN_PACKET = "serverHy2GeckoMinPacket"
     const val SERVER_HY2_GECKO_MAX_PACKET = "serverHy2GeckoMaxPacket"
-    const val SERVER_HY2_ECH_CATEGORY = "serverHy2EchCategory"
     const val SERVER_HY2_ECH_ENABLED = "serverHy2EchEnabled"
     const val SERVER_HY2_ECH_CONFIG = "serverHy2EchConfig"
 

@@ -18,6 +18,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.widget.glass.Glass
 
@@ -77,6 +78,47 @@ class BottomBarRoomDeviceTest {
                         assertTrue("$name: ${scroller.javaClass.simpleName} ends at $last, under the button at $buttonTop", last <= buttonTop)
                     }
                 }
+            }
+        }
+    }
+
+    @Test
+    fun theConnectButtonStaysOffSettingsAfterTheScreenIsRecreated() {
+        DataStore.showBottomBar = false
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.displayFragmentWithId(R.id.nav_settings) }
+            instrumentation.waitForIdleSync()
+            // A theme or glass change recreates the activity the same way.
+            scenario.recreate()
+            instrumentation.waitForIdleSync()
+            Thread.sleep(1500)
+            scenario.onActivity { activity ->
+                assertFalse("the connect button shows over Settings", activity.findViewById<View>(R.id.fab).isShown)
+            }
+        }
+    }
+
+    @Test
+    fun theStatsBarComesBackOnHomeWhileConnected() {
+        DataStore.showBottomBar = false
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            instrumentation.waitForIdleSync()
+            Thread.sleep(1500)
+            val saved = DataStore.serviceState
+            // Connected as far as the screens can tell; the stopped service sends no new state during the test.
+            DataStore.serviceState = BaseService.State.Connected
+            try {
+                for (screen in listOf(R.id.nav_settings, R.id.nav_configuration)) {
+                    scenario.onActivity { it.displayFragmentWithId(screen) }
+                    instrumentation.waitForIdleSync()
+                    Thread.sleep(1000)
+                }
+                scenario.onActivity { activity ->
+                    val bar = activity.findViewById<View>(R.id.stats)
+                    assertTrue("the stats bar is slid away on Home", bar.isShown && bar.translationY == 0f)
+                }
+            } finally {
+                DataStore.serviceState = saved
             }
         }
     }

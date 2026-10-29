@@ -82,7 +82,7 @@ class GlobalPreferencesLayoutTest {
             "networkAutomation", "networkAutomationRules", "networkChangeResetConnections", "nightTheme", "profileTrafficStatistics", "protectionAlwaysOn",
             "protectionBattery", "protectionLockdown", "protectionNotes", "proxyApps", "proxyModeInboundAuth", "remoteDns", "requireProxyInVPN", "resetSettings", "resolveDestination",
             "rulesGeoipUrl", "rulesGeositeUrl", "rulesProvider", "rulesUpdateInterval", "serviceMode",
-            "showBottomBar", "showDirectSpeed", "showGroupInNotification", "speedInterval", "strictRoute",
+            "showBottomBar", "showDirectSpeed", "showGroupInNotification", "speedInterval",
             "trafficSniffing", "tunImplementation", "wakeResetConnections", "webrtcLeakProtection",
         )
     }

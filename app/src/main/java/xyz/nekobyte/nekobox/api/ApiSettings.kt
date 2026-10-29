@@ -65,10 +65,10 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         result[Key.LOG_BUF_SIZE] = Setting("integer", 0)
         result[Key.NEBULA_ENABLED] = Setting("boolean", false)
         result[Key.NEBULA_CONFIG] = Setting("string", "")
-        result["webdavServer"] = Setting("string", "")
-        result["webdavUsername"] = Setting("string", "")
-        result["webdavPassword"] = Setting("string", "")
-        result["webdavPath"] = Setting("string", "NekoBox")
+        result[Key.WEBDAV_SERVER] = Setting("string", "")
+        result[Key.WEBDAV_USERNAME] = Setting("string", "")
+        result[Key.WEBDAV_PASSWORD] = Setting("string", "")
+        result[Key.WEBDAV_PATH] = Setting("string", "NekoBox")
         result
     }
 

@@ -285,7 +285,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var appendHttpProxy by configurationStore.boolean(Key.APPEND_HTTP_PROXY)
     var httpProxyBypass by configurationStore.string(Key.HTTP_PROXY_BYPASS) { DEFAULT_HTTP_PROXY_BYPASS }
     var dnsHosts by configurationStore.string(Key.DNS_HOSTS) { "" }
-    var strictRoute by configurationStore.boolean(Key.STRICT_ROUTE) { true }
     var connectionTestURL by configurationStore.string(Key.CONNECTION_TEST_URL) { CONNECTION_TEST_URL }
     var connectionTestConcurrent by configurationStore.int("connectionTestConcurrent") { 5 }
     var connectionTestTimeout by configurationStore.int(Key.CONNECTION_TEST_TIMEOUT) { 3000 }
@@ -399,20 +398,20 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // var enableTLSFragment by configurationStore.boolean(Key.ENABLE_TLS_FRAGMENT)
 
     var webdavServer: String?
-        get() = configurationStore.getString("webdavServer")
-        set(value) = configurationStore.putString("webdavServer", value)
+        get() = configurationStore.getString(Key.WEBDAV_SERVER)
+        set(value) = configurationStore.putString(Key.WEBDAV_SERVER, value)
 
     var webdavUsername: String?
-        get() = configurationStore.getString("webdavUsername")
-        set(value) = configurationStore.putString("webdavUsername", value)
+        get() = configurationStore.getString(Key.WEBDAV_USERNAME)
+        set(value) = configurationStore.putString(Key.WEBDAV_USERNAME, value)
 
     var webdavPassword: String?
-        get() = configurationStore.getString("webdavPassword")
-        set(value) = configurationStore.putString("webdavPassword", value)
+        get() = configurationStore.getString(Key.WEBDAV_PASSWORD)
+        set(value) = configurationStore.putString(Key.WEBDAV_PASSWORD, value)
 
     var webdavPath: String?
-        get() = configurationStore.getString("webdavPath") ?: "NekoBox" // set default value
-        set(value) = configurationStore.putString("webdavPath", value)
+        get() = configurationStore.getString(Key.WEBDAV_PATH) ?: "NekoBox" // set default value
+        set(value) = configurationStore.putString(Key.WEBDAV_PATH, value)
 
     var globalMode by configurationStore.boolean(Key.GLOBAL_MODE)
 

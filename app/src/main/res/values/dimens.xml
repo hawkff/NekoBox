@@ -3,10 +3,8 @@
     <dimen name="main_list_padding_bottom">88dp</dimen>
     <!-- Room a list keeps below its last row so the connect button and stats bar never cover it. -->
     <dimen name="bottom_bar_room">168dp</dimen>
-    <dimen name="bottom_sheet_padding">8dp</dimen>
 
     <dimen name="card_corner_radius">16dp</dimen>
-    <dimen name="card_elevation">1dp</dimen>
     <dimen name="card_stroke_width">1dp</dimen>
     <dimen name="card_stroke_width_selected">2dp</dimen>
     <dimen name="profile_card_corner_radius">10dp</dimen>
@@ -19,7 +17,6 @@
     <dimen name="nav_item_corner_radius">14dp</dimen>
     <dimen name="button_corner_radius">12dp</dimen>
 
-    <dimen name="mtrl_snackbar_background_corner_radius">12dp</dimen>
 
     <!-- Liquid glass: frost of the content behind, the refracting rim and its light split, the
          fade of the band under floating controls, and the blur behind glass dialogs. -->

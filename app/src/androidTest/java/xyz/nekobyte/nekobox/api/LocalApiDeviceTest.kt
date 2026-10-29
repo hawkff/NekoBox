@@ -10,8 +10,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.ui.MainActivity
-import java.net.HttpURLConnection
-import java.net.URL
+import java.net.Socket
 
 @RunWith(AndroidJUnit4::class)
 class LocalApiDeviceTest {
@@ -36,12 +35,7 @@ class LocalApiDeviceTest {
                 }
             }
             assertTrue("API did not start", ready)
-            val unauthenticated = URL("http://127.0.0.1:${config.port}/v1").openConnection() as HttpURLConnection
-            try {
-                assertEquals(401, unauthenticated.responseCode)
-            } finally {
-                unauthenticated.disconnect()
-            }
+            assertEquals(401, exchange(config.port, "GET /v1", null, null).first)
             val catalog = call(config, "api.describe").getJSONObject("commands")
             assertTrue(catalog.has("profiles.create"))
             val group = call(config, "groups.create", JSONObject().put("name", "API device fixture"))
@@ -86,19 +80,28 @@ class LocalApiDeviceTest {
     }
 
     private fun request(config: LocalApiAccess.Config, operation: String, parameters: JSONObject): JSONObject {
-        val connection = URL("http://127.0.0.1:${config.port}/v1/$operation").openConnection() as HttpURLConnection
-        try {
-            connection.connectTimeout = 1000
-            connection.readTimeout = 5000
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Authorization", "Bearer ${config.token}")
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.doOutput = true
-            connection.outputStream.use { it.write(parameters.toString().toByteArray()) }
-            assertEquals(200, connection.responseCode)
-            return JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-        } finally {
-            connection.disconnect()
+        val (status, body) = exchange(config.port, "POST /v1/$operation", config.token, parameters.toString())
+        assertEquals(200, status)
+        return JSONObject(body)
+    }
+
+    /**
+     * One HTTP/1.0 exchange over a plain socket. The test runs in the app's process, whose network security policy
+     * refuses cleartext to every host; a socket is outside that policy, as the API's clients in other apps are.
+     */
+    private fun exchange(port: Int, request: String, token: String?, body: String?): Pair<Int, String> {
+        Socket("127.0.0.1", port).use { socket ->
+            socket.soTimeout = 5000
+            val payload = body.orEmpty().toByteArray()
+            val head = buildString {
+                append("$request HTTP/1.0\r\nHost: 127.0.0.1:$port\r\n")
+                token?.let { append("Authorization: Bearer $it\r\n") }
+                if (body != null) append("Content-Type: application/json\r\nContent-Length: ${payload.size}\r\n")
+                append("\r\n")
+            }
+            socket.getOutputStream().apply { write(head.toByteArray() + payload) }.flush()
+            val response = socket.getInputStream().readBytes().toString(Charsets.UTF_8)
+            return response.substringBefore("\r\n").split(' ')[1].toInt() to response.substringAfter("\r\n\r\n")
         }
     }
 }

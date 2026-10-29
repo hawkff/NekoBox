@@ -9,6 +9,7 @@ import com.google.android.material.snackbar.Snackbar
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.databinding.LayoutWebdavSettingsBinding
@@ -67,7 +68,7 @@ class WebDAVSettingsActivity : ThemedActivity() {
             preferenceManager.preferenceDataStore = DataStore.configurationStore
             addPreferencesFromResource(R.xml.webdav_preferences)
 
-            findPreference<EditTextPreference>("webdavServer")?.apply {
+            findPreference<EditTextPreference>(Key.WEBDAV_SERVER)?.apply {
                 setOnBindEditTextListener { editText ->
                     editText.setSingleLine()
                     editText.setSelection(editText.text.length)
@@ -75,7 +76,7 @@ class WebDAVSettingsActivity : ThemedActivity() {
                 summaryProvider = EditTextPreference.SimpleSummaryProvider.getInstance()
             }
 
-            findPreference<EditTextPreference>("webdavUsername")?.apply {
+            findPreference<EditTextPreference>(Key.WEBDAV_USERNAME)?.apply {
                 setOnBindEditTextListener { editText ->
                     editText.setSingleLine()
                     editText.setSelection(editText.text.length)
@@ -83,7 +84,7 @@ class WebDAVSettingsActivity : ThemedActivity() {
                 summaryProvider = EditTextPreference.SimpleSummaryProvider.getInstance()
             }
 
-            findPreference<EditTextPreference>("webdavPassword")?.apply {
+            findPreference<EditTextPreference>(Key.WEBDAV_PASSWORD)?.apply {
                 setOnBindEditTextListener { editText ->
                     editText.setSingleLine()
                     editText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -93,7 +94,7 @@ class WebDAVSettingsActivity : ThemedActivity() {
                 summaryProvider = GroupSettingsActivity.PasswordSummaryProvider
             }
 
-            findPreference<EditTextPreference>("webdavPath")?.apply {
+            findPreference<EditTextPreference>(Key.WEBDAV_PATH)?.apply {
                 setOnBindEditTextListener { editText ->
                     editText.setSingleLine()
                     editText.setSelection(editText.text.length)

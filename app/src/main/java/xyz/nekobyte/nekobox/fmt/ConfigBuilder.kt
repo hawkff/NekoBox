@@ -467,7 +467,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         endpoint_independent_nat = true
                         mtu = DataStore.mtu
                         auto_route = true
-                        strict_route = DataStore.strictRoute
+                        // For exported configs: the core reads it only when it sets the routes up, never with the VPN service's descriptor.
+                        strict_route = true
                         when (ipv6Mode) {
                             IPv6Mode.DISABLE -> {
                                 address = listOf(VpnService.PRIVATE_VLAN4_CLIENT + "/28")

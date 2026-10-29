@@ -92,10 +92,6 @@
             app:key="mtu"
             app:title="@string/mtu" />
         <SwitchPreference
-            app:defaultValue="true"
-            app:key="strictRoute"
-            app:title="@string/strict_route" />
-        <SwitchPreference
             app:icon="@drawable/ic_device_data_usage"
             app:key="meteredNetwork"
             app:summary="@string/metered_summary"

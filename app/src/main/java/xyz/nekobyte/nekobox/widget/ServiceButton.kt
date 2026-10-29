@@ -213,12 +213,9 @@ class ServiceButton @JvmOverloads constructor(
             imageTintList = ColorStateList.valueOf(if (connected) context.getColorAttr(R.attr.fabConnectedColor) else color)
             return
         }
-        // Tint the connect FAB icon by state. Connected uses fabConnectedColor
-        // (defaults to the green connected status color, but themes whose FAB
-        // background is that same green - e.g. Dark High Contrast - override it
-        // with a contrasting color so the icon stays visible). Stopped uses
-        // fabStoppedColor. Transient states fall back to colorOnPrimary, the FAB's
-        // normal icon color, so unaffected themes look unchanged.
+        // Tint the connect FAB icon by state: fabConnectedColor when connected, fabStoppedColor when stopped,
+        // colorOnPrimary in between. Both default to colorOnPrimary; the palettes with a green status color of their
+        // own set fabConnectedColor to their on-primary color, so the icon never turns green on the button.
         val attr = when (state) {
             BaseService.State.Connected -> R.attr.fabConnectedColor
             BaseService.State.Stopped -> R.attr.fabStoppedColor

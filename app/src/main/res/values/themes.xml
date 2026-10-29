@@ -644,10 +644,6 @@
         <item name="android:textColorTertiary">@color/catppuccin_on_surface_variant</item>
         <item name="android:textColorHint">@color/catppuccin_outline</item>
     </style>
-    <style name="AppearanceFoundation.Title" parent="TextAppearance.AppCompat.Title">
-        <item name="android:textColor">?attr/colorOnSurface</item>
-        <item name="android:textStyle">bold</item>
-    </style>
 
     <style name="ThemeOverlay.NekoBox.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <!-- Palettes set the surface and its text colors but not the M3 container roles, so a
@@ -798,11 +794,6 @@
     </style>
 
     <!-- ElevatedCard: shadow + tonal surface, no stroke. -->
-    <style name="Widget.NekoBox.CardView.Elevated">
-        <item name="cardElevation">@dimen/card_elevation</item>
-        <item name="strokeWidth">0dp</item>
-        <item name="cardBackgroundColor">?attr/cardElevatedSurfaceColor</item>
-    </style>
 
     <style name="ShapeAppearanceOverlay.NekoBox.Dialog" parent="">
         <item name="cornerFamily">rounded</item>
