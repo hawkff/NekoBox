@@ -6,8 +6,16 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.util.AttributeSet
-import android.widget.ArrayAdapter
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.CheckedTextView
+import android.widget.LinearLayout
+import android.widget.RadioButton
 import androidx.core.content.res.use
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.core.widget.NestedScrollView
 import androidx.preference.ListPreference
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xyz.nekobyte.nekobox.R
@@ -28,18 +36,34 @@ open class ChoicePreference @JvmOverloads constructor(context: Context, attrs: A
         isSingleLineTitle = false
     }
 
+    // The rows sit in a plain scrolling column: a dialog's list view sizes itself before its rows wrap, which
+    // cut off rows with a second line.
     override fun onClick() {
         val names = entries ?: return
         val values = entryValues ?: return
-        val rows = names.mapIndexed { index, name -> row(name, entrySummaries?.getOrNull(index)) }
-        MaterialAlertDialogBuilder(context)
+        val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = NestedScrollView(context).apply { addView(column) }
+        val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(title)
-            .setSingleChoiceItems(ArrayAdapter(context, R.layout.item_choice, rows), checkedIndex()) { dialog, which ->
-                dialog.dismiss()
-                choose(values[which].toString())
-            }
+            .setView(scroll)
             .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            .create()
+        val checked = checkedIndex()
+        val inflater = LayoutInflater.from(dialog.context)
+        names.forEachIndexed { index, name ->
+            val row = inflater.inflate(R.layout.item_choice, column, false) as CheckedTextView
+            row.text = row(name, entrySummaries?.getOrNull(index))
+            row.isChecked = index == checked
+            row.setOnClickListener {
+                dialog.dismiss()
+                choose(values[index].toString())
+            }
+            ViewCompat.setAccessibilityDelegate(row, RadioRole)
+            column.addView(row)
+        }
+        dialog.show()
+        // A long list opens with its picked row in view.
+        column.getChildAt(checked)?.let { row -> scroll.post { scroll.scrollTo(0, row.top - (scroll.height - row.height) / 2) } }
     }
 
     /** The row shown as picked. */
@@ -57,6 +81,14 @@ open class ChoicePreference @JvmOverloads constructor(context: Context, attrs: A
             append(summary)
             setSpan(RelativeSizeSpan(0.875f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             setSpan(ForegroundColorSpan(context.getColorAttr(android.R.attr.textColorSecondary)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
+
+    /** Screen readers announce a row as a radio button, picked or not. */
+    private object RadioRole : AccessibilityDelegateCompat() {
+        override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+            super.onInitializeAccessibilityNodeInfo(host, info)
+            info.className = RadioButton::class.java.name
         }
     }
 }

@@ -2,9 +2,9 @@
 <!-- One row of a ChoicePreference dialog: Material's single-choice row, with room for a second line. -->
 <CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@android:id/text1"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
     android:drawablePadding="20dp"
     android:gravity="center_vertical"
     android:minHeight="?attr/listPreferredItemHeightSmall"
