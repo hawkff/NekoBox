@@ -1,6 +1,6 @@
 # Local control API
 
-The app provides a versioned HTTP API for local automation. While enabled, it listens on a loopback port, independently of the VPN. Each time it is turned on, it gets a new token and a random port between 20000 and 60000, so a probe of one fixed port cannot find it. It is off by default.
+The app provides a versioned HTTP API for local automation. While enabled, it listens on a loopback port, independently of the VPN. Turning it on in the app gives it a new token and a random port between 20000 and 60000, so a probe of one fixed port cannot find it. The Python client below keeps a stored token and port when it enables the API again; `--rotate` replaces the token. It is off by default.
 
 The token grants administrative access to the app, including credential exports, backup restoration and approval of installed plugin signers. Keep it out of source control, shell history and shared logs. Disable the API or replace its token to revoke access. An operation accepted before revocation may finish.
 
