@@ -1,12 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<string name="abc_search_hint">Введите запрос</string>
-<string name="abc_searchview_description_clear">Удалить запрос</string>
-<string name="abc_searchview_description_search">Поиск</string>
-<string name="abc_searchview_description_submit">Отправить запрос</string>
-<string name="abc_searchview_description_voice">Голосовой поиск</string>
-<string name="abc_shareactionprovider_share_with">Поделиться с помощью</string>
-<string name="abc_toolbar_collapse_description">Свернуть</string>
 <string name="acquire_wake_lock">Не усыплять процессор</string>
 <string name="acquire_wake_lock_summary">Соединения не рвутся при выключенном экране. Тратит больше батареи.</string>
 <string name="action_download">СКАЧАТЬ</string>
@@ -59,11 +52,6 @@
 <string name="backup_rules">Правила маршрутизации</string>
 <string name="backup_settings">Настройки</string>
 <string name="backup_summary">Если правила маршрутизации резервируются без конфигураций, то пользовательские исходящие соединения будут потеряны.</string>
-<string name="bottomsheet_action_collapse">Свернуть нижний экран</string>
-<string name="bottomsheet_action_expand">Развернуть нижний экран</string>
-<string name="bottomsheet_action_expand_halfway">Развернуть наполовину</string>
-<string name="bottomsheet_drag_handle_clicked">Двойное нажатие на маркер перемещения</string>
-<string name="bottomsheet_drag_handle_content_description">Маркер перемещения</string>
 <string name="bypass_apps">Обход</string>
 <string name="bypass_lan_in_core">Обход LAN в ядре</string>
 <string name="cag_dns">Настройки DNS</string>
@@ -71,15 +59,12 @@
 <string name="cag_ws">Настройки WebSocket</string>
 <string name="certificates">Сертификаты</string>
 <string name="chain_settings">Настройки цепочки</string>
-<string name="character_counter_content_description">Введено символов: %1$d из %2$d</string>
-<string name="character_counter_overflowed_content_description">Превышено ограничение на количество символов (%1$d из %2$d)</string>
 <string name="check_update_no">Обновления не найдены.</string>
 <string name="circular_reference">Циклическая ссылка</string>
 <string name="circular_reference_sum">Маршрут не может содержать сам себя.</string>
 <string name="clear_logcat">Очистить журнал</string>
 <string name="clear_profiles_message">Вы уверены, что хотите очистить эту группу?</string>
 <string name="clear_selections">Очистить выбранное</string>
-<string name="clear_text_end_icon_content_description">Очистить текстовое поле</string>
 <string name="clear_traffic_statistics">Очистить статистику трафика</string>
 <string name="cleartext_http_warning">Передача HTTP-трафика в виде открытого текста небезопасна</string>
 <string name="clipboard_empty">Буфер обмена пуст</string>
@@ -104,8 +89,6 @@
 <string name="connection_test_unreachable">Недоступен</string>
 <string name="connection_test_url">URL-адрес проверки подключения</string>
 <string name="connection_test_url_test">URL-тест</string>
-<string name="copy">Копировать</string>
-<string name="copy_toast_msg">Ссылка скопирована в буфер обмена.</string>
 <string name="create_shortcut">Создать ярлык</string>
 <string name="custom_config">Пользовательская конфигурация</string>
 <string name="custom_config_json">Пользовательская конфигурация JSON</string>
@@ -155,11 +138,7 @@
 <string name="enable_mux">Включить мультиплексор</string>
 <string name="enc_method">Метод шифрования</string>
 <string name="encryption">Шифрование</string>
-<string name="error_a11y_label">Ошибка: недопустимое значение</string>
-<string name="error_icon_content_description">Ошибка</string>
 <string name="error_title">Ошибка</string>
-<string name="expand_button_title">Дополнительно</string>
-<string name="exposed_dropdown_menu_content_description">Показать раскрывающееся меню</string>
 <string name="extra_headers">Дополнительные заголовки</string>
 <string name="fakedns_message">Имена разрешает прокси. После отключения приложениям может понадобиться перезапуск.</string>
 <string name="file_manager_missing">На вашем устройстве отсутствует стандартный селектор файлов Android, установите его, например Material Files.</string>
@@ -224,7 +203,6 @@
 <string name="hysteria_obfs">Обфускация пароля</string>
 <string name="hysteria_stream_receive_window">Окно приема потока QUIC</string>
 <string name="hysteria_upload_mbps">Макс. скорость отдачи (Мбит/с)</string>
-<string name="icon_content_description">Значок диалогового окна</string>
 <string name="ignore_battery_optimizations_sum">Снять некоторые ограничения</string>
 <string name="inbound_settings">Входящие настройки</string>
 <string name="insecure">Ненадежный</string>
@@ -235,7 +213,6 @@
 <string name="invert_selections">Инвертировать выбранное</string>
 <string name="ipv6">Маршрут IPv6</string>
 <string name="is_outbound_only">Сделать JSON исходящим</string>
-<string name="item_view_role_description">Вкладка</string>
 <string name="key_opt">Ключ (необязательно)</string>
 <string name="landing_proxy">Обратный прокси</string>
 <string name="license">Лицензия</string>
@@ -249,9 +226,6 @@
 <string name="log_empty">Журнал пуст. Чтобы он записывался, выберите тип журнала в настройках.</string>
 <string name="logcat">Экспорт отладочной информации</string>
 <string name="action_close">Закрыть</string>
-<string name="material_clock_toggle_content_description">Выберите AM (до полудня) или PM (после полудня)</string>
-<string name="material_timepicker_am">AM</string>
-<string name="material_timepicker_pm">PM</string>
 <string name="menu_about">О приложении</string>
 <string name="menu_configuration">Конфигурация</string>
 <string name="menu_group">Группы</string>
@@ -264,24 +238,6 @@
 <string name="minimize">Свернуть</string>
 <string name="missing_plugin">Отсутствующий плагин</string>
 <string name="move">Переместить</string>
-<string name="mtrl_badge_numberless_content_description">Новое уведомление</string>
-<string name="mtrl_checkbox_state_description_checked">Флажок установлен.</string>
-<string name="mtrl_checkbox_state_description_indeterminate">Флажки установлены частично.</string>
-<string name="mtrl_checkbox_state_description_unchecked">Флажок не установлен.</string>
-<string name="mtrl_chip_close_icon_content_description">Удалить "%1$s"</string>
-<string name="mtrl_exceed_max_badge_number_content_description">Новых уведомлений больше %1$d</string>
-<string name="mtrl_picker_a11y_next_month">Перейти к следующему месяцу</string>
-<string name="mtrl_picker_a11y_prev_month">Перейти к предыдущему месяцу</string>
-<string name="mtrl_picker_cancel">Отмена</string>
-<string name="mtrl_picker_confirm">ОК</string>
-<string name="mtrl_picker_day_of_week_column_header">Столбец со днями недели: %1$s</string>
-<string name="mtrl_picker_navigate_to_current_year_description">Перейти к текущему году: %1$d</string>
-<string name="mtrl_picker_navigate_to_year_description">Перейти к %1$s году</string>
-<string name="mtrl_picker_save">Сохранить</string>
-<string name="mtrl_picker_toggle_to_calendar_input_mode">Перейти в режим выбора дней</string>
-<string name="mtrl_picker_toggle_to_day_selection">Нажмите, чтобы перейти к выбору дня</string>
-<string name="mtrl_picker_toggle_to_text_input_mode">Перейти в режим ввода текста</string>
-<string name="mtrl_picker_toggle_to_year_selection">Нажмите, чтобы перейти к выбору года</string>
 <string name="mux_concurrency">Число одновременных подключений Mux</string>
 <string name="mux_preference">Мультиплекс</string>
 <string name="mux_sum">Мультиплексирование уменьшает задержку TCP-рукопожатия и не увеличивает пропускную способность. Для видео, загрузок и тестов скорости оно обычно только мешает. Если сервер его не поддерживает, соединения не работают.</string>
@@ -316,7 +272,6 @@
 <string name="padding">Отступ</string>
 <string name="password">Пароль</string>
 <string name="password_opt">Пароль (необязательно)</string>
-<string name="password_toggle_content_description">Показать пароль</string>
 <string name="plugin">Плагин</string>
 <string name="plugin_auto_connect_unlock_only">Этот плагин может не работать с автоподключением</string>
 <string name="plugin_configure">Настроить…</string>
@@ -329,7 +284,6 @@
 <string name="port_proxy">Порт прокси SOCKS5</string>
 <string name="port_transproxy">Транспрокси-порт</string>
 <string name="prefer">Предпочитать</string>
-<string name="preference_copied">Текст "%1$s" скопирован в буфер обмена</string>
 <string name="preview_version_hint">Это приложение является предварительной версией и может содержать множество проблем. Если вы не хотите тестировать его, скачайте релизную версию с GitHub!</string>
 <string name="profile_config">Конфигурация профиля</string>
 <string name="profile_empty">Пожалуйста, выберите профиль</string>
@@ -387,9 +341,6 @@
 <string name="route_warn">Перед добавлением собственных правил убедитесь, что вы прочитали документацию, иначе подключение к Интернету может не удасться.</string>
 <string name="scanning">Сканирование…</string>
 <string name="search_apps">Поиск…</string>
-<string name="search_menu_title">Поиск</string>
-<string name="searchview_clear_text_content_description">Очистить текстовое поле</string>
-<string name="searchview_navigation_content_description">Назад</string>
 <string name="security">Шифрование транспортного уровня</string>
 <string name="security_settings">Настройки безопасности</string>
 <string name="select_apps">Выберите приложения</string>
@@ -414,7 +365,6 @@
 <string name="show_direct_speed_sum">Также в уведомлении показывать скорость трафика без прокси</string>
 <string name="show_group_in_notification">Показывать название группы в уведомлении</string>
 <string name="show_system_apps">Показать системные приложения</string>
-<string name="side_sheet_accessibility_pane_title">Боковая панель</string>
 <string name="sni">SNI (индикация имени сервера)</string>
 <string name="sniff_override">Для маршрутизации и подключения</string>
 <string name="sniff_routing">Для маршрутизации</string>
@@ -437,7 +387,6 @@
 <string name="ssh_private_key_passphrase">Парольная фраза закрытого ключа</string>
 <string name="ssh_public_key">Открытый ключ</string>
 <string name="standard">Стандарт</string>
-<string name="status_bar_notification_info_overflow">&gt;999</string>
 <string name="stop">Остановить</string>
 <string name="stopping">Выключение…</string>
 <string name="stun_test">Поведение NAT</string>
@@ -483,8 +432,6 @@
 <string name="username_opt">Имя пользователя (необязательно)</string>
 <string name="utls_fingerprint">Отпечаток uTLS</string>
 <string name="uuid">ID пользователя (UUID)</string>
-<string name="v7_preference_off">ВЫКЛ.</string>
-<string name="v7_preference_on">ВКЛ.</string>
 <string name="vpn_connected">Подключено, нажмите для проверки подключения</string>
 <string name="vpn_permission_denied">Отказано в разрешении на создание службы VPN</string>
 <string name="wake_reset_connections">Сбросить исходящие соединения при выходе из спящего режима</string>

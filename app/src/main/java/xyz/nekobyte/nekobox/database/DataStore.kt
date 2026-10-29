@@ -399,20 +399,20 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // var enableTLSFragment by configurationStore.boolean(Key.ENABLE_TLS_FRAGMENT)
 
     var webdavServer: String?
-        get() = configurationStore.getString("webdavServer")
-        set(value) = configurationStore.putString("webdavServer", value)
+        get() = configurationStore.getString(Key.WEBDAV_SERVER)
+        set(value) = configurationStore.putString(Key.WEBDAV_SERVER, value)
 
     var webdavUsername: String?
-        get() = configurationStore.getString("webdavUsername")
-        set(value) = configurationStore.putString("webdavUsername", value)
+        get() = configurationStore.getString(Key.WEBDAV_USERNAME)
+        set(value) = configurationStore.putString(Key.WEBDAV_USERNAME, value)
 
     var webdavPassword: String?
-        get() = configurationStore.getString("webdavPassword")
-        set(value) = configurationStore.putString("webdavPassword", value)
+        get() = configurationStore.getString(Key.WEBDAV_PASSWORD)
+        set(value) = configurationStore.putString(Key.WEBDAV_PASSWORD, value)
 
     var webdavPath: String?
-        get() = configurationStore.getString("webdavPath") ?: "NekoBox" // set default value
-        set(value) = configurationStore.putString("webdavPath", value)
+        get() = configurationStore.getString(Key.WEBDAV_PATH) ?: "NekoBox" // set default value
+        set(value) = configurationStore.putString(Key.WEBDAV_PATH, value)
 
     var globalMode by configurationStore.boolean(Key.GLOBAL_MODE)
 
