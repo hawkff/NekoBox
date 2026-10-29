@@ -22,7 +22,7 @@
                 android:clipToPadding="false"
                 android:paddingLeft="4dp"
                 android:paddingRight="4dp"
-                android:paddingBottom="168dp"
+                android:paddingBottom="@dimen/bottom_bar_room"
                 android:scrollbarSize="0dp" />
 
         </xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout>

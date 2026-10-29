@@ -13,7 +13,7 @@
         android:paddingLeft="4dp"
         android:paddingTop="4dp"
         android:paddingRight="4dp"
-        android:paddingBottom="168dp"
+        android:paddingBottom="@dimen/bottom_bar_room"
         android:scrollbarSize="0dp"
         tools:listitem="@layout/layout_profile" />
 
