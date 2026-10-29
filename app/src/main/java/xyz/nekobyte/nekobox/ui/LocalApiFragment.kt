@@ -1,5 +1,6 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.ViewCompat
@@ -46,7 +47,8 @@ class LocalApiPreferences : PreferenceFragmentCompat() {
         copyToken.setOnPreferenceClickListener {
             config?.let {
                 LocalApiAccess.copyToken(requireContext(), it.token)
-                snackbar(R.string.local_api_token_copied).show()
+                // From Android 13 the system confirms a copy itself.
+                if (Build.VERSION.SDK_INT < 33) snackbar(R.string.local_api_token_copied).show()
             }
             true
         }
