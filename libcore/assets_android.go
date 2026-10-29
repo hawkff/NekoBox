@@ -14,43 +14,28 @@ import (
 )
 
 func extractAssets() {
+	// Builds before 2.0.0 unpacked a web dashboard here.
+	_ = os.RemoveAll(internalAssetsPath + "yacd")
+	_ = os.Remove(internalAssetsPath + "yacd.version.txt")
 	useOfficialAssets := appPlatform.UseOfficialAssets()
-	for _, name := range []string{geoipDat, geositeDat, yacdDstFolder} {
+	for _, name := range []string{geoipDat, geositeDat} {
 		if err := extractAssetName(name, useOfficialAssets); err != nil {
 			log.Println("Extract", name, "failed:", err)
 		}
 	}
 }
 
-// this extracts the ones inside the apk
+// extractAssetName copies a rule database out of the APK into the external assets directory, where
+// other sources may replace it.
 func extractAssetName(name string, useOfficialAssets bool) error {
-	// those that support unofficial sources are replaceable, placed in the Android directory
-	// those that don't support unofficial sources go in the file directory
-	replaceable := true
-
-	var version string
-	var apkPrefix string
-	switch name {
-	case geoipDat:
+	version := geositeVersion
+	if name == geoipDat {
 		version = geoipVersion
-		apkPrefix = apkAssetPrefixSingBox
-	case geositeDat:
-		version = geositeVersion
-		apkPrefix = apkAssetPrefixSingBox
-	case yacdDstFolder:
-		version = yacdVersion
-		replaceable = false
 	}
-
-	var dir string
-	if !replaceable {
-		dir = internalAssetsPath
-	} else {
-		dir = externalAssetsPath
-	}
+	dir := externalAssetsPath
 	dstName := dir + name
 
-	b, err := readAsset(apkPrefix + version)
+	b, err := readAsset(apkAssetPrefixSingBox + version)
 	if err != nil {
 		return fmt.Errorf("read version in assets: %v", err)
 	}
@@ -61,7 +46,7 @@ func extractAssetName(name string, useOfficialAssets bool) error {
 	if _, err := os.Stat(dstName); err != nil {
 		// assetFileMissing
 		doExtract = true
-	} else if useOfficialAssets || !replaceable {
+	} else if useOfficialAssets {
 		// official source upgrade
 		b, err := os.ReadFile(dir + version)
 		if err != nil {
@@ -89,13 +74,7 @@ func extractAssetName(name string, useOfficialAssets bool) error {
 		return nil
 	}
 
-	switch name {
-	case yacdDstFolder:
-		err = extractArchive("yacd.zip", dstName, unzipReplaceDir)
-	default:
-		err = extractArchive(apkPrefix+name+".xz", dstName, Unxz)
-	}
-	if err != nil {
+	if err := extractArchive(apkAssetPrefixSingBox+name+".xz", dstName, Unxz); err != nil {
 		return err
 	}
 	// Record the version only once the asset is in place, so a failed

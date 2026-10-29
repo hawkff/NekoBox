@@ -7,9 +7,6 @@ GEOIP_VERSION="${GEOIP_VERSION:-20261012}"
 GEOIP_SHA256="${GEOIP_SHA256:-f24050f4ce11783cd632fe3982f24895d959fa01afc8fab6ca8a6a3615b5de56}"
 GEOSITE_VERSION="${GEOSITE_VERSION:-20261027070632}"
 GEOSITE_SHA256="${GEOSITE_SHA256:-1d482209179b2d38781149ec4d9646c146d91420ecbc7f9f1f8076788c2d75cd}"
-DASHBOARD_COMMIT="4a759007e8887da47d599f88274faa9810feadcc"
-DASHBOARD_VERSION="20261021125152"
-DASHBOARD_SHA256="7ef005e420832b804a71e7970d62dde95b26cda59759d6751048bf5b6c4454f3"
 
 sha256_tool() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
@@ -29,13 +26,6 @@ download_verified() {
   fi
   mv "$tmp" "$output"
 }
-
-# Pin the published dashboard bundle rather than rebuilding a moving branch.
-download_verified \
-  "https://codeload.github.com/MetaCubeX/Yacd-meta/zip/$DASHBOARD_COMMIT" \
-  app/src/main/assets/yacd.zip \
-  "$DASHBOARD_SHA256"
-printf '%s' "$DASHBOARD_VERSION" > app/src/main/assets/yacd.version.txt
 
 DIR=app/src/main/assets/sing-box
 rm -rf "$DIR"

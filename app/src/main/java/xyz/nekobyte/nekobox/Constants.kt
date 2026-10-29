@@ -56,11 +56,9 @@ object Key {
 
     const val BYPASS_LAN = "bypassLan"
     const val BYPASS_LAN_IN_CORE = "bypassLanInCore"
-    const val CONCURRENT_DIAL = "concurrentDial"
 
     const val MIXED_PORT = "mixedPort"
     const val MIXED_SECRET = "mixedSecret" // storage key for the generated inbound secret
-    const val CLASH_API_SECRET = "clashApiSecret" // per-install secret for the local Clash API
     const val MIXED_USERNAME = "neko" // username presented to the authed mixed inbound
     const val SHARE_SECRET = "shareSecret" // storage key for the credential handed to other devices
     const val SHARE_USERNAME = "share" // username other devices present to the shared inbound
@@ -203,7 +201,6 @@ object Key {
     //
 
     const val APP_TLS_VERSION = "appTLSVersion"
-    const val ENABLE_CLASH_API = "enableClashAPI"
 
     const val ENABLE_TLS_FRAGMENT = "enableTLSFragment"
 

@@ -131,20 +131,6 @@ class SingBoxOptions {
         @JvmField var experimental: ExperimentalOptions? = null
     }
 
-    class ClashAPIOptions : SingBoxOption() {
-        @JvmField var external_controller: String? = null
-
-        @JvmField var external_ui: String? = null
-
-        @JvmField var external_ui_download_url: String? = null
-
-        @JvmField var external_ui_download_detour: String? = null
-
-        @JvmField var secret: String? = null
-
-        @JvmField var default_mode: String? = null
-    }
-
     class LogOptions : SingBoxOption() {
         @JvmField var disabled: Boolean? = null
 
@@ -220,8 +206,6 @@ class SingBoxOptions {
     }
 
     class ExperimentalOptions : SingBoxOption() {
-        @JvmField var clash_api: ClashAPIOptions? = null
-
         @JvmField var v2ray_api: V2RayAPIOptions? = null
 
         @JvmField var cache_file: CacheFile? = null
@@ -348,8 +332,6 @@ class SingBoxOptions {
         @JvmField var default_interface: String? = null
 
         @JvmField var default_mark: Int? = null
-
-        @JvmField var concurrent_dial: Boolean? = null
 
         @JvmField var default_domain_resolver: DomainResolveOptions? = null
     }

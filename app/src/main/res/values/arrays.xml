@@ -292,6 +292,10 @@
                 <item>@string/service_mode_transproxy</item>
         -->
     </string-array>
+    <string-array name="service_mode_summaries">
+        <item>@string/service_mode_vpn_summary</item>
+        <item>@string/service_mode_proxy_summary</item>
+    </string-array>
     <string-array name="service_mode_values">
         <item>vpn</item>
         <item>proxy</item>
@@ -301,20 +305,6 @@
     </string-array>
 
 
-
-    <string-array name="outbound_entry">
-        <item>@string/route_proxy</item>
-        <item>@string/route_bypass</item>
-        <item>@string/route_block</item>
-        <item>@string/route_profile</item>
-    </string-array>
-
-    <string-array name="outbound_value">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-    </string-array>
 
     <string-array name="front_proxy_entry">
         <item>@string/ssh_auth_type_none</item>
@@ -432,9 +422,9 @@
 
     <string-array name="night_mode">
         <item>@string/follow_system</item>
-        <item>@string/enable</item>
-        <item>@string/disable</item>
-        <item>@string/auto</item>
+        <item>@string/night_mode_dark</item>
+        <item>@string/night_mode_light</item>
+        <item>@string/night_mode_battery</item>
     </string-array>
     <string-array name="ipv6_mode">
         <item>@string/disable</item>
@@ -449,6 +439,13 @@
         <item>Chocolate4U/Iran-sing-box-rules</item>
         <item>L11R/Antizapret-sing-box-geo</item>
         <item>@string/custom_rules_provider</item>
+    </string-array>
+    <string-array name="rules_provider_summaries">
+        <item>@string/rules_provider_official_summary</item>
+        <item>@string/rules_provider_china_summary</item>
+        <item>@string/rules_provider_iran_summary</item>
+        <item>@string/rules_provider_russia_summary</item>
+        <item>@string/rules_provider_custom_summary</item>
     </string-array>
 
     <string-array name="balancer_type">
@@ -521,6 +518,11 @@
         <item>System</item>
         <item>Mixed</item>
     </string-array>
+    <string-array name="tun_implementation_summaries">
+        <item>@string/tun_gvisor_summary</item>
+        <item>@string/tun_system_summary</item>
+        <item>@string/tun_mixed_summary</item>
+    </string-array>
 
     <string-array name="packet_encoding_entry">
         <item>@string/value_none</item>
@@ -528,9 +530,20 @@
         <item>XUDP</item>
     </string-array>
 
-    <string-array name="mtu_select">
+    <string-array name="mtu_entries">
         <item>1500</item>
         <item>9000</item>
+        <item>@string/mtu_custom</item>
+    </string-array>
+    <string-array name="mtu_values">
+        <item>1500</item>
+        <item>9000</item>
+        <item>custom</item>
+    </string-array>
+    <string-array name="mtu_summaries">
+        <item>@string/mtu_1500_summary</item>
+        <item>@string/mtu_9000_summary</item>
+        <item>@string/mtu_custom_summary</item>
     </string-array>
 
     <string-array name="mux_select_init" />
@@ -612,6 +625,11 @@
         <item>@string/off</item>
         <item>@string/sniff_routing</item>
         <item>@string/sniff_override</item>
+    </string-array>
+    <string-array name="traffic_sniffing_summaries">
+        <item>@string/traffic_sniffing_off_sum</item>
+        <item>@string/traffic_sniffing_routing_sum</item>
+        <item>@string/traffic_sniffing_connect_sum</item>
     </string-array>
 
     <!-- Snell Protocol -->

@@ -11,7 +11,7 @@ import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.proxy.PreferenceBinding
 import xyz.nekobyte.nekobox.proxy.PreferenceBindingManager
 import xyz.nekobyte.nekobox.proxy.Type
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 class ShadowsocksSettingsActivity : ProfileSettingsActivity<ShadowsocksBean>() {
 
@@ -70,7 +70,7 @@ class ShadowsocksSettingsActivity : ProfileSettingsActivity<ShadowsocksBean>() {
         // Mux mode visibility control
         muxMode.preference.apply {
             updateMuxMode(muxMode.readIntFromCache())
-            this as SimpleMenuPreference
+            this as ChoicePreference
             setOnPreferenceChangeListener { _, newValue ->
                 updateMuxMode((newValue as String).toInt())
                 true

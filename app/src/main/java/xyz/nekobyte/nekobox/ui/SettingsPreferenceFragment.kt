@@ -13,7 +13,6 @@ import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.preference.*
@@ -23,7 +22,6 @@ import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.TrafficSniffing
-import xyz.nekobyte.nekobox.api.LocalApiAccess
 import xyz.nekobyte.nekobox.bg.LocationSpoofing
 import xyz.nekobyte.nekobox.bg.LocationTurnOffReceiver
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
@@ -104,7 +102,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     }
 
     private fun setupAppearance() {
-        val nightTheme = findPreference<SimpleMenuPreference>(Key.NIGHT_THEME)
+        val nightTheme = findPreference<ChoicePreference>(Key.NIGHT_THEME)
         // A dark-only theme ignores the night setting; a theme change recreates this screen.
         if (Theme.darkOnly()) {
             nightTheme?.isEnabled = false
@@ -164,7 +162,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             ActivityCompat.recreate(requireActivity())
             true
         }
-        findPreference<SimpleMenuPreference>(Key.APP_LANGUAGE)?.setOnPreferenceChangeListener { _, newValue ->
+        findPreference<ChoicePreference>(Key.APP_LANGUAGE)?.setOnPreferenceChangeListener { _, newValue ->
             AppLocale.apply(newValue as String)
             true
         }
@@ -179,8 +177,9 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             if (DataStore.serviceState.started) NekoBox.stopService()
             true
         }
+        // Android takes a VPN's metered hint from Android 10.
         findPreference<Preference>(Key.METERED_NETWORK)?.let {
-            if (Build.VERSION.SDK_INT < 28) it.remove()
+            if (Build.VERSION.SDK_INT < 29) it.remove()
         }
         findPreference<SwitchPreference>(Key.NETWORK_AUTOMATION)?.setOnPreferenceChangeListener { preference, newValue ->
             NetworkAutomation.onSwitched(preference.context.applicationContext, newValue as Boolean)
@@ -196,7 +195,6 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             Key.TUN_IMPLEMENTATION,
             Key.MTU,
             Key.STRICT_ROUTE,
-            Key.CONCURRENT_DIAL,
             Key.ACQUIRE_WAKE_LOCK,
         )) {
             findPreference<Preference>(key)?.onPreferenceChangeListener = reloadListener
@@ -397,7 +395,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             findPreference<Preference>(key)?.onPreferenceChangeListener = reloadListener
         }
         // The choice's name alone does not say what it changes, so the summary does.
-        findPreference<SimpleMenuPreference>(Key.TRAFFIC_SNIFFING)?.summaryProvider = Preference.SummaryProvider<SimpleMenuPreference> { preference ->
+        findPreference<ChoicePreference>(Key.TRAFFIC_SNIFFING)?.summaryProvider = Preference.SummaryProvider<ChoicePreference> { preference ->
             preference.context.getString(
                 when (preference.value?.toIntOrNull()) {
                     TrafficSniffing.OFF -> R.string.traffic_sniffing_off_sum
@@ -411,7 +409,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         val rulesGeoipUrl = findPreference<EditTextPreference>(Key.RULES_GEOIP_URL)
         rulesGeositeUrl?.isVisible = DataStore.rulesProvider == 4
         rulesGeoipUrl?.isVisible = DataStore.rulesProvider == 4
-        findPreference<SimpleMenuPreference>(Key.RULES_PROVIDER)?.setOnPreferenceChangeListener { _, newValue ->
+        findPreference<ChoicePreference>(Key.RULES_PROVIDER)?.setOnPreferenceChangeListener { _, newValue ->
             val provider = (newValue as String).toInt()
             rulesGeositeUrl?.isVisible = provider == 4
             rulesGeoipUrl?.isVisible = provider == 4
@@ -494,52 +492,42 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
     private fun setupNotification() {
         findPreference<SwitchPreference>(Key.PROFILE_TRAFFIC_STATISTICS)?.onPreferenceChangeListener = reloadListener
-        findPreference<SimpleMenuPreference>(Key.SPEED_INTERVAL)?.onPreferenceChangeListener = reloadListener
+        findPreference<ChoicePreference>(Key.SPEED_INTERVAL)?.onPreferenceChangeListener = reloadListener
         findPreference<SwitchPreference>(Key.SHOW_DIRECT_SPEED)?.onPreferenceChangeListener = reloadListener
     }
 
     private fun setupAdvanced() {
-        findPreference<Preference>("localControlApi")?.setOnPreferenceClickListener {
-            LocalApiAccess.showSettings(requireActivity())
+        // Turning reports on shows what they send first; turning them off needs no question.
+        findPreference<SwitchPreference>(Key.HELP_TO_IMPROVE)?.apply {
+            setOnPreferenceChangeListener { _, newValue ->
+                if (newValue == false) return@setOnPreferenceChangeListener true
+                requireContext().helpToImproveDialog()
+                    .setPositiveButton(R.string.help_to_improve_prompt_allow) { _, _ -> isChecked = true }
+                    .setNegativeButton(R.string.help_to_improve_prompt_deny, null)
+                    .show()
+                false
+            }
+        }
+        findPreference<ChoicePreference>(Key.LOG_LEVEL)?.setOnPreferenceChangeListener { _, _ ->
+            needRestart()
             true
         }
-        findPreference<LongClickListPreference>(Key.LOG_LEVEL)?.apply {
-            dialogLayoutResource = R.layout.layout_loglevel_help
-            setOnPreferenceChangeListener { _, _ ->
-                needRestart()
-                true
-            }
-            setOnLongClickListener {
-                if (context == null) return@setOnLongClickListener true
-
-                val view = EditText(context).apply {
-                    inputType = EditorInfo.TYPE_CLASS_NUMBER
-                    var size = DataStore.logBufSize
-                    if (size == 0) size = 50
-                    setText(size.toString())
+        // The core keeps at least 50 KB; 0 means never set.
+        findPreference<Preference>(Key.LOG_BUF_SIZE)?.apply {
+            fun size() = DataStore.logBufSize.coerceAtLeast(50)
+            summary = getString(R.string.log_buffer_size_summary, size())
+            setOnPreferenceClickListener {
+                numberDialog(requireContext(), title, size(), 50..16_384) {
+                    DataStore.logBufSize = it
+                    summary = getString(R.string.log_buffer_size_summary, it)
+                    needRestart()
                 }
-
-                MaterialAlertDialogBuilder(requireContext()).setTitle("Log buffer size (kb)")
-                    .setView(view)
-                    .setPositiveButton(android.R.string.ok) { _, _ ->
-                        DataStore.logBufSize = view.text.toString().toInt()
-                        if (DataStore.logBufSize <= 0) DataStore.logBufSize = 50
-                        needRestart()
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
                 true
             }
         }
         globalCustomConfig = findPreference<EditConfigPreference>(Key.GLOBAL_CUSTOM_CONFIG)?.apply {
             useConfigStore(Key.GLOBAL_CUSTOM_CONFIG)
         }
-        findPreference<SwitchPreference>(Key.ENABLE_CLASH_API)?.setOnPreferenceChangeListener { _, newValue ->
-            (activity as MainActivity?)?.refreshNavMenu(newValue as Boolean)
-            needReload()
-            true
-        }
-
         // reset to default settings feature
         findPreference<Preference>("resetSettings")?.setOnPreferenceClickListener {
             MaterialAlertDialogBuilder(requireContext()).apply {

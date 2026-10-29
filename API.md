@@ -1,12 +1,12 @@
 # Local control API
 
-The app provides a versioned HTTP API for local automation. It listens on `127.0.0.1:9091` while enabled, independently of the VPN. It is off by default.
+The app provides a versioned HTTP API for local automation. While enabled, it listens on a loopback port, independently of the VPN. Each time it is turned on, it gets a new token and a random port between 20000 and 60000, so a probe of one fixed port cannot find it. It is off by default.
 
 The token grants administrative access to the app, including credential exports, backup restoration and approval of installed plugin signers. Keep it out of source control, shell history and shared logs. Disable the API or replace its token to revoke access. An operation accepted before revocation may finish.
 
 ## Enable access
 
-For a release build, open Settings → Advanced → Local control API. Enable access and copy the token. The ongoing notification has a Disable API action.
+For a release build, open API control in the navigation drawer, turn on Local control API, and copy the token. The screen shows the port. A copied token leaves the clipboard after a minute if it is still there. The ongoing notification has a Disable API action.
 
 For an installed debug build with authorized ADB access, the Python client enrolls the app without screen taps:
 
@@ -28,7 +28,7 @@ python3 scripts/app-api.py --serial DEVICE_SERIAL disable
 
 Disabling also removes matching saved host credentials and an owned ADB forward when the device configuration is missing. If an existing configuration cannot be read, the client preserves saved access and reports an error. Legacy state without a recorded forward destination leaves that unverified listener in place with a warning.
 
-Release builds do not permit `run-as`. After enabling the API in the app, use an explicit forward such as `adb -s DEVICE_SERIAL forward tcp:19091 tcp:9091`, then connect to `http://127.0.0.1:19091` with the copied token. A client state file can contain `{"port":19091,"token":"YOUR_TOKEN"}` for HTTP-only use. Keep that file private.
+Release builds do not permit `run-as`. After enabling the API in the app, use an explicit forward to the port the screen shows, such as `adb -s DEVICE_SERIAL forward tcp:19091 tcp:DEVICE_PORT`, then connect to `http://127.0.0.1:19091` with the copied token. A client state file can contain `{"port":19091,"token":"YOUR_TOKEN"}` for HTTP-only use. Keep that file private.
 
 ## Requests and results
 
@@ -135,7 +135,7 @@ Settings and routing changes report whether a reload or restart is needed. Use `
 
 Use `automation.set` to replace the network-rule list. Each rule has `kind`, `action`, and optional `ssid` and `profileId`. Kinds are `MOBILE`, `WIFI`, `SSID` and `ETHERNET`; actions are `CONNECT` and `DISCONNECT`. Enable or disable automation through `settings.set`.
 
-`ui.status` lists the available screen names. `ui.navigate` accepts one of those names. Launch the main activity first if the API reports `ui_unavailable`. Screen navigation never opens the web dashboard or another browser.
+`ui.status` lists the available screen names. `ui.navigate` accepts one of those names. Launch the main activity first if the API reports `ui_unavailable`. Screen navigation never opens a browser.
 
 ### Assets, backups and external services
 

@@ -2,47 +2,24 @@ package xyz.nekobyte.nekobox.ui
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.View
-import android.view.inputmethod.EditorInfo
-import android.widget.EditText
-import androidx.preference.ListPreference
-import androidx.preference.PreferenceViewHolder
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import xyz.nekobyte.nekobox.R
 
-class MTUPreference
-@JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyle: Int = R.attr.dropdownPreferenceStyle,
-) : ListPreference(context, attrs, defStyle, 0) {
+/** MTU from the list, or any value in [CUSTOM_RANGE] through its Custom row. */
+class MTUPreference @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : ChoicePreference(context, attrs) {
 
     init {
-        setSummaryProvider {
-            value.toString()
-        }
-        dialogLayoutResource = R.layout.layout_mtu_help
+        setSummaryProvider { value }
     }
 
-    override fun onBindViewHolder(holder: PreferenceViewHolder) {
-        super.onBindViewHolder(holder)
-        val itemView: View = holder.itemView
-        itemView.setOnLongClickListener {
-            val view = EditText(context).apply {
-                inputType = EditorInfo.TYPE_CLASS_NUMBER
-                setText(preferenceDataStore?.getString(key, "") ?: "")
-            }
+    // A value that is not in the list was typed in: its row is Custom, the last one.
+    override fun checkedIndex() = findIndexOfValue(value).takeIf { it >= 0 } ?: entryValues.lastIndex
 
-            MaterialAlertDialogBuilder(context).setTitle("MTU")
-                .setView(view)
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                    val mtu = view.text.toString().toInt()
-                    if (mtu < 1000 || mtu > 10000) return@setPositiveButton
-                    value = mtu.toString()
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-            true
-        }
+    override fun choose(newValue: String) {
+        if (newValue != CUSTOM) return super.choose(newValue)
+        numberDialog(context, title, value?.toIntOrNull() ?: 1500, CUSTOM_RANGE) { super.choose(it.toString()) }
+    }
+
+    private companion object {
+        const val CUSTOM = "custom"
+        val CUSTOM_RANGE = 1000..10000
     }
 }

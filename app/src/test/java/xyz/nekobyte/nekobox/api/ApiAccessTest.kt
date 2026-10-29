@@ -2,10 +2,13 @@ package xyz.nekobyte.nekobox.api
 
 import android.app.Activity
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.os.Looper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
@@ -15,9 +18,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import java.io.File
+import java.time.Duration
 import java.util.Base64
 
 @RunWith(RobolectricTestRunner::class)
@@ -33,6 +38,7 @@ class ApiAccessTest {
         assertNull(LocalApiAccess.read(context))
         val fresh = LocalApiAccess.fresh()
         assertTrue(fresh.token.matches(Regex("[0-9a-f]{64}")))
+        assertTrue(fresh.port in 20000..60000)
         assertNotEquals(fresh.token, LocalApiAccess.fresh().token)
         LocalApiAccess.write(context, fresh)
         assertEquals(fresh, LocalApiAccess.read(context))
@@ -40,6 +46,25 @@ class ApiAccessTest {
         assertFalse(File(context.filesDir, "local-api.json").exists())
         LocalApiAccess.write(context, fresh.copy(enabled = false))
         assertEquals(false, LocalApiAccess.read(context)?.enabled)
+    }
+
+    @Test
+    fun copiedTokenLeavesTheClipboardAfterAMinuteUnlessSomethingNewerIsThere() {
+        val context = RuntimeEnvironment.getApplication()
+        val clipboard = context.getSystemService(ClipboardManager::class.java)
+        fun text() = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+        val looper = shadowOf(Looper.getMainLooper())
+
+        LocalApiAccess.copyToken(context, token)
+        looper.idleFor(Duration.ofSeconds(59))
+        assertEquals(token, text())
+        looper.idleFor(Duration.ofSeconds(1))
+        assertNotEquals(token, text())
+
+        LocalApiAccess.copyToken(context, token)
+        clipboard.setPrimaryClip(ClipData.newPlainText("note", "kept"))
+        looper.idleFor(Duration.ofMinutes(1))
+        assertEquals("kept", text())
     }
 
     @Test

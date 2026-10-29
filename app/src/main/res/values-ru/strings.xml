@@ -7,8 +7,8 @@
 <string name="abc_searchview_description_voice">Голосовой поиск</string>
 <string name="abc_shareactionprovider_share_with">Поделиться с помощью</string>
 <string name="abc_toolbar_collapse_description">Свернуть</string>
-<string name="acquire_wake_lock">Использовать WakeLock</string>
-<string name="acquire_wake_lock_summary">Сохранять CPU включенным</string>
+<string name="acquire_wake_lock">Не усыплять процессор</string>
+<string name="acquire_wake_lock_summary">Соединения не рвутся при выключенном экране. Тратит больше батареи.</string>
 <string name="action_download">СКАЧАТЬ</string>
 <string name="action_export_clipboard">Экспорт в буфер обмена</string>
 <string name="action_export_err">Не удалось экспортировать.</string>
@@ -25,7 +25,7 @@
 <string name="add_profile_methods_scan_qr_code">Отсканировать QR-код</string>
 <string name="ads">Реклама</string>
 <string name="allow_access">Разрешить подключения из локальной сети</string>
-<string name="allow_access_sum">Привязать входящие серверы к 0.0.0.0</string>
+<string name="allow_access_sum">Другие устройства в вашей сети могут пользоваться портом прокси</string>
 <string name="allow_insecure">Разрешить небезопасное подключение</string>
 <string name="allow_insecure_on_request_sum">Отключить проверку сертификатов при обновлении подписок</string>
 <string name="allow_insecure_sum">Отключить проверку сертификата. При включении эта функция настолько же безопасна как передача пароля в открытом виде</string>
@@ -38,7 +38,7 @@
 <string name="app_tls_version">Минимальная версия TLS протокола</string>
 <string name="app_version">Версия</string>
 <string name="append_http_proxy">Добавить HTTP-прокси к VPN</string>
-<string name="append_http_proxy_sum">HTTP-прокси будет использоваться напрямую из (браузера / некоторых поддерживаемых приложений), без использования виртуального сетевого интерфейса (Android 10+)</string>
+<string name="append_http_proxy_sum">Браузеры и некоторые приложения используют порт прокси напрямую (Android 10+)</string>
 <string name="append_http_proxy_security_title">Уведомление о безопасности</string>
 <string name="append_http_proxy_security_message">При включении другие приложения на этом устройстве смогут напрямую использовать локальный прокси-порт.\n\nРекомендация: Включайте эту функцию только если доверяете всем установленным приложениям.</string>
 <string name="enable_anyway">Всё равно включить</string>
@@ -47,7 +47,7 @@
 <string name="apps_message">%d приложений</string>
 <string name="auto">Авто</string>
 <string name="auto_connect">Автоматическое подключение</string>
-<string name="auto_connect_summary">Включить прокси при запуске/обновлении приложения, если он был запущен до этого</string>
+<string name="auto_connect_summary">Переподключаться после перезагрузки или обновления, если было включено</string>
 <string name="auto_select_proxy_apps">Автовыбор приложений</string>
 <string name="auto_select_proxy_apps_message">Автоматический выбор прокси-приложений приведет к очистке текущего выбора.</string>
 <string name="backup">Бэкап</string>
@@ -146,8 +146,6 @@
 <string name="empty_route">Пустой маршрут</string>
 <string name="empty_route_notice">Установите какие-либо правила перед сохранением</string>
 <string name="enable">Включить</string>
-<string name="enable_clash_api">Включить Clash API</string>
-<string name="enable_clash_api_summary">Предоставлять панель управления Clash API и YACD по адресу 127.0.0.1:9090</string>
 <string name="enable_dns_routing">Включить маршрутизацию DNS</string>
 <string name="enable_ech">Включить ECH</string>
 <string name="enable_ech_sum">Включить зашифрованный клиент Hello</string>
@@ -163,7 +161,7 @@
 <string name="expand_button_title">Дополнительно</string>
 <string name="exposed_dropdown_menu_content_description">Показать раскрывающееся меню</string>
 <string name="extra_headers">Дополнительные заголовки</string>
-<string name="fakedns_message">Может вызвать необходимость перезапуска других приложений для повторного подключения к сети после остановки прокси</string>
+<string name="fakedns_message">Имена разрешает прокси. После отключения приложениям может понадобиться перезапуск.</string>
 <string name="file_manager_missing">На вашем устройстве отсутствует стандартный селектор файлов Android, установите его, например Material Files.</string>
 <string name="follow_system">Использовать системную тему</string>
 <string name="force_resolve">Принудительно разрешать доменные имена</string>
@@ -249,7 +247,6 @@
 </plurals>
 <string name="log_level">Тип журнала</string>
 <string name="log_empty">Журнал пуст. Чтобы он записывался, выберите тип журнала в настройках.</string>
-<string name="log_level_help">Удерживайте для настройки размера буфера.</string>
 <string name="logcat">Экспорт отладочной информации</string>
 <string name="action_close">Закрыть</string>
 <string name="material_clock_toggle_content_description">Выберите AM (до полудня) или PM (после полудня)</string>
@@ -257,14 +254,13 @@
 <string name="material_timepicker_pm">PM</string>
 <string name="menu_about">О приложении</string>
 <string name="menu_configuration">Конфигурация</string>
-<string name="menu_dashboard">Панель sing-box</string>
 <string name="menu_group">Группы</string>
 <string name="menu_log">Журналы</string>
 <string name="menu_route">Маршруты</string>
 <string name="menu_tools">Инструменты</string>
 <string name="menu_traffic">Трафик</string>
-<string name="metered">Подсказка о соединении с лимитным тарифным планом</string>
-<string name="metered_summary">Подсказывать системе, что VPN следует рассматривать как сеть с лимитным тарифным планом</string>
+<string name="metered">Лимитное подключение</string>
+<string name="metered_summary">Приложения экономят трафик даже по Wi-Fi, как в мобильной сети</string>
 <string name="minimize">Свернуть</string>
 <string name="missing_plugin">Отсутствующий плагин</string>
 <string name="move">Переместить</string>
@@ -286,7 +282,6 @@
 <string name="mtrl_picker_toggle_to_day_selection">Нажмите, чтобы перейти к выбору дня</string>
 <string name="mtrl_picker_toggle_to_text_input_mode">Перейти в режим ввода текста</string>
 <string name="mtrl_picker_toggle_to_year_selection">Нажмите, чтобы перейти к выбору года</string>
-<string name="mtu_help">Удерживайте для настройки своего MTU.</string>
 <string name="mux_concurrency">Число одновременных подключений Mux</string>
 <string name="mux_preference">Мультиплекс</string>
 <string name="mux_sum">Мультиплексирование уменьшает задержку TCP-рукопожатия и не увеличивает пропускную способность. Для видео, загрузок и тестов скорости оно обычно только мешает. Если сервер его не поддерживает, соединения не работают.</string>
@@ -301,7 +296,7 @@
 <string name="network">Сеть</string>
 <string name="network_change_reset_connections">Сбросить исходящие соединения при изменении сети</string>
 <string name="night_mode">Ночной режим</string>
-<string name="night_mode_dark_only">С этой темой всегда тёмный</string>
+<string name="night_mode_dark_only">Эта тема только тёмная</string>
 <string name="no">Нет</string>
 <string name="no_proxies_found">В ссылке не найдено прокси-серверов</string>
 <string name="no_proxies_found_in_clipboard">В буфере обмена не найдено ни одного прокси</string>
@@ -343,7 +338,7 @@
 <string name="profile_name">Имя профиля</string>
 <string name="profile_requiring_plugin">Профиль %s требует установки подключаемого модуля %s, но он не найден.</string>
 <string name="profile_traffic_statistics">Статистика трафика профиля</string>
-<string name="profile_traffic_statistics_summary">Когда отключено, использованный трафик не будет отображаться</string>
+<string name="profile_traffic_statistics_summary">Считать трафик каждого профиля</string>
 <string name="project">Проект</string>
 <string name="protocol">Протокол</string>
 <string name="protocol_param">Параметры протокола</string>
@@ -364,7 +359,7 @@
 <string name="reset_settings">Восстановить настройки по умолчанию</string>
 <string name="reset_settings_message">Восстановить настройки по умолчанию, такие данные, как узлы и группы, будут сохранены. Для полной очистки данных, очистите данные приложения непосредственно в системных настройках.</string>
 <string name="resolve_destination">Определить адрес назначения</string>
-<string name="resolve_destination_summary">Если адрес назначения является доменом, то он передается в соответствии с правилом IPv6.</string>
+<string name="resolve_destination_summary">Разрешать домены до маршрутизации по настройке IPv6. Не вместе с FakeDNS</string>
 <string name="route_add">Добавить правило</string>
 <string name="route_asset_no_update">Обновлений нет</string>
 <string name="route_asset_status">Локальная версия: %s</string>
@@ -407,14 +402,13 @@
 <string name="service_proxy">Прокси-сервис</string>
 <string name="service_subscription">Служба обновления подписки</string>
 <string name="service_vpn">VPN-сервис</string>
-<string name="set_panel_url">Установить URL панель</string>
 <string name="settings">Настройки</string>
 <string name="shadowsocks_plugin_simple_obfs">Simple Obfs (плагин Shadowsocks для Android)</string>
 <string name="shadowsocks_plugin_v2ray">V2Ray (плагин Shadowsocks для Android)</string>
 <string name="share">Поделиться</string>
 <string name="share_qr_nfc">QR-код</string>
 <string name="show_bottom_bar">Нижняя панель на всех экранах</string>
-<string name="show_bottom_bar_sum">Кнопка подключения, скорость и статус остаются внизу на всех экранах, а не только на главном</string>
+<string name="show_bottom_bar_sum">Кнопка подключения и скорость на всех экранах</string>
 <string name="liquid_glass">Жидкое стекло</string>
 <string name="show_direct_speed">Показать прямую скорость</string>
 <string name="show_direct_speed_sum">Также в уведомлении показывать скорость трафика без прокси</string>
@@ -424,9 +418,9 @@
 <string name="sni">SNI (индикация имени сервера)</string>
 <string name="sniff_override">Для маршрутизации и подключения</string>
 <string name="sniff_routing">Для маршрутизации</string>
-<string name="traffic_sniffing_off_sum">Правила по доменам срабатывают, только если имя сайта уже известно, например через FakeDNS</string>
+<string name="traffic_sniffing_off_sum">Правила по доменам срабатывают только по уже известным именам, например через FakeDNS</string>
 <string name="traffic_sniffing_routing_sum">Правила по доменам срабатывают и по имени сайта, прочитанному из соединения</string>
-<string name="traffic_sniffing_connect_sum">Сервер тоже получает имя каждого сайта и ищет его сам, если не включено «Определить адрес назначения». Если приложение перестанет работать, выберите «Для маршрутизации».</string>
+<string name="traffic_sniffing_connect_sum">Сервер тоже получает имя каждого сайта и ищет его сам. Если приложение перестанет работать, выберите «Для маршрутизации».</string>
 <string name="speed">%s/с</string>
 <string name="speed_upload">Отдача %s</string>
 <string name="speed_download">Загрузка %s</string>
@@ -622,8 +616,6 @@
     <string name="clear_cache_confirm">Вы уверены, что хотите очистить кэш?</string>
     <string name="clear_cache_success">Кэш очищен</string>
     <string name="clear_cache_failed">Не удалось очистить кэш: %s</string>
-    <string name="concurrent_dial">Параллельное подключение</string>
-    <string name="concurrent_dial_summary">Включить параллельные соединения для более быстрого установления сети; может увеличить расход батареи</string>
     <string name="connection_test_timeout">Тайм-аут проверки (мс)</string>
     <string name="xhttp_host">XHTTP Host</string>
     <string name="xhttp_path">XHTTP Path</string>
@@ -657,7 +649,7 @@
     <string name="require_proxy_in_vpn">Локальный прокси в режиме VPN</string>
     <string name="require_proxy_in_vpn_sum">Порт SOCKS/HTTP остаётся открытым в режиме VPN. Другие приложения на этом устройстве могут им пользоваться.</string>
     <string name="proxy_mode_inbound_auth">Авторизация локального прокси в режиме прокси</string>
-    <string name="proxy_mode_inbound_auth_sum">Требовать имя пользователя и пароль в режиме прокси, чтобы другие приложения не могли пользоваться им как открытым ретранслятором</string>
+    <string name="proxy_mode_inbound_auth_sum">Другим приложениям нужен пароль для порта прокси</string>
     <string name="settings_appearance">Внешний вид</string>
     <string name="settings_appearance_summary">Тема, ночной режим, язык, поведение интерфейса</string>
     <string name="settings_connection">Подключение</string>
@@ -672,7 +664,7 @@
     <string name="settings_notification">Уведомление и статистика</string>
     <string name="settings_notification_summary">Обновление скорости, статистика трафика, содержимое уведомления</string>
     <string name="settings_advanced">Дополнительно</string>
-    <string name="settings_advanced_summary">Журналы, своя конфигурация, Clash API, сброс, кэш</string>
+    <string name="settings_advanced_summary">Отчёты, журналы, своя конфигурация, сброс, кэш</string>
     <string name="lifetime_traffic">За всё время: %1$s↑ %2$s↓</string>
     <string name="profile_unsupported">Неподдерживаемый тип профиля</string>
     <string name="profile_archived">Архивный профиль</string>
@@ -813,7 +805,7 @@
         <item quantity="other">%d правила</item>
     </plurals>
     <string name="http_proxy_bypass">Список обхода HTTP-прокси</string>
-    <string name="http_proxy_bypass_sum">Хосты, которые идут мимо HTTP-прокси, по одному шаблону в строке, например 192.168.*. По умолчанию это частные диапазоны и loopback.</string>
+    <string name="http_proxy_bypass_sum">Хосты мимо HTTP-прокси, например 192.168.*</string>
     <string name="subscription_filter_empty">Ни один профиль не прошёл фильтр подписки. Существующие профили не изменены.</string>
     <string name="subscription_filter_invalid">Неверный фильтр подписки. Существующие профили не изменены.</string>
     <string name="subscription_custom_dns">Свой резолвер</string>
@@ -924,13 +916,13 @@
     <string name="tailscale_amnezia_wg_invalid">Неверные настройки AmneziaWG: %s</string>
     <string name="tailscale_only_tcp_443_sum">Передавать весь трафик между узлами через ретранслятор по TCP 443 без UDP. Нужно для цепочки перед Tailscale, иначе прямые соединения с узлами уходят с этого устройства.</string>
     <string name="kill_switch">Kill switch</string>
-    <string name="kill_switch_summary">Блокировать трафик, пока VPN подключается, перезапускается или не работает, вместо отправки напрямую. Вступает в силу при следующем запуске.</string>
+    <string name="kill_switch_summary">Блокировать трафик, пока VPN подключается, перезапускается или не работает. Со следующего запуска.</string>
     <string name="problem_report_title">Проверьте отчёт перед отправкой</string>
     <string name="problem_report_note">Серверы, имена профилей и групп, ключи, UUID, IP-адреса и имена хостов заменены метками. Отправляется только этот текст.</string>
     <string name="problem_report_share">Поделиться</string>
     <string name="kill_switch_blocking">Kill switch: трафик заблокирован</string>
     <string name="webrtc_leak_protection">Защита от утечки WebRTC</string>
-    <string name="webrtc_leak_protection_summary">Блокировать STUN и TURN в туннеле, чтобы сайты не узнали ваш IP через WebRTC. Голосовые и видеозвонки могут перестать работать.</string>
+    <string name="webrtc_leak_protection_summary">Сайты не узнают ваш IP через WebRTC. Звонки в некоторых приложениях могут перестать работать.</string>
     <string name="protection_always_on">Постоянная VPN</string>
     <string name="protection_always_on_enabled">Включено. Android перезапускает VPN после перезагрузки или сбоя.</string>
     <string name="protection_always_on_disabled">Выключено. Нажмите, чтобы включить в системных настройках VPN.</string>
@@ -943,7 +935,7 @@
     <string name="protection_battery_unrestricted">Без ограничений</string>
     <string name="protection_battery_optimized">Оптимизировано. Android может остановить сервис. Нажмите, чтобы выбрать «Без ограничений».</string>
     <string name="protection_notes_title">Настройки Android</string>
-    <string name="protection_notes">Постоянную VPN и блокировку соединений без VPN обеспечивает Android в режиме VPN. Они держат трафик заблокированным, даже если приложение остановят, а kill switch этого не может.</string>
+    <string name="protection_notes">Android соблюдает их, даже если NekoBox остановлен. Kill switch так не может.</string>
     <string name="auto_select">Автоматический выбор</string>
     <string name="auto_select_active">В этой группе включён автоматический выбор. Чтобы выбрать участника вручную, выключите его в настройках группы.</string>
     <string name="auto_select_sum">Направлять трафик через участника с наименьшей задержкой по проверке соединения и переключаться, если он перестаёт работать или восстанавливается более быстрый. Пока включено, ручной выбор в этой группе недоступен.</string>
@@ -1219,4 +1211,29 @@
 <string name="relay_native">Нативный</string>
 <string name="utls_random_browser">Случайный браузер</string>
 <string name="utls_randomized">Рандомизированный</string>
+    <string name="menu_home">Главная</string>
+    <string name="menu_api">Управление через API</string>
+    <string name="night_mode_dark">Тёмный</string>
+    <string name="night_mode_light">Светлый</string>
+    <string name="night_mode_battery">Тёмный при экономии заряда</string>
+    <string name="service_mode_vpn_summary">Все приложения идут через туннель</string>
+    <string name="service_mode_proxy_summary">Только приложения, настроенные на порт прокси. Без VPN</string>
+    <string name="tun_gvisor_summary">Собственный сетевой стек внутри приложения</string>
+    <string name="tun_system_summary">Сетевой стек Android. Обычно быстрее</string>
+    <string name="tun_mixed_summary">Стек Android для TCP, gVisor для UDP</string>
+    <string name="mtu_custom">Другое</string>
+    <string name="mtu_1500_summary">Как в большинстве сетей. Рекомендуется</string>
+    <string name="mtu_9000_summary">Меньше пакетов, но крупнее. Бывает быстрее; некоторые приложения могут сломаться</string>
+    <string name="mtu_custom_summary">Своё значение</string>
+    <string name="number_range">От %1$d до %2$d</string>
+    <string name="bypass_lan_summary">Адреса локальной сети идут мимо VPN</string>
+    <string name="bypass_lan_in_core_summary">Ядро отправляет локальные адреса напрямую. Работает и в режиме прокси</string>
+    <string name="global_allow_insecure_summary">Не проверять сертификаты ни у одного профиля. Небезопасно.</string>
+    <string name="rules_provider_official_summary">Списки geosite и geoip от SagerNet</string>
+    <string name="rules_provider_china_summary">Списки для Китая</string>
+    <string name="rules_provider_iran_summary">Списки для Ирана</string>
+    <string name="rules_provider_russia_summary">Списки для России</string>
+    <string name="rules_provider_custom_summary">Ваши ссылки на GeoSite и GeoIP</string>
+    <string name="log_buffer_size">Размер буфера журнала</string>
+    <string name="log_buffer_size_summary">%d КБ</string>
 </resources>

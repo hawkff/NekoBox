@@ -37,8 +37,6 @@ class VpnService :
 
     var conn: ParcelFileDescriptor? = null
 
-    private var metered = false
-
     override var upstreamInterfaceName: String? = null
 
     override suspend fun startProcesses() {
@@ -241,7 +239,6 @@ class VpnService :
         }
 
         updateUnderlyingNetwork(builder)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(metered)
 
         // app route
         val packageName = packageName
@@ -328,8 +325,7 @@ class VpnService :
             }
         }
 
-        metered = DataStore.meteredNetwork
-        if (Build.VERSION.SDK_INT >= 29) builder.setMetered(metered)
+        if (Build.VERSION.SDK_INT >= 29) builder.setMetered(DataStore.meteredNetwork)
         return builder
     }
 

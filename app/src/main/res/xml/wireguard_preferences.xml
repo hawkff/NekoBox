@@ -80,7 +80,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/cag_dns">
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.ChoicePreference
             app:defaultValue="0"
             app:entries="@array/wireguard_dns_modes"
             app:entryValues="@array/int_array_3"

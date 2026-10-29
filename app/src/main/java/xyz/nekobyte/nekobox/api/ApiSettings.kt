@@ -69,7 +69,6 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         result["webdavUsername"] = Setting("string", "")
         result["webdavPassword"] = Setting("string", "")
         result["webdavPath"] = Setting("string", "NekoBox")
-        result["yacdURL"] = Setting("string", "http://127.0.0.1:9090/ui")
         result
     }
 

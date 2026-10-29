@@ -28,7 +28,6 @@
     <string name="quick_disable">Disable</string>
     <string name="tile_title">Switcher</string>
     <string name="menu_traffic">Traffic</string>
-    <string name="menu_dashboard">sing-box dashboard</string>
     <!-- externel -->
     <string name="action_copy">Copy</string>
     <string name="action_open">Open</string>
@@ -71,11 +70,11 @@
     <string name="port_transproxy">Transproxy port</string>
     <string name="cag_route">Route settings</string>
     <string name="allow_access">Allow LAN connections</string>
-    <string name="allow_access_sum">Bind inbound servers to 0.0.0.0</string>
+    <string name="allow_access_sum">Other devices on your network can use the proxy port</string>
     <string name="require_proxy_in_vpn">Keep local proxy in VPN mode</string>
     <string name="require_proxy_in_vpn_sum">Keep the SOCKS/HTTP port open in VPN mode. Other apps on this device can use it.</string>
     <string name="proxy_mode_inbound_auth">Authenticate local proxy in Proxy mode</string>
-    <string name="proxy_mode_inbound_auth_sum">Require a username and password in proxy mode so other apps cannot use it as an open relay</string>
+    <string name="proxy_mode_inbound_auth_sum">Other apps need a password to use the proxy port</string>
     <string name="inbound_settings">Inbound</string>
     <!-- settings hub rows (global_preferences.xml) -->
     <string name="settings_appearance">Appearance</string>
@@ -92,7 +91,7 @@
     <string name="settings_notification">Notification &amp; statistics</string>
     <string name="settings_notification_summary">Speed updates, traffic statistics, notification content</string>
     <string name="settings_advanced">Advanced</string>
-    <string name="settings_advanced_summary">Logging, custom config, Clash API, reset, cache</string>
+    <string name="settings_advanced_summary">Reports, logging, custom config, reset, cache</string>
     <string name="require_http">Enable HTTP inbound</string>
     <string name="cag_ws">WebSocket settings</string>
     <string name="ws_max_early_data" translatable="false">Max early data</string>
@@ -129,7 +128,7 @@
     <string name="enable_dns_routing">DNS routing</string>
     <string name="dns_routing_message">Resolve bypassed domains with Direct DNS. Those queries skip the proxy.</string>
     <string name="enable_fakedns">FakeDNS</string>
-    <string name="fakedns_message">Apps may need a restart to reconnect after the proxy stops</string>
+    <string name="fakedns_message">Lets the proxy resolve names. Apps may need a restart after you disconnect.</string>
     <string name="dns_hosts">Domain rewrite</string>
     <string name="dns_hosts_dialog_message">One per line. Lines starting with # are comments. Example:\nexample.com 1.1.1.1\nwww.example.com 1.1.1.1 1.1.1.2</string>
     <string name="port_local_dns">Local DNS port</string>
@@ -183,7 +182,7 @@
     <string name="prefer">Prefer</string>
     <string name="only">Only</string>
     <string name="metered">Metered connection</string>
-    <string name="metered_summary">Ask Android to treat the VPN as metered</string>
+    <string name="metered_summary">Apps save data even on Wi-Fi, as they do on mobile data</string>
     <string name="menu_route">Route</string>
     <string name="route_add">Add rule</string>
     <string name="delete_route_prompt">Are you sure you want to remove this route?</string>
@@ -235,7 +234,7 @@
     <string name="bypass_apps">Bypass</string>
     <string name="show_system_apps">Show system apps</string>
     <string name="auto_connect">Auto-connect</string>
-    <string name="auto_connect_summary">Start the service after a reboot or app update if it was running. VPN mode also needs the VPN permission and no other active VPN.</string>
+    <string name="auto_connect_summary">Reconnect after a reboot or app update if it was on</string>
     <string name="direct_boot_aware">Allow toggling on the lock screen</string>
     <string name="direct_boot_aware_summary">Your selected profile information will be less
         protected</string>
@@ -491,7 +490,7 @@
         <item quantity="other">%d rules</item>
     </plurals>
     <string name="night_mode">Night mode</string>
-    <string name="night_mode_dark_only">Always dark with this theme</string>
+    <string name="night_mode_dark_only">This theme is dark only</string>
     <string name="language">Language</string>
     <string name="follow_system">Follow system</string>
     <string name="enable">Enable</string>
@@ -523,11 +522,11 @@
     <string name="connection_test_unreachable">Unreachable</string>
     <string name="connection_test_timeout_error">Timeout</string>
     <string name="append_http_proxy">Append HTTP proxy to VPN</string>
-    <string name="append_http_proxy_sum">Browsers and some apps use the HTTP proxy directly, without the TUN interface (Android 10+)</string>
+    <string name="append_http_proxy_sum">Browsers and some apps use the proxy port directly (Android 10+)</string>
     <string name="append_http_proxy_security_title">Security notice</string>
     <string name="append_http_proxy_security_message">When enabled, other apps on this device can directly use the local proxy port.\n\nRecommendation: Only enable this if you trust all installed apps.</string>
     <string name="http_proxy_bypass">HTTP proxy bypass list</string>
-    <string name="http_proxy_bypass_sum">Hosts that skip the HTTP proxy, one pattern per line, for example 192.168.*. Defaults to private and loopback ranges.</string>
+    <string name="http_proxy_bypass_sum">Hosts that skip the HTTP proxy, such as 192.168.*</string>
     <string name="enable_anyway">Enable anyway</string>
     <string name="strict_route">Strict route</string>
     <string name="protocol_settings">Protocol settings</string>
@@ -757,7 +756,7 @@
     <string name="destination_override_summary">Use the sniffed domain to overwrite the destination
         address, not just for routing</string>
     <string name="resolve_destination">Resolve destination</string>
-    <string name="resolve_destination_summary">Resolve domain destinations before routing, using the IPv6 setting. Conflicts with FakeDNS.</string>
+    <string name="resolve_destination_summary">Look up domains before routing, following the IPv6 setting. Not with FakeDNS</string>
     <string name="pcap" translatable="false">Pcap</string>
     <string name="pcap_notice">Pcap files will be saved to %s</string>
     <string name="naive_insecure_concurrency">Insecure concurrency</string>
@@ -818,7 +817,7 @@
     <string name="packet_encoding">Packet encoding</string>
     <string name="acquire_wake_lock">Keep CPU awake</string>
     <string name="release_wake_lock">Release wake lock</string>
-    <string name="acquire_wake_lock_summary">Hold a wake lock while connected. Uses more battery.</string>
+    <string name="acquire_wake_lock_summary">Keeps connections alive with the screen off. Uses more battery.</string>
     <string name="hide_from_recent_apps">Hide from recent tasks</string>
     <string name="action_switch">Switch</string>
     <string name="custom_rules_provider">Custom</string>
@@ -845,19 +844,16 @@
     <string name="domain_strategy_for_direct">Direct domain strategy</string>
     <string name="domain_strategy_for_server">Server domain strategy</string>
     <string name="show_bottom_bar">Bottom bar on every screen</string>
-    <string name="show_bottom_bar_sum">The connect button, speeds and status stay at the bottom of every screen, not only on Home</string>
+    <string name="show_bottom_bar_sum">Keep the connect button and speeds on every screen</string>
     <string name="liquid_glass">Liquid glass</string>
     <string name="utls_fingerprint">uTLS fingerprint</string>
     <string name="custom_outbound_json">Custom outbound JSON</string>
     <string name="custom_config_json">Custom config JSON</string>
     <string name="is_outbound_only">The JSON set is outbound</string>
     <string name="save">Save</string>
-    <string name="set_panel_url">Set panel URL</string>
     <string name="action_close">Close</string>
-    <string name="enable_clash_api">Clash API</string>
     <string name="log_level">Log level</string>
     <string name="log_empty">Nothing logged yet. Pick a log level in the settings to record one.</string>
-    <string name="enable_clash_api_summary">Serve the Clash API and yacd dashboard at 127.0.0.1:9090</string>
     <string name="xtls_flow">Flow (VLESS sub-protocol)</string>
     <string name="ads">Ads</string>
     <string name="bypass_lan_in_core">Bypass LAN in core</string>
@@ -865,13 +861,13 @@
     <string name="use_selector">Use selector</string>
     <!-- leak protection page -->
     <string name="kill_switch">Kill switch</string>
-    <string name="kill_switch_summary">Block traffic while the VPN connects, restarts or fails, instead of sending it directly. Takes effect on the next start.</string>
+    <string name="kill_switch_summary">Block traffic while the VPN connects, restarts or fails. Applies from the next start.</string>
     <string name="problem_report_title">Check the report before sharing</string>
     <string name="problem_report_note">Servers, profile and group names, keys, UUIDs, IP addresses and host names are replaced with placeholders. Only this text is shared.</string>
     <string name="problem_report_share">Share</string>
     <string name="kill_switch_blocking">Kill switch: traffic blocked</string>
     <string name="webrtc_leak_protection">WebRTC leak protection</string>
-    <string name="webrtc_leak_protection_summary">Block STUN and TURN in the tunnel so websites cannot find your IP through WebRTC. Voice and video calls may stop working.</string>
+    <string name="webrtc_leak_protection_summary">Stop websites from finding your IP through WebRTC. Calls in some apps may stop working.</string>
     <string name="protection_always_on">Always-on VPN</string>
     <string name="protection_always_on_enabled">On. Android restarts the VPN after a reboot or crash.</string>
     <string name="protection_always_on_disabled">Off. Tap to turn it on in the system VPN settings.</string>
@@ -884,7 +880,7 @@
     <string name="protection_battery_unrestricted">Unrestricted</string>
     <string name="protection_battery_optimized">Optimized. Android may stop the service. Tap to set Unrestricted.</string>
     <string name="protection_notes_title">Android settings</string>
-    <string name="protection_notes">Always-on VPN and Block connections without VPN are enforced by Android in VPN mode. They keep traffic blocked even if this app is killed, which the kill switch cannot do.</string>
+    <string name="protection_notes">Android enforces these even if NekoBox is killed. The kill switch can\'t.</string>
     <string name="auto_select">Automatic selection</string>
     <string name="auto_select_active">Automatic selection is on for this group. Turn it off in the group settings to pick a member.</string>
     <string name="auto_select_sum">Route through the member with the lowest connection-test latency and switch when it fails or a faster one recovers. Manual selection within this group is off while enabled.</string>
@@ -895,16 +891,14 @@
     <string name="show_group_in_notification">Show group name in notification</string>
     <string name="reset_connections">Reset connections</string>
     <string name="remove_duplicate">Remove duplicates</string>
-    <string name="mtu_help">Long press the preference to set custom MTU.</string>
-    <string name="log_level_help">Long press the preference to set the buffer size.</string>
     <string name="tls_camouflage_settings">TLS camouflage settings</string>
     <string name="test_concurrency">Test concurrency</string>
     <string name="mux_type">Mux protocol</string>
     <string name="sniff_routing">For routing</string>
     <string name="sniff_override">For routing and connecting</string>
-    <string name="traffic_sniffing_off_sum">Domain rules match a site only when its name is already known, for example through FakeDNS</string>
+    <string name="traffic_sniffing_off_sum">Domain rules match only names already known, such as through FakeDNS</string>
     <string name="traffic_sniffing_routing_sum">Domain rules also match the site name read from each connection</string>
-    <string name="traffic_sniffing_connect_sum">The server also gets each site\'s name and looks it up itself, unless Resolve destination is on. If an app stops working, choose “For routing”.</string>
+    <string name="traffic_sniffing_connect_sum">The server also gets each site\'s name and looks it up. If an app stops working, choose “For routing”.</string>
     <string name="resolve_server">Resolve the server address according to the IPv6 policy</string>
     <string name="auto_select_proxy_apps">Auto select proxy apps</string>
     <string name="auto_select_proxy_apps_message">Auto select proxy apps, this will clear your
@@ -966,8 +960,6 @@
     <string name="clear_cache_confirm">Are you sure you want to clear the cache?</string>
     <string name="clear_cache_success">Cache cleared</string>
     <string name="clear_cache_failed">Failed to clear cache: %s</string>
-    <string name="concurrent_dial">Concurrent dial</string>
-    <string name="concurrent_dial_summary">Dial several addresses at once to connect faster. Uses more battery.</string>
     <string name="connection_test_timeout">Test timeout (ms)</string>
     <string name="preview_version_hint">This application is a preview version and may contain many problems. If you do not want to test it, please go to GitHub to download the Release version!</string>
     <string name="update_dialog_title">New version available</string>
@@ -1230,4 +1222,29 @@
     <string name="relay_native">Native</string>
     <string name="utls_random_browser">Random browser</string>
     <string name="utls_randomized">Randomized</string>
+    <string name="menu_home">Home</string>
+    <string name="menu_api">API control</string>
+    <string name="night_mode_dark">Dark</string>
+    <string name="night_mode_light">Light</string>
+    <string name="night_mode_battery">Dark with Battery Saver</string>
+    <string name="service_mode_vpn_summary">Every app goes through the tunnel</string>
+    <string name="service_mode_proxy_summary">Only apps set to use the proxy port. No VPN</string>
+    <string name="tun_gvisor_summary">Its own network stack inside the app</string>
+    <string name="tun_system_summary">Android\'s network stack. Usually faster</string>
+    <string name="tun_mixed_summary">Android\'s stack for TCP, gVisor for UDP</string>
+    <string name="mtu_custom">Custom</string>
+    <string name="mtu_1500_summary">Matches most networks. Recommended</string>
+    <string name="mtu_9000_summary">Fewer, larger packets. Can be faster; a few apps may break</string>
+    <string name="mtu_custom_summary">Your own value</string>
+    <string name="number_range">From %1$d to %2$d</string>
+    <string name="bypass_lan_summary">Local network addresses skip the VPN</string>
+    <string name="bypass_lan_in_core_summary">The core sends local addresses out directly. Works in proxy mode too</string>
+    <string name="global_allow_insecure_summary">Skip certificate checks for every profile. Unsafe.</string>
+    <string name="rules_provider_official_summary">SagerNet\'s geosite and geoip lists</string>
+    <string name="rules_provider_china_summary">Lists tuned for China</string>
+    <string name="rules_provider_iran_summary">Lists tuned for Iran</string>
+    <string name="rules_provider_russia_summary">Lists tuned for Russia</string>
+    <string name="rules_provider_custom_summary">Your own GeoSite and GeoIP URLs</string>
+    <string name="log_buffer_size">Log buffer size</string>
+    <string name="log_buffer_size_summary">%d KB</string>
 </resources>

@@ -19,7 +19,6 @@
     <string name="quick_disable">غیرفعال‌سازی</string>
     <string name="tile_title">سوییچر</string>
     <string name="menu_traffic">ترافیک</string>
-    <string name="menu_dashboard">sing-box تنظیمات</string>
     <!-- externel -->
     <string name="action_copy">کپی</string>
     <string name="action_open">باز کردن</string>
@@ -472,10 +471,7 @@
     <string name="custom_config_json">پراکسی سفارشی JSON</string>
     <string name="is_outbound_only">مجموعه JSON برای خروجی است</string>
     <string name="save">ذخیره</string>
-    <string name="set_panel_url">تعیین لینک صفحه</string>
-    <string name="enable_clash_api">فعال کردن Clash API</string>
     <string name="log_level">سطح ثبت آمار</string>
-    <string name="enable_clash_api_summary">ارائه Clash api و صفحه yacd را در 127.0.0.1: 9090</string>
     <string name="xtls_flow">Flow (VLESS دستورالعمل فرعی)</string>
     <string name="ads">تبلیغات</string>
     <string name="bypass_lan_in_core">دورزدن شبکه محلی در هسته برنامه</string>
@@ -488,8 +484,6 @@
     <string name="show_group_in_notification">نمایش نام گروه در نوار اعلان</string>
     <string name="reset_connections">بازنشانی اتصالات</string>
     <string name="remove_duplicate">حذف سرورهای تکراری</string>
-    <string name="mtu_help">برای تنظیم MTU سفارشی، تنظیمات را مدتی فشار دهید.</string>
-    <string name="log_level_help">برای تنظیم اندازه بافر، تنظیمات را مدتی فشار دهید.</string>
     <string name="tls_camouflage_settings">تنظیمات استتار TLS</string>
     <string name="test_concurrency">آزمایش همزمان اتصال</string>
     <string name="mux_type">پروتکل مالتی‌پلکسر</string>
@@ -582,8 +576,6 @@
     <string name="clear_cache_confirm">آیا مطمئنید می‌خواهید حافظهٔ پنهان را پاک کنید؟</string>
     <string name="clear_cache_success">حافظهٔ پنهان پاک شد</string>
     <string name="clear_cache_failed">پاک‌سازی حافظهٔ پنهان ناموفق بود: %s</string>
-    <string name="concurrent_dial">اتصال هم‌زمان</string>
-    <string name="concurrent_dial_summary">فعال‌سازی اتصال‌های هم‌زمان برای برقراری سریع‌تر شبکه؛ ممکن است مصرف باتری را افزایش دهد</string>
     <string name="connection_test_timeout">مهلت آزمایش (ms)</string>
     <string name="preview_version_hint">این برنامه نسخهٔ پیش‌نمایش است و ممکن است مشکلات زیادی داشته باشد. اگر نمی‌خواهید آن را آزمایش کنید، لطفاً برای دانلود نسخهٔ Release به GitHub بروید!</string>
     <string name="update_dialog_title">نسخهٔ جدید در دسترس است</string>

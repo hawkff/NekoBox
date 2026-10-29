@@ -18,7 +18,7 @@
             app:key="serverPorts"
             app:title="@string/server_port"
             app:useSimpleSummaryProvider="true" />
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.ChoicePreference
             app:defaultValue="0"
             app:entries="@array/hysteria2_obfs_type"
             app:entryValues="@array/hysteria2_obfs_type_value"

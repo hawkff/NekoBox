@@ -13,7 +13,7 @@ import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.hysteria.canonicalHysteria2ECHConfig
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 class HysteriaSettingsActivity : ProfileSettingsActivity<HysteriaBean>() {
 
@@ -88,7 +88,7 @@ class HysteriaSettingsActivity : ProfileSettingsActivity<HysteriaBean>() {
             true
         }
 
-        val obfsType = findPreference<SimpleMenuPreference>(Key.SERVER_HY2_OBFS_TYPE)!!
+        val obfsType = findPreference<ChoicePreference>(Key.SERVER_HY2_OBFS_TYPE)!!
         val obfsPassword = findPreference<EditTextPreference>(Key.SERVER_OBFS)!!
         val geckoMin = findPreference<EditTextPreference>(Key.SERVER_HY2_GECKO_MIN_PACKET)!!
         val geckoMax = findPreference<EditTextPreference>(Key.SERVER_HY2_GECKO_MAX_PACKET)!!

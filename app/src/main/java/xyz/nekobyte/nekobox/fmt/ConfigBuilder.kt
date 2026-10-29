@@ -417,18 +417,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 cache_file = CacheFile().apply {
                     enabled = true
                     path = "../cache/cache.db"
-                    // if (DataStore.enableClashAPI) {
                     store_fakeip = true
-                    // }
-                }
-
-                if (DataStore.enableClashAPI) {
-                    clash_api = ClashAPIOptions().apply {
-                        external_controller = "127.0.0.1:9090"
-                        external_ui = "../files/yacd"
-                        // Exported/shared configs must not carry the per-install token.
-                        if (!forExport) secret = DataStore.clashApiSecret
-                    }
                 }
             }
         }
@@ -548,9 +537,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             if (!forTest && DataStore.connectionDiagnostics) find_process = true
             rules = routeRules
             rule_set = routeRuleSets
-
-            // add concurrent dial setting
-            concurrent_dial = DataStore.concurrentDial
             default_domain_resolver = dnsResolver("dns-direct", directStrategy)
 
             // Sniffing and destination resolution are rule actions, first so that every rule after

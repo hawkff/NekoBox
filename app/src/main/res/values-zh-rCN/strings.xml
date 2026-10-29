@@ -454,14 +454,10 @@
     <string name="tuic_congestion_controller">拥塞控制</string>
     <string name="tuic_udp_relay_mode">UDP 转发模式</string>
     <string name="pinned_certchain_sha256">固定证书链散列</string>
-    <string name="menu_dashboard">sing-box 仪表板</string>
     <string name="custom_outbound_json">自定义出站 JSON</string>
     <string name="custom_config_json">自定义配置 JSON</string>
     <string name="is_outbound_only">设置的 JSON 是出站</string>
     <string name="save">保存</string>
-    <string name="set_panel_url">设置面板 URL</string>
-    <string name="enable_clash_api">启用 Clash API</string>
-    <string name="enable_clash_api_summary">在 127.0.0.1:9090 提供 clash api 和 yacd 仪表板</string>
     <string name="xtls_flow">Flow（VLESS 子协议）</string>
     <string name="log_level">日志级别</string>
     <string name="ads">推广</string>
@@ -474,8 +470,6 @@
     <string name="reset_connections">重置连接</string>
     <string name="remove_duplicate">删除重复的服务器</string>
     <string name="tls_camouflage_settings">TLS 伪装设置</string>
-    <string name="mtu_help">长按设置项以设置自定义 MTU。</string>
-    <string name="log_level_help">长按设置项以设置缓冲区大小。</string>
     <string name="test_concurrency">测试并发</string>
     <string name="mux_type">Mux 协议</string>
     <string name="sniff_routing">探测结果用于路由判断</string>
@@ -538,8 +532,6 @@
     <string name="clear_cache_confirm">确定要清理缓存吗？</string>
     <string name="clear_cache_success">缓存已清理</string>
     <string name="clear_cache_failed">清理缓存失败: %s</string>
-    <string name="concurrent_dial">并发拨号</string>
-    <string name="concurrent_dial_summary">启用并发连接以更快地建立网络，可能会增加电池使用量</string>
     <string name="layout_single_column">单列</string>
     <string name="layout_double_column">双列</string>
     <string name="sort_and_layout">排序与布局</string>

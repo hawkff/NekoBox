@@ -64,4 +64,9 @@
          reference: android:background resolves it as a drawable and does not
          follow attr-to-attr indirection (that crashed AppBarLayout inflation). -->
     <attr name="appBarBackgroundColor" format="color" />
+
+    <declare-styleable name="ChoicePreference">
+        <!-- One line per entry, shown under its name in the picker. -->
+        <attr name="entrySummaries" format="reference" />
+    </declare-styleable>
 </resources>

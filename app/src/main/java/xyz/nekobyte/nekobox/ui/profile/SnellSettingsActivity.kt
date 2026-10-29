@@ -12,7 +12,7 @@ import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.proxy.PreferenceBinding
 import xyz.nekobyte.nekobox.proxy.PreferenceBindingManager
 import xyz.nekobyte.nekobox.proxy.Type
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 class SnellSettingsActivity : ProfileSettingsActivity<SnellBean>() {
 
@@ -48,10 +48,10 @@ class SnellSettingsActivity : ProfileSettingsActivity<SnellBean>() {
             summaryProvider = PasswordSummaryProvider
         }
 
-        val versionPref = findPreference<SimpleMenuPreference>("version")!!
-        val networkPref = findPreference<SimpleMenuPreference>("network")!!
+        val versionPref = findPreference<ChoicePreference>("version")!!
+        val networkPref = findPreference<ChoicePreference>("network")!!
         val reusePref = findPreference<Preference>("reuse")!!
-        val obfsModePref = findPreference<SimpleMenuPreference>("obfsMode")!!
+        val obfsModePref = findPreference<ChoicePreference>("obfsMode")!!
 
         val initialVersion = versionPref.value?.toIntOrNull() ?: 4
         updateNetworkOptions(initialVersion, networkPref)
@@ -67,7 +67,7 @@ class SnellSettingsActivity : ProfileSettingsActivity<SnellBean>() {
         }
     }
 
-    private fun updateNetworkOptions(version: Int, networkPref: SimpleMenuPreference) {
+    private fun updateNetworkOptions(version: Int, networkPref: ChoicePreference) {
         if (version <= 2) {
             networkPref.entries = arrayOf("Auto", "TCP")
             networkPref.entryValues = arrayOf("", "tcp")
@@ -84,7 +84,7 @@ class SnellSettingsActivity : ProfileSettingsActivity<SnellBean>() {
         reusePref.isEnabled = version >= 4
     }
 
-    private fun updateObfsModeOptions(version: Int, obfsModePref: SimpleMenuPreference) {
+    private fun updateObfsModeOptions(version: Int, obfsModePref: ChoicePreference) {
         if (version >= 4) {
             obfsModePref.entries = arrayOf("None", "HTTP")
             obfsModePref.entryValues = arrayOf("", "http")
