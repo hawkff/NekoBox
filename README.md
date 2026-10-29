@@ -128,7 +128,7 @@ Route rules, in the Route screen, control where traffic goes. A rule matches app
 
 A domain or app rule can also send matching DNS queries through the rule's proxy, so the lookups leave through the same exit as the traffic. You can give it a custom resolver. This setting, DNS through this proxy, is off by default. Those queries do not fall back to another resolver if the proxy fails.
 
-A Proxy Chain profile connects through several profiles in order. Add exit proxy, in the Configuration menu, builds a chain from the selected profile to an exit profile you pick, then selects it and reconnects. In a group, Automatic selection uses the member with the lowest test latency and switches if that member fails or a faster one recovers.
+A Proxy Chain profile connects through several profiles in order. Add exit proxy, in the ⋮ menu on Home, builds a chain from the selected profile to an exit profile you pick, then selects it and reconnects. In a group, Automatic selection uses the member with the lowest test latency and switches if that member fails or a faster one recovers.
 
 ### Routing profiles
 
@@ -155,17 +155,15 @@ These controls work in VPN mode. A running service does not prove that protectio
 
 Network automation, under Settings > Connection, acts when the device joins mobile data, Ethernet, any Wi-Fi network or a Wi-Fi network you name. A rule can connect with a profile, switch profiles or disconnect. Android hides Wi-Fi names from apps without the location permission, so rules for a named network need it.
 
-Share connection, in the Configuration menu, lets other devices use your connection through an HTTP and SOCKS5 proxy with a generated username and password. The proxy listens on all of the device's IPv4 networks, Wi-Fi and hotspot included, so anyone there with the credentials can connect. Regenerate the credentials to lock out devices that hold the old ones.
+Share connection, in the ⋮ menu on Home, lets other devices use your connection through an HTTP and SOCKS5 proxy with a generated username and password. The proxy listens on all of the device's IPv4 networks, Wi-Fi and hotspot included, so anyone there with the credentials can connect. Regenerate the credentials to lock out devices that hold the old ones.
 
-The Configuration menu tests profiles by TCP ping, ICMP ping or URL test. A URL test checks that the server reaches the internet. Under Tools > Network, the connection check shows what your connection reveals: its public addresses, the DNS servers that resolve your lookups, where IPv6 and UDP leave, and whether the address is on public VPN, datacenter or Tor lists. NAT behavior tests how your NAT maps and filters UDP, using a STUN server.
+The ⋮ menu on Home tests profiles by URL test, TCP ping or ICMP ping. A URL test checks that the server reaches the internet. Under Tools > Network, the connection check shows what your connection reveals: its public addresses, the DNS servers that resolve your lookups, where IPv6 and UDP leave, and whether the address is on public VPN, datacenter or Tor lists. NAT behavior tests how your NAT maps and filters UDP, using a STUN server.
 
 Under Tools > Backup, you can save profiles, routing rules and settings to a file or to WebDAV, and restore them. Backups contain your server credentials, so keep them private.
 
-Turn on Enable Clash API in Settings > Advanced to serve the Clash API at `127.0.0.1:9090`. The setting also adds the sing-box Dashboard screen, which shows the bundled Yacd-meta dashboard.
-
 ## Local control API
 
-The local control API lets scripts on the device, or on a computer through ADB, operate the app over HTTP. It is off by default. Enable it under Settings > Advanced > Local control API, and it listens on `127.0.0.1:9091`. Its token grants administrative access to the app, including credential export and backup restore, so keep it private. [API.md](API.md) covers setup, the command list and the Python client.
+The local control API lets scripts on the device, or on a computer through ADB, operate the app over HTTP. It is off by default. Turn it on under API control in the navigation drawer. Each time you turn it on there, it gets a new token and a random loopback port, shown on that screen. Its token grants administrative access to the app, including credential export and backup restore, so keep it private. [API.md](API.md) covers setup, the command list and the Python client.
 
 ## Usage and crash reporting
 
