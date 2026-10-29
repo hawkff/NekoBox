@@ -3,7 +3,7 @@
     <string name="help_to_improve">Help improve the app</string>
     <string name="help_to_improve_summary">Send anonymous crash and connection reports</string>
     <string name="help_to_improve_prompt_title">Help improve NekoBox?</string>
-    <string name="help_to_improve_prompt_message">NekoBox can send anonymous reports to PostHog and Sentry: app opens, connection results (protocol and kind of failure), startup times, subscription import counts and crash reports. It never sends servers, profile names, credentials, traffic or logs. Reports leave only while a VPN is connected. The official build sends them through the developer\'s server, so the services see that server\'s address, not yours. You can change this in Settings, Advanced.</string>
+    <string name="help_to_improve_prompt_message">NekoBox can send anonymous reports to PostHog and Sentry: app and Android versions, app opens, connection results (protocol and kind of failure), startup times, subscription import counts and crash reports. It never sends servers, profile names, credentials, traffic or logs. Reports leave only while a VPN is connected. The official build sends them through the developer\'s server, so the services see that server\'s address, not yours. You can change this in Settings, Advanced.</string>
     <string name="help_to_improve_prompt_allow">Send reports</string>
     <string name="help_to_improve_prompt_deny">Don\'t send</string>
 </resources>

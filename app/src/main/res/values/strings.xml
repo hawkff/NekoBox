@@ -867,7 +867,7 @@
     <string name="problem_report_share">Share</string>
     <string name="kill_switch_blocking">Kill switch: traffic blocked</string>
     <string name="webrtc_leak_protection">WebRTC leak protection</string>
-    <string name="webrtc_leak_protection_summary">Stop websites from finding your IP through WebRTC. Calls in some apps may stop working.</string>
+    <string name="webrtc_leak_protection_summary">Websites can\'t find your IP through WebRTC while the VPN runs. Calls in some apps may stop working.</string>
     <string name="protection_always_on">Always-on VPN</string>
     <string name="protection_always_on_enabled">On. Android restarts the VPN after a reboot or crash.</string>
     <string name="protection_always_on_disabled">Off. Tap to turn it on in the system VPN settings.</string>
@@ -1227,7 +1227,7 @@
     <string name="night_mode_dark">Dark</string>
     <string name="night_mode_light">Light</string>
     <string name="night_mode_battery">Dark with Battery Saver</string>
-    <string name="service_mode_vpn_summary">Every app goes through the tunnel</string>
+    <string name="service_mode_vpn_summary">Apps go through the tunnel unless Proxied apps leaves them out</string>
     <string name="service_mode_proxy_summary">Only apps set to use the proxy port. No VPN</string>
     <string name="tun_gvisor_summary">Its own network stack inside the app</string>
     <string name="tun_system_summary">Android\'s network stack. Usually faster</string>

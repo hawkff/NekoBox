@@ -922,7 +922,7 @@
     <string name="problem_report_share">Поделиться</string>
     <string name="kill_switch_blocking">Kill switch: трафик заблокирован</string>
     <string name="webrtc_leak_protection">Защита от утечки WebRTC</string>
-    <string name="webrtc_leak_protection_summary">Сайты не узнают ваш IP через WebRTC. Звонки в некоторых приложениях могут перестать работать.</string>
+    <string name="webrtc_leak_protection_summary">Пока работает VPN, сайты не узнают ваш IP через WebRTC. Звонки в некоторых приложениях могут перестать работать.</string>
     <string name="protection_always_on">Постоянная VPN</string>
     <string name="protection_always_on_enabled">Включено. Android перезапускает VPN после перезагрузки или сбоя.</string>
     <string name="protection_always_on_disabled">Выключено. Нажмите, чтобы включить в системных настройках VPN.</string>
@@ -1216,7 +1216,7 @@
     <string name="night_mode_dark">Тёмный</string>
     <string name="night_mode_light">Светлый</string>
     <string name="night_mode_battery">Тёмный при экономии заряда</string>
-    <string name="service_mode_vpn_summary">Все приложения идут через туннель</string>
+    <string name="service_mode_vpn_summary">Приложения идут через туннель, кроме исключённых</string>
     <string name="service_mode_proxy_summary">Только приложения, настроенные на порт прокси. Без VPN</string>
     <string name="tun_gvisor_summary">Собственный сетевой стек внутри приложения</string>
     <string name="tun_system_summary">Сетевой стек Android. Обычно быстрее</string>

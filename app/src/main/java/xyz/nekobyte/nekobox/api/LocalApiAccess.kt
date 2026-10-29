@@ -58,15 +58,17 @@ internal object LocalApiAccess {
     }
 
     /** A new token on a free random port: a probe of one fixed port cannot spot the API. Binds sockets, so not on the main thread. */
-    fun fresh() = Config(true, freePort(), ByteArray(32).also { random.nextBytes(it) }.joinToString("") { "%02x".format(it) })
+    fun fresh() = Config(true, freePort(), token())
+
+    fun token() = ByteArray(32).also { random.nextBytes(it) }.joinToString("") { "%02x".format(it) }
 
     private fun freePort(): Int {
         val loopback = InetAddress.getByName("127.0.0.1")
-        repeat(20) {
+        repeat(50) {
             val port = PORTS.first + random.nextInt(PORTS.last - PORTS.first + 1)
             if (runCatching { ServerSocket(port, 1, loopback).close() }.isSuccess) return port
         }
-        return ServerSocket(0, 1, loopback).use { it.localPort }
+        error("No free port for the local API")
     }
 
     @Synchronized
@@ -110,7 +112,7 @@ internal object LocalApiAccess {
         }
     }
 
-    private class Copy(val label: String, val timestamp: Long, val at: Long)
+    private class Copy(val token: String, val label: String, val timestamp: Long, val at: Long)
 
     // shortcut: kept in memory only, so a killed app leaves the token on the clipboard; persist it if that matters.
     private var copied: Copy? = null
@@ -123,15 +125,16 @@ internal object LocalApiAccess {
         clip.description.extras = PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
         clipboard.setPrimaryClip(clip)
         val timestamp = if (Build.VERSION.SDK_INT >= 26) clipboard.primaryClipDescription?.timestamp ?: 0 else 0
-        copied = Copy(label, timestamp, SystemClock.elapsedRealtime())
+        copied = Copy(token, label, timestamp, SystemClock.elapsedRealtime())
         val app = context.applicationContext
         Handler(Looper.getMainLooper()).postDelayed({ clearCopiedToken(app) }, CLIPBOARD_MILLIS)
     }
 
     /**
      * Clears the copied token once its minute is up, if it is still the clipboard's clip. Android shows the
-     * clipboard only to the app in focus, so a minute that ends elsewhere waits for the app's next focus. The
-     * check reads the clip's label and time, never its text, so Android shows no paste notice.
+     * clipboard only to the app in focus, so a minute that ends elsewhere waits for the app's next focus. From
+     * Android 8 the check reads the clip's label and time, never its text, so Android shows no paste notice;
+     * before that, clips carry no time and reading them shows no notice, so the text is compared.
      */
     fun clearCopiedToken(context: Context) {
         val copy = copied ?: return
@@ -139,7 +142,11 @@ internal object LocalApiAccess {
         val clipboard = context.getSystemService(ClipboardManager::class.java)
         val description = clipboard.primaryClipDescription ?: return
         copied = null
-        val ours = description.label?.toString() == copy.label && (Build.VERSION.SDK_INT < 26 || description.timestamp == copy.timestamp)
+        val ours = if (Build.VERSION.SDK_INT >= 26) {
+            description.label?.toString() == copy.label && description.timestamp == copy.timestamp
+        } else {
+            clipboard.primaryClip?.getItemAt(0)?.text?.toString() == copy.token
+        }
         if (!ours) return
         if (Build.VERSION.SDK_INT >= 28) clipboard.clearPrimaryClip() else clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
     }
