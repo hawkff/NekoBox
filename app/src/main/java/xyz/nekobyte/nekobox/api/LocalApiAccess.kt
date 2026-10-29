@@ -86,6 +86,12 @@ internal object LocalApiAccess {
         }
     }
 
+    /** Turns [failed] off unless a newer save replaced it; one lock covers the check and the write. */
+    @Synchronized
+    fun disableIfUnchanged(context: Context, failed: Config) {
+        if (read(context) == failed) write(context, failed.copy(enabled = false))
+    }
+
     fun sync(context: Context) = runOnDefaultDispatcher {
         val app = context.applicationContext
         val enabled = runCatching { read(app)?.enabled == true }.getOrDefault(false)

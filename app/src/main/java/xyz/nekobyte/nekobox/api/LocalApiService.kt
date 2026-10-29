@@ -78,13 +78,7 @@ class LocalApiService : Service() {
                 } catch (_: Exception) {
                     // A listener that could not start is off, so API control does not show its port as listening.
                     attempted?.let { failed ->
-                        withContext(Dispatchers.IO) {
-                            runCatching {
-                                if (LocalApiAccess.read(this@LocalApiService) == failed) {
-                                    LocalApiAccess.write(this@LocalApiService, failed.copy(enabled = false))
-                                }
-                            }
-                        }
+                        withContext(Dispatchers.IO) { runCatching { LocalApiAccess.disableIfUnchanged(this@LocalApiService, failed) } }
                     }
                     Toast.makeText(this@LocalApiService, R.string.local_api_start_failed, Toast.LENGTH_LONG).show()
                     stopSelf()
