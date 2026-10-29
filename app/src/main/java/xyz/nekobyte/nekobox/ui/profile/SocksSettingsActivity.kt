@@ -8,7 +8,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.preference.EditTextPreferenceModifiers
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 class SocksSettingsActivity : ProfileSettingsActivity<SOCKSBean>() {
     override fun createEntity() = SOCKSBean()
@@ -45,7 +45,7 @@ class SocksSettingsActivity : ProfileSettingsActivity<SOCKSBean>() {
         val password = findPreference<EditTextPreference>(Key.SERVER_PASSWORD)!!.apply {
             summaryProvider = PasswordSummaryProvider
         }
-        val protocol = findPreference<SimpleMenuPreference>(Key.SERVER_PROTOCOL)!!
+        val protocol = findPreference<ChoicePreference>(Key.SERVER_PROTOCOL)!!
 
         fun updateProtocol(version: Int) {
             password.isVisible = version == SOCKSBean.PROTOCOL_SOCKS5

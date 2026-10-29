@@ -46,7 +46,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/tls_camouflage_settings">
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.ChoicePreference
             app:defaultValue=""
             app:entries="@array/utls_fingerprint_display"
             app:entryValues="@array/utls_fingerprint_entry"

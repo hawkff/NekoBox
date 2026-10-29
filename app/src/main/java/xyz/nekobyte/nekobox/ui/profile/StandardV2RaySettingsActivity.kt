@@ -15,7 +15,7 @@ import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.proxy.PreferenceBinding
 import xyz.nekobyte.nekobox.proxy.PreferenceBindingManager
 import xyz.nekobyte.nekobox.proxy.Type
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV2RayBean>() {
 
@@ -131,7 +131,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
         }
 
         encryption.preference.apply {
-            this as SimpleMenuPreference
+            this as ChoicePreference
             if (isVless) {
                 title = resources.getString(R.string.xtls_flow)
                 setIcon(R.drawable.ic_baseline_stream_24)
@@ -147,7 +147,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
 
         type.preference.apply {
             updateView(type.readStringFromCache())
-            this as SimpleMenuPreference
+            this as ChoicePreference
             setOnPreferenceChangeListener { _, newValue ->
                 updateView(newValue as String)
                 true
@@ -156,7 +156,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
 
         security.preference.apply {
             updateTls(security.readStringFromCache())
-            this as SimpleMenuPreference
+            this as ChoicePreference
             setOnPreferenceChangeListener { _, newValue ->
                 updateTls(newValue as String)
                 true
@@ -166,7 +166,7 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
         // Mux mode visibility control
         muxMode.preference.apply {
             updateMuxMode(muxMode.readIntFromCache())
-            this as SimpleMenuPreference
+            this as ChoicePreference
             setOnPreferenceChangeListener { _, newValue ->
                 updateMuxMode((newValue as String).toInt())
                 true

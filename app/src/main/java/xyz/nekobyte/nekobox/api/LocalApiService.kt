@@ -47,6 +47,7 @@ class LocalApiService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         scope.launch {
             startLock.withLock {
+                var attempted: LocalApiAccess.Config? = null
                 try {
                     val config = withContext(Dispatchers.IO) { LocalApiAccess.read(this@LocalApiService) }
                     if (intent?.action == DISABLE && config != null) {
@@ -59,6 +60,7 @@ class LocalApiService : Service() {
                         return@launch
                     }
                     if (config != configuration) {
+                        attempted = config
                         server?.close()
                         server = null
                         var opened: LocalAPIServer? = null
@@ -74,6 +76,10 @@ class LocalApiService : Service() {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
+                    // A listener that could not start is off, so API control does not show its port as listening.
+                    attempted?.let { failed ->
+                        withContext(Dispatchers.IO) { runCatching { LocalApiAccess.disableIfUnchanged(this@LocalApiService, failed) } }
+                    }
                     Toast.makeText(this@LocalApiService, R.string.local_api_start_failed, Toast.LENGTH_LONG).show()
                     stopSelf()
                 }

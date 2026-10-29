@@ -16,7 +16,7 @@
             app:key="serverPort"
             app:title="@string/server_port"
             app:useSimpleSummaryProvider="true" />
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.ChoicePreference
             app:entries="@array/shadowtls_version_value"
             app:entryValues="@array/shadowtls_version_value"
             app:icon="@drawable/ic_baseline_update_24"
@@ -53,7 +53,7 @@
             app:key="allowInsecure"
             app:summary="@string/allow_insecure_sum"
             app:title="@string/allow_insecure" />
-        <xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+        <xyz.nekobyte.nekobox.ui.ChoicePreference
             app:defaultValue=""
             app:entries="@array/utls_fingerprint_display"
             app:entryValues="@array/utls_fingerprint_entry"

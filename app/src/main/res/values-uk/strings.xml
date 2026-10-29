@@ -19,7 +19,6 @@
     <string name="quick_disable">Вимкнути</string>
     <string name="tile_title">Перемикач</string>
     <string name="menu_traffic">Трафік</string>
-    <string name="menu_dashboard">Панель керування sing-box</string>
     <!-- externel -->
     <string name="action_copy">Копіювати</string>
     <string name="action_open">Відкрити</string>
@@ -451,10 +450,7 @@
     <string name="custom_config_json">Власний JSON конфігурації</string>
     <string name="is_outbound_only">Встановлений JSON є лише вихідним з\'єднанням</string>
     <string name="save">Зберегти</string>
-    <string name="set_panel_url">Встановити URL панелі</string>
-    <string name="enable_clash_api">Увімкнути Clash API</string>
     <string name="log_level">Рівень журналу</string>
-    <string name="enable_clash_api_summary">Надати Clash API та панель yacd за адресою 127.0.0.1:9090</string>
     <string name="xtls_flow">Flow (підпротокол VLESS)</string>
     <string name="ads">Реклама</string>
     <string name="bypass_lan_in_core">Обходити ЛВС в ядрі</string>
@@ -467,8 +463,6 @@
     <string name="show_group_in_notification">Показувати назву групи у сповіщенні</string>
     <string name="reset_connections">Скинути з\'єднання</string>
     <string name="remove_duplicate">Видалити дублікати серверів</string>
-    <string name="mtu_help">Довге натискання на налаштування, щоб встановити власний MTU.</string>
-    <string name="log_level_help">Довге натискання на налаштування, щоб встановити розмір буфера.</string>
     <string name="tls_camouflage_settings">Налаштування маскування TLS</string>
     <string name="test_concurrency">Паралелізм тесту</string>
     <string name="mux_type">Протокол Mux</string>

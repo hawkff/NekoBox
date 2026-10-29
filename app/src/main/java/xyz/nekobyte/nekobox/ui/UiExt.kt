@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jakewharton.processphoenix.ProcessPhoenix
 import kotlinx.coroutines.delay
 import xyz.nekobyte.nekobox.NekoBox
@@ -24,6 +25,11 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
 fun Fragment.snackbar(textId: Int) = (requireActivity() as MainActivity).snackbar(textId)
 fun Fragment.snackbar(text: CharSequence) = (requireActivity() as MainActivity).snackbar(text)
+
+/** What reports send, shown before they start: on first start, and when they are turned on in Settings. */
+fun Context.helpToImproveDialog(): MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(this)
+    .setTitle(R.string.help_to_improve_prompt_title)
+    .setMessage(R.string.help_to_improve_prompt_message)
 
 fun ThemedActivity.startFilesForResult(launcher: ActivityResultLauncher<String>, input: String) {
     try {

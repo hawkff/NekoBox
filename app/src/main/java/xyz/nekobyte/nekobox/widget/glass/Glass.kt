@@ -115,8 +115,14 @@ object Glass {
     /** Keeps [inset] clear at the top of a scrolling [view], above its own top padding; its content scrolls into it. */
     fun insetScroller(view: View, inset: Int) {
         val own = view.getTag(R.id.glass_own_padding) as? Int ?: view.paddingTop.also { view.setTag(R.id.glass_own_padding, it) }
+        // A list laid out before the bars measured keeps its first row where it was, under the bars: one
+        // that has not moved yet starts again below them.
+        val atTop = !view.canScrollVertically(-1)
         (view as? ViewGroup)?.clipToPadding = false
         view.updatePadding(top = own + inset)
+        if (atTop) {
+            if (view is RecyclerView) view.scrollToPosition(0) else view.scrollTo(view.scrollX, 0)
+        }
     }
 
     /** The vertical scrolling views in [root], the outermost on each branch. A pager's own list is not one: its pages are. */

@@ -141,8 +141,6 @@ class MainActivity :
             onNewIntent(intent)
         }
 
-        refreshNavMenu(DataStore.enableClashAPI)
-
         // sdk 33 notification
         if (Build.VERSION.SDK_INT >= 33) {
             val checkPermission =
@@ -176,6 +174,11 @@ class MainActivity :
         // A connect that finished while the app was away asks now. Lifecycle reports RESUMED only
         // after onResume returns, which is why the prompt needs no more than STARTED.
         if (DataStore.serviceState.connected) askForBackgroundUse()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) LocalApiAccess.clearCopiedToken(this)
     }
 
     // Liquid glass: the connect button and the stats bar float as glass over the profiles; the
@@ -229,18 +232,10 @@ class MainActivity :
         )
     }
 
-    fun refreshNavMenu(clashApi: Boolean) {
-        if (::navigation.isInitialized) {
-            navigation.menu.findItem(R.id.nav_traffic)?.isVisible = clashApi
-        }
-    }
-
     // Reports stay off until the user answers once; builds without reporting keys never ask.
     private fun askHelpToImprove() {
         if (DataStore.helpToImproveAnswered || (BuildConfig.POSTHOG_PROJECT_TOKEN.isBlank() && BuildConfig.SENTRY_DSN.isBlank())) return
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.help_to_improve_prompt_title)
-            .setMessage(R.string.help_to_improve_prompt_message)
+        helpToImproveDialog()
             .setPositiveButton(R.string.help_to_improve_prompt_allow) { _, _ -> DataStore.helpToImprove = true }
             .setNegativeButton(R.string.help_to_improve_prompt_deny) { _, _ -> DataStore.helpToImprove = false }
             .setCancelable(false)
@@ -551,7 +546,7 @@ class MainActivity :
 
             R.id.nav_connections -> displayFragment(ConnectionsFragment())
 
-            R.id.nav_traffic -> displayFragment(WebviewFragment())
+            R.id.nav_local_api -> displayFragment(LocalApiFragment())
 
             R.id.nav_tools -> displayFragment(ToolsFragment())
 

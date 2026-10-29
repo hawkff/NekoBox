@@ -8,7 +8,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.preference.EditTextPreferenceModifiers
 import xyz.nekobyte.nekobox.fmt.ssh.SSHBean
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 class SSHSettingsActivity : ProfileSettingsActivity<SSHBean>() {
 
@@ -60,7 +60,7 @@ class SSHSettingsActivity : ProfileSettingsActivity<SSHBean>() {
         val privateKeyPassphrase = findPreference<EditTextPreference>(Key.SERVER_PASSWORD1)!!.apply {
             summaryProvider = PasswordSummaryProvider
         }
-        val authType = findPreference<SimpleMenuPreference>(Key.SERVER_AUTH_TYPE)!!
+        val authType = findPreference<ChoicePreference>(Key.SERVER_AUTH_TYPE)!!
         fun updateAuthType(type: Int = DataStore.serverAuthType) {
             password.isVisible = type == SSHBean.AUTH_TYPE_PASSWORD
             privateKey.isVisible = type == SSHBean.AUTH_TYPE_PRIVATE_KEY

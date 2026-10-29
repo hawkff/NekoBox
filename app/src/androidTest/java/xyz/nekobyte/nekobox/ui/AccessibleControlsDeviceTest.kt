@@ -77,7 +77,6 @@ class AccessibleControlsDeviceTest {
     }
 
     private companion object {
-        // The traffic screen is a web view and has no controls of the app's own.
         val SCREENS = listOf(
             R.id.nav_configuration,
             R.id.nav_group,
@@ -88,6 +87,7 @@ class AccessibleControlsDeviceTest {
             R.id.nav_logcat,
             R.id.nav_connections,
             R.id.nav_tools,
+            R.id.nav_local_api,
             R.id.nav_about,
         )
     }

@@ -38,7 +38,7 @@ class TrafficStatisticsPreferenceTest {
         try {
             activity.supportFragmentManager.beginTransaction().add(android.R.id.content, fragment).commitNow()
             val statistics = fragment.findPreference<SwitchPreference>(Key.PROFILE_TRAFFIC_STATISTICS)!!
-            val interval = fragment.findPreference<SimpleMenuPreference>(Key.SPEED_INTERVAL)!!
+            val interval = fragment.findPreference<ChoicePreference>(Key.SPEED_INTERVAL)!!
             assertTrue(statistics.isEnabled)
             assertNotNull(statistics.onPreferenceChangeListener)
             assertSame(interval.onPreferenceChangeListener, statistics.onPreferenceChangeListener)

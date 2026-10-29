@@ -33,7 +33,7 @@ import xyz.nekobyte.nekobox.ui.MainActivity
 import xyz.nekobyte.nekobox.ui.migratePinnedProfileShortcuts
 import xyz.nekobyte.nekobox.utils.*
 import xyz.nekobyte.nekobox.utils.JavaUtil
-import xyz.nekobyte.nekobox.utils.cleanWebview
+import xyz.nekobyte.nekobox.utils.removeWebviewData
 import java.io.File
 import androidx.work.Configuration as WorkConfiguration
 
@@ -104,12 +104,9 @@ class NekoBox :
                 nativeInterface, nativeInterface, LocalResolverImpl,
             )
 
-            // fix multi process issue in Android 9+
-            JavaUtil.handleWebviewDir(this)
-
             runOnDefaultDispatcher {
                 PackageCache.register()
-                cleanWebview()
+                if (isMainProcess) removeWebviewData()
             }
         }
 

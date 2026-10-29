@@ -487,17 +487,12 @@ class ConfigBuilderGoldenTest {
 
     @Test
     fun forExport_omitsDeviceSecretsAndLanBinding() {
-        DataStore.enableClashAPI = true
         DataStore.allowAccess = true
-        assertEquals("export-secret", DataStore.clashApiSecret)
         val profile = addSocks(addGroup(), "192.0.2.50", 1080, "export-socks")
 
         val root = JSONObject(build(profile, forExport = true).config)
-        val clashApi = root.getJSONObject("experimental").getJSONObject("clash_api")
         val mixed = objects(root.getJSONArray("inbounds")).single { it.optString("type") == "mixed" }
 
-        assertEquals("127.0.0.1:9090", clashApi.getString("external_controller"))
-        assertFalse(clashApi.has("secret"))
         assertEquals(LOCALHOST, mixed.getString("listen"))
         assertFalse(mixed.has("users"))
         assertFalse(root.toString().contains(DataStore.shareSecret))

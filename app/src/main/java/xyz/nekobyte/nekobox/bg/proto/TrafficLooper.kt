@@ -140,8 +140,8 @@ class TrafficLooper(
         }
     }
 
-    // The "proxy" group picks members on its own (urltest failover, or a selector switched from
-    // the dashboard), so poll its current pick each tick and move accounting, notification title
+    // The "proxy" group picks members on its own (urltest failover, or a selector switched without
+    // a restart), so poll its current pick each tick and move accounting, notification title
     // and the UI's selected profile along with it.
     private suspend fun followGroupSelection(proxy: ProxyInstance) {
         val nowTag = proxy.box.selectedOutbound()

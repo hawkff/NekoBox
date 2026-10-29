@@ -51,7 +51,6 @@ import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.ktx.beginFold
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
-import xyz.nekobyte.nekobox.widget.OutboundPreference
 
 /**
  * Makes or changes a group. The common choices come first: the name, what the group holds and,
@@ -86,9 +85,9 @@ class GroupSettingsActivity :
         DataStore.frontProxy = frontProxy
         DataStore.landingProxy = landingProxy
         DataStore.frontProxyTmp =
-            if (frontProxy >= 0) OutboundPreference.VALUE_SELECT_PROFILE.toInt() else 0
+            if (frontProxy >= 0) PROXY_PROFILE else 0
         DataStore.landingProxyTmp =
-            if (landingProxy >= 0) OutboundPreference.VALUE_SELECT_PROFILE.toInt() else 0
+            if (landingProxy >= 0) PROXY_PROFILE else 0
 
         val subscription = subscription ?: SubscriptionBean().applyDefaultValues()
         DataStore.subscriptionLink = subscription.link!!
@@ -118,13 +117,13 @@ class GroupSettingsActivity :
         autoSelect = isSelector && DataStore.groupAutoSelect
 
         frontProxy =
-            if (DataStore.frontProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt()) {
+            if (DataStore.frontProxyTmp == PROXY_PROFILE) {
                 DataStore.frontProxy
             } else {
                 -1
             }
         landingProxy =
-            if (DataStore.landingProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt()) {
+            if (DataStore.landingProxyTmp == PROXY_PROFILE) {
                 DataStore.landingProxy
             } else {
                 -1
@@ -362,7 +361,7 @@ class GroupSettingsActivity :
         binding.moreToggle.setOnClickListener { showMore(!binding.more.isVisible, animate = true) }
 
         val usesMore = DataStore.groupOrder != 0 || DataStore.groupIsSelector ||
-            DataStore.frontProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt() || DataStore.landingProxyTmp == OutboundPreference.VALUE_SELECT_PROFILE.toInt() ||
+            DataStore.frontProxyTmp == PROXY_PROFILE || DataStore.landingProxyTmp == PROXY_PROFILE ||
             DataStore.subscriptionBackupLinks.isNotBlank() || DataStore.subscriptionFormat != (defaults.outputFormat ?: 0) ||
             DataStore.subscriptionForceResolve != defaults.forceResolve || DataStore.subscriptionDeduplication != defaults.deduplication ||
             DataStore.subscriptionFilterMode != SubscriptionFilterMode.DISABLED || DataStore.subscriptionCustomDns.isNotBlank() ||
@@ -549,7 +548,7 @@ class GroupSettingsActivity :
     }
 
     private fun showChain(row: ItemGroupChainBinding, front: Boolean) {
-        val set = (if (front) DataStore.frontProxyTmp else DataStore.landingProxyTmp) == OutboundPreference.VALUE_SELECT_PROFILE.toInt()
+        val set = (if (front) DataStore.frontProxyTmp else DataStore.landingProxyTmp) == PROXY_PROFILE
         val id = if (front) DataStore.frontProxy else DataStore.landingProxy
         row.chainClear.isVisible = set
         if (!set) return row.chainValue.setText(R.string.group_editor_none)
@@ -717,10 +716,10 @@ class GroupSettingsActivity :
         if (id <= 0) return
         if (front) {
             DataStore.frontProxy = id
-            DataStore.frontProxyTmp = OutboundPreference.VALUE_SELECT_PROFILE.toInt()
+            DataStore.frontProxyTmp = PROXY_PROFILE
         } else {
             DataStore.landingProxy = id
-            DataStore.landingProxyTmp = OutboundPreference.VALUE_SELECT_PROFILE.toInt()
+            DataStore.landingProxyTmp = PROXY_PROFILE
         }
         showChain(if (front) binding.first else binding.last, front)
     }
@@ -744,6 +743,9 @@ class GroupSettingsActivity :
 
         /** A new group that starts as a subscription, waiting for its link. */
         const val EXTRA_SUBSCRIPTION = "subscription"
+
+        /** frontProxyTmp and landingProxyTmp hold this while a profile is picked as the front or landing proxy. */
+        private const val PROXY_PROFILE = 3
 
         private const val LINK_OFFER = "linkOffer"
         private const val BACKUP_OFFER = "backupOffer"

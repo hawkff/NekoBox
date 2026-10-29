@@ -1,34 +1,15 @@
 package xyz.nekobyte.nekobox.utils
 
 import xyz.nekobyte.nekobox.NekoBox
-import xyz.nekobyte.nekobox.ktx.Logs
-import java.io.File
 
 const val KB = 1024L
 const val MB = KB * 1024
 const val GB = MB * 1024
 
-fun NekoBox.cleanWebview() {
-    var pathToClean = "app_webview"
-    if (isBgProcess) pathToClean += "_$process"
-    try {
-        val dataDir = filesDir.parentFile!!
-        File(dataDir, "$pathToClean/BrowserMetrics").recreate(true)
-        File(dataDir, "$pathToClean/BrowserMetrics-spare.pma").recreate(false)
-    } catch (e: Exception) {
-        Logs.e(e)
-    }
-}
-
-fun File.recreate(dir: Boolean) {
-    if (parentFile?.isDirectory != true) return
-    if (dir && !isFile) {
-        if (exists()) deleteRecursively()
-        createNewFile()
-    } else if (!dir && !isDirectory) {
-        if (exists()) delete()
-        mkdir()
-    }
+// Builds before 2.0.0 showed the dashboard in a WebView; its data, the Clash API secret included, goes.
+fun NekoBox.removeWebviewData() {
+    filesDir.parentFile?.listFiles { file -> file.name.startsWith("app_webview") || file.name.startsWith("app_hws_webview") }
+        ?.forEach { it.deleteRecursively() }
 }
 
 // Traffic display

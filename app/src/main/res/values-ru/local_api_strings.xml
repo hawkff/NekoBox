@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="local_api_title">Локальный API управления</string>
-    <string name="local_api_summary">Управление приложением через локальное подключение с проверкой токена</string>
-    <string name="local_api_warning">Включить HTTP API на 127.0.0.1:9091. Владелец токена может читать учётные данные прокси, менять профили и настройки, восстанавливать резервные копии и одобрять установленные плагины. Храните токен в тайне. Проверки разрешений Android продолжают действовать.</string>
-    <string name="local_api_enable">Включить API</string>
+    <string name="local_api_summary">Скрипты на этом телефоне управляют NekoBox по HTTP</string>
     <string name="local_api_disable">Выключить API</string>
-    <string name="local_api_enabled">Слушает на 127.0.0.1:%1$d. Локальные запросы проходят проверку по токену. Выключение API закрывает порт, но не останавливает VPN.</string>
     <string name="local_api_copy_token">Скопировать токен</string>
     <string name="local_api_token_copied">Токен API скопирован</string>
     <string name="local_api_rotate">Заменить токен</string>
     <string name="local_api_rotate_warning">Подключённым клиентам понадобится новый токен. Уже принятые операции могут завершиться.</string>
     <string name="local_api_notification">Локальное управление приложением включено</string>
-    <string name="local_api_saved">Доступ к API обновлён</string>
     <string name="local_api_start_failed">Не удалось запустить локальный API. Проверьте его настройки и свободен ли порт.</string>
+    <string name="local_api_listening">Слушает 127.0.0.1:%1$d</string>
+    <string name="local_api_token_label">Токен API NekoBox</string>
+    <string name="local_api_copy_token_summary">Через минуту исчезнет из буфера обмена</string>
+    <string name="local_api_rotate_summary">Скриптам понадобится новый токен</string>
+    <string name="local_api_notes_title">Что видят другие приложения</string>
+    <string name="local_api_notes">Другие приложения на этом телефоне могут заметить, что API включён, но без токена им не воспользоваться. Токен открывает пароли прокси и настройки, держите его в тайне. При каждом включении API получает новый токен и порт.</string>
 </resources>

@@ -28,7 +28,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.preference.EditTextPreferenceModifiers
 import xyz.nekobyte.nekobox.fmt.mieru.MieruBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
-import xyz.nekobyte.nekobox.ui.SimpleMenuPreference
+import xyz.nekobyte.nekobox.ui.ChoicePreference
 
 class MieruSettingsActivity : ProfileSettingsActivity<MieruBean>() {
 
@@ -62,7 +62,7 @@ class MieruSettingsActivity : ProfileSettingsActivity<MieruBean>() {
         findPreference<EditTextPreference>(Key.SERVER_PASSWORD)!!.apply {
             summaryProvider = PasswordSummaryProvider
         }
-        val protocol = findPreference<SimpleMenuPreference>(Key.SERVER_PROTOCOL)!!
+        val protocol = findPreference<ChoicePreference>(Key.SERVER_PROTOCOL)!!
         val mtu = findPreference<EditTextPreference>(Key.SERVER_MTU)!!
         mtu.isVisible = protocol.value.equals("UDP")
         protocol.setOnPreferenceChangeListener { _, newValue ->

@@ -397,7 +397,6 @@
     <string name="backup_summary">如果路由規則不與設定檔一起備份，則自訂出站將丟失。</string>
     <string name="backup_not_file">不是一個備份檔案，預計 .json，但 %s</string>
     <string name="packet_encoding">封包編碼</string>
-    <string name="menu_dashboard">sing-box 儀表板</string>
     <string name="action_copy">複製</string>
     <string name="action_open">開啟</string>
     <string name="update_all_subscription">更新所有訂閱</string>
@@ -457,10 +456,7 @@
     <string name="custom_config_json">自定義配置 JSON</string>
     <string name="is_outbound_only">設定的 JSON 是出站</string>
     <string name="save">儲存</string>
-    <string name="set_panel_url">設定面板 URL</string>
-    <string name="enable_clash_api">啟用 Clash API</string>
     <string name="log_level">日誌級別</string>
-    <string name="enable_clash_api_summary">在 127.0.0.1:9090 提供 clash api 和 yacd 儀表板</string>
     <string name="xtls_flow">Flow（VLESS 子協議）</string>
     <string name="ads">推廣</string>
     <string name="bypass_lan_in_core">在核心中繞過 LAN</string>
@@ -472,8 +468,6 @@
     <string name="show_group_in_notification">在通知中顯示組名</string>
     <string name="reset_connections">重置連線</string>
     <string name="remove_duplicate">刪除重複的伺服器</string>
-    <string name="mtu_help">長按設定項以設定自定義 MTU。</string>
-    <string name="log_level_help">長按設定項以設定緩衝區大小。</string>
     <string name="tls_camouflage_settings">TLS 偽裝設定</string>
     <string name="test_concurrency">測試併發</string>
     <string name="mux_type">Mux 協議</string>
@@ -536,8 +530,6 @@
     <string name="clear_cache_confirm">確定要清理快取嗎？</string>
     <string name="clear_cache_success">快取已清理</string>
     <string name="clear_cache_failed">清理快取失敗: %s</string>
-    <string name="concurrent_dial">併發撥號</string>
-    <string name="concurrent_dial_summary">啟用併發連線以更快地建立網路，可能會增加電池使用量</string>
     <string name="connection_test_timeout">測試超時（ms）</string>
     <string name="preview_version_hint">本應用為預覽版，可能存在諸多問題。若您不願參與測試，請前往GitHub下載正式釋出版本！</string>
     <string name="update_dialog_title">發現新版本</string>

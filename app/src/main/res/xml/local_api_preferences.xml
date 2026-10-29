@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The API control screen. Nothing here is stored in settings: LocalApiAccess keeps the API's own file. -->
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <SwitchPreference
+        app:icon="@drawable/ic_device_developer_mode"
+        app:key="localApiEnabled"
+        app:persistent="false"
+        app:summary="@string/local_api_summary"
+        app:title="@string/local_api_title" />
+    <Preference
+        app:icon="@drawable/ic_baseline_vpn_key_24"
+        app:isPreferenceVisible="false"
+        app:key="localApiCopyToken"
+        app:persistent="false"
+        app:summary="@string/local_api_copy_token_summary"
+        app:title="@string/local_api_copy_token" />
+    <Preference
+        app:icon="@drawable/ic_baseline_refresh_24"
+        app:isPreferenceVisible="false"
+        app:key="localApiReplaceToken"
+        app:persistent="false"
+        app:summary="@string/local_api_rotate_summary"
+        app:title="@string/local_api_rotate" />
+    <Preference
+        app:icon="@drawable/ic_baseline_info_24"
+        app:key="localApiNotes"
+        app:persistent="false"
+        app:selectable="false"
+        app:summary="@string/local_api_notes"
+        app:title="@string/local_api_notes_title" />
+
+</PreferenceScreen>

@@ -115,7 +115,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     }
 
     var appTLSVersion by configurationStore.string(Key.APP_TLS_VERSION) { "1.2" }
-    var enableClashAPI by configurationStore.boolean(Key.ENABLE_CLASH_API)
     var showBottomBar by configurationStore.boolean(Key.SHOW_BOTTOM_BAR)
     var confirmProfileDelete by configurationStore.boolean(Key.CONFIRM_PROFILE_DELETE) { true }
     var askForBackgroundUse by configurationStore.boolean(Key.ASK_FOR_BACKGROUND_USE) { true }
@@ -159,14 +158,13 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var bypassLan by configurationStore.boolean(Key.BYPASS_LAN)
     var bypassLanInCore by configurationStore.boolean(Key.BYPASS_LAN_IN_CORE)
-    var concurrentDial by configurationStore.boolean(Key.CONCURRENT_DIAL)
 
     var allowAccess by configurationStore.boolean(Key.ALLOW_ACCESS)
 
     // Default must match global_preferences.xml (1000ms). Without a non-zero code
     // default, a fresh install that never opens Settings reads 0, which disables the
     // TrafficLooper stats loop entirely (TrafficLooper.loop() returns on delayMs == 0),
-    // so the dashboard up/down speeds stay blank. "0" remains a valid user choice (Off).
+    // so the bottom bar's up/down speeds stay blank. "0" remains a valid user choice (Off).
     var speedInterval by configurationStore.stringToInt(Key.SPEED_INTERVAL) { 1000 }
     var showGroupInNotification by configurationStore.boolean("showGroupInNotification")
 
@@ -184,7 +182,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     val helpToImproveAnswered get() = configurationStore.getBoolean(Key.HELP_TO_IMPROVE) != null
     var logLevel by configurationStore.stringToInt(Key.LOG_LEVEL)
     var logBufSize by configurationStore.int(Key.LOG_BUF_SIZE) { 0 }
-    var acquireWakeLock by configurationStore.boolean(Key.ACQUIRE_WAKE_LOCK)
+    var acquireWakeLock by configurationStore.boolean(Key.ACQUIRE_WAKE_LOCK) { true }
     var hideFromRecentApps by configurationStore.boolean(Key.HIDE_FROM_RECENT_APPS)
 
     var rulesGeositeUrl by configurationStore.string(Key.RULES_GEOSITE_URL) {
@@ -200,7 +198,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // hopefully hashCode = mHandle doesn't change, currently this is true from KitKat to Nougat
     private val userIndex by lazy { Binder.getCallingUserHandle().hashCode() }
     val mixedSecret: String get() = storedSecret(Key.MIXED_SECRET)
-    val clashApiSecret: String get() = storedSecret(Key.CLASH_API_SECRET)
 
     // Credential handed to other devices when the connection is shared. Regenerating it revokes
     // their access on the next reload while the app's own loopback user stays valid.
@@ -296,8 +293,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var tunImplementation by configurationStore.stringToInt(Key.TUN_IMPLEMENTATION) { TunImplementation.GVISOR }
     var profileTrafficStatistics by configurationStore.boolean(Key.PROFILE_TRAFFIC_STATISTICS) { true }
-
-    var yacdURL by configurationStore.string("yacdURL") { "http://127.0.0.1:9090/ui" }
 
     // protocol
 

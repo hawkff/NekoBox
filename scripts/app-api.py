@@ -95,7 +95,8 @@ def configure(args, enabled):
                     remove_forward(forward)
                 args.state.unlink()
             return {"enabled": False}
-        config = {"enabled": True, "port": 9091, "token": secrets.token_hex(32)}
+        # A random port, as the app picks when the API is turned on there.
+        config = {"enabled": True, "port": 20000 + secrets.randbelow(40001), "token": secrets.token_hex(32)}
     previous_config = config.copy() if existing.returncode == 0 else config | {"enabled": False}
     config["enabled"] = enabled
     if args.rotate:
