@@ -472,7 +472,7 @@ class ConfigurationGroupFragment : Fragment() {
             profile.rx,
             profile.lifetimeTx,
             profile.lifetimeRx,
-            ProfileWords.transport(profile),
+            ProfileWords.connection(profile),
             ProfileWords.country(profile),
         )
 
@@ -1379,7 +1379,7 @@ class ConfigurationGroupFragment : Fragment() {
             entity = proxyEntity
 
             profileName.text = proxyEntity.displayName()
-            profileType.text = ProfileWords.transport(proxyEntity)
+            profileType.text = ProfileWords.connection(proxyEntity)
 
             val rx = proxyEntity.rx
             val tx = proxyEntity.tx

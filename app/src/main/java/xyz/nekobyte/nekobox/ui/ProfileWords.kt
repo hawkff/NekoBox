@@ -11,8 +11,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** What a profile row says about its server, beside the name. */
 object ProfileWords {
+    // The transports as share links and panels shorten them; TCP is the default and goes unsaid.
     private val TRANSPORTS = mapOf(
-        "ws" to "WebSocket",
+        "ws" to "WS",
         "grpc" to "gRPC",
         "http" to "HTTP",
         "httpupgrade" to "HTTPUpgrade",
@@ -23,24 +24,23 @@ object ProfileWords {
     )
 
     /**
-     * How the connection looks on the wire: "Reality", "WebSocket · TLS", "Trojan · TLS". VLESS names
-     * nothing a server is told apart by, so its rows name only the transport; other protocols keep
-     * their names.
+     * The protocol and how its connection looks on the wire: "VLESS · Reality", "VLESS · WS · TLS",
+     * "Trojan · TLS". Every row names its protocol, so one VMess server among VLESS ones stands out.
      */
-    fun transport(profile: ProxyEntity): String {
+    fun connection(profile: ProxyEntity): String {
         val bean = profile.requireBean()
-        if (bean !is VMessBean && bean !is TrojanBean) return profile.displayType()
+        val protocol = profile.displayType()
+        if (bean !is VMessBean && bean !is TrojanBean) return protocol
         bean as StandardV2RayBean
-        val parts = listOfNotNull(
-            profile.displayType().takeUnless { bean.isVLESS },
+        return listOfNotNull(
+            protocol,
             bean.type?.let { TRANSPORTS[it] ?: it.takeUnless { type -> type == "tcp" } },
             when {
                 !bean.realityPubKey.isNullOrBlank() -> "Reality"
                 bean.security == "tls" -> "TLS"
                 else -> null
             },
-        )
-        return parts.ifEmpty { listOf("TCP") }.joinToString(" · ")
+        ).joinToString(" · ")
     }
 
     /**

@@ -36,25 +36,25 @@ class ProfileWordsTest {
     )
 
     @Test
-    fun rowsNameTheTransportAndKeepProtocolsOtherThanVless() {
+    fun rowsNameTheProtocolAndHowItConnects() {
         val reality = vmess(true) {
             security = "tls"
             realityPubKey = "key"
         }
-        assertEquals("Reality", ProfileWords.transport(reality))
+        assertEquals("VLESS · Reality", ProfileWords.connection(reality))
         val webSocket = vmess(true) {
             type = "ws"
             security = "tls"
         }
-        assertEquals("WebSocket · TLS", ProfileWords.transport(webSocket))
-        assertEquals("TCP", ProfileWords.transport(vmess(true) {}))
-        assertEquals("VMess · WebSocket", ProfileWords.transport(vmess(false) { type = "ws" }))
+        assertEquals("VLESS · WS · TLS", ProfileWords.connection(webSocket))
+        assertEquals("VLESS", ProfileWords.connection(vmess(true) {}))
+        assertEquals("VMess · WS", ProfileWords.connection(vmess(false) { type = "ws" }))
         val trojan = TrojanBean().apply {
             serverAddress = "192.0.2.2"
             serverPort = 443
             password = "secret"
         }
-        assertEquals("Trojan · TLS", ProfileWords.transport(entity(trojan)))
+        assertEquals("Trojan · TLS", ProfileWords.connection(entity(trojan)))
     }
 
     @Test
