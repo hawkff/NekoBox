@@ -38,14 +38,13 @@ internal object ProfileSections {
         }
     }
 
+    // A trailing number with the marks around it: "-2", " № 16 ★". Symbols alone stay part of a name.
+    private val TRAILING_NUMBER = Regex("^(.*?)[^\\p{L}\\p{N}]*\\p{N}+[^\\p{L}\\p{N}]*$")
+
     /** The name without a trailing number and the symbols around it. */
     fun stem(name: String): String {
-        var rest = name.trim()
-        while (true) {
-            val shorter = rest.trimEnd { !it.isLetterOrDigit() }.trimEnd(Char::isDigit)
-            if (shorter == rest) return rest
-            rest = shorter
-        }
+        val trimmed = name.trim()
+        return TRAILING_NUMBER.find(trimmed)?.groupValues?.get(1) ?: trimmed
     }
 
     // The words all names begin with, without a trailing number mark; the stem when they share none.

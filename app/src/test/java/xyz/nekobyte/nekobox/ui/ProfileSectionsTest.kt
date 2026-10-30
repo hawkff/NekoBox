@@ -36,6 +36,9 @@ class ProfileSectionsTest {
         // Two of a kind are not worth a fold, and a single section would only repeat the group.
         assertTrue(ProfileSections.of(listOf("DE 1", "DE 2", "France")).isEmpty())
         assertTrue(ProfileSections.of(listOf("DE 1", "DE 2", "DE 3")).isEmpty())
+        // Without a number, the symbols at the end tell servers apart.
+        assertTrue(ProfileSections.of(listOf("France!", "France?", "France", "Japan")).isEmpty())
+        assertTrue(ProfileSections.of(listOf("Server 🇩🇪", "Server 🇺🇸", "Server 🇯🇵", "Home")).isEmpty())
     }
 
     @Test

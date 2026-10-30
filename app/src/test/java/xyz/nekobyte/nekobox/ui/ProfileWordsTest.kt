@@ -17,10 +17,12 @@ import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 @Config(sdk = [35], application = android.app.Application::class)
 class ProfileWordsTest {
     private val originalLookup = ServerCountries.lookup
+    private val originalDatabase = ServerCountries.database
 
     @After
     fun tearDown() {
         ServerCountries.lookup = originalLookup
+        ServerCountries.database = originalDatabase
     }
 
     private fun entity(bean: AbstractBean) = ProxyEntity().apply { putBean(bean.applyDefaultValues()) }
@@ -59,8 +61,10 @@ class ProfileWordsTest {
 
     @Test
     fun aRowNamesTheCountryOnlyWhenItsNameHasNoFlag() {
+        ServerCountries.database = { 1L }
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { if (it == "192.0.2.77") "de" else "" } }
-        ServerCountries.lookUp(listOf("192.0.2.77", "node.example"))
+        // An address with a line break is never sent: it would shift the answers after it.
+        ServerCountries.lookUp(listOf("bad\naddress", "192.0.2.77", "node.example"))
         fun named(name: String, address: String) = vmess(true) {
             this.name = name
             serverAddress = address
@@ -70,5 +74,10 @@ class ProfileWordsTest {
         // A flag names the exit; the address may be a relay in another country.
         assertNull(ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
         assertNull(ProfileWords.country(named("Auto proxy-6", "node.example")))
+        // A replaced database answers again.
+        ServerCountries.database = { 2L }
+        ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { "fr" } }
+        ServerCountries.lookUp(listOf("192.0.2.77"))
+        assertEquals("🇫🇷 France", ProfileWords.country(named("Auto proxy-5", "192.0.2.77")))
     }
 }

@@ -6,6 +6,8 @@ import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.app
+import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
@@ -79,15 +81,27 @@ object ProfileWords {
 object ServerCountries {
     private val codes = ConcurrentHashMap<String, String>()
 
-    // Tests replace the core.
+    // When the database file the answers came from was written; the Assets screen can replace it.
+    @Volatile
+    private var answeredFrom = 0L
+
+    // Tests replace the core and the database file.
     internal var lookup: (String) -> String = { Libcore.serverCountries(it) }
+    internal var database: () -> Long = { File(app.externalAssets, "geoip.db").lastModified() }
 
     fun cached(address: String): String? = codes[address]
 
-    /** Looks up the addresses not seen yet; true when any was added. */
+    /** Looks up the addresses not seen yet; true when any answer was added or dropped. */
     fun lookUp(addresses: Collection<String?>): Boolean {
-        val missing = addresses.filterNotNull().filter { it.isNotBlank() && !codes.containsKey(it) }.distinct()
-        if (missing.isEmpty()) return false
+        val written = database()
+        val renewed = written != answeredFrom && codes.isNotEmpty()
+        if (written != answeredFrom) {
+            codes.clear()
+            answeredFrom = written
+        }
+        // A line break would shift every answer after it.
+        val missing = addresses.filterNotNull().filter { it.isNotBlank() && '\n' !in it && '\r' !in it && !codes.containsKey(it) }.distinct()
+        if (missing.isEmpty()) return renewed
         val found = try {
             lookup(missing.joinToString("\n")).split('\n')
         } catch (e: Exception) {

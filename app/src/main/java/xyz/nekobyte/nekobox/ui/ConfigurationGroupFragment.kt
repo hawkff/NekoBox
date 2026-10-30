@@ -124,8 +124,8 @@ class ConfigurationGroupFragment : Fragment() {
         }
     }
 
-    // Folds are kept per group.
-    private fun foldKey(sectionKey: String) = "${proxyGroup.id}\t$sectionKey"
+    // Folds are kept per group, one per line.
+    private fun foldKey(sectionKey: String) = "${proxyGroup.id}\t${sectionKey.replace('\n', ' ')}"
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -604,7 +604,12 @@ class ConfigurationGroupFragment : Fragment() {
                     sections.forEachIndexed { index, section ->
                         val headerId = SECTION_ID_BASE - index
                         val members = section.members.map(visible::get)
-                        val isFolded = foldKey(section.key) in folded
+                        var isFolded = foldKey(section.key) in folded
+                        // A jump to a profile opens its section, also when the jump came before the list loaded.
+                        if (isFolded && pendingScrollId in members) {
+                            DataStore.updateFoldedSections { it - foldKey(section.key) }
+                            isFolded = false
+                        }
                         members.forEach { keys[it] = section.key }
                         val title = section.title ?: getString(if (section.allFlags) R.string.profile_section_countries else R.string.profile_section_other)
                         rows[headerId] = SectionRow(section.key, title, members.size, isFolded)
@@ -635,13 +640,10 @@ class ConfigurationGroupFragment : Fragment() {
             submitMasterList()
         }
 
-        /** Unfolds the section that holds [profileId]; false when it is not folded away. */
-        fun reveal(profileId: Long): Boolean {
-            val key = foldKey(sectionKeys[profileId] ?: return false)
-            if (key !in DataStore.foldedSections) return false
-            DataStore.updateFoldedSections { it - key }
-            submitMasterList()
-            return true
+        /** Shows the pending jump target: building the list opens its folded section. */
+        fun reveal(profileId: Long) {
+            // Not loaded yet: the load's own list opens it.
+            if (profileId in masterProfiles) submitMasterList()
         }
 
         /** Whether the rows at two positions are profiles of one section, where a drag may drop. */
