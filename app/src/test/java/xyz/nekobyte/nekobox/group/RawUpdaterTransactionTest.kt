@@ -301,7 +301,7 @@ class RawUpdaterTransactionTest {
             assertEquals(pinned.requireBean(), after.last().requireBean())
             assertEquals(
                 listOf(
-                    app.getString(R.string.subscription_import_failed, 2, 1, "vless 1"),
+                    app.getString(R.string.subscription_import_failed, 2, 1, "vless 1") + " " + app.getString(R.string.subscription_import_reasons, "unsupported pcs"),
                     app.getString(R.string.subscription_kept_partial, 1),
                 ).joinToString("\n"),
                 subscription.importWarning,
@@ -321,7 +321,10 @@ class RawUpdaterTransactionTest {
             val after = ProfileDatabase.proxyDao.getByGroup(group.id)
             assertEquals(listOf("first", "second", "fast"), after.map { it.displayName() })
             assertEquals(fast.id, after.last().id)
-            assertEquals(app.getString(R.string.subscription_import_failed, 2, 1, "hy2 1"), subscription.importWarning.orEmpty().lines().first())
+            assertEquals(
+                app.getString(R.string.subscription_import_failed, 2, 1, "hy2 1") + " " + app.getString(R.string.subscription_import_reasons, "unsupported vcn"),
+                subscription.importWarning.orEmpty().lines().first(),
+            )
         }
     }
 

@@ -284,12 +284,6 @@ class SingBoxOptions {
         @JvmField var tag: String? = null
     }
 
-    class Fragment : SingBoxOption() {
-        @JvmField var length: String? = null
-
-        @JvmField var interval: String? = null
-    }
-
     class MultiplexOptions : SingBoxOption() {
         @JvmField var enabled: Boolean? = null
 
@@ -414,6 +408,8 @@ class SingBoxOptions {
         @JvmField var utls: OutboundUTLSOptions? = null
 
         @JvmField var reality: OutboundRealityOptions? = null
+
+        @JvmField var fragment: Boolean? = null
     }
 
     class InboundRealityOptions : SingBoxOption() {

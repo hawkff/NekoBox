@@ -353,8 +353,6 @@
     <string name="global_allow_insecure">常に安全でない接続を許可</string>
     <string name="fragment_settings">Fragment 設定</string>
     <string name="enable_tls_fragment">TLS Client Hello のフラグメントを有効化</string>
-    <string name="fragment_length">フラグメント長 (最小-最大)</string>
-    <string name="fragment_interval">フラグメント間隔 (最小-最大)</string>
     <string name="backup_local">ローカルバックアップ</string>
     <string name="backup_webdav">WebDAV バックアップ</string>
     <string name="webdav_settings">WebDAV 設定</string>

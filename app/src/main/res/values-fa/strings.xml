@@ -403,8 +403,6 @@
     <string name="pinned_certchain_sha256">SHA256 گواهی پین‌شده</string>
     <string name="fragment_settings">تنظیمات Fragment</string>
     <string name="enable_tls_fragment">فعال‌سازی Fragment در TLS Client Hello</string>
-    <string name="fragment_length">طول Fragment (کمینه-بیشینه)</string>
-    <string name="fragment_interval">بازه Fragment (کمینه-بیشینه)</string>
     <string name="backup_local">پشتیبان محلی</string>
     <string name="backup_webdav">پشتیبان WebDAV</string>
     <string name="webdav_settings">تنظیمات WebDAV</string>

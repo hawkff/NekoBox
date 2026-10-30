@@ -165,34 +165,12 @@
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;route_profile&quot;>انتخاب پراکسی...&lt;/string>"
-        errorLine2="                                 ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-fa/strings.xml"
-            line="144"
-            column="34"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
         errorLine1="    &lt;string name=&quot;search_apps&quot;>در حال جستجو...&lt;/string>"
         errorLine2="                               ~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-fa/strings.xml"
             line="173"
             column="32"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;scanning&quot;>در حال اسکن...&lt;/string>"
-        errorLine2="                            ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-fa/strings.xml"
-            line="174"
-            column="29"/>
     </issue>
 
     <issue
@@ -226,28 +204,6 @@
             file="src/main/res/values-fa/strings.xml"
             line="281"
             column="37"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;generating&quot;>در حال ایجاد...&lt;/string>"
-        errorLine2="                              ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-fa/strings.xml"
-            line="439"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;stun_attest_loading&quot;>ممکن است چند دقیقه‌ای طول بکشد...&lt;/string>"
-        errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-fa/strings.xml"
-            line="453"
-            column="40"/>
     </issue>
 
     <issue
@@ -404,17 +360,6 @@
             file="src/main/java/xyz/nekobyte/nekobox/ui/ConfigurationFragment.kt"
             line="413"
             column="56"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                    if (Uri.parse(link.toString()).scheme == &quot;content&quot;) {"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/xyz/nekobyte/nekobox/widget/LinkOrContentPreference.kt"
-            line="42"
-            column="25"/>
     </issue>
 
     <issue

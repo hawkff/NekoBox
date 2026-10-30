@@ -20,6 +20,8 @@ import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2
 import xyz.nekobyte.nekobox.fmt.shadowsocks.parseShadowsocks
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundTLS
+import xyz.nekobyte.nekobox.fmt.v2ray.isFragmentFinalMask
+import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2RayN
 import xyz.nekobyte.nekobox.fmt.v2ray.toUriVMessVLESSTrojan
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
@@ -316,10 +318,36 @@ class PanelShareLinkTest {
         assertFalse(KryoConverters.deserialize(SubscriptionBean(), legacy).sendDeviceId!!)
     }
 
+    @Test
+    fun fragmentMaskLink_becomesTlsFragmentationAndBack() {
+        val fm = encode("""{"tcp":[{"type":"fragment","settings":{"packets":"tlshello","length":"10-20","delay":"0"}}]}""")
+        val reality = "security=reality&sni=www.example.com&pbk=$REALITY_KEY&sid=ab&fp=firefox&flow=xtls-rprx-vision"
+        val bean = parseV2Ray("vless://$UUID@192.0.2.1:443?type=tcp&$reality&fm=$fm#fragmented").applyDefaultValues()
+        assertTrue(bean.tlsFragment!!)
+        assertTrue(buildSingBoxOutboundTLS(bean)!!.fragment!!)
+        val exported = bean.toUriVMessVLESSTrojan(false)
+        val query = exported.substringAfter('?').split('&').associate { it.substringBefore('=') to java.net.URLDecoder.decode(it.substringAfter('='), "UTF-8") }
+        assertTrue(isFragmentFinalMask(query.getValue("fm")))
+        assertTrue(parseV2Ray(exported).tlsFragment!!)
+        // Version 12 only for a profile that fragments, so the others keep their bytes.
+        val stored = KryoConverters.serialize(bean)
+        assertEquals(12, stored[0].toInt())
+        val copy = KryoConverters.deserialize(VMessBean(), stored)
+        assertTrue(copy.tlsFragment!!)
+        assertEquals(10, KryoConverters.serialize(copy.apply { tlsFragment = false })[0].toInt())
+
+        // Without TLS there is no ClientHello to split.
+        assertFalse(parseV2Ray("vless://$UUID@192.0.2.1:443?type=tcp&security=none&fm=$fm#plain").applyDefaultValues().tlsFragment!!)
+        // Another mask beside the fragment still refuses the link.
+        val mixed = encode("""{"tcp":[{"type":"fragment"},{"type":"header-custom"}]}""")
+        assertThrows(Exception::class.java) { parseV2Ray("vless://$UUID@192.0.2.1:443?type=tcp&$reality&fm=$mixed") }
+    }
+
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
 
     private companion object {
         const val UUID = "00000000-0000-4000-8000-000000000001"
+        const val REALITY_KEY = "yAnz5TF-lXXJte14tji3zlMNq-hd2rYUIgJBgB3fBmk"
         const val PRIVATE_KEY = "yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk="
         const val PUBLIC_KEY = "xTIBA5rboUvnH4htodjb6e697QjLERt1NAB4mZqp8Dg="
         const val PRESHARED_KEY = "FpCyhws9cxwWoV4xELtfJvjJN+zQVRPISllRWgeopVE="

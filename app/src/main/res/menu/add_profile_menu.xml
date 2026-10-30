@@ -132,6 +132,9 @@
                         </group>
                         <group android:id="@+id/layout_group" android:checkableBehavior="single">
                             <item
+                                android:id="@+id/action_layout_compact"
+                                android:title="@string/layout_compact" />
+                            <item
                                 android:id="@+id/action_layout_single"
                                 android:title="@string/layout_single_column" />
                             <item

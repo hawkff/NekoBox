@@ -438,6 +438,8 @@ class ConfigurationFragment @JvmOverloads constructor(
         groupPager = groupListBinding.groupPager
         tabLayout = groupListBinding.groupTab
         tabBar = groupListBinding.groupTabBar
+        // The tabs name the group on show, the only one too.
+        toolbar.elevation = dp2px(4).toFloat()
         searchResults = groupListBinding.groupSearchResults
         searchEmpty = groupListBinding.groupSearchEmpty
         searchEmptyMargin = (searchEmpty.layoutParams as FrameLayout.LayoutParams).topMargin
@@ -1485,9 +1487,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                             groupList = newGroupList
                             notifyDataSetChanged()
                             if (set) groupPager.setCurrentItem(selectedGroupIndex, false)
-                            val hideTab = groupList.size < 2
-                            tabBar.isGone = hideTab
-                            toolbar.elevation = if (hideTab) 0F else dp2px(4).toFloat()
                             if (!select) {
                                 groupPager.registerOnPageChangeCallback(updateSelectedCallback)
                             }
@@ -1520,11 +1519,6 @@ class ConfigurationFragment @JvmOverloads constructor(
             tabLayout.post {
                 if (disposed) return@post
                 groupList.add(group)
-
-                if (groupList.any { !it.ungrouped }) {
-                    tabBar.visibility = View.VISIBLE
-                }
-
                 notifyItemInserted(groupList.size - 1)
                 tabLayout.getTabAt(groupList.size - 1)?.select()
             }

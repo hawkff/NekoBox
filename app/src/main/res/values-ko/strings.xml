@@ -347,8 +347,6 @@
     <string name="global_allow_insecure">항상 안전하지 않은 연결 허용</string>
     <string name="fragment_settings">Fragment 설정</string>
     <string name="enable_tls_fragment">TLS Client Hello Fragment 활성화</string>
-    <string name="fragment_length">Fragment 길이 (최소-최대)</string>
-    <string name="fragment_interval">Fragment 간격 (최소-최대)</string>
     <string name="backup_local">로컬 백업</string>
     <string name="backup_webdav">WebDAV 백업</string>
     <string name="webdav_settings">WebDAV 설정</string>

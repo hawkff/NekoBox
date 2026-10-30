@@ -370,8 +370,9 @@
 <string name="ws_path">Путь к WebSocket</string>
 <string name="xtls_flow">Flow (подпротокол VLESS)</string>
 <string name="yes">Да</string>
-    <string name="layout_single_column">Один столбец</string>
-    <string name="layout_double_column">Два столбца</string>
+    <string name="layout_compact">Компактный список</string>
+    <string name="layout_single_column">Карточки</string>
+    <string name="layout_double_column">Карточки в два столбца</string>
     <string name="sort_and_layout">Сортировка и макет</string>
     <string name="kcp_seed">mKCP Seed</string>
     <string name="kcp_header_type">Тип заголовка</string>
@@ -405,8 +406,8 @@
     <string name="ech_settings">Настройки ECH</string>
     <string name="fragment_settings">Фрагментация TLS</string>
     <string name="enable_tls_fragment">Включить фрагментацию TLS Client Hello</string>
-    <string name="fragment_length">Длина фрагмента (мин-макс)</string>
-    <string name="fragment_interval">Интервал фрагмента (мин-макс)</string>
+    <string name="enable_tls_fragment_sum">Делит TLS-рукопожатие с каждым сервером на небольшие TCP-сегменты, чтобы фильтр, который читает имя сервера из одного пакета, его не увидел. Подключение занимает чуть больше времени.</string>
+    <string name="tls_fragment_profile_sum">Делит TLS-рукопожатие с этим сервером, даже если переключатель в настройках выключен. Подписки включают это для серверов, которым это нужно.</string>
     <string name="backup_local">Локальная резервная копия</string>
     <string name="backup_webdav">Резервная копия WebDAV</string>
     <string name="webdav_settings">Настройки WebDAV</string>
@@ -570,7 +571,8 @@
     <string name="import_section_rule_providers">провайдеры правил</string>
     <string name="import_section_dns">настройки DNS</string>
     <string name="import_section_inbounds">входящие</string>
-    <string name="import_section_fragment">фрагментация TLS и шум UDP</string>
+    <string name="import_section_fragment">фрагментация TLS</string>
+    <string name="import_section_noise">шум UDP</string>
     <string name="menu_connections">Соединения</string>
     <string name="connections_show_closed">Показывать закрытые соединения</string>
     <string name="connection_diagnostics">Диагностика соединений</string>

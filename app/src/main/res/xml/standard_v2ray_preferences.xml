@@ -178,6 +178,11 @@
             app:key="allowInsecure"
             app:summary="@string/allow_insecure_sum"
             app:title="@string/allow_insecure" />
+        <SwitchPreference
+            app:icon="@drawable/ic_baseline_texture_24"
+            app:key="tlsFragment"
+            app:summary="@string/tls_fragment_profile_sum"
+            app:title="@string/enable_tls_fragment" />
     </PreferenceCategory>
 
     <PreferenceCategory
