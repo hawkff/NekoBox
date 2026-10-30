@@ -36,34 +36,11 @@ open class ChoicePreference @JvmOverloads constructor(context: Context, attrs: A
         isSingleLineTitle = false
     }
 
-    // The rows sit in a plain scrolling column: a dialog's list view sizes itself before its rows wrap, which
-    // cut off rows with a second line.
     override fun onClick() {
         val names = entries ?: return
         val values = entryValues ?: return
-        val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = NestedScrollView(context).apply { addView(column) }
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setTitle(title)
-            .setView(scroll)
-            .setNegativeButton(android.R.string.cancel, null)
-            .create()
-        val checked = checkedIndex()
-        val inflater = LayoutInflater.from(dialog.context)
-        names.forEachIndexed { index, name ->
-            val row = inflater.inflate(R.layout.item_choice, column, false) as CheckedTextView
-            row.text = row(name, entrySummaries?.getOrNull(index))
-            row.isChecked = index == checked
-            row.setOnClickListener {
-                dialog.dismiss()
-                choose(values[index].toString())
-            }
-            ViewCompat.setAccessibilityDelegate(row, RadioRole)
-            column.addView(row)
-        }
-        dialog.show()
-        // A long list opens with its picked row in view.
-        column.getChildAt(checked)?.let { row -> scroll.post { scroll.scrollTo(0, row.top - (scroll.height - row.height) / 2) } }
+        val rows = names.mapIndexed { index, name -> name to entrySummaries?.getOrNull(index) }
+        showChoiceDialog(context, title, rows, checkedIndex()) { choose(values[it].toString()) }
     }
 
     /** The row shown as picked. */
@@ -73,22 +50,58 @@ open class ChoicePreference @JvmOverloads constructor(context: Context, attrs: A
     protected open fun choose(newValue: String) {
         if (newValue != value && callChangeListener(newValue)) value = newValue
     }
+}
 
-    private fun row(name: CharSequence, summary: CharSequence?): CharSequence {
-        if (summary.isNullOrEmpty()) return name
-        return SpannableStringBuilder(name).append('\n').apply {
-            val start = length
-            append(summary)
-            setSpan(RelativeSizeSpan(0.875f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(ForegroundColorSpan(context.getColorAttr(android.R.attr.textColorSecondary)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+/**
+ * A choice in a dialog: one radio row per entry, with a smaller line under the entries that have
+ * one, and Cancel. Picking a row closes the dialog and hands [onPick] its index; [checked] opens in view.
+ */
+// The rows sit in a plain scrolling column: a dialog's list view sizes itself before its rows wrap, which
+// cut off rows with a second line.
+internal fun showChoiceDialog(
+    context: Context,
+    title: CharSequence?,
+    rows: List<Pair<CharSequence, CharSequence?>>,
+    checked: Int,
+    onPick: (Int) -> Unit,
+) {
+    val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+    val scroll = NestedScrollView(context).apply { addView(column) }
+    val dialog = MaterialAlertDialogBuilder(context)
+        .setTitle(title)
+        .setView(scroll)
+        .setNegativeButton(android.R.string.cancel, null)
+        .create()
+    val inflater = LayoutInflater.from(dialog.context)
+    rows.forEachIndexed { index, (name, summary) ->
+        val row = inflater.inflate(R.layout.item_choice, column, false) as CheckedTextView
+        row.text = choiceRow(dialog.context, name, summary)
+        row.isChecked = index == checked
+        row.setOnClickListener {
+            dialog.dismiss()
+            onPick(index)
         }
+        ViewCompat.setAccessibilityDelegate(row, RadioRole)
+        column.addView(row)
     }
+    dialog.show()
+    column.getChildAt(checked)?.let { row -> scroll.post { scroll.scrollTo(0, row.top - (scroll.height - row.height) / 2) } }
+}
 
-    /** Screen readers announce a row as a radio button, picked or not. */
-    private object RadioRole : AccessibilityDelegateCompat() {
-        override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
-            super.onInitializeAccessibilityNodeInfo(host, info)
-            info.className = RadioButton::class.java.name
-        }
+private fun choiceRow(context: Context, name: CharSequence, summary: CharSequence?): CharSequence {
+    if (summary.isNullOrEmpty()) return name
+    return SpannableStringBuilder(name).append('\n').apply {
+        val start = length
+        append(summary)
+        setSpan(RelativeSizeSpan(0.875f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        setSpan(ForegroundColorSpan(context.getColorAttr(android.R.attr.textColorSecondary)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+}
+
+/** Screen readers announce a row as a radio button, picked or not. */
+private object RadioRole : AccessibilityDelegateCompat() {
+    override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+        super.onInitializeAccessibilityNodeInfo(host, info)
+        info.className = RadioButton::class.java.name
     }
 }

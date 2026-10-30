@@ -317,7 +317,6 @@
     <string name="filter_include">包含</string>
     <string name="filter_exclude">排除</string>
     <string name="filter_regex">過濾（正規表示式）</string>
-    <string name="subscription_expire">過期: %s</string>
     <string name="nat_stun_server_hint">Stun 伺服器</string>
     <string name="acquire_wake_lock">獲取喚醒鎖</string>
     <string name="acquire_wake_lock_summary">保持 CPU 開啟</string>

@@ -14,11 +14,13 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.BundleCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
@@ -43,6 +45,7 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileListBinding
+import xyz.nekobyte.nekobox.databinding.LayoutProfileSectionBinding
 import xyz.nekobyte.nekobox.fmt.toUniversalLink
 import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.FixedGridLayoutManager
@@ -72,7 +75,22 @@ private data class ProfileListSubmission(
     val profiles: Map<Long, ProxyEntity>,
     val stamps: Map<Long, ProfileRowStamp>,
     val scrollIndex: Int = -1,
+    // The section headers among [ids], and the section of every profile, shown or folded away.
+    val sections: Map<Long, SectionRow> = emptyMap(),
+    val sectionKeys: Map<Long, String> = emptyMap(),
+    // The master order the list was built from.
+    val master: List<Long> = emptyList(),
 )
+
+/** A section header in the list. */
+private class SectionRow(val key: String, val title: String, val count: Int, val folded: Boolean)
+
+// Header IDs count down from here, below every profile ID and RecyclerView's NO_ID.
+private const val SECTION_ID_BASE = -100L
+private const val SECTION_VIEW = 100
+
+// A row scrolls to the top of the list; the first of a section takes its header along.
+private fun withHeader(ids: List<Long>, index: Int) = if (index > 0 && ids[index - 1] < 0) index - 1 else index
 
 /** The pager tab of profiles pinned from any group. It is not a group: it never becomes the selected group. */
 internal const val FAVORITES_GROUP_ID = -2L
@@ -98,8 +116,16 @@ class ConfigurationGroupFragment : Fragment() {
 
     fun scrollToProfile(profileId: Long) {
         val index = adapter?.configurationIdList?.indexOf(profileId) ?: -1
-        if (index >= 0) configurationListView.scrollTo(index, true) else pendingScrollId = profileId
+        if (index >= 0) {
+            configurationListView.scrollTo(withHeader(adapter!!.configurationIdList, index), true)
+        } else {
+            pendingScrollId = profileId
+            adapter?.reveal(profileId)
+        }
     }
+
+    // Folds are kept per group, one per line.
+    private fun foldKey(sectionKey: String) = "${proxyGroup.id}\t${sectionKey.replace('\n', ' ')}"
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -134,7 +160,7 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         itemTouchHelper = configurationListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, 0) {
-            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (isEnabled && adapter?.canDrag() == true) {
+            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (viewHolder is ConfigurationHolder && isEnabled && adapter?.canDrag() == true) {
                 if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
                 } else {
@@ -146,6 +172,8 @@ class ConfigurationGroupFragment : Fragment() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
             }
+
+            override fun canDropOver(recyclerView: RecyclerView, current: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = target is ConfigurationHolder && adapter?.sameSection(current.bindingAdapterPosition, target.bindingAdapterPosition) == true
 
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -273,11 +301,25 @@ class ConfigurationGroupFragment : Fragment() {
                 true
             }
         }
+        menu.findItem(R.id.action_sections).apply {
+            isChecked = DataStore.profileSections
+            setOnMenuItemClickListener {
+                DataStore.profileSections = !DataStore.profileSections
+                it.isChecked = DataStore.profileSections
+                (parentFragment as? ConfigurationFragment)?.switchAllGroupFragmentsLayout()
+                true
+            }
+        }
     }
 
     private fun setupLayoutManager() {
         layoutManager = if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
-            FixedGridLayoutManager(configurationListView, 2)
+            FixedGridLayoutManager(configurationListView, 2).apply {
+                // A section header spans both columns.
+                spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int) = if (adapter?.isHeader(position) == true) spanCount else 1
+                }
+            }
         } else {
             FixedLinearLayoutManager(configurationListView)
         }
@@ -370,7 +412,7 @@ class ConfigurationGroupFragment : Fragment() {
     }
 
     inner class ConfigurationAdapter :
-        RecyclerView.Adapter<ConfigurationHolder>(),
+        RecyclerView.Adapter<RecyclerView.ViewHolder>(),
         ProfileManager.Listener,
         GroupManager.Listener,
         UndoSnackbarManager.Interface<ProxyEntity> {
@@ -385,6 +427,9 @@ class ConfigurationGroupFragment : Fragment() {
         var configurationIdList: MutableList<Long> = mutableListOf()
         val configurationList = HashMap<Long, ProxyEntity>()
         private val configurationStamps = HashMap<Long, ProfileRowStamp>()
+        private val sectionRows = HashMap<Long, SectionRow>()
+        private val sectionKeys = HashMap<Long, String>()
+        private var displayedMaster: List<Long> = emptyList()
         private val displayPositions = HashMap<Long, Int>()
         private val masterIds = ArrayList<Long>()
         private val masterProfiles = HashMap<Long, ProxyEntity>()
@@ -427,6 +472,8 @@ class ConfigurationGroupFragment : Fragment() {
             profile.rx,
             profile.lifetimeTx,
             profile.lifetimeRx,
+            ProfileWords.connection(profile),
+            ProfileWords.country(profile),
         )
 
         private fun profileStateStamp(contentStamp: Int, profileId: Long): Int {
@@ -461,6 +508,11 @@ class ConfigurationGroupFragment : Fragment() {
             configurationList.putAll(submission.profiles)
             configurationStamps.clear()
             configurationStamps.putAll(submission.stamps)
+            sectionRows.clear()
+            sectionRows.putAll(submission.sections)
+            sectionKeys.clear()
+            sectionKeys.putAll(submission.sectionKeys)
+            displayedMaster = submission.master
             pendingRemovalIds.removeAll { id -> id !in configurationList && id !in masterProfiles }
             rebuildDisplayPositions()
             updateEmptyHint()
@@ -523,7 +575,7 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         private fun scrollAfterSubmission(submission: ProfileListSubmission) {
-            val pending = submission.ids.indexOf(pendingScrollId).takeIf { pendingScrollId != 0L && it >= 0 }
+            val pending = submission.ids.indexOf(pendingScrollId).takeIf { pendingScrollId != 0L && it >= 0 }?.let { withHeader(submission.ids, it) }
             if (pending != null) {
                 pendingScrollId = 0L
                 configurationListView.scrollTo(pending, true)
@@ -532,18 +584,73 @@ class ConfigurationGroupFragment : Fragment() {
             }
         }
 
-        private fun submitMasterList(scrollIndex: Int = -1) {
+        // Sections follow the order on show; a search lists its matches without them.
+        private fun showsSections() = DataStore.profileSections && !isFavorites && filterQuery.isEmpty()
+
+        fun isHeader(position: Int) = (configurationIdList.getOrNull(position) ?: 0L) < 0
+
+        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L) {
             if (disposed || dragInProgress) return
-            val ids = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
+            val visible = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
             val profiles = masterProfiles.toMap()
+            val sections = if (showsSections()) ProfileSections.of(visible.map { profiles.getValue(it).displayName() }) else emptyList()
+            val rows = HashMap<Long, SectionRow>()
+            val keys = HashMap<Long, String>()
+            val folded = if (sections.isEmpty()) emptySet() else DataStore.foldedSections
+            val ids = if (sections.isEmpty()) {
+                visible
+            } else {
+                buildList {
+                    sections.forEachIndexed { index, section ->
+                        val headerId = SECTION_ID_BASE - index
+                        val members = section.members.map(visible::get)
+                        var isFolded = foldKey(section.key) in folded
+                        // A jump to a profile opens its section, also when the jump came before the list loaded.
+                        if (isFolded && pendingScrollId in members) {
+                            DataStore.updateFoldedSections { it - foldKey(section.key) }
+                            isFolded = false
+                        }
+                        members.forEach { keys[it] = section.key }
+                        val title = section.title ?: getString(if (section.allFlags) R.string.profile_section_countries else R.string.profile_section_other)
+                        rows[headerId] = SectionRow(section.key, title, members.size, isFolded)
+                        add(headerId)
+                        if (!isFolded) addAll(members)
+                    }
+                }
+            }
+            val stamps = buildDisplayStamps(ids, profiles) + rows.mapValues { (_, row) ->
+                ProfileRowStamp(Objects.hash(row.title, row.count, row.folded), reserveMiddleRow = false, doubleColumn = false)
+            }
             submit(
                 ProfileListSubmission(
                     ids = ids,
                     profiles = profiles,
-                    stamps = buildDisplayStamps(ids, profiles),
-                    scrollIndex = scrollIndex.coerceAtMost(ids.lastIndex),
+                    stamps = stamps,
+                    scrollIndex = ids.indexOf(scrollToId).takeIf { scrollToId != 0L && it >= 0 }?.let { withHeader(ids, it) } ?: scrollIndex.coerceAtMost(ids.lastIndex),
+                    sections = rows,
+                    sectionKeys = keys,
+                    master = masterIds.toList(),
                 ),
             )
+        }
+
+        fun toggleSection(headerId: Long) {
+            val key = foldKey(sectionRows[headerId]?.key ?: return)
+            DataStore.updateFoldedSections { if (key in it) it - key else it + key }
+            submitMasterList()
+        }
+
+        /** Shows the pending jump target: building the list opens its folded section. */
+        fun reveal(profileId: Long) {
+            // Not loaded yet: the load's own list opens it.
+            if (profileId in masterProfiles) submitMasterList()
+        }
+
+        /** Whether the rows at two positions are profiles of one section, where a drag may drop. */
+        fun sameSection(from: Int, to: Int): Boolean {
+            val first = configurationIdList.getOrNull(from) ?: return false
+            val second = configurationIdList.getOrNull(to) ?: return false
+            return first > 0 && second > 0 && sectionKeys[first] == sectionKeys[second]
         }
 
         private fun sortMasterProfiles() {
@@ -575,7 +682,9 @@ class ConfigurationGroupFragment : Fragment() {
             !filterPending &&
             !masterUpdatePending &&
             !displayPending &&
-            configurationIdList == masterIds
+            displayedMaster == masterIds &&
+            // Sections stand in the master order, so only that order can be dragged into shape.
+            (sectionRows.isEmpty() || proxyGroup.order == GroupOrder.ORIGIN)
 
         fun beginDrag() {
             if (!canDrag()) return
@@ -609,15 +718,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         private fun hasMiddleRow(profile: ProxyEntity): Boolean {
             val showTraffic = profile.rx + profile.tx != 0L
-            val address = if (
-                profile.requireBean().name!!.isNotBlank() &&
-                (parentFragment as? ConfigurationFragment)?.alwaysShowAddress == true
-            ) {
-                profile.displayAddress()
-            } else {
-                ""
-            }
-            return !((!showTraffic || profile.status <= 0) && address.isBlank())
+            return !((!showTraffic || profile.status <= 0) && rowDetails(profile).isBlank())
         }
 
         private fun displaySpanCount() = (layoutManager as? FixedGridLayoutManager)?.spanCount ?: 1
@@ -641,18 +742,25 @@ class ConfigurationGroupFragment : Fragment() {
             }
         }
 
-        override fun getItemViewType(position: Int) = layoutMode
+        override fun getItemViewType(position: Int) = if (configurationIdList[position] < 0) SECTION_VIEW else layoutMode
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ConfigurationHolder {
-            // The compact row holds the card's views in one line, so the card's binding reads it too.
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val inflater = LayoutInflater.from(parent.context)
+            if (viewType == SECTION_VIEW) return SectionHolder(LayoutProfileSectionBinding.inflate(inflater, parent, false))
+            // The compact row holds the card's views, so the card's binding reads it too.
             val layout = if (viewType == GroupLayout.COMPACT) R.layout.layout_profile_compact else R.layout.layout_profile
-            val view = LayoutInflater.from(parent.context).inflate(layout, parent, false)
-            return ConfigurationHolder(LayoutProfileBinding.bind(view), viewType)
+            return ConfigurationHolder(LayoutProfileBinding.bind(inflater.inflate(layout, parent, false)), viewType)
         }
 
         override fun getItemId(position: Int): Long = configurationIdList[position]
 
-        override fun onBindViewHolder(holder: ConfigurationHolder, position: Int) {
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            if (holder is SectionHolder) {
+                val id = configurationIdList[position]
+                sectionRows[id]?.let { holder.bind(id, it) }
+                return
+            }
+            holder as ConfigurationHolder
             try {
                 val id = configurationIdList[position]
                 val rowStamp = configurationStamps[id] ?: return
@@ -711,13 +819,20 @@ class ConfigurationGroupFragment : Fragment() {
         fun move(from: Int, to: Int) {
             if (!dragInProgress || from == to) return
 
-            if (layoutMode == GroupLayout.TWO_COLUMNS) {
+            // In sections the moved rows trade their orders, which leaves the folded ones in place.
+            if (layoutMode == GroupLayout.TWO_COLUMNS && sectionRows.isEmpty()) {
                 moveDualColumn(from, to)
             } else {
                 moveLinear(from, to)
             }
-            masterIds.clear()
-            masterIds.addAll(configurationIdList)
+            if (sectionRows.isEmpty()) {
+                masterIds.clear()
+                masterIds.addAll(configurationIdList)
+            } else {
+                // Folded sections are not in the list; the new orders put the moved rows in place among them.
+                masterIds.sortBy { masterProfiles[it]?.userOrder ?: Long.MAX_VALUE }
+            }
+            displayedMaster = masterIds.toList()
             rebuildDisplayPositions()
         }
 
@@ -845,6 +960,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         override suspend fun onAdd(profile: ProxyEntity) {
             if (profile.groupId != proxyGroup.id) return
+            onDefaultDispatcher { ServerCountries.lookUp(listOf(profile.requireBean().serverAddress)) }
             onMainDispatcher {
                 if (disposed) return@onMainDispatcher
                 reloadGeneration.incrementAndGet()
@@ -856,6 +972,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) {
             if (profile.groupId != proxyGroup.id && !isFavorites) return
+            onDefaultDispatcher { ServerCountries.lookUp(listOf(profile.requireBean().serverAddress)) }
             onMainDispatcher {
                 if (disposed || profile.id in pendingRemovalIds) return@onMainDispatcher
                 if (isFavorites && profile.id !in masterProfiles) return@onMainDispatcher
@@ -920,7 +1037,7 @@ class ConfigurationGroupFragment : Fragment() {
             val positions = HashSet<Int>()
             for (id in changedIds) {
                 val position = displayPositions[id] ?: continue
-                positions.addAll(profileRowRange(position, configurationIdList.size, displaySpanCount()))
+                positions.addAll(profileRowRange(configurationIdList, position, displaySpanCount()))
             }
             val newStamps = buildDisplayStamps(configurationIdList, configurationList, positions)
             for ((id, stamp) in newStamps) {
@@ -995,6 +1112,7 @@ class ConfigurationGroupFragment : Fragment() {
                 } else {
                     ProfileDatabase.proxyDao.getByGroup(groupId)
                 }
+                ServerCountries.lookUp(profiles.map { it.requireBean().serverAddress })
                 profiles = when (order) {
                     GroupOrder.BY_NAME -> profiles.sortedBy { it.displayName() }
 
@@ -1026,23 +1144,47 @@ class ConfigurationGroupFragment : Fragment() {
                         masterStamps[id] = profileStateStamp(stamp, id)
                     }
                 }
-                val displayedIds = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
                 val selectedId = selectedItem?.id ?: DataStore.selectedProxy
-                val selectedIndex = if (selected) displayedIds.indexOf(selectedId) else -1
-                val scrollIndex = if (selectedIndex >= 0) {
-                    selectedIndex
-                } else if (displayedIds.isNotEmpty()) {
-                    0
-                } else {
-                    -1
-                }
-                submitMasterList(scrollIndex)
+                // The open page shows its selected profile, unless its section is folded; others start at the top.
+                submitMasterList(if (masterIds.isNotEmpty()) 0 else -1, if (selected) selectedId else 0L)
             }
         }
     }
 
     val profileAccess = Mutex()
     val reloadAccess = Mutex()
+
+    // Under the name: the server's country when the name does not show it, and its address when settings ask for it.
+    private fun rowDetails(profile: ProxyEntity): String {
+        val showAddress = (parentFragment as? ConfigurationFragment)?.alwaysShowAddress == true && !profile.requireBean().name.isNullOrBlank()
+        return listOfNotNull(ProfileWords.country(profile), profile.displayAddress().takeIf { showAddress }).joinToString(" · ")
+    }
+
+    /** A section's header: its title and size; a tap folds or unfolds it. */
+    private inner class SectionHolder(private val binding: LayoutProfileSectionBinding) : RecyclerView.ViewHolder(binding.root) {
+        private var headerId = 0L
+
+        init {
+            binding.root.setOnClickListener { adapter?.toggleSection(headerId) }
+            ViewCompat.setAccessibilityHeading(binding.root, true)
+        }
+
+        fun bind(id: Long, row: SectionRow) {
+            headerId = id
+            val context = binding.root.context
+            binding.title.text = row.title
+            binding.count.text = row.count.toString()
+            binding.chevron.setImageResource(if (row.folded) R.drawable.ic_expand_more_24 else R.drawable.ic_expand_less_24)
+            binding.root.contentDescription = "${row.title}, " + context.resources.getQuantityString(R.plurals.group_profiles, row.count, row.count)
+            ViewCompat.setStateDescription(binding.root, context.getString(if (row.folded) R.string.group_collapsed else R.string.group_expanded))
+            ViewCompat.replaceAccessibilityAction(
+                binding.root,
+                AccessibilityActionCompat.ACTION_CLICK,
+                context.getString(if (row.folded) R.string.section_expand else R.string.section_collapse),
+                null,
+            )
+        }
+    }
 
     inner class ConfigurationHolder(val binding: LayoutProfileBinding, private val layout: Int) : RecyclerView.ViewHolder(binding.root) {
 
@@ -1239,7 +1381,7 @@ class ConfigurationGroupFragment : Fragment() {
             entity = proxyEntity
 
             profileName.text = proxyEntity.displayName()
-            profileType.text = proxyEntity.displayType()
+            profileType.text = ProfileWords.connection(proxyEntity)
 
             val rx = proxyEntity.rx
             val tx = proxyEntity.tx
@@ -1269,24 +1411,19 @@ class ConfigurationGroupFragment : Fragment() {
                 TooltipCompat.setTooltipText(trafficText, null)
             }
 
-            val address = if (proxyEntity.requireBean().name!!.isBlank() || !pf.alwaysShowAddress) {
-                ""
-            } else {
-                proxyEntity.displayAddress()
-            }
-
-            profileAddress.text = address
-            val trafficRowEmpty =
-                (!showTraffic || proxyEntity.status <= 0) && address.isBlank()
+            val details = rowDetails(proxyEntity)
+            profileAddress.text = details
+            // A compact row keeps the traffic on its second line; a card without a test result shows it in the result's place.
+            val compact = layout == GroupLayout.COMPACT
+            val trafficRowEmpty = details.isBlank() && (!showTraffic || (!compact && proxyEntity.status <= 0))
             (trafficText.parent as View).visibility = when {
-                layout == GroupLayout.COMPACT -> View.GONE
                 !trafficRowEmpty -> View.VISIBLE
                 reserveMiddleRow -> View.INVISIBLE
                 else -> View.GONE
             }
 
             if (proxyEntity.status <= 0) {
-                if (showTraffic) {
+                if (showTraffic && !compact) {
                     profileStatus.text = trafficText.text
                     profileStatus.setTextColor(requireContext().getColorAttr(android.R.attr.textColorSecondary))
                     trafficText.text = ""

@@ -24,10 +24,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.appcompat.widget.TooltipCompat
 import androidx.core.net.toUri
 import androidx.core.view.MenuCompat
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
+import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
@@ -114,7 +116,6 @@ import xyz.nekobyte.nekobox.ui.profile.TrojanSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.TuicSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.VMessSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
-import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassLayout
 import java.io.Closeable
@@ -163,6 +164,9 @@ class ConfigurationFragment @JvmOverloads constructor(
     lateinit var groupPager: ViewPager2
     private var tabLayoutMediator: TabLayoutMediator? = null
     private lateinit var tabBar: View
+
+    // Lists every group; hidden while there is only one.
+    private lateinit var groupPicker: View
     private lateinit var searchResults: RecyclerView
     private lateinit var searchEmpty: View
 
@@ -348,28 +352,31 @@ class ConfigurationFragment @JvmOverloads constructor(
         }.show()
     }
 
+    // Each group with the facts its Groups row gives: profiles, traffic and when it ends.
     private fun showGroupPicker() {
         val groups = adapter.groupList.toList()
+        val context = requireContext()
         runOnDefaultDispatcher {
-            val labels = groups.map { group ->
+            val now = System.currentTimeMillis()
+            val rows = groups.map { group ->
                 val count = if (group.id == FAVORITES_GROUP_ID) DataStore.favoriteProfiles.size else ProfileDatabase.proxyDao.countByGroup(group.id).toInt()
-                listOfNotNull(
-                    group.displayName(),
-                    app.resources.getQuantityString(R.plurals.group_profiles, count, count),
-                    group.subscription?.expiry()?.let { app.getString(R.string.subscription_expire, Util.timeStamp2Text(it * 1000)) },
+                val quota = GroupWords.quota(group.subscription.takeIf { group.type == GroupType.SUBSCRIPTION })
+                val facts = listOfNotNull(
+                    context.resources.getQuantityString(R.plurals.group_profiles, count, count),
+                    GroupWords.traffic(context, quota),
+                    GroupWords.ends(context, quota, now),
                 ).joinToString(" · ")
+                group.displayName() to facts
             }
             onMainDispatcher {
                 if (!isAdded) return@onMainDispatcher
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(R.string.all_groups)
-                    .setSingleChoiceItems(labels.toTypedArray(), groupPager.currentItem) { dialog, which ->
-                        groupPager.setCurrentItem(which, false)
-                        dialog.dismiss()
-                    }
-                    .show()
+                showChoiceDialog(context, getString(R.string.all_groups), rows, groupPager.currentItem) { groupPager.setCurrentItem(it, false) }
             }
         }
+    }
+
+    private fun updateGroupPicker() {
+        groupPicker.isVisible = adapter.groupList.size > 1
     }
 
     override fun onQueryTextSubmit(query: String): Boolean = false
@@ -446,7 +453,9 @@ class ConfigurationFragment @JvmOverloads constructor(
         if (Glass.enabled) styleGlassTabs()
         searchResults.layoutManager = LinearLayoutManager(requireContext())
         searchResults.adapter = searchResultAdapter
-        groupListBinding.groupPicker.setOnClickListener { showGroupPicker() }
+        groupPicker = groupListBinding.groupPicker
+        groupPicker.setOnClickListener { showGroupPicker() }
+        TooltipCompat.setTooltipText(groupPicker, getString(R.string.all_groups))
         syncProfileState()
         adapter = GroupPagerAdapter()
         ProfileManager.addListener(adapter)
@@ -1487,6 +1496,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                             groupFragments.keys.retainAll(liveIds)
                             groupList = newGroupList
                             notifyDataSetChanged()
+                            updateGroupPicker()
                             if (set) groupPager.setCurrentItem(selectedGroupIndex, false)
                             if (!select) {
                                 groupPager.registerOnPageChangeCallback(updateSelectedCallback)
@@ -1521,6 +1531,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 if (disposed) return@post
                 groupList.add(group)
                 notifyItemInserted(groupList.size - 1)
+                updateGroupPicker()
                 tabLayout.getTabAt(groupList.size - 1)?.select()
             }
         }
@@ -1534,6 +1545,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 groupFragments.remove(groupId)
                 groupList.removeAt(index)
                 notifyItemRemoved(index)
+                updateGroupPicker()
             }
         }
 

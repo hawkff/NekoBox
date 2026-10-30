@@ -255,7 +255,6 @@
     <string name="service_subscription">Служба оновлення підписок</string>
     <string name="subscription_update">Оновлення підписки</string>
     <string name="subscription_update_message">Оновлення %s …</string>
-    <string name="subscription_expire">Закінчується: %s</string>
     <string name="subscription_import">Імпортувати підписку</string>
     <string name="subscription_import_message">Підтвердьте, що ви хочете імпортувати підписку %s? Якщо ви робите це з ненадійного джерела, це може призвести до витоку вашої IP-адреси та даних про цю дію.</string>
     <string name="profile_import">Імпортувати профіль</string>
