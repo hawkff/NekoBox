@@ -205,6 +205,20 @@ class GroupsScreenDeviceTest {
             }
             settle()
             instrumentation.runOnMainSync { assertEquals(names, shown()) }
+
+            // A screen reader selects with the row's long press action. Without Undo, the snackbar going away
+            // deletes the groups, off the main thread.
+            instrumentation.runOnMainSync {
+                assertTrue(row(names[0]).performAccessibilityAction(AccessibilityNodeInfo.ACTION_LONG_CLICK, null))
+                row(names[1]).performClick()
+                assertEquals(selected(2), screen.toolbar.title.toString())
+                screen.groupAdapter.removeSelected()
+                screen.undoManager.flush()
+            }
+            val deadline = SystemClock.uptimeMillis() + 10_000
+            fun left() = ProfileDatabase.groupDao.allGroups().map { it.id }.filter { it in groups }
+            while (left().isNotEmpty() && SystemClock.uptimeMillis() < deadline) Thread.sleep(200)
+            assertEquals(emptyList<Long>(), left())
         }
     }
 
