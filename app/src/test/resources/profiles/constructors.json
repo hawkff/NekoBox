@@ -59,7 +59,7 @@
       "announce": "",
       "expiryNotifiedAt": 0,
       "providerUpdateInterval": 0,
-      "sendDeviceId": false,
+      "sendDeviceId": true,
       "outputFormat": 0,
       "importWarning": "",
       "backupLinks": "",

@@ -29,7 +29,10 @@ internal object XrayOutbound {
     fun parse(outbound: JSONObject, name: String, outbounds: List<JSONObject?>, report: ImportReport): AbstractBean {
         require(outbound.optJSONObject("proxySettings") == null) { "unsupported proxySettings" }
         val settings = outbound.optJSONObject("settings") ?: JSONObject()
-        val stream = outbound.optJSONObject("streamSettings") ?: JSONObject()
+        val streamSettings = outbound.optJSONObject("streamSettings") ?: JSONObject()
+        // Finalmask can fragment the TLS ClientHello itself, as the freedom outbound below does; the
+        // node imports without it the same way.
+        val stream = streamSettings.withoutFragmentMasks() ?: streamSettings
         val fragmented = stream.optJSONObject("sockopt")?.optString("dialerProxy")?.takeIf { it.isNotEmpty() }?.let { tag ->
             // 3x-ui can send the connection through a local freedom outbound that fragments the TLS
             // ClientHello or adds UDP noise. Another proxy in front would be a chain, which this
@@ -39,7 +42,7 @@ internal object XrayOutbound {
             // A freedom outbound that redirects or adds a PROXY header would change the connection itself.
             val freedom = target!!.optJSONObject("settings") ?: JSONObject()
             require(freedom.optString("redirect").isEmpty() && freedom.optInt("proxyProtocol") == 0) { "unsupported dialerProxy" }
-        } != null
+        } != null || stream !== streamSettings
         if (security(stream) == "tls") {
             // The core has no counterpart to a pinned certificate, checked names or a private CA,
             // so the node would trust certificates its provider meant to refuse.
@@ -258,7 +261,11 @@ internal object XrayOutbound {
         return parseShadowsocks(link.fragment(name).build().link("ss"))
     }
 
-    /** Hysteria 2 in the link form 3x-ui generates, with Finalmask salamander obfuscation and port hopping. */
+    /**
+     * Hysteria 2 in the link form 3x-ui generates, with Finalmask salamander obfuscation and port hopping.
+     * Finalmask's QUIC parameters shape only how this client sends: Brutal's bandwidth and port hopping
+     * carry over, and the congestion control otherwise stays the core's BBR.
+     */
     private fun hysteria(settings: JSONObject, stream: JSONObject, name: String): AbstractBean {
         val hysteria = stream.optJSONObject("hysteriaSettings") ?: JSONObject()
         require(settings.optInt("version", 2) == 2 && hysteria.optInt("version", 2) == 2) { "unsupported Hysteria version" }
@@ -273,10 +280,17 @@ internal object XrayOutbound {
         if (tls.optBoolean("allowInsecure")) link.param("insecure", "1")
         var hopInterval: Int? = null
         val masks = stream.optJSONObject("finalmask")
-        require(masks == null || masks.keys().asSequence().all { it == "udp" }) { "unsupported finalmask" }
+        require(masks == null || masks.keys().asSequence().all { it == "udp" || it == "quicParams" }) { "unsupported finalmask" }
+        val quic = masks?.optJSONObject("quicParams") ?: JSONObject()
+        // Brutal sends at brutalUp unless another congestion control is chosen; the receive rate is advertised either way.
+        val upMbps = bandwidthMbps(quic.optString("brutalUp")).takeIf { quic.optString("congestion").lowercase() in BRUTAL }
+        val downMbps = bandwidthMbps(quic.optString("brutalDown"))
         val udp = masks?.optJSONArray("udp") ?: JSONArray()
-        for (index in 0 until udp.length()) {
-            val mask = udp.getJSONObject(index)
+        val udpMasks = (0 until udp.length()).map { udp.getJSONObject(it) }
+        // Older configs hop ports from quicParams instead of a udphop mask.
+        val quicHop = quic.optJSONObject("udpHop")?.takeIf { udpMasks.none { it.optString("type") == "udphop" } }
+            ?.let { JSONObject().put("type", "udphop").put("settings", it) }
+        for (mask in udpMasks + listOfNotNull(quicHop)) {
             val maskSettings = mask.optJSONObject("settings") ?: JSONObject()
             when (mask.optString("type")) {
                 "salamander" -> {
@@ -303,6 +317,42 @@ internal object XrayOutbound {
         }
         return parseHysteria2(link.fragment(name).build().link("hysteria2")).apply {
             hopInterval?.let { this.hopInterval = it }
+            upMbps?.let { uploadMbps = it }
+            downMbps?.let { downloadMbps = it }
+        }
+    }
+
+    /** Congestion controls under which Xray's Hysteria sends at brutalUp. */
+    private val BRUTAL = setOf("", "brutal", "force-brutal")
+
+    private val BANDWIDTH = Regex("""([0-9]+(?:\.[0-9]+)?)\s*([a-z]*)""")
+
+    /** An Xray bandwidth such as "100mbps", in whole Mbps for the core; Xray's units are binary. Null when unset. */
+    private fun bandwidthMbps(value: String): Int? {
+        if (value.isBlank()) return null
+        val (number, unit) = BANDWIDTH.matchEntire(value.trim().lowercase())?.destructured ?: error("invalid bandwidth")
+        val bits = number.toDouble() * when (unit) {
+            "", "b", "bps" -> 1.0
+            "k", "kb", "kbps" -> 1024.0
+            "m", "mb", "mbps" -> 1048576.0
+            "g", "gb", "gbps" -> 1073741824.0
+            "t", "tb", "tbps" -> 1099511627776.0
+            else -> error("invalid bandwidth")
+        }
+        // Zero leaves Brutal off, as an unset value does. A positive one that rounds to 0 would also turn
+        // it off, so it keeps 1; Xray's own minimum is 512 kbps.
+        if (bits <= 0) return null
+        return (bits / 1_000_000).toInt().coerceAtLeast(1)
+    }
+
+    /** This stream without its Finalmask TCP masks when every one of them is a fragment mask, else null. */
+    private fun JSONObject.withoutFragmentMasks(): JSONObject? {
+        val tcp = optJSONObject("finalmask")?.optJSONArray("tcp") ?: return null
+        if (tcp.length() == 0 || (0 until tcp.length()).any { tcp.optJSONObject(it)?.optString("type") != "fragment" }) return null
+        return JSONObject(toString()).apply {
+            val masks = getJSONObject("finalmask")
+            masks.remove("tcp")
+            if (masks.length() == 0) remove("finalmask")
         }
     }
 

@@ -197,6 +197,63 @@ class XrayJsonImportTest {
         assertTrue(ImportPreview.of(failed).dropped.isEmpty())
     }
 
+    private fun hysteria(finalmask: JSONObject) = JSONObject().put("protocol", "hysteria").put("tag", "proxy")
+        .put("settings", JSONObject().put("address", "192.0.2.6").put("port", 443).put("version", 2))
+        .put(
+            "streamSettings",
+            JSONObject().put("network", "hysteria").put("security", "tls")
+                .put("hysteriaSettings", JSONObject().put("version", 2).put("auth", "a"))
+                .put("tlsSettings", JSONObject().put("serverName", "node.example").put("fingerprint", "firefox").put("alpn", JSONArray().put("h3")))
+                .put("finalmask", finalmask),
+        )
+
+    private suspend fun quic(params: JSONObject) = (RawUpdater.parseImport(config(hysteria(JSONObject().put("quicParams", params))))!!.proxies.single() as HysteriaBean).applyDefaultValues()
+
+    @Test
+    fun quicParamsShapeOnlyTheClientsSending() = runTest {
+        // As Remnawave serves Hysteria 2: a congestion control the core uses anyway.
+        val bbr = quic(JSONObject().put("congestion", "bbr").put("debug", false))
+        assertEquals(listOf("node.example", 0, 0), listOf(bbr.sni, bbr.uploadMbps, bbr.downloadMbps))
+        // Xray's units are binary: 100 mbps is 104.9 Mbps to the core.
+        val brutal = quic(JSONObject().put("brutalUp", "100mbps").put("brutalDown", "300 Mbps"))
+        assertEquals(listOf(104, 314), listOf(brutal.uploadMbps, brutal.downloadMbps))
+        // Zero is as good as unset: BBR.
+        val zero = quic(JSONObject().put("brutalUp", "0").put("brutalDown", "0mbps"))
+        assertEquals(listOf(0, 0), listOf(zero.uploadMbps, zero.downloadMbps))
+        // Under BBR the client sends without Brutal, and still tells the server how fast it receives.
+        val advertised = quic(JSONObject().put("congestion", "bbr").put("brutalUp", "100mbps").put("brutalDown", "50mbps"))
+        assertEquals(listOf(0, 52), listOf(advertised.uploadMbps, advertised.downloadMbps))
+        // Older configs hop ports from quicParams; a udphop mask beside it wins.
+        val hopping = quic(JSONObject().put("udpHop", JSONObject().put("ports", "20000-50000").put("interval", "5-30")))
+        assertEquals(listOf("20000-50000", 5), listOf(hopping.serverPorts, hopping.hopInterval))
+        val mask = JSONObject().put("type", "udphop").put("settings", JSONObject().put("remotePorts", "30000-31000").put("interval", "10"))
+        val both = JSONObject().put("quicParams", JSONObject().put("udpHop", JSONObject().put("ports", "20000-50000"))).put("udp", JSONArray().put(mask))
+        val masked = RawUpdater.parseImport(config(hysteria(both)))!!.proxies.single() as HysteriaBean
+        assertEquals(listOf("30000-31000", 10), listOf(masked.serverPorts, masked.hopInterval))
+        // A bandwidth Xray cannot read, or a Finalmask part the core lacks, refuses the node.
+        for (refused in listOf(JSONObject().put("quicParams", JSONObject().put("brutalUp", "fast")), JSONObject().put("quicParams", JSONObject()).put("xdns", JSONObject()))) {
+            val parsed = RawUpdater.parseImport(config(hysteria(refused)))
+            assertTrue(refused.toString(), parsed == null || parsed.proxies.isEmpty())
+        }
+    }
+
+    @Test
+    fun finalmaskFragmentImportsWithoutIt() = runTest {
+        // REALITY with a fragmented ClientHello, as Remnawave serves it: the node imports without fragmenting.
+        val fragment = JSONObject().put("type", "fragment").put("settings", JSONObject().put("packets", "tlshello").put("length", "10-20").put("delay", "0"))
+        fun reality(tcp: JSONArray) = JSONObject().put("network", "tcp").put("security", "reality")
+            .put("realitySettings", JSONObject().put("serverName", "www.example.com").put("publicKey", "key").put("fingerprint", "firefox"))
+            .put("finalmask", JSONObject().put("tcp", tcp))
+        val parsed = RawUpdater.parseImport(config(vless(reality(JSONArray().put(fragment)))))!!
+        val node = parsed.proxies.single() as VMessBean
+        assertEquals(listOf("www.example.com", "xtls-rprx-vision"), listOf(node.sni, node.encryption))
+        assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(parsed).dropped)
+        assertTrue(parsed.report.failed.isEmpty())
+        // Another TCP mask beside it still refuses the node.
+        val mixed = RawUpdater.parseImport(config(vless(reality(JSONArray().put(fragment).put(JSONObject().put("type", "header-custom"))))))
+        assertTrue(mixed == null || mixed.proxies.isEmpty())
+    }
+
     @Test
     fun olderSplitHttpSettingsKeepTheirPath() = runTest {
         val stream = JSONObject().put("network", "splithttp").put("security", "none")

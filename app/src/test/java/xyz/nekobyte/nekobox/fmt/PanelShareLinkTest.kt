@@ -305,10 +305,15 @@ class PanelShareLinkTest {
     }
 
     @Test
-    fun subscriptionBean_storesSendDeviceId() {
-        val bean = SubscriptionBean().applyDefaultValues().apply { sendDeviceId = true }
-        val copy = KryoConverters.deserialize(SubscriptionBean(), KryoConverters.serialize(bean))
-        assertTrue(copy.sendDeviceId!!)
+    fun subscriptionBean_sendsDeviceIdUnlessTurnedOffOrSavedBeforeTheSwitch() {
+        assertTrue(SubscriptionBean().applyDefaultValues().sendDeviceId!!)
+        val off = SubscriptionBean().applyDefaultValues().apply { sendDeviceId = false }
+        val bytes = KryoConverters.serialize(off)
+        assertFalse(KryoConverters.deserialize(SubscriptionBean(), bytes).sendDeviceId!!)
+        // Version 5 bytes end with the switch: without it and marked version 4, they are a subscription
+        // saved before the switch existed, which keeps sending no device ID.
+        val legacy = KryoConverters.serialize(SubscriptionBean().applyDefaultValues()).let { it.copyOf(it.size - 1) }.also { it[0] = 4 }
+        assertFalse(KryoConverters.deserialize(SubscriptionBean(), legacy).sendDeviceId!!)
     }
 
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
