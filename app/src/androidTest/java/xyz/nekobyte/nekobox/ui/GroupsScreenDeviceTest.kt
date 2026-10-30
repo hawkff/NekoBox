@@ -156,9 +156,21 @@ class GroupsScreenDeviceTest {
             fun shown() = screen.groupAdapter.groupList.map { it.name }.filter { it in names }
             fun selected(count: Int) = context.resources.getQuantityString(R.plurals.group_selected, count, count)
 
-            // A finger that rests on a row and lifts without moving selects it, and does not open it.
+            // A held row that follows the finger was dragged, even if it never reached another row, and even
+            // if the finger lifted right after it moved. The first move only picks the row up.
             lateinit var first: View
+            for (steps in listOf(5, 2)) {
+                instrumentation.runOnMainSync { first = row(names[0]) }
+                hold(first, by = 2f * ViewConfiguration.get(context).scaledTouchSlop, steps = steps)
+                settle()
+                instrumentation.runOnMainSync {
+                    assertFalse("$steps steps", row(names[0]).isSelected)
+                    assertEquals(context.getString(R.string.menu_group), screen.toolbar.title.toString())
+                }
+            }
             instrumentation.runOnMainSync { first = row(names[0]) }
+
+            // A finger that rests on a row and lifts without moving selects it, and does not open it.
             hold(first)
             settle()
             instrumentation.runOnMainSync {
@@ -239,8 +251,8 @@ class GroupsScreenDeviceTest {
         Thread.sleep(1500)
     }
 
-    /** A finger resting on [view] past the long press timeout, then lifted where it rested. */
-    private fun hold(view: View) {
+    /** A finger resting on [view] past the long press timeout, then moving [by] pixels down in [steps] before it lifts. */
+    private fun hold(view: View, by: Float = 0f, steps: Int = 5) {
         val location = IntArray(2)
         var x = 0f
         var y = 0f
@@ -250,13 +262,20 @@ class GroupsScreenDeviceTest {
             y = location[1] + view.height / 2f
         }
         val down = SystemClock.uptimeMillis()
-        fun send(action: Int) {
-            val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+        fun send(action: Int, moved: Float) {
+            val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y + moved, 0)
             instrumentation.sendPointerSync(event)
             event.recycle()
         }
-        send(MotionEvent.ACTION_DOWN)
+        send(MotionEvent.ACTION_DOWN, 0f)
         Thread.sleep(ViewConfiguration.getLongPressTimeout() * 2L)
-        send(MotionEvent.ACTION_UP)
+        // Without a move, the lift is the first event after the long press, as from a finger held still.
+        if (by != 0f) {
+            for (step in 1..steps) {
+                send(MotionEvent.ACTION_MOVE, by * step / steps)
+                if (step < steps) Thread.sleep(50)
+            }
+        }
+        send(MotionEvent.ACTION_UP, by)
     }
 }

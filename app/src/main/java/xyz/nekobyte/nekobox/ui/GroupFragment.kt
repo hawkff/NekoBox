@@ -1,9 +1,11 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.content.Intent
+import android.graphics.Canvas
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
@@ -42,6 +44,7 @@ import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
+import kotlin.math.abs
 
 /**
  * The groups, one compact row each: the name, how many profiles, the quota left and an update
@@ -90,6 +93,7 @@ class GroupFragment :
         ) {
             // The group a long press picked up, until it moves: let go before then, and the press selects it.
             private var held = 0L
+            private val slop = ViewConfiguration.get(view.context).scaledTouchSlop
 
             override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
                 if (!(viewHolder as GroupHolder).proxyGroup.removable()) return 0
@@ -111,6 +115,27 @@ class GroupFragment :
                     groupAdapter.select(held)
                     held = 0L
                 }
+            }
+
+            override fun onChildDraw(
+                c: Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean,
+            ) {
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+                // A row that follows the finger is dragged, even if it never reaches another row.
+                if (isCurrentlyActive && abs(dY) > slop) held = 0L
+            }
+
+            // On release the row slides back as far as it followed the finger. This runs before the idle state, so
+            // it also catches a finger that lifted before any frame showed the row move.
+            override fun getAnimationDuration(recyclerView: RecyclerView, animationType: Int, animateDx: Float, animateDy: Float): Long {
+                if (animationType == ItemTouchHelper.ANIMATION_TYPE_DRAG && abs(animateDy) > slop) held = 0L
+                return super.getAnimationDuration(recyclerView, animationType, animateDx, animateDy)
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
