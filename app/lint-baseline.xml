@@ -385,21 +385,6 @@
     </issue>
 
     <issue
-        id="AlwaysShowAction"
-        message="Prefer &quot;`ifRoom`&quot; instead of &quot;`always`&quot;"
-        errorLine1="        app:showAsAction=&quot;always&quot; />"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/menu/add_group_menu.xml"
-            line="8"
-            column="9"/>
-        <location
-            file="src/main/res/menu/add_group_menu.xml"
-            line="13"
-            column="9"/>
-    </issue>
-
-    <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toUri` instead?"
         errorLine1="            launchUrl(this@launchCustomTab, Uri.parse(link))"

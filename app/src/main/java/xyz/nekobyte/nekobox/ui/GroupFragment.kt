@@ -37,6 +37,7 @@ import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
+import xyz.nekobyte.nekobox.widget.CardHighlight
 import xyz.nekobyte.nekobox.widget.ListListener
 import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
@@ -45,7 +46,8 @@ import xyz.nekobyte.nekobox.widget.attachItemTouch
 /**
  * The groups, one compact row each: the name, how many profiles, the quota left and an update
  * button. A row opens in place, one at a time, to show what the provider reports and every action.
- * Drag to reorder, which is also the order of Home's tabs; swipe to remove, with undo.
+ * Drag to reorder, which is also the order of Home's tabs; swipe to remove, with undo. Holding a row
+ * without moving it selects it; taps then select more, and the toolbar removes them together.
  */
 class GroupFragment :
     ToolbarFragment(R.layout.layout_group),
@@ -59,6 +61,9 @@ class GroupFragment :
 
     // The group whose row is open, or 0.
     private var openGroup = 0L
+
+    // The groups selected for removal. While there are any, a tap on a row selects it or drops it.
+    private val selected = HashSet<Long>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -83,20 +88,29 @@ class GroupFragment :
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.START,
         ) {
+            // The group a long press picked up, until it moves: let go before then, and the press selects it.
+            private var held = 0L
+
             override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                val proxyGroup = (viewHolder as GroupHolder).proxyGroup
-                if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) {
-                    return 0
-                }
+                if (!(viewHolder as GroupHolder).proxyGroup.removable()) return 0
                 return super.getSwipeDirs(recyclerView, viewHolder)
             }
 
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                val proxyGroup = (viewHolder as GroupHolder).proxyGroup
-                if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) {
-                    return 0
-                }
+                if (!(viewHolder as GroupHolder).proxyGroup.removable()) return 0
                 return super.getDragDirs(recyclerView, viewHolder)
+            }
+
+            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(viewHolder, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder is GroupHolder) {
+                    held = viewHolder.proxyGroup.id
+                    // Picked up, the row is no longer pressed: lifting the finger does not tap it as well.
+                    viewHolder.itemView.isPressed = false
+                } else if (actionState == ItemTouchHelper.ACTION_STATE_IDLE && held != 0L) {
+                    groupAdapter.select(held)
+                    held = 0L
+                }
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -110,6 +124,7 @@ class GroupFragment :
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder,
             ): Boolean {
+                held = 0L
                 groupAdapter.move(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
                 return true
             }
@@ -138,7 +153,50 @@ class GroupFragment :
                     .setNegativeButton(R.string.no, null)
                     .show()
             }
+
+            R.id.action_remove_selected -> confirmRemoveSelected()
         }
+        return true
+    }
+
+    /** Whether the group may be removed: not the default one, nor one being updated. */
+    private fun ProxyGroup.removable() = !ungrouped && id !in GroupUpdater.updating
+
+    /** While groups are selected, the toolbar counts them and offers to remove them; Close, like Back, drops the selection. */
+    private fun updateToolbar() {
+        val count = selected.size
+        toolbar.menu.findItem(R.id.action_update_all).isVisible = count == 0
+        toolbar.menu.findItem(R.id.action_new_group).isVisible = count == 0
+        toolbar.menu.findItem(R.id.action_remove_selected).isVisible = count > 0
+        if (count == 0) {
+            toolbar.setTitle(R.string.menu_group)
+            showDrawerButton()
+        } else {
+            toolbar.title = toolbar.resources.getQuantityString(R.plurals.group_selected, count, count)
+            toolbar.setNavigationIcon(R.drawable.ic_navigation_close)
+            toolbar.setNavigationContentDescription(R.string.close)
+            toolbar.setNavigationOnClickListener { groupAdapter.clearSelection() }
+        }
+    }
+
+    // Names up to 20 of the selected groups with how many profiles go with each, and asks first.
+    private fun confirmRemoveSelected() {
+        val groups = groupAdapter.groupList.filter { it.id in selected }
+        val lines = groups.take(20).joinToString("\n") { group ->
+            val count = (groupAdapter.counts[group.id] ?: 0L).toInt()
+            "${group.displayName()} · ${resources.getQuantityString(R.plurals.group_profiles, count, count)}"
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getQuantityString(R.plurals.group_remove, groups.size, groups.size))
+            .setMessage(if (groups.size > 20) "$lines\n…" else lines)
+            .setPositiveButton(R.string.delete) { _, _ -> groupAdapter.removeSelected() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    override fun onBackPressed(): Boolean {
+        if (selected.isEmpty()) return false
+        groupAdapter.clearSelection()
         return true
     }
 
@@ -217,6 +275,8 @@ class GroupFragment :
                 }
                 groupList.clear()
                 groupList.addAll(groups.filter { it.id !in pending })
+                // A selected group removed elsewhere, as in its editor, leaves the selection.
+                if (selected.retainAll(groupList.mapTo(HashSet()) { it.id })) updateToolbar()
                 counts.clear()
                 counts.putAll(sizes)
                 notifyDataSetChanged()
@@ -271,9 +331,45 @@ class GroupFragment :
         }
 
         fun remove(index: Int) {
-            pending += groupList[index].id
+            val id = groupList[index].id
+            pending += id
             groupList.removeAt(index)
             notifyItemRemoved(index)
+            if (selected.remove(id)) selectionChanged()
+        }
+
+        /** Selects [groupId] for removal if it may be removed, or drops it if it is selected. */
+        fun select(groupId: Long) {
+            if (!selected.remove(groupId)) {
+                if (groupList.none { it.id == groupId && it.removable() }) return
+                selected += groupId
+            }
+            selectionChanged()
+        }
+
+        fun clearSelection() {
+            selected.clear()
+            selectionChanged()
+        }
+
+        /** Takes the selected groups off the list at once; one snackbar brings them all back. */
+        fun removeSelected() {
+            val removed = ArrayList<Pair<Int, ProxyGroup>>()
+            // From the end, so taking a row off does not shift the ones still to check; undo replays the
+            // removals in reverse, lowest index first. An update may have started since the dialog opened.
+            for (index in groupList.indices.reversed()) {
+                val group = groupList[index]
+                if (group.id !in selected || !group.removable()) continue
+                remove(index)
+                removed += index to group
+            }
+            if (removed.isNotEmpty()) undoManager.remove(removed)
+        }
+
+        // Every row rebinds: the first selection and the last change what a tap on any row does.
+        private fun selectionChanged() {
+            notifyItemRangeChanged(0, itemCount, SELECT)
+            updateToolbar()
         }
 
         /** Opens the row of [groupId], closing the one open before; again on the same row, closes it. */
@@ -335,6 +431,7 @@ class GroupFragment :
                 } else {
                     groupList.removeAt(index)
                     notifyItemRemoved(index)
+                    if (selected.remove(groupId)) selectionChanged()
                 }
             }
         }
@@ -370,6 +467,8 @@ class GroupFragment :
                 }
                 counts[groupId] = size
                 notifyItemChanged(index)
+                // An update that starts takes its group out of the selection: it cannot be removed meanwhile.
+                if (groupId in GroupUpdater.updating && selected.remove(groupId)) selectionChanged()
             }
         }
     }
@@ -397,9 +496,10 @@ class GroupFragment :
 
         lateinit var proxyGroup: ProxyGroup
         private val card = binding.root
+        private val highlight = CardHighlight(card)
 
         init {
-            card.setOnClickListener { groupAdapter.toggle(proxyGroup.id) }
+            card.setOnClickListener { if (selecting()) groupAdapter.select(proxyGroup.id) else groupAdapter.toggle(proxyGroup.id) }
             binding.update.setOnClickListener { GroupUpdater.startUpdate(proxyGroup, true) }
             binding.updateAction.setOnClickListener { GroupUpdater.startUpdate(proxyGroup, true) }
             binding.edit.setOnClickListener {
@@ -420,7 +520,7 @@ class GroupFragment :
             }
             if (subscription?.supportUrl.isNullOrBlank()) popup.menu.removeItem(R.id.action_support_url)
             if (subscription?.webPageUrl.isNullOrBlank()) popup.menu.removeItem(R.id.action_web_page_url)
-            if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) popup.menu.removeItem(R.id.action_delete_group)
+            if (!proxyGroup.removable()) popup.menu.removeItem(R.id.action_delete_group)
             popup.setOnMenuItemClickListener(this)
             popup.show()
         }
@@ -493,16 +593,28 @@ class GroupFragment :
             binding.edit.isEnabled = !updating
         }
 
+        // While groups are selected, a tap on a row that may be removed selects it or drops it.
+        private fun selecting() = selected.isNotEmpty() && proxyGroup.removable()
+
         /** Shows [group]; [opening] when its row has just been opened, so the details fade in and the bar fills. */
         fun bind(group: ProxyGroup, opening: Boolean) {
+            // Shown again for the same group, the row fades its selection in or out.
+            val same = ::proxyGroup.isInitialized && proxyGroup.id == group.id
             proxyGroup = group
             val context = card.context
             val open = openGroup == group.id
+            val picked = group.id in selected
             val count = groupAdapter.counts[group.id] ?: 0L
             val profiles = context.resources.getQuantityString(R.plurals.group_profiles, count.toInt(), count.toInt())
             binding.name.text = group.displayName()
             binding.count.text = count.toString()
-            binding.chevron.setImageResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)
+            binding.chevron.setImageResource(
+                when {
+                    picked -> R.drawable.ic_action_done
+                    open -> R.drawable.ic_expand_less_24
+                    else -> R.drawable.ic_expand_more_24
+                },
+            )
             binding.details.isVisible = open
             binding.edit.isVisible = !group.ungrouped
             bindProgress()
@@ -547,6 +659,9 @@ class GroupFragment :
             val announce = subscription?.announce?.takeIf { it.isNotBlank() }
             binding.announce.isVisible = announce != null
             binding.announce.text = announce
+            // Picked out as the selected profile is, and reported as selected.
+            card.isSelected = picked
+            highlight.show(picked, animate = same)
 
             // TalkBack hears the whole row, and what tapping it does.
             card.contentDescription = listOfNotNull(
@@ -557,12 +672,27 @@ class GroupFragment :
                 updated,
             ).joinToString(". ")
             ViewCompat.setStateDescription(card, context.getString(if (open) R.string.group_expanded else R.string.group_collapsed))
-            ViewCompat.replaceAccessibilityAction(card, AccessibilityActionCompat.ACTION_CLICK, context.getString(if (open) R.string.group_hide_details else R.string.group_show_details), null)
+            val tap = when {
+                selecting() -> if (picked) R.string.group_deselect else R.string.group_select
+                open -> R.string.group_hide_details
+                else -> R.string.group_show_details
+            }
+            ViewCompat.replaceAccessibilityAction(card, AccessibilityActionCompat.ACTION_CLICK, context.getString(tap), null)
+            // Holding the row selects it; screen readers get that as its long press.
+            if (group.removable() && selected.isEmpty()) {
+                ViewCompat.replaceAccessibilityAction(card, AccessibilityActionCompat.ACTION_LONG_CLICK, context.getString(R.string.group_select)) { _, _ ->
+                    groupAdapter.select(group.id)
+                    true
+                }
+            } else {
+                ViewCompat.removeAccessibilityAction(card, AccessibilityActionCompat.ACTION_LONG_CLICK.id)
+            }
         }
     }
 
     private companion object {
         const val OPEN = "open"
+        const val SELECT = "select"
         const val OPEN_FADE = 200L
     }
 }

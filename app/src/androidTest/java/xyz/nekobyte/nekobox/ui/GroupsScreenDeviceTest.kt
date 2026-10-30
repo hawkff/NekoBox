@@ -3,8 +3,13 @@ package xyz.nekobyte.nekobox.ui
 import android.Manifest
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Button
 import android.widget.TextView
 import androidx.core.view.children
 import androidx.recyclerview.widget.RecyclerView
@@ -31,7 +36,10 @@ import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.utils.toBytesString
 
-/** The groups list opens a row in place with what the provider reports, and the editor says what a group is. */
+/**
+ * The groups list opens a row in place with what the provider reports and removes held rows together,
+ * and the editor says what a group is.
+ */
 @RunWith(AndroidJUnit4::class)
 class GroupsScreenDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -131,6 +139,64 @@ class GroupsScreenDeviceTest {
     }
 
     @Test
+    fun heldRowsAreRemovedTogether() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.displayFragmentWithId(R.id.nav_group) }
+            settle()
+            lateinit var activity: MainActivity
+            lateinit var screen: GroupFragment
+            scenario.onActivity {
+                activity = it
+                screen = it.supportFragmentManager.findFragmentById(R.id.fragment_holder) as GroupFragment
+            }
+            val list = screen.groupListView
+            instrumentation.runOnMainSync { list.scrollToPosition(list.adapter!!.itemCount - 1) }
+            settle()
+            fun row(name: String) = list.children.first { it.findViewById<TextView>(R.id.name).text.toString() == name }
+            fun shown() = screen.groupAdapter.groupList.map { it.name }.filter { it in names }
+            fun selected(count: Int) = context.resources.getQuantityString(R.plurals.group_selected, count, count)
+
+            // A finger that rests on a row and lifts without moving selects it, and does not open it.
+            lateinit var first: View
+            instrumentation.runOnMainSync { first = row(names[0]) }
+            hold(first)
+            settle()
+            instrumentation.runOnMainSync {
+                assertTrue(row(names[0]).isSelected)
+                assertEquals(View.GONE, row(names[0]).findViewById<View>(R.id.details).visibility)
+                assertEquals(selected(1), screen.toolbar.title.toString())
+                // While one is selected, a tap selects another instead of opening it.
+                row(names[1]).performClick()
+            }
+            settle()
+            instrumentation.runOnMainSync {
+                assertTrue(row(names[1]).isSelected)
+                assertEquals(View.GONE, row(names[1]).findViewById<View>(R.id.details).visibility)
+                assertEquals(selected(2), screen.toolbar.title.toString())
+                assertTrue(screen.toolbar.menu.performIdentifierAction(R.id.action_remove_selected, 0))
+            }
+            settle()
+
+            // Remove asks first, naming the groups, then takes both off at once.
+            val dialog = instrumentation.uiAutomation.rootInActiveWindow
+            assertEquals(1, dialog.findAccessibilityNodeInfosByText(context.resources.getQuantityString(R.plurals.group_remove, 2, 2)).size)
+            for (name in names) assertTrue(name, dialog.findAccessibilityNodeInfosByText(name).isNotEmpty())
+            val remove = dialog.findAccessibilityNodeInfosByText(context.getString(R.string.delete)).first { it.className?.toString() == Button::class.java.name }
+            assertTrue(remove.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            instrumentation.waitForIdleSync()
+            Thread.sleep(600)
+            instrumentation.runOnMainSync {
+                assertEquals(emptyList<String>(), shown())
+                assertEquals(context.getString(R.string.menu_group), screen.toolbar.title.toString())
+                // One undo brings both back, in their places.
+                activity.findViewById<View>(com.google.android.material.R.id.snackbar_action).performClick()
+            }
+            settle()
+            instrumentation.runOnMainSync { assertEquals(names, shown()) }
+        }
+    }
+
+    @Test
     fun theEditorSaysWhatTheGroupIsAndAsksForALink() {
         val edit = Intent(context, GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, groups[0])
         ActivityScenario.launch<GroupSettingsActivity>(edit).use { scenario ->
@@ -171,5 +237,26 @@ class GroupsScreenDeviceTest {
     private fun settle() {
         instrumentation.waitForIdleSync()
         Thread.sleep(1500)
+    }
+
+    /** A finger resting on [view] past the long press timeout, then lifted where it rested. */
+    private fun hold(view: View) {
+        val location = IntArray(2)
+        var x = 0f
+        var y = 0f
+        instrumentation.runOnMainSync {
+            view.getLocationOnScreen(location)
+            x = location[0] + view.width / 4f
+            y = location[1] + view.height / 2f
+        }
+        val down = SystemClock.uptimeMillis()
+        fun send(action: Int) {
+            val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
+            instrumentation.sendPointerSync(event)
+            event.recycle()
+        }
+        send(MotionEvent.ACTION_DOWN)
+        Thread.sleep(ViewConfiguration.getLongPressTimeout() * 2L)
+        send(MotionEvent.ACTION_UP)
     }
 }
