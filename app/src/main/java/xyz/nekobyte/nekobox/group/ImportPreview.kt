@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.group
 
 import androidx.annotation.StringRes
+import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.RoutingProfiles
@@ -37,7 +38,9 @@ class ImportReport {
      * server configs, so [routing] is the one most configs use, the first of them on a tie.
      */
     fun addXrayRouting(profile: RoutingProfiles.Profile) {
-        val key = profile.content.toString() + profile.notes
+        // Rule names follow each config's own tags, so rules compare by what they match and where they send it.
+        val rules = profile.content.optJSONArray("rules")
+        val key = (0 until (rules?.length() ?: 0)).joinToString("\n") { JSONObject(rules!!.getJSONObject(it).toString()).apply { remove("name") }.toString() }
         val (first, count) = xrayRoutings[key] ?: (profile to 0)
         xrayRoutings[key] = first to count + 1
         routing = xrayRoutings.values.maxBy { it.second }.first

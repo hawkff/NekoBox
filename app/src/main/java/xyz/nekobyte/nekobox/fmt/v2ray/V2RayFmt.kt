@@ -10,6 +10,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.SingBoxOptions.*
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
 import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.group.UnsupportedEntryException
@@ -155,6 +156,22 @@ internal fun StandardV2RayBean.kcpFinalMask(): String? {
         masks.put(JSONObject().put("type", "mkcp-legacy").put("settings", JSONObject().put("header", name).put("value", "")))
     }
     return JSONObject().put("udp", masks).toString()
+}
+
+/**
+ * Whether a VMess, VLESS or Trojan [link] asks for a fragment mask that [bean], parsed from it, leaves out
+ * for lack of TLS.
+ */
+internal fun dropsFragmentMask(link: String, bean: AbstractBean): Boolean {
+    if (bean !is StandardV2RayBean || bean.tlsFragment == true || bean.type == "kcp") return false
+    val fm = if ('?' in link) {
+        link.substringBefore('#').substringAfter('?').split('&').firstOrNull { decodeLinkComponent(it.substringBefore('=')) == "fm" }
+            ?.let { decodeLinkComponent(it.substringAfter('=', "")) }
+    } else {
+        // The VMess JSON form carries its options in the encoded object.
+        runCatching { JSONObject(link.substringAfter("vmess://").decodeBase64UrlSafe()) }.getOrNull()?.takeUnless { it.isNull("fm") }?.optString("fm")
+    }
+    return fm?.let(::isFragmentFinalMask) == true
 }
 
 /** Whether a Finalmask holds only TCP fragment masks, which split the TLS ClientHello. */

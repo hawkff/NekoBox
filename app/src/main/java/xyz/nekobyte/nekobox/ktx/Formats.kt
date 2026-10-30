@@ -21,9 +21,11 @@ import xyz.nekobyte.nekobox.fmt.snell.parseSnell
 import xyz.nekobyte.nekobox.fmt.socks.parseSOCKS
 import xyz.nekobyte.nekobox.fmt.trojan.parseTrojan
 import xyz.nekobyte.nekobox.fmt.tuic.parseTuic
+import xyz.nekobyte.nekobox.fmt.v2ray.dropsFragmentMask
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.v2ray.requireSupportedLinkOptions
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardLink
+import xyz.nekobyte.nekobox.group.ImportPreview
 import xyz.nekobyte.nekobox.group.ImportReport
 import xyz.nekobyte.nekobox.group.RawUpdater
 import xyz.nekobyte.nekobox.group.UnsupportedEntryException
@@ -159,17 +161,16 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
 
     val entities = ArrayList<AbstractBean>()
     val entitiesByLine = ArrayList<AbstractBean>()
-    val failures = ArrayList<String?>()
-    val failuresByLine = ArrayList<String?>()
-    val reasons = linkedSetOf<String>()
-    val reasonsByLine = linkedSetOf<String>()
+    // What each way of splitting the input left out.
+    val tokens = ImportReport()
+    val lines = ImportReport()
     // An http(s) link that fails to parse as an HTTP proxy is a subscription candidate.
     // Don't abort import immediately (issue #1128): a file may contain valid profile
     // links alongside a plain promo/Telegram URL. Remember the first candidate and only
     // treat the input as a subscription if NO profiles parsed at all.
     var subscriptionCandidate: String? = null
 
-    fun String.parseLink(entities: ArrayList<AbstractBean>, failures: MutableList<String?>, reasons: MutableSet<String>) {
+    fun String.parseLink(entities: ArrayList<AbstractBean>, pass: ImportReport) {
         if (startsWith("clash://install-config?") || startsWith("sn://subscription?")) {
             throw SubscriptionFoundException(this)
         }
@@ -178,8 +179,8 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
         // not an HTTP proxy link may be a subscription, and its query belongs to the provider.
         unsupportedOption()?.let {
             Logs.w("Link with unsupported options rejected")
-            failures += substringBefore("://").lowercase()
-            if (it.isNotEmpty()) reasons += it
+            pass.failed += substringBefore("://").lowercase()
+            if (it.isNotEmpty()) pass.reasons += it
             return
         }
         val parsed = entities.size
@@ -189,7 +190,7 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
             runCatching {
                 val bean = parseUniversal(this)
                 if (bean.isHysteria1()) {
-                    failures += "hysteria"
+                    pass.failed += "hysteria"
                     return
                 }
                 entities.add(bean)
@@ -230,7 +231,7 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
                 entities.add(parseV2Ray(this))
             }.onFailure {
                 Logs.w("V2Ray parser rejected input")
-                (it as? UnsupportedEntryException)?.message?.let(reasons::add)
+                (it as? UnsupportedEntryException)?.message?.let(pass.reasons::add)
             }
         } else if (startsWith("vless://")) {
             Logs.d("Trying VLESS parser")
@@ -238,7 +239,7 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
                 entities.add(parseV2Ray(this))
             }.onFailure {
                 Logs.w("VLESS parser rejected input")
-                (it as? UnsupportedEntryException)?.message?.let(reasons::add)
+                (it as? UnsupportedEntryException)?.message?.let(pass.reasons::add)
             }
         } else if (startsWith("trojan://")) {
             Logs.d("Trying Trojan parser")
@@ -319,14 +320,18 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
                 Logs.w("AmneziaVPN parser rejected input")
             }
         }
-        if (entities.size == parsed) linkNodeScheme(this)?.let { failures += it }
+        if (entities.size == parsed) {
+            linkNodeScheme(this)?.let { pass.failed += it }
+        } else if (dropsFragmentMask(this, entities.last())) {
+            pass.dropped += ImportPreview.Section.FRAGMENT
+        }
     }
 
     for (link in links) {
-        link.parseLink(entities, failures, reasons)
+        link.parseLink(entities, tokens)
     }
     for (link in linksByLine) {
-        link.parseLink(entitiesByLine, failuresByLine, reasonsByLine)
+        link.parseLink(entitiesByLine, lines)
     }
     // No profile links parsed but we saw an unparsable http(s) URL: treat the whole
     // input as a subscription link (single-URL paste / file). When profiles WERE found,
@@ -350,9 +355,13 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
         }
     }
     val byTokens = entities.size > entitiesByLine.size ||
-        (entities.size == entitiesByLine.size && failures.size > failuresByLine.size)
-    report?.failed?.addAll(if (byTokens) failures else failuresByLine)
-    report?.reasons?.addAll(if (byTokens) reasons else reasonsByLine)
+        (entities.size == entitiesByLine.size && tokens.failed.size > lines.failed.size)
+    val pass = if (byTokens) tokens else lines
+    report?.run {
+        failed += pass.failed
+        reasons += pass.reasons
+        dropped += pass.dropped
+    }
     return if (byTokens) entities else entitiesByLine
 }
 

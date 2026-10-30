@@ -263,6 +263,10 @@ class XrayJsonImportTest {
         val unfragmented = RawUpdater.parseImport(config(vless(plain)))!!
         assertEquals(false, (unfragmented.proxies.single() as VMessBean).tlsFragment)
         assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(unfragmented).dropped)
+        // A share link without TLS says the same.
+        val mask = java.net.URLEncoder.encode(JSONObject().put("tcp", JSONArray().put(fragment)).toString(), "UTF-8")
+        val link = RawUpdater.parseImport("vless://$UUID@192.0.2.1:443?type=tcp&security=none&fm=$mask#plain")!!
+        assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(link).dropped)
     }
 
     @Test
@@ -278,18 +282,19 @@ class XrayJsonImportTest {
 
     @Test
     fun panelSubscriptionsKeepOneCopyOfEachServerAndTheRoutingMostConfigsUse() = runTest {
-        fun routing(domain: String) = JSONObject().put(
+        fun routing(domain: String, tag: String) = JSONObject().put(
             "rules",
-            JSONArray().put(JSONObject().put("type", "field").put("outboundTag", "direct").put("domain", JSONArray().put(domain))),
+            JSONArray().put(JSONObject().put("type", "field").put("ruleTag", tag).put("outboundTag", "direct").put("domain", JSONArray().put(domain))),
         )
         fun panelConfig(remarks: String, routing: JSONObject, vararg addresses: String) = JSONObject(
             config(*addresses.mapIndexed { index, address -> vless(address = address).put("tag", if (index == 0) "proxy" else "proxy-${index + 1}") }.toTypedArray()),
         ).put("remarks", remarks).put("routing", routing)
         // An auto-select config first, as Remnawave serves it: a server of its own and a copy of the next config's.
+        // The server configs name their rules differently, which does not split their votes.
         val subscription = JSONArray()
-            .put(panelConfig("auto", routing("domain:auto.example"), "192.0.2.10", "192.0.2.11"))
-            .put(panelConfig("first", routing("domain:server.example"), "192.0.2.11"))
-            .put(panelConfig("second", routing("domain:server.example"), "192.0.2.12"))
+            .put(panelConfig("auto", routing("domain:auto.example", "auto"), "192.0.2.10", "192.0.2.11"))
+            .put(panelConfig("first", routing("domain:server.example", "first"), "192.0.2.11"))
+            .put(panelConfig("second", routing("domain:server.example", "second"), "192.0.2.12"))
         val parsed = RawUpdater.parseImport(subscription.toString())!!
         assertEquals(listOf("auto proxy", "first", "second"), parsed.proxies.map { it.name })
         val rules = parsed.report.routing!!.content.getJSONArray("rules")
