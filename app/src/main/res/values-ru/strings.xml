@@ -406,7 +406,7 @@
     <string name="ech_settings">Настройки ECH</string>
     <string name="fragment_settings">Фрагментация TLS</string>
     <string name="enable_tls_fragment">Включить фрагментацию TLS Client Hello</string>
-    <string name="enable_tls_fragment_sum">Делит TLS-рукопожатие с каждым сервером на небольшие TCP-сегменты, чтобы фильтр, который читает имя сервера из одного пакета, его не увидел. Подключение занимает чуть больше времени.</string>
+    <string name="enable_tls_fragment_sum">Делит TLS-рукопожатие с сервером, к которому вы подключаетесь (в цепочке это первый сервер), на небольшие TCP-сегменты, чтобы фильтр, который читает имя сервера из одного пакета, его не увидел. Подключение занимает чуть больше времени.</string>
     <string name="tls_fragment_profile_sum">Делит TLS-рукопожатие с этим сервером, даже если переключатель в настройках выключен. Подписки включают это для серверов, которым это нужно.</string>
     <string name="backup_local">Локальная резервная копия</string>
     <string name="backup_webdav">Резервная копия WebDAV</string>

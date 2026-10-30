@@ -672,6 +672,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 ),
             )
         }
+        if (preview.reasons.isNotEmpty()) append('\n').append(getString(R.string.subscription_import_reasons, preview.reasons.joinToString(", ")))
         if (preview.behaviorDiffers) {
             val sections = preview.dropped.joinToString(", ") { getString(it.title) }
             append("\n\n").append(getString(R.string.import_preview_dropped, sections))

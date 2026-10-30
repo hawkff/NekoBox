@@ -337,6 +337,8 @@ class PanelShareLinkTest {
         assertTrue(copy.tlsFragment!!)
         assertEquals(10, KryoConverters.serialize(copy.apply { tlsFragment = false })[0].toInt())
 
+        // The rarely used VMess form with the transport in the user name splits it too.
+        assertTrue(parseV2Ray("vmess://ws+tls:$UUID-0@192.0.2.1:443/?path=%2Fws&tlsServerName=a.example&fm=$fm#legacy").tlsFragment!!)
         // Without TLS there is no ClientHello to split.
         assertFalse(parseV2Ray("vless://$UUID@192.0.2.1:443?type=tcp&security=none&fm=$fm#plain").applyDefaultValues().tlsFragment!!)
         // Another mask beside the fragment still refuses the link.

@@ -192,6 +192,11 @@ internal fun StandardV2RayBean.fragmentFinalMask(): String? {
     return JSONObject().put("tcp", JSONArray().put(JSONObject().put("type", "fragment").put("settings", settings))).toString()
 }
 
+// A TCP fragment mask splits the ClientHello, which the profile does itself; without TLS there is none.
+private fun StandardV2RayBean.applyFragmentMask(fm: String?) {
+    if (type != "kcp" && security == "tls" && fm?.let(::isFragmentFinalMask) == true) tlsFragment = true
+}
+
 private fun StandardV2RayBean.applyKcpFinalMask(fm: String?) {
     if (fm.isNullOrBlank()) return
     // As in 3x-ui, the masks win over the separate seed and headerType fields.
@@ -310,6 +315,7 @@ fun parseV2Ray(link: String): StandardV2RayBean {
                 }
             }
         }
+        bean.applyFragmentMask(url.queryParameter("fm"))
     } else {
         // also vless format
         bean.parseDuckSoft(url)
@@ -495,8 +501,7 @@ fun StandardV2RayBean.parseDuckSoft(url: HttpUrl) {
         utlsFingerprint = it
     }
 
-    // A TCP fragment mask splits the ClientHello, which the profile does itself; without TLS there is none.
-    if (type != "kcp" && security == "tls" && url.queryParameter("fm")?.let(::isFragmentFinalMask) == true) tlsFragment = true
+    applyFragmentMask(url.queryParameter("fm"))
 }
 
 // not sure whose format this is
@@ -630,7 +635,7 @@ fun parseV2RayN(link: String): VMessBean {
             if (vmessQRCode.alpn != "none") bean.alpn = vmessQRCode.alpn
             bean.utlsFingerprint = vmessQRCode.fp
             bean.applyECHParam(vmessQRCode.ech)
-            if (vmessQRCode.net != "kcp" && options?.takeUnless { it.isNull("fm") }?.optString("fm")?.let(::isFragmentFinalMask) == true) bean.tlsFragment = true
+            bean.applyFragmentMask(options?.takeUnless { it.isNull("fm") }?.optString("fm"))
         }
 
         else -> throw UnsupportedEntryException("unsupported security")

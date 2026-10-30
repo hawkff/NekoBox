@@ -771,7 +771,7 @@
     <string name="global_allow_insecure">Always allow insecure</string>
     <string name="fragment_settings">TLS fragmentation</string>
     <string name="enable_tls_fragment">Fragment the TLS ClientHello</string>
-    <string name="enable_tls_fragment_sum">Splits the TLS handshake with each server into small TCP segments, so a firewall that reads the server name from one packet misses it. Connecting takes a little longer.</string>
+    <string name="enable_tls_fragment_sum">Splits the TLS handshake with the server you connect to, the first one in a chain, into small TCP segments, so a firewall that reads the server name from one packet misses it. Connecting takes a little longer.</string>
     <string name="tls_fragment_profile_sum">Splits the TLS handshake with this server even when the switch in Settings is off. Subscriptions turn this on for servers that ask for it.</string>
 
     <string name="backup_local">Local backup</string>
