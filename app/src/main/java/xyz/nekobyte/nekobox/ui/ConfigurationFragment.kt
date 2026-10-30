@@ -391,8 +391,9 @@ class ConfigurationFragment @JvmOverloads constructor(
         dialog.show()
         binding.name.requestFocus()
         binding.name.selectAll()
-        // OK stays off while the name is blank.
+        // OK stays off while the name is blank, from the start.
         val ok = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        ok.isEnabled = !binding.name.text.isNullOrBlank()
         binding.name.doAfterTextChanged { ok.isEnabled = !it.isNullOrBlank() }
     }
 
@@ -406,8 +407,12 @@ class ConfigurationFragment @JvmOverloads constructor(
                     .setTitle(resources.getQuantityString(R.plurals.group_remove, 1, 1))
                     .setMessage("${group.displayName()} · ${resources.getQuantityString(R.plurals.group_profiles, count, count)}")
                     .setPositiveButton(R.string.delete) { _, _ ->
-                        // An update may have started since the menu opened.
-                        runOnDefaultDispatcher { if (group.id !in GroupUpdater.updating) GroupManager.deleteGroup(listOf(group)) }
+                        // An update may have started since the menu opened; it would write the group back.
+                        if (group.id in GroupUpdater.updating) {
+                            snackbar(R.string.group_wait_update).show()
+                        } else {
+                            runOnDefaultDispatcher { GroupManager.deleteGroup(listOf(group)) }
+                        }
                     }
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()

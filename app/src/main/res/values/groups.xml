@@ -49,6 +49,7 @@
     <string name="group_editor_link">Subscription link</string>
     <string name="group_editor_link_help">The address your provider gave you</string>
     <string name="group_editor_wait_update">Wait for the update to finish, then save</string>
+    <string name="group_wait_update">Wait for the update to finish</string>
     <string name="group_editor_link_missing">Enter the subscription link</string>
     <string name="group_editor_link_line">The link has a line break in it</string>
     <string name="group_editor_auto_update">Update automatically</string>

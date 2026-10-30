@@ -109,6 +109,16 @@ class RawUpdaterTransactionTest {
     }
 
     @Test
+    fun anUpdateForAGroupDeletedMeanwhile_failsAndStoresNothing() = runTest {
+        withContext(Dispatchers.IO) {
+            GroupManager.deleteGroup(listOf(group)) {}
+            val failure = runCatching { RawUpdater.updateFromContent(group, subscription, "socks://192.0.2.9:1080#late") }.exceptionOrNull()
+            assertEquals("Group deleted during the update", failure?.message)
+            assertTrue(ProfileDatabase.proxyDao.getByGroup(group.id).isEmpty())
+        }
+    }
+
+    @Test
     fun rejectedResponses_preserveEveryDatabaseColumnAndInMemoryMetadata() = runTest {
         withContext(Dispatchers.IO) {
             val inputs = listOf(
