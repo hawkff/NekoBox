@@ -64,9 +64,23 @@ class ProfileListStateTest {
 
     @Test
     fun rowRange_handlesPartialAndInvalidRows() {
-        assertEquals(2..2, profileRowRange(position = 2, itemCount = 3, spanCount = 2))
-        assertTrue(profileRowRange(position = -1, itemCount = 3, spanCount = 2).isEmpty())
-        assertTrue(profileRowRange(position = 3, itemCount = 3, spanCount = 2).isEmpty())
+        val ids = listOf(1L, 2L, 3L)
+        assertEquals(2..2, profileRowRange(ids, position = 2, spanCount = 2))
+        assertTrue(profileRowRange(ids, position = -1, spanCount = 2).isEmpty())
+        assertTrue(profileRowRange(ids, position = 3, spanCount = 2).isEmpty())
+    }
+
+    @Test
+    fun rowRange_startsANewRowAfterEachSectionHeader() {
+        // A header, three cards, a header, one card: the third card has no partner and the headers stand alone.
+        val ids = listOf(-100L, 1L, 2L, 3L, -101L, 4L)
+        assertEquals(0..0, profileRowRange(ids, position = 0, spanCount = 2))
+        assertEquals(1..2, profileRowRange(ids, position = 2, spanCount = 2))
+        assertEquals(3..3, profileRowRange(ids, position = 3, spanCount = 2))
+        assertEquals(5..5, profileRowRange(ids, position = 5, spanCount = 2))
+        val stamps = stamps(ids, mapOf(1L to false, 2L to true, 3L to false, 4L to true), 2)
+        assertTrue(stamps.getValue(1L).reserveMiddleRow)
+        assertFalse(stamps.getValue(3L).reserveMiddleRow)
     }
 
     @Test
@@ -85,7 +99,7 @@ class ProfileListStateTest {
             ids,
             mapOf(3L to 3, 4L to 4),
             spanCount = 2,
-            positions = profileRowRange(3, ids.size, 2),
+            positions = profileRowRange(ids, 3, 2),
         ) { id ->
             visited += id
             id == 4L

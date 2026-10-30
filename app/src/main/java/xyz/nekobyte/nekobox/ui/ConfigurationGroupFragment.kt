@@ -20,6 +20,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
@@ -313,7 +314,12 @@ class ConfigurationGroupFragment : Fragment() {
 
     private fun setupLayoutManager() {
         layoutManager = if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
-            FixedGridLayoutManager(configurationListView, 2)
+            FixedGridLayoutManager(configurationListView, 2).apply {
+                // A section header spans both columns.
+                spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int) = if (adapter?.isHeader(position) == true) spanCount else 1
+                }
+            }
         } else {
             FixedLinearLayoutManager(configurationListView)
         }
@@ -579,7 +585,9 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         // Sections follow the order on show; a search lists its matches without them.
-        private fun showsSections() = DataStore.profileSections && !isFavorites && filterQuery.isEmpty() && layoutMode != GroupLayout.TWO_COLUMNS
+        private fun showsSections() = DataStore.profileSections && !isFavorites && filterQuery.isEmpty()
+
+        fun isHeader(position: Int) = (configurationIdList.getOrNull(position) ?: 0L) < 0
 
         private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L) {
             if (disposed || dragInProgress) return
@@ -809,7 +817,8 @@ class ConfigurationGroupFragment : Fragment() {
         fun move(from: Int, to: Int) {
             if (!dragInProgress || from == to) return
 
-            if (layoutMode == GroupLayout.TWO_COLUMNS) {
+            // In sections the moved rows trade their orders, which leaves the folded ones in place.
+            if (layoutMode == GroupLayout.TWO_COLUMNS && sectionRows.isEmpty()) {
                 moveDualColumn(from, to)
             } else {
                 moveLinear(from, to)
@@ -1026,7 +1035,7 @@ class ConfigurationGroupFragment : Fragment() {
             val positions = HashSet<Int>()
             for (id in changedIds) {
                 val position = displayPositions[id] ?: continue
-                positions.addAll(profileRowRange(position, configurationIdList.size, displaySpanCount()))
+                positions.addAll(profileRowRange(configurationIdList, position, displaySpanCount()))
             }
             val newStamps = buildDisplayStamps(configurationIdList, configurationList, positions)
             for ((id, stamp) in newStamps) {

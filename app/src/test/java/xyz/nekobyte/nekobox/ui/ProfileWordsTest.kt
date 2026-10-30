@@ -58,7 +58,7 @@ class ProfileWordsTest {
     }
 
     @Test
-    fun aRowNamesTheCountryOnlyWhenItsNameDoesNotFlagIt() {
+    fun aRowNamesTheCountryOnlyWhenItsNameHasNoFlag() {
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { if (it == "192.0.2.77") "de" else "" } }
         ServerCountries.lookUp(listOf("192.0.2.77", "node.example"))
         fun named(name: String, address: String) = vmess(true) {
@@ -67,6 +67,8 @@ class ProfileWordsTest {
         }
         assertEquals("🇩🇪 Germany", ProfileWords.country(named("Auto proxy-5", "192.0.2.77")))
         assertNull(ProfileWords.country(named("🇩🇪 Frankfurt", "192.0.2.77")))
+        // A flag names the exit; the address may be a relay in another country.
+        assertNull(ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
         assertNull(ProfileWords.country(named("Auto proxy-6", "node.example")))
     }
 }
