@@ -74,10 +74,11 @@ class ProfileWordsTest {
         // A flag names the exit; the address may be a relay in another country.
         assertNull(ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
         assertNull(ProfileWords.country(named("Auto proxy-6", "node.example")))
-        // A replaced database answers again.
+        // A replaced database answers again for every known address, not only the one asked about.
         ServerCountries.database = { 2L }
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { "fr" } }
-        ServerCountries.lookUp(listOf("192.0.2.77"))
+        ServerCountries.lookUp(listOf("192.0.2.88"))
         assertEquals("🇫🇷 France", ProfileWords.country(named("Auto proxy-5", "192.0.2.77")))
+        assertEquals("🇫🇷 France", ProfileWords.country(named("Auto proxy-7", "192.0.2.88")))
     }
 }

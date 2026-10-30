@@ -91,17 +91,19 @@ object ServerCountries {
 
     fun cached(address: String): String? = codes[address]
 
-    /** Looks up the addresses not seen yet; true when any answer was added or dropped. */
+    /** Looks up the addresses not seen yet; true when any answer was added or changed. */
     fun lookUp(addresses: Collection<String?>): Boolean {
         val written = database()
-        val renewed = written != answeredFrom && codes.isNotEmpty()
-        if (written != answeredFrom) {
-            codes.clear()
-            answeredFrom = written
-        }
+        // A replaced database answers every known address again; the old answers stand until then.
+        val known = if (written != answeredFrom) codes.keys.toList() else emptyList()
         // A line break would shift every answer after it.
-        val missing = addresses.filterNotNull().filter { it.isNotBlank() && '\n' !in it && '\r' !in it && !codes.containsKey(it) }.distinct()
-        if (missing.isEmpty()) return renewed
+        val missing = (addresses.filterNotNull().filterNot(codes::containsKey) + known)
+            .filter { it.isNotBlank() && '\n' !in it && '\r' !in it }
+            .distinct()
+        if (missing.isEmpty()) {
+            answeredFrom = written
+            return false
+        }
         val found = try {
             lookup(missing.joinToString("\n")).split('\n')
         } catch (e: Exception) {
@@ -110,6 +112,7 @@ object ServerCountries {
             return false
         }
         missing.forEachIndexed { index, address -> codes[address] = found.getOrElse(index) { "" } }
+        answeredFrom = written
         return true
     }
 }
