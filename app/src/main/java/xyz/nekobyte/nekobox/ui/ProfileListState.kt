@@ -4,6 +4,8 @@ internal data class ProfileRowStamp(
     val content: Int,
     val reserveMiddleRow: Boolean,
     val doubleColumn: Boolean,
+    // In two columns a card without a country keeps the row its neighbor's country takes.
+    val reserveCountryRow: Boolean = false,
 )
 
 /** Where each position's run of cards begins: after the last section header (a negative ID) before it. */
@@ -32,6 +34,7 @@ internal fun buildProfileRowStamps(
     baseStamps: Map<Long, Int>,
     spanCount: Int,
     positions: Iterable<Int> = ids.indices,
+    hasCountryRow: (Long) -> Boolean = { false },
     hasMiddleRow: (Long) -> Boolean,
 ): Map<Long, ProfileRowStamp> {
     val doubleColumn = spanCount > 1
@@ -39,15 +42,13 @@ internal fun buildProfileRowStamps(
     return positions.associate { position ->
         val id = ids[position]
         val ownHasMiddleRow = hasMiddleRow(id)
-        val rowHasMiddleRow = if (doubleColumn) {
-            profileRowRange(ids, position, spanCount, starts).any { hasMiddleRow(ids[it]) }
-        } else {
-            ownHasMiddleRow
-        }
+        val row = if (doubleColumn) profileRowRange(ids, position, spanCount, starts) else IntRange.EMPTY
+        val rowHasMiddleRow = if (doubleColumn) row.any { hasMiddleRow(ids[it]) } else ownHasMiddleRow
         id to ProfileRowStamp(
             content = baseStamps.getValue(id),
             reserveMiddleRow = !ownHasMiddleRow && rowHasMiddleRow,
             doubleColumn = doubleColumn,
+            reserveCountryRow = doubleColumn && !hasCountryRow(id) && row.any { hasCountryRow(ids[it]) },
         )
     }
 }
