@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!-- A fold over the profiles whose names differ only by a number: its title, how many, and a chevron.
-     The type and color are the section heading's; more room above than below sets it off from the row before. -->
+     The type is the section heading's, in the text accent every palette keeps readable; more room above than below sets it off from the row before. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -24,7 +24,7 @@
         android:ellipsize="end"
         android:singleLine="true"
         android:textAppearance="?attr/textAppearanceLabelLarge"
-        android:textColor="?attr/colorPrimary"
+        android:textColor="?attr/primaryOrTextPrimary"
         tools:text="Countries" />
 
     <TextView
