@@ -344,11 +344,12 @@ class ConfigurationFragment @JvmOverloads constructor(
         PopupMenu(requireContext(), anchor).apply {
             menu.add(0, R.string.group_edit, 0, R.string.group_edit)
             if (group.type == GroupType.SUBSCRIPTION) menu.add(0, R.string.group_update, 1, R.string.group_update)
-            // The default group keeps its name and stays, as on the Groups screen.
-            if (!group.ungrouped) {
+            // The default group keeps its name and stays, as on the Groups screen. An update under way
+            // writes the group back when it ends, over a new name, so neither is offered meanwhile.
+            if (!group.ungrouped && group.id !in GroupUpdater.updating) {
                 menu.add(0, R.string.group_rename, 2, R.string.group_rename)
-                // Removing comes last, apart from the rest; not while an update writes to the group.
-                if (group.id !in GroupUpdater.updating) menu.add(1, R.string.group_delete, 3, R.string.group_delete)
+                // Removing comes last, apart from the rest.
+                menu.add(1, R.string.group_delete, 3, R.string.group_delete)
             }
             MenuCompat.setGroupDividerEnabled(menu, true)
             setOnMenuItemClickListener { item ->
@@ -372,11 +373,15 @@ class ConfigurationFragment @JvmOverloads constructor(
             .setView(binding.root)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val name = binding.name.text?.toString()?.trim().orEmpty()
-                if (name.isNotEmpty() && name != group.name) {
-                    // The stored group, which an update may have changed since the tabs loaded.
-                    runOnDefaultDispatcher {
-                        ProfileDatabase.groupDao.getById(group.id)?.let { GroupManager.updateGroup(it.apply { this.name = name }) }
-                    }
+                if (name.isEmpty() || name == group.name) return@setPositiveButton
+                // An update that started while the dialog was open would write its own copy back.
+                if (group.id in GroupUpdater.updating) {
+                    snackbar(R.string.group_editor_wait_update).show()
+                    return@setPositiveButton
+                }
+                // The stored group, which an update may have changed since the tabs loaded.
+                runOnDefaultDispatcher {
+                    ProfileDatabase.groupDao.getById(group.id)?.let { GroupManager.updateGroup(it.apply { this.name = name }) }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
