@@ -3,7 +3,6 @@ package xyz.nekobyte.nekobox.ui
 import android.os.Bundle
 import android.view.View
 import androidx.core.os.bundleOf
-import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.FragmentManager
 import androidx.preference.PreferenceFragmentCompat
@@ -61,11 +60,7 @@ class SettingsFragment :
         val depth = childFragmentManager.backStackEntryCount
         if (depth == 0) {
             toolbar.setTitle(R.string.settings)
-            toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
-            toolbar.setNavigationContentDescription(R.string.open_menu)
-            toolbar.setNavigationOnClickListener {
-                (activity as MainActivity).binding.drawerLayout.openDrawer(GravityCompat.START)
-            }
+            showDrawerButton()
         } else {
             toolbar.title = childFragmentManager.getBackStackEntryAt(depth - 1).name
             toolbar.setNavigationIcon(R.drawable.baseline_arrow_back_24)

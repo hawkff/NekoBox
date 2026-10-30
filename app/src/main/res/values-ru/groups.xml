@@ -30,6 +30,20 @@
     <string name="group_save_profiles">Сохранить профили в файл</string>
     <string name="group_clear">Удалить все профили</string>
     <string name="group_delete">Удалить группу</string>
+    <string name="group_select">Выбрать</string>
+    <string name="group_deselect">Снять выбор</string>
+    <plurals name="group_selected">
+        <item quantity="one">Выбрано: %d</item>
+        <item quantity="few">Выбрано: %d</item>
+        <item quantity="many">Выбрано: %d</item>
+        <item quantity="other">Выбрано: %d</item>
+    </plurals>
+    <plurals name="group_remove">
+        <item quantity="one">Удалить %d группу?</item>
+        <item quantity="few">Удалить %d группы?</item>
+        <item quantity="many">Удалить %d групп?</item>
+        <item quantity="other">Удалить %d группы?</item>
+    </plurals>
     <!-- Group editor -->
     <string name="group_editor_new">Новая группа</string>
     <string name="group_editor_edit">Изменить группу</string>

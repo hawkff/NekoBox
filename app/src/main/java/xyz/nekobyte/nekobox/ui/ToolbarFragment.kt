@@ -57,6 +57,11 @@ open class ToolbarFragment : Fragment {
             view.post { clearBottomBar(view) }
             childFragmentManager.registerFragmentLifecycleCallbacks(bottomBarChildren, false)
         }
+        showDrawerButton()
+    }
+
+    /** The navigation button opens the drawer. */
+    protected fun showDrawerButton() {
         toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
         toolbar.setNavigationContentDescription(R.string.open_menu)
         toolbar.setNavigationOnClickListener {

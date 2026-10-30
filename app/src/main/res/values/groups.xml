@@ -28,6 +28,16 @@
     <string name="group_save_profiles">Save the profiles to a file</string>
     <string name="group_clear">Remove all profiles</string>
     <string name="group_delete">Delete group</string>
+    <string name="group_select">Select</string>
+    <string name="group_deselect">Deselect</string>
+    <plurals name="group_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="group_remove">
+        <item quantity="one">Remove %d group?</item>
+        <item quantity="other">Remove %d groups?</item>
+    </plurals>
     <!-- Group editor -->
     <string name="group_editor_new">New group</string>
     <string name="group_editor_edit">Edit group</string>
