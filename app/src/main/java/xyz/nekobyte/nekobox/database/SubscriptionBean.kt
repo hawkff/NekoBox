@@ -84,7 +84,8 @@ class SubscriptionBean : Serializable() {
     var providerUpdateInterval: Int? = null
 
     // Send the per-install device identifier headers (X-HWID and friends) with every fetch, for
-    // panels that count devices per subscription.
+    // panels that count devices per subscription. On for new subscriptions: panels with a device
+    // limit, such as Remnawave, send a placeholder server to an app that leaves them out.
     @JvmField
     var sendDeviceId: Boolean? = null
 
@@ -189,9 +190,8 @@ class SubscriptionBean : Serializable() {
             expiryNotifiedAt = input.readInt()
             providerUpdateInterval = input.readInt()
         }
-        if (version >= 5) {
-            sendDeviceId = input.readBoolean()
-        }
+        // A subscription saved before the switch existed keeps sending none, as it always did.
+        sendDeviceId = if (version >= 5) input.readBoolean() else false
         if (version >= 6) {
             outputFormat = input.readInt()
             importWarning = input.readString()
@@ -236,7 +236,7 @@ class SubscriptionBean : Serializable() {
         announce = announce ?: ""
         expiryNotifiedAt = expiryNotifiedAt ?: 0
         providerUpdateInterval = providerUpdateInterval ?: 0
-        sendDeviceId = sendDeviceId ?: false
+        sendDeviceId = sendDeviceId ?: true
         outputFormat = outputFormat ?: 0
         importWarning = importWarning ?: ""
         backupLinks = backupLinks ?: ""

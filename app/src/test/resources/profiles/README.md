@@ -10,5 +10,6 @@ Later storage versions extend these files by hand rather than by capture:
 
 - `WireGuardBean-v3`, `WireGuardBean-v3-defaults`, `AmneziaWGBean-v1` and `AmneziaWGBean-v1-defaults` were written from the Kryo byte layout for the AllowedIPs, keepalive, extra peer, peer position, imported DNS and DNS override fields. A version whose new fields hold their defaults re-encodes in the previous version's layout, so the `-defaults` cases have the older `canonicalHex`. The captured WireGuard and AmneziaWG cases gained only the default values of those fields in `decoded`.
 - `AmneziaWGBean-v2` (the AmneziaWG 3.1 fields) and `VMessBean-standard-v11-kcp` (the legacy mKCP checksum) were written the same way. Existing cases gained the defaults of those fields in `decoded`; profiles that leave them at their defaults keep their previous layout.
+- `SubscriptionBean`'s initialized default for `sendDeviceId` in `constructors.json` is `true`: new subscriptions send the device ID. No stored bytes changed; subscriptions keep their stored value, and those saved before version 5 still decode as `false`.
 
 Tests must consume these bytes, not generate replacements from the implementation under test. A changed fixture requires an explicit storage-format migration review.
