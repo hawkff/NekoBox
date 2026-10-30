@@ -10,7 +10,6 @@ import xyz.nekobyte.nekobox.fmt.shadowsocks.parseShadowsocks
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.trojan.parseTrojan
 import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
-import xyz.nekobyte.nekobox.fmt.v2ray.isFragmentFinalMask
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.ktx.linkBuilder
@@ -31,7 +30,9 @@ internal object XrayOutbound {
     fun parse(outbound: JSONObject, name: String, outbounds: List<JSONObject?>, report: ImportReport): AbstractBean {
         requireSupported(outbound.optJSONObject("proxySettings") == null) { "unsupported proxySettings" }
         val settings = outbound.optJSONObject("settings") ?: JSONObject()
-        val stream = outbound.optJSONObject("streamSettings") ?: JSONObject()
+        val streamSettings = outbound.optJSONObject("streamSettings") ?: JSONObject()
+        // Finalmask can fragment the ClientHello too, as Remnawave writes it; the profile does that itself below.
+        val stream = streamSettings.withoutFragmentMasks() ?: streamSettings
         val freedom = stream.optJSONObject("sockopt")?.optString("dialerProxy")?.takeIf { it.isNotEmpty() }?.let { tag ->
             // 3x-ui can send the connection through a local freedom outbound that fragments the TLS
             // ClientHello or adds UDP noise. Another proxy in front would be a chain, which this
@@ -51,10 +52,8 @@ internal object XrayOutbound {
             requireSupported(tls.strings("verifyPeerCertInNames").isEmpty()) { "unsupported checked names" }
             requireSupported((tls.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
         }
-        // Finalmask can fragment the ClientHello too, as Remnawave writes it.
-        val fragmentMask = stream.optJSONObject("finalmask")?.let { isFragmentFinalMask(it.toString()) } == true
         return parseProtocol(outbound, settings, stream, name).also { bean ->
-            if (freedom?.optJSONObject("fragment") != null || fragmentMask) {
+            if (freedom?.optJSONObject("fragment") != null || stream !== streamSettings) {
                 // The profile splits the ClientHello itself; a node without TLS has none to split.
                 if (bean is StandardV2RayBean && bean.security == "tls") bean.tlsFragment = true else report.dropped += ImportPreview.Section.FRAGMENT
             }
@@ -215,7 +214,7 @@ internal object XrayOutbound {
 
             else -> refuse("unsupported transport")
         }
-        // The link parsers accept only the mKCP masks and TCP fragment masks.
+        // Fragment masks are gone by now; the link parsers accept only the mKCP masks.
         stream.optJSONObject("finalmask")?.let { link.param("fm", it.toString()) }
         when (val security = security(stream)) {
             "none" -> link.param("security", security)
@@ -349,6 +348,17 @@ internal object XrayOutbound {
         // it off, so it keeps 1; Xray's own minimum is 512 kbps.
         if (bits <= 0) return null
         return (bits / 1_000_000).toInt().coerceAtLeast(1)
+    }
+
+    /** This stream without its Finalmask TCP masks when every one of them is a fragment mask, else null. */
+    private fun JSONObject.withoutFragmentMasks(): JSONObject? {
+        val tcp = optJSONObject("finalmask")?.optJSONArray("tcp") ?: return null
+        if (tcp.length() == 0 || (0 until tcp.length()).any { tcp.optJSONObject(it)?.optString("type") != "fragment" }) return null
+        return JSONObject(toString()).apply {
+            val masks = getJSONObject("finalmask")
+            masks.remove("tcp")
+            if (masks.length() == 0) remove("finalmask")
+        }
     }
 
     /** WireGuard as the wg-quick config of the same tunnel. */

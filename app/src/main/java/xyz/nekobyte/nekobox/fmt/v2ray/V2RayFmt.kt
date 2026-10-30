@@ -94,11 +94,13 @@ internal fun requireSupportedLinkOptions(link: String) {
     val query = link.substringBefore('#').substringAfter('?', "")
     val parameters = query.split('&').map { decodeLinkComponent(it.substringBefore('=')) to decodeLinkComponent(it.substringAfter('=', "")) }
     val kcp = parameters.any { (name, value) -> name == "type" && value == "kcp" }
+    // Only these links set a profile's TLS fragmentation from it.
+    val fragments = link.substringBefore("://").lowercase() in setOf("vless", "vmess", "trojan")
     for ((name, value) in parameters) {
         if (name !in UNSUPPORTED_LINK_OPTIONS || value.isBlank()) continue
         // mKCP's own packet masks are the one Finalmask part the transport carries; TCP fragment masks
         // become the profile's TLS fragmentation.
-        if (name == "fm" && if (kcp) parseKcpFinalMask(value) != null else isFragmentFinalMask(value)) continue
+        if (name == "fm" && if (kcp) parseKcpFinalMask(value) != null else fragments && isFragmentFinalMask(value)) continue
         throw UnsupportedEntryException("unsupported $name")
     }
 }

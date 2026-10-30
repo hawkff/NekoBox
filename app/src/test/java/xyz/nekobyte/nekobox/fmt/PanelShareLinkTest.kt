@@ -23,6 +23,7 @@ import xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundTLS
 import xyz.nekobyte.nekobox.fmt.v2ray.isFragmentFinalMask
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2RayN
+import xyz.nekobyte.nekobox.fmt.v2ray.requireSupportedLinkOptions
 import xyz.nekobyte.nekobox.fmt.v2ray.toUriVMessVLESSTrojan
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -341,6 +342,8 @@ class PanelShareLinkTest {
         // Another mask beside the fragment still refuses the link.
         val mixed = encode("""{"tcp":[{"type":"fragment"},{"type":"header-custom"}]}""")
         assertThrows(Exception::class.java) { parseV2Ray("vless://$UUID@192.0.2.1:443?type=tcp&$reality&fm=$mixed") }
+        // A scheme whose profiles do not fragment refuses the mask too.
+        assertThrows(Exception::class.java) { requireSupportedLinkOptions("hy2://secret@192.0.2.1:443?sni=a.example&fm=$fm") }
     }
 
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
