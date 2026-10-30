@@ -22,7 +22,7 @@
 <string name="alpn">Согласование протокола уровня приложений</string>
 <string name="alter_id">Alter ID</string>
 <string name="always_show_address">Всегда показывать адрес</string>
-<string name="always_show_address_sum">На карточках профилей</string>
+<string name="always_show_address_sum">Под названием профиля на главном экране</string>
 <string name="app_name">NekoBox</string>
 <string name="app_tls_version">Минимальная версия TLS протокола</string>
 <string name="app_version">Версия</string>
@@ -327,7 +327,6 @@
 <string name="stopping">Выключение…</string>
 <string name="stun_test">Поведение NAT</string>
 <string name="stun_test_summary">Как NAT этого соединения сопоставляет и фильтрует UDP: проверка через STUN-сервер (RFC 5780)</string>
-<string name="subscription_expire">Истекает: %s</string>
 <string name="subscription_import">Импортировать подписку</string>
 <string name="subscription_import_message">Подтвердите, что хотите импортировать подписку %s? Если вы импортируете из ненадежного источника, это может привести к утечке вашего IP-адреса и такого поведения.</string>
 <string name="subscription_update">Обновление подписки</string>
@@ -371,6 +370,11 @@
 <string name="xtls_flow">Flow (подпротокол VLESS)</string>
 <string name="yes">Да</string>
     <string name="layout_compact">Компактный список</string>
+    <string name="profile_sections">Разделы по названию</string>
+    <string name="profile_section_countries">Страны</string>
+    <string name="profile_section_other">Другие</string>
+    <string name="section_expand">Развернуть</string>
+    <string name="section_collapse">Свернуть</string>
     <string name="layout_single_column">Карточки</string>
     <string name="layout_double_column">Карточки в два столбца</string>
     <string name="sort_and_layout">Сортировка и макет</string>

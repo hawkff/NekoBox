@@ -141,6 +141,11 @@
                                 android:id="@+id/action_layout_double"
                                 android:title="@string/layout_double_column" />
                         </group>
+                        <group android:id="@+id/sections_group" android:checkableBehavior="all">
+                            <item
+                                android:id="@+id/action_sections"
+                                android:title="@string/profile_sections" />
+                        </group>
                     </menu>
                 </item>
             </group>

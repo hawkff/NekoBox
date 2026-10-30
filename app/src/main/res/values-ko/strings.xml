@@ -246,7 +246,6 @@
     <string name="service_subscription">구독 업데이트 서비스</string>
     <string name="subscription_update">구독 업데이트</string>
     <string name="subscription_update_message">%s 업데이트 중 …</string>
-    <string name="subscription_expire">만료: %s</string>
     <string name="subscription_import">구독 가져오기</string>
     <string name="subscription_import_message">구독 %s을(를) 가져오시겠습니까? 신뢰할 수 없는 출처에서 온 경우 IP와 이 동작이 유출될 수 있습니다.</string>
     <string name="profile_import">프로파일 가져오기</string>

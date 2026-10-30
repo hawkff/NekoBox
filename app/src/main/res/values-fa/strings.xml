@@ -261,7 +261,6 @@
     <string name="service_subscription">سرویس به‌روزسانی اشتراک</string>
     <string name="subscription_update">به‌روزرسانی اشتراک</string>
     <string name="subscription_update_message">به‌روزرسانی %s …</string>
-    <string name="subscription_expire">انقضا: %s</string>
     <string name="subscription_import">وارد کردن اشتراک</string>
     <string name="subscription_import_message">تأیید می‌کنید که می‌خواهید اشتراک %s را وارد کنید؟ اگر از یک منبع نامعتبر وارد کنید، ممکن است منجر به لو رفتن IP شما شود.</string>
     <string name="profile_import">اضافه کردن پراکسی</string>

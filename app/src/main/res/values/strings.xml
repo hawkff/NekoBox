@@ -38,6 +38,11 @@
         <item quantity="other">%d profiles</item>
     </plurals>
     <string name="layout_compact">Compact list</string>
+    <string name="profile_sections">Sections by name</string>
+    <string name="profile_section_countries">Countries</string>
+    <string name="profile_section_other">Other</string>
+    <string name="section_expand">Expand</string>
+    <string name="section_collapse">Collapse</string>
     <string name="layout_single_column">Cards</string>
     <string name="layout_double_column">Cards in two columns</string>
     <string name="sort_and_layout">Sort and layout</string>
@@ -436,7 +441,7 @@
     <string name="available" translatable="false">%dms</string>
     <string name="unavailable">Unavailable</string>
     <string name="always_show_address">Always show address</string>
-    <string name="always_show_address_sum">On profile cards</string>
+    <string name="always_show_address_sum">Under each profile\'s name on Home</string>
     <string name="clear_traffic_statistics">Clear traffic statistics</string>
     <string name="connection_test">Connection test</string>
     <string name="connection_test_clear_results">Clear test results</string>
@@ -484,7 +489,6 @@
     <string name="service_subscription">Subscription update service</string>
     <string name="subscription_update">Subscription update</string>
     <string name="subscription_update_message">Updating %s …</string>
-    <string name="subscription_expire">Expire: %s</string>
     <string name="subscription_support">Support</string>
     <string name="subscription_website">Website</string>
     <string name="subscription_expiring_title">Subscription expiring</string>

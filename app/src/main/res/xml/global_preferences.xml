@@ -41,6 +41,7 @@
             app:summary="@string/show_bottom_bar_sum"
             app:title="@string/show_bottom_bar" />
         <SwitchPreference
+            app:defaultValue="true"
             app:icon="@drawable/ic_baseline_center_focus_weak_24"
             app:key="alwaysShowAddress"
             app:summary="@string/always_show_address_sum"

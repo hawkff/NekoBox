@@ -80,7 +80,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/all_groups"
-                android:src="@drawable/ic_baseline_view_list_24"
+                android:src="@drawable/ic_expand_more_24"
                 app:tint="?tabTextColor" />
 
         </LinearLayout>

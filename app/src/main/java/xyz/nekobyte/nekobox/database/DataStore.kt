@@ -125,6 +125,18 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var nebulaConfig by configurationStore.string(Key.NEBULA_CONFIG)
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { GroupLayout.COMPACT }
 
+    // Profiles whose names differ only by a number fold into sections on Home.
+    var profileSections by configurationStore.boolean(Key.PROFILE_SECTIONS) { true }
+
+    // Folded sections, as "groupId<tab>section key" lines.
+    var foldedSections: Set<String>
+        get() = configurationStore.getString(Key.FOLDED_SECTIONS).orEmpty().split('\n').filterTo(HashSet()) { it.isNotEmpty() }
+        set(value) = configurationStore.putString(Key.FOLDED_SECTIONS, value.joinToString("\n"))
+
+    private val foldLock = Any()
+
+    fun updateFoldedSections(change: (Set<String>) -> Set<String>) = synchronized(foldLock) { foldedSections = change(foldedSections) }
+
     // Profiles pinned to the Favorites tab, in the order they were pinned.
     var favoriteProfiles: List<Long>
         get() = configurationStore.getString(Key.FAVORITE_PROFILES).orEmpty().split(',').mapNotNull { it.toLongOrNull() }
@@ -289,7 +301,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var connectionTestURL by configurationStore.string(Key.CONNECTION_TEST_URL) { CONNECTION_TEST_URL }
     var connectionTestConcurrent by configurationStore.int("connectionTestConcurrent") { 5 }
     var connectionTestTimeout by configurationStore.int(Key.CONNECTION_TEST_TIMEOUT) { 3000 }
-    var alwaysShowAddress by configurationStore.boolean(Key.ALWAYS_SHOW_ADDRESS)
+    var alwaysShowAddress by configurationStore.boolean(Key.ALWAYS_SHOW_ADDRESS) { true }
 
     var tunImplementation by configurationStore.stringToInt(Key.TUN_IMPLEMENTATION) { TunImplementation.GVISOR }
     var profileTrafficStatistics by configurationStore.boolean(Key.PROFILE_TRAFFIC_STATISTICS) { true }
