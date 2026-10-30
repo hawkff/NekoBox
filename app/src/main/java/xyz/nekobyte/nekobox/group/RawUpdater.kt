@@ -672,8 +672,9 @@ object RawUpdater : GroupUpdater() {
 
         val failedEntries = preview.failed.groupingBy { it ?: app.getString(R.string.subscription_import_unknown_entry) }
             .eachCount().entries.joinToString(", ") { "${it.key} ${it.value}" }
+        val reasons = preview.reasons.takeIf { it.isNotEmpty() }?.let { " " + app.getString(R.string.subscription_import_reasons, it.joinToString(", ")) }.orEmpty()
         val importWarning = listOfNotNull(
-            app.getString(R.string.subscription_import_failed, preview.acceptedCount, preview.unparsedCount, failedEntries)
+            (app.getString(R.string.subscription_import_failed, preview.acceptedCount, preview.unparsedCount, failedEntries) + reasons)
                 .takeIf { partial },
             app.getString(R.string.subscription_import_dropped, dropped.joinToString(", ") { app.getString(it.title) })
                 .takeIf { dropped.isNotEmpty() },
@@ -2149,8 +2150,7 @@ object RawUpdater : GroupUpdater() {
                     val remarks = json.getStr("remarks")
                     val xrayProxies = outbounds.count { it?.getStr("type") == null && it?.getStr("protocol") in XrayOutbound.PROXY_PROTOCOLS }
                     report.format = if (xrayProxies > 0) ImportFormat.XRAY_JSON else ImportFormat.SING_BOX
-                    // shortcut: only the first config's routing is read, since panels give every config the same; read each if a provider varies them.
-                    if (xrayProxies > 0 && report.routing == null) json.optJSONObject("routing")?.let { report.routing = SubscriptionRules.fromXray(it, outbounds) }
+                    if (xrayProxies > 0) json.optJSONObject("routing")?.let { report.addXrayRouting(SubscriptionRules.fromXray(it, outbounds)) }
                     for (outbound in outbounds) {
                         val type = outbound?.getStr("type") ?: outbound?.getStr("protocol")
                         when {
@@ -2168,10 +2168,11 @@ object RawUpdater : GroupUpdater() {
                             outbound.getStr("type") == null && type in XrayOutbound.PROXY_PROTOCOLS -> try {
                                 val tag = outbound.getStr("tag")?.takeIf { remarks == null || xrayProxies > 1 }
                                 proxies += XrayOutbound.parse(outbound, listOfNotNull(remarks, tag).joinToString(" "), outbounds, report)
-                            } catch (_: Exception) {
+                            } catch (e: Exception) {
                                 Logs.w("Xray outbound rejected")
                                 // Xray's hysteria protocol is Hysteria 2; "hysteria" here means the retired Hysteria 1.
                                 report.failed += if (type == "hysteria") "hysteria2" else type
+                                (e as? UnsupportedEntryException)?.message?.let { report.reasons += it }
                             }
 
                             else -> report.failed += type
@@ -2185,9 +2186,10 @@ object RawUpdater : GroupUpdater() {
                     report.format = ImportFormat.XRAY_JSON
                     return try {
                         listOf(XrayOutbound.parse(json, json.getStr("tag").orEmpty(), emptyList(), report))
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
                         Logs.w("Xray outbound rejected")
                         report.failed += json.getStr("protocol").let { if (it == "hysteria") "hysteria2" else it }
+                        (e as? UnsupportedEntryException)?.message?.let { report.reasons += it }
                         emptyList()
                     }
                 }
@@ -2206,10 +2208,14 @@ object RawUpdater : GroupUpdater() {
             }
         } else {
             json as JSONArray
+            // Nodes of configs that hold several, as Xray panels build their auto-select configs.
+            val grouped = HashSet<Int>()
             json.forEach { _, it ->
                 try {
                     if (isJsonObjectValid(it)) {
-                        proxies.addAll(parseJSON(if (it is String) JSONTokener(it).nextValue() else it, report))
+                        val parsed = parseJSON(if (it is String) JSONTokener(it).nextValue() else it, report)
+                        if (parsed.size > 1) parsed.indices.mapTo(grouped) { index -> proxies.size + index }
+                        proxies.addAll(parsed)
                     } else {
                         report.failed += null
                     }
@@ -2218,6 +2224,11 @@ object RawUpdater : GroupUpdater() {
                     report.failed += null
                 }
             }
+            // Such a config repeats servers that other configs offer alone, under the server's own name.
+            val alone = proxies.filterIndexed { index, _ -> index !in grouped }.toHashSet()
+            val distinct = proxies.filterIndexed { index, bean -> index !in grouped || bean !in alone }
+            proxies.clear()
+            proxies.addAll(distinct)
         }
 
         return proxies

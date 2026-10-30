@@ -10,8 +10,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.SingBoxOptions.*
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
 import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
+import xyz.nekobyte.nekobox.group.UnsupportedEntryException
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.utils.NGUtil
 import xyz.nekobyte.nekobox.utils.listByLineOrComma
@@ -73,13 +75,12 @@ fun StandardV2RayBean.setTLS(boolean: Boolean) {
 /** Transports a share link may name; the core builds each of them. */
 private val SHARE_LINK_TRANSPORTS = setOf("tcp", "http", "kcp", "ws", "grpc", "httpupgrade", "xhttp", "quic")
 
-private class UnsupportedShareLinkException(message: String) : IllegalArgumentException(message)
-
 /**
  * Xray share-link options this app cannot honor that change which servers a connection accepts:
  * a pinned certificate (pcs), the names a certificate is checked against (vcn) and Finalmask
- * traffic masking (fm). Without them a link would trust certificates its provider meant to
- * refuse, or would not reach a server that expects masked traffic. Each may be empty.
+ * traffic masking (fm), apart from mKCP's masks and TCP fragment masks. Without them a link would
+ * trust certificates its provider meant to refuse, or would not reach a server that expects masked
+ * traffic. Each may be empty.
  */
 private val UNSUPPORTED_LINK_OPTIONS = listOf("pcs", "vcn", "fm")
 
@@ -94,11 +95,14 @@ internal fun requireSupportedLinkOptions(link: String) {
     val query = link.substringBefore('#').substringAfter('?', "")
     val parameters = query.split('&').map { decodeLinkComponent(it.substringBefore('=')) to decodeLinkComponent(it.substringAfter('=', "")) }
     val kcp = parameters.any { (name, value) -> name == "type" && value == "kcp" }
+    // Only these links set a profile's TLS fragmentation from it.
+    val fragments = link.substringBefore("://").lowercase() in setOf("vless", "vmess", "trojan")
     for ((name, value) in parameters) {
         if (name !in UNSUPPORTED_LINK_OPTIONS || value.isBlank()) continue
-        // mKCP's own packet masks are the one Finalmask part the transport carries.
-        if (name == "fm" && kcp && parseKcpFinalMask(value) != null) continue
-        throw UnsupportedShareLinkException("unsupported $name")
+        // mKCP's own packet masks are the one Finalmask part the transport carries; TCP fragment masks
+        // become the profile's TLS fragmentation.
+        if (name == "fm" && if (kcp) parseKcpFinalMask(value) != null else fragments && isFragmentFinalMask(value)) continue
+        throw UnsupportedEntryException("unsupported $name")
     }
 }
 
@@ -154,6 +158,45 @@ internal fun StandardV2RayBean.kcpFinalMask(): String? {
     return JSONObject().put("udp", masks).toString()
 }
 
+/**
+ * Whether a VMess, VLESS or Trojan [link] asks for a fragment mask that [bean], parsed from it, leaves out
+ * for lack of TLS.
+ */
+internal fun dropsFragmentMask(link: String, bean: AbstractBean): Boolean {
+    if (bean !is StandardV2RayBean || bean.tlsFragment == true || bean.type == "kcp") return false
+    val fm = if ('?' in link) {
+        link.substringBefore('#').substringAfter('?').split('&').firstOrNull { decodeLinkComponent(it.substringBefore('=')) == "fm" }
+            ?.let { decodeLinkComponent(it.substringAfter('=', "")) }
+    } else {
+        // The VMess JSON form carries its options in the encoded object.
+        runCatching { JSONObject(link.substringAfter("vmess://").decodeBase64UrlSafe()) }.getOrNull()?.takeUnless { it.isNull("fm") }?.optString("fm")
+    }
+    return fm?.let(::isFragmentFinalMask) == true
+}
+
+/** Whether a Finalmask holds only TCP fragment masks, which split the TLS ClientHello. */
+internal fun isFragmentFinalMask(fm: String): Boolean {
+    val json = runCatching { JSONObject(fm) }.getOrNull() ?: return false
+    val masks = json.optJSONArray("tcp") ?: return false
+    return json.keys().asSequence().all { it == "tcp" } && masks.length() > 0 &&
+        (0 until masks.length()).all { masks.optJSONObject(it)?.optString("type") == "fragment" }
+}
+
+/**
+ * The Finalmask for this profile's TLS fragmentation, else null. The core picks its own split points,
+ * so a link carries the lengths and delays Xray clients commonly use.
+ */
+internal fun StandardV2RayBean.fragmentFinalMask(): String? {
+    if (tlsFragment != true || security != "tls") return null
+    val settings = JSONObject().put("packets", "tlshello").put("length", "100-200").put("delay", "10-20")
+    return JSONObject().put("tcp", JSONArray().put(JSONObject().put("type", "fragment").put("settings", settings))).toString()
+}
+
+// A TCP fragment mask splits the ClientHello, which the profile does itself; without TLS there is none.
+private fun StandardV2RayBean.applyFragmentMask(fm: String?) {
+    if (type != "kcp" && security == "tls" && fm?.let(::isFragmentFinalMask) == true) tlsFragment = true
+}
+
 private fun StandardV2RayBean.applyKcpFinalMask(fm: String?) {
     if (fm.isNullOrBlank()) return
     // As in 3x-ui, the masks win over the separate seed and headerType fields.
@@ -171,7 +214,7 @@ fun parseV2Ray(link: String): StandardV2RayBean {
     if (!link.contains("?")) {
         try {
             return parseV2RayN(link)
-        } catch (e: UnsupportedShareLinkException) {
+        } catch (e: UnsupportedEntryException) {
             // A readable link with unsupported settings; the other formats would misread it.
             throw e
         } catch (_: Exception) {
@@ -272,6 +315,7 @@ fun parseV2Ray(link: String): StandardV2RayBean {
                 }
             }
         }
+        bean.applyFragmentMask(url.queryParameter("fm"))
     } else {
         // also vless format
         bean.parseDuckSoft(url)
@@ -456,6 +500,8 @@ fun StandardV2RayBean.parseDuckSoft(url: HttpUrl) {
     url.queryParameter("fp")?.let {
         utlsFingerprint = it
     }
+
+    applyFragmentMask(url.queryParameter("fm"))
 }
 
 // not sure whose format this is
@@ -521,8 +567,8 @@ fun parseV2RayN(link: String): VMessBean {
     for (name in UNSUPPORTED_LINK_OPTIONS) {
         val value = options?.takeUnless { it.isNull(name) }?.opt(name)?.toString()
         if (value.isNullOrBlank()) continue
-        if (name == "fm" && options.optString("net") == "kcp" && parseKcpFinalMask(value) != null) continue
-        throw UnsupportedShareLinkException("unsupported $name")
+        if (name == "fm" && if (options.optString("net") == "kcp") parseKcpFinalMask(value) != null else isFragmentFinalMask(value)) continue
+        throw UnsupportedEntryException("unsupported $name")
     }
     val vmessQRCode = Gson().fromJson(result, VmessQRCode::class.java)
 
@@ -547,7 +593,7 @@ fun parseV2RayN(link: String): VMessBean {
         "raw" -> "tcp"
         else -> net
     }
-    if (bean.type !in SHARE_LINK_TRANSPORTS) throw UnsupportedShareLinkException("unsupported transport")
+    if (bean.type !in SHARE_LINK_TRANSPORTS) throw UnsupportedEntryException("unsupported transport")
     if (bean.type == "xhttp") {
         bean.xhttpMode = vmessQRCode.mode
         val extra = vmessQRCode.extra?.takeUnless { it.isJsonNull }?.let {
@@ -569,7 +615,7 @@ fun parseV2RayN(link: String): VMessBean {
         // 3x-ui writes the mKCP header as type and the seed as path.
         "kcp" -> {
             if (!headerType.isNullOrBlank()) {
-                if (headerType !in supportedKcpHeaderType) throw UnsupportedShareLinkException("unsupported headerType")
+                if (headerType !in supportedKcpHeaderType) throw UnsupportedEntryException("unsupported headerType")
                 bean.headerType = headerType
             }
             bean.mKcpSeed = bean.path
@@ -589,9 +635,10 @@ fun parseV2RayN(link: String): VMessBean {
             if (vmessQRCode.alpn != "none") bean.alpn = vmessQRCode.alpn
             bean.utlsFingerprint = vmessQRCode.fp
             bean.applyECHParam(vmessQRCode.ech)
+            bean.applyFragmentMask(options?.takeUnless { it.isNull("fm") }?.optString("fm"))
         }
 
-        else -> throw UnsupportedShareLinkException("unsupported security")
+        else -> throw UnsupportedEntryException("unsupported security")
     }
 
     return bean
@@ -663,6 +710,7 @@ fun VMessBean.toV2rayN(): String {
                 fm = bean.kcpFinalMask()
             }
         }
+        if (net != "kcp") fm = bean.fragmentFinalMask()
 
         if (isTLS()) {
             tls = "tls"
@@ -797,6 +845,8 @@ fun StandardV2RayBean.toUriVMessVLESSTrojan(isTrojan: Boolean): String {
                     builder.addQueryParameter("pbk", realityPubKey)
                     builder.addQueryParameter("sid", realityShortId)
                 }
+                // Xray's Finalmask form of the profile's TLS fragmentation.
+                if (type != "kcp") fragmentFinalMask()?.let { builder.addQueryParameter("fm", it) }
             }
         }
     }
@@ -947,6 +997,8 @@ fun buildSingBoxOutboundTLS(bean: StandardV2RayBean): OutboundTLSOptions? {
             }
         }
         if (bean.certificates!!.isNotBlank()) certificate = bean.certificates
+        // The core splits the ClientHello into TCP segments, REALITY's too.
+        if (bean.tlsFragment == true) fragment = true
         var fp = bean.utlsFingerprint
         if (bean.realityPubKey!!.isNotBlank()) {
             reality = OutboundRealityOptions().apply {

@@ -82,6 +82,9 @@ abstract class StandardV2RayBean : AbstractBean() {
 
     @JvmField var packetEncoding: Int? = null
 
+    // Split the TLS ClientHello into TCP segments, REALITY's too, whatever the global setting says.
+    @JvmField var tlsFragment: Boolean? = null
+
     override fun initializeDefaultValues() {
         super.initializeDefaultValues()
         uuid = uuid?.takeIf { it.isNotBlank() } ?: ""
@@ -120,11 +123,17 @@ abstract class StandardV2RayBean : AbstractBean() {
         mKcpSeed = mKcpSeed?.takeIf { it.isNotBlank() } ?: ""
         headerType = headerType?.takeIf { it.isNotBlank() } ?: "none"
         kcpLegacy = kcpLegacy ?: false
+        tlsFragment = tlsFragment ?: false
     }
 
     override fun serialize(output: ByteBufferOutput) {
-        // Version 11 only for the legacy mKCP flag, so other stored profiles keep their bytes.
-        val version = if (type == "kcp" && kcpLegacy == true) 11 else 10
+        // Version 11 only for the legacy mKCP flag and 12 only for TLS fragmentation, so other stored
+        // profiles keep their bytes.
+        val version = when {
+            tlsFragment == true -> 12
+            type == "kcp" && kcpLegacy == true -> 11
+            else -> 10
+        }
         output.writeInt(version)
         super.serialize(output)
         output.writeString(uuid)
@@ -186,6 +195,7 @@ abstract class StandardV2RayBean : AbstractBean() {
         output.writeBoolean(muxBrutal!!)
         output.writeInt(muxBrutalUpMbps!!)
         output.writeInt(muxBrutalDownMbps!!)
+        if (version >= 12) output.writeBoolean(true)
     }
 
     override fun deserialize(input: ByteBufferInput) {
@@ -285,6 +295,7 @@ abstract class StandardV2RayBean : AbstractBean() {
             muxBrutalUpMbps = input.readInt()
             muxBrutalDownMbps = input.readInt()
         }
+        if (version >= 12) tlsFragment = input.readBoolean()
     }
 
     val isVLESS: Boolean get() = this is VMessBean && alterId == -1

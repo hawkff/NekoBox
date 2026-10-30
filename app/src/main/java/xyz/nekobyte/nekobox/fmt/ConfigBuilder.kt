@@ -169,10 +169,12 @@ const val TAG_DIRECT = "direct"
 const val TAG_BYPASS = "bypass"
 const val TAG_BLOCK = "block"
 const val TAG_NEBULA = "nebula"
-const val TAG_FRAGMENT = "fragment"
 const val TAG_DNS_HOSTS = "dns-hosts"
 
 const val LOCALHOST = "127.0.0.1"
+
+// Outbounds whose TLS handshake the core cannot split: QUIC carries its own, and naive refuses the option.
+private val UNFRAGMENTED_TLS_TYPES = setOf("hysteria", "hysteria2", "tuic", "juicity", "naive")
 
 // Mirrors libcore/box_include.go, except the legacy DNS type rejected by the core decoder.
 private val coreOutboundTypes = setOf(
@@ -311,7 +313,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     // The Nebula network runs beside whatever profile is selected. Exports leave it out: its config
     // holds this device's key.
     val joinNebula = !forTest && !forExport && DataStore.nebulaEnabled && DataStore.nebulaConfig.isNotBlank()
-    val readableNames = mutableSetOf(TAG_DIRECT, TAG_BYPASS, TAG_BLOCK, TAG_FRAGMENT, TAG_MIXED, TAG_PROXY)
+    val readableNames = mutableSetOf(TAG_DIRECT, TAG_BYPASS, TAG_BLOCK, TAG_MIXED, TAG_PROXY)
     if (joinNebula) readableNames += TAG_NEBULA
     val lookupCache = BuildLookupCache()
     val group = lookupCache.group(proxy.groupId)
@@ -820,13 +822,17 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         }
                     }
 
+                    // The first hop's TLS handshake is the one a firewall sees. The core splits it into TCP
+                    // segments, REALITY's too.
                     if (needGlobal && DataStore.enableTLSFragment) {
-                        val tls = SingBoxOptions.toJsonTree(currentOutbound).get("tls")
-                        val enabled = tls?.takeIf { it.isJsonObject }?.asJsonObject?.get("enabled")
+                        val tree = SingBoxOptions.toJsonTree(currentOutbound).asJsonObject
+                        val enabled = tree.get("tls")?.takeIf { it.isJsonObject }?.asJsonObject?.get("enabled")
                         val tlsEnabled = enabled?.isJsonPrimitive == true &&
                             enabled.asJsonPrimitive.isBoolean &&
                             enabled.asBoolean
-                        if (tlsEnabled) currentOutbound._hack_config_map["detour"] = TAG_FRAGMENT
+                        if (tlsEnabled && tree.get("type")?.asString !in UNFRAGMENTED_TLS_TYPES) {
+                            currentOutbound._hack_config_map["tls"] = mapOf("fragment" to true)
+                        }
                     }
                 }
 
@@ -882,16 +888,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
 
                             // no chain rule and not outbound, so need to set to direct
                             if (index == profileList.lastIndex) {
-                                if (DataStore.enableTLSFragment) {
-                                    routeRules.add(
-                                        Rule_DefaultOptions().apply {
-                                            network = listOf("tcp")
-                                            inbound = listOf(pastInboundTag)
-                                            outbound = TAG_FRAGMENT
-                                        },
-                                    )
-                                }
-
                                 routeRules.add(
                                     Rule_DefaultOptions().apply {
                                         inbound = listOf(pastInboundTag)
@@ -1329,18 +1325,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             )
         }
 
-        if (DataStore.enableTLSFragment) {
-            val fragmentOutbound = Outbound().apply {
-                tag = TAG_FRAGMENT
-                type = "direct"
-                _hack_config_map["fragment"] = Fragment().apply {
-                    length = DataStore.fragmentLength
-                    interval = DataStore.fragmentInterval
-                }.asMap()
-            }
-            outbounds.add(fragmentOutbound)
-        }
-
         // Per-subscription custom resolver (#71): a host is eligible for a dedicated resolver
         // only when it maps to exactly one resolver AND is not shared with any non-custom
         // profile. Otherwise it stays on the global direct DNS path.
@@ -1564,10 +1548,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
         outboundHosts.forEach { (outbound, host) ->
             val strategy = if (forTest) null else SingBoxOptionsUtil.domainStrategy("server")
-            // A chain with as-is resolution must still pass hostnames to its next hop. The local
-            // fragment outbound is not a hop, so the first hop keeps its resolver behind it.
+            // A chain with as-is resolution must still pass hostnames to its next hop.
             val detour = outbound._hack_config_map["detour"]
-            if (detour == null || detour == TAG_FRAGMENT || !strategy.isNullOrEmpty()) {
+            if (detour == null || !strategy.isNullOrEmpty()) {
                 outbound._hack_config_map["domain_resolver"] = dnsResolver(resolverFor(host), strategy?.takeIf { it.isNotEmpty() } ?: directStrategy).asMap()
             }
         }

@@ -89,12 +89,16 @@ class ConfigBuilderGoldenTest {
     }
 
     @Test
-    fun tlsFragment_detoursTlsOutbound() {
+    fun tlsFragment_splitsTheFirstHopHandshakeInTheCore() {
         val previousTlsFragment = DataStore.enableTLSFragment
+        // The core loads each of these in libcore's generated-config check.
+        val directory = File("build/generated-core-configs/fragment").apply { mkdirs() }
+        fun config(profile: ProxyEntity, name: String) = JSONObject(build(profile).config).also { directory.resolve("$name.json").writeText(it.toString()) }
         try {
             DataStore.enableTLSFragment = true
-            val profile = addProfile(
-                addGroup(),
+            val group = addGroup()
+            val vmess = addProfile(
+                group,
                 VMessBean().apply {
                     serverAddress = "192.0.2.13"
                     serverPort = 443
@@ -107,11 +111,49 @@ class ConfigBuilderGoldenTest {
                     initializeDefaultValues()
                 },
             )
+            val global = config(vmess, "global-vmess")
+            val outbound = outbound(global, "vmess")
+            assertTrue(outbound.getJSONObject("tls").getBoolean("fragment"))
+            assertFalse(outbound.has("detour"))
+            assertTrue(objects(global.getJSONArray("outbounds")).none { it.optString("tag") == "fragment" })
 
-            val outbound = outbound(JSONObject(build(profile).config), "vmess")
+            // Hysteria 2's TLS runs inside QUIC, with no TCP segments to split.
+            val hysteria = addProfile(
+                group,
+                HysteriaBean().apply {
+                    protocolVersion = 2
+                    serverAddress = "192.0.2.14"
+                    serverPorts = "443"
+                    authPayload = "charlie"
+                    authPayloadType = HysteriaBean.TYPE_STRING
+                    name = "fragment-hy2"
+                    initializeDefaultValues()
+                },
+            )
+            assertFalse(outbound(config(hysteria, "global-hysteria2"), "hysteria2").getJSONObject("tls").has("fragment"))
 
-            assertTrue(outbound.getJSONObject("tls").getBoolean("enabled"))
-            assertEquals(TAG_FRAGMENT, outbound.getString("detour"))
+            // A profile splits its own handshake, REALITY's too, with the switch off.
+            DataStore.enableTLSFragment = false
+            val reality = addProfile(
+                group,
+                VMessBean().apply {
+                    serverAddress = "192.0.2.15"
+                    serverPort = 443
+                    uuid = "d342d11e-d424-4583-b36e-524ab1f0afa4"
+                    alterId = -1
+                    encryption = "xtls-rprx-vision"
+                    security = "tls"
+                    sni = "www.example.com"
+                    realityPubKey = "yAnz5TF-lXXJte14tji3zlMNq-hd2rYUIgJBgB3fBmk"
+                    realityShortId = "ab"
+                    tlsFragment = true
+                    name = "fragment-reality"
+                    initializeDefaultValues()
+                },
+            )
+            val tls = outbound(config(reality, "profile-reality"), "vless").getJSONObject("tls")
+            assertTrue(tls.getJSONObject("reality").getBoolean("enabled"))
+            assertTrue(tls.getBoolean("fragment"))
         } finally {
             DataStore.enableTLSFragment = previousTlsFragment
         }
@@ -150,8 +192,8 @@ class ConfigBuilderGoldenTest {
 
             val outbound = outbound(JSONObject(build(profile).config), "vmess")
 
-            // The fragment outbound is local, so the subscription's resolver still applies.
-            assertEquals(TAG_FRAGMENT, outbound.getString("detour"))
+            // Splitting the handshake keeps the subscription's resolver on the first hop.
+            assertTrue(outbound.getJSONObject("tls").getBoolean("fragment"))
             assertEquals("dns-sub-$group", outbound.getJSONObject("domain_resolver").getString("server"))
         } finally {
             DataStore.enableTLSFragment = previousTlsFragment

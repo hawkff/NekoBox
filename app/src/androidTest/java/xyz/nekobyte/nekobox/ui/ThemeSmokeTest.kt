@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
 import java.io.File
@@ -56,6 +57,7 @@ class ThemeSmokeTest {
             R.layout.layout_import,
             R.layout.item_keyboard_key,
             R.layout.layout_profile,
+            R.layout.layout_profile_compact,
             R.layout.layout_route_item,
         )
         for (id in allThemes) {
@@ -69,6 +71,13 @@ class ThemeSmokeTest {
                 }
             }
         }
+    }
+
+    /** The compact profile row holds every view of the card, so the card's binding reads it. */
+    @Test
+    fun compactProfileRowBindsLikeTheCard() {
+        val inflater = LayoutInflater.from(themed(Theme.RED, night = false))
+        instrumentation.runOnMainSync { LayoutProfileBinding.bind(inflater.inflate(R.layout.layout_profile_compact, null)) }
     }
 
     /**

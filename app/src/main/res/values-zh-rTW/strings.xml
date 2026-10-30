@@ -369,8 +369,6 @@
     <string name="global_allow_insecure">總是跳過 TLS 證書驗證</string>
     <string name="fragment_settings">分片設定</string>
     <string name="enable_tls_fragment">啟用TLS Client Hello分片</string>
-    <string name="fragment_length">分片包長（最小-最大）</string>
-    <string name="fragment_interval">分片間隔（最小-最大）</string>
     <string name="backup_local">本地</string>
     <string name="backup_webdav">WebDAV</string>
     <string name="webdav_settings">WebDAV 設定</string>

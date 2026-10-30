@@ -374,17 +374,8 @@
         <PreferenceCategory app:title="@string/fragment_settings">
             <SwitchPreference
                 app:key="enableTLSFragment"
+                app:summary="@string/enable_tls_fragment_sum"
                 app:title="@string/enable_tls_fragment" />
-            <EditTextPreference
-                app:defaultValue="100-200"
-                app:key="fragmentLength"
-                app:title="@string/fragment_length"
-                app:useSimpleSummaryProvider="true" />
-            <EditTextPreference
-                app:defaultValue="10-20"
-                app:key="fragmentInterval"
-                app:title="@string/fragment_interval"
-                app:useSimpleSummaryProvider="true" />
         </PreferenceCategory>
     </PreferenceScreen>
 

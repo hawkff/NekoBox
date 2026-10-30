@@ -56,8 +56,7 @@
             android:layout_height="wrap_content"
             android:background="?attr/appBarBackgroundColor"
             android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone">
+            android:orientation="horizontal">
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/group_tab"

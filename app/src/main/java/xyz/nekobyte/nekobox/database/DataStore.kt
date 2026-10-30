@@ -4,6 +4,7 @@ import android.os.Binder
 import android.os.Build
 import androidx.preference.PreferenceDataStore
 import xyz.nekobyte.nekobox.CONNECTION_TEST_URL
+import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.IPv6Mode
 import xyz.nekobyte.nekobox.Key
@@ -122,7 +123,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // One Nebula network joined alongside the selected profile; its config holds the PKI inline.
     var nebulaEnabled by configurationStore.boolean(Key.NEBULA_ENABLED)
     var nebulaConfig by configurationStore.string(Key.NEBULA_CONFIG)
-    var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { 0 }
+    var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { GroupLayout.COMPACT }
 
     // Profiles pinned to the Favorites tab, in the order they were pinned.
     var favoriteProfiles: List<Long>
@@ -298,8 +299,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var globalAllowInsecure by configurationStore.boolean(Key.GLOBAL_ALLOW_INSECURE) { false }
 
     var enableTLSFragment by configurationStore.boolean(Key.ENABLE_TLS_FRAGMENT) { false }
-    var fragmentLength by configurationStore.string(Key.FRAGMENT_LENGTH) { "100-200" }
-    var fragmentInterval by configurationStore.string(Key.FRAGMENT_INTERVAL) { "10-20" }
 
     // old cache, DO NOT ADD
 
@@ -394,8 +393,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var subscriptionCustomDns by profileCacheStore.string(Key.SUBSCRIPTION_CUSTOM_DNS)
 
     var rulesFirstCreate by profileCacheStore.boolean("rulesFirstCreate")
-
-    // var enableTLSFragment by configurationStore.boolean(Key.ENABLE_TLS_FRAGMENT)
 
     var webdavServer: String?
         get() = configurationStore.getString(Key.WEBDAV_SERVER)

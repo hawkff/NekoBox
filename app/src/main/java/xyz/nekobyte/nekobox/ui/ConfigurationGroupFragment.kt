@@ -27,6 +27,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
+import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.GroupOrder
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.NekoBox
@@ -134,7 +135,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         itemTouchHelper = configurationListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, 0) {
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (isEnabled && adapter?.canDrag() == true) {
-                if (DataStore.groupLayoutMode == 1) {
+                if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
                 } else {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN
@@ -254,32 +255,28 @@ class ConfigurationGroupFragment : Fragment() {
             true
         }
 
-        val layoutSingle = menu.findItem(R.id.action_layout_single)
-        val layoutDouble = menu.findItem(R.id.action_layout_double)
-        when (DataStore.groupLayoutMode) {
-            0 -> layoutSingle.isChecked = true
-            1 -> layoutDouble.isChecked = true
-        }
-        layoutSingle.setOnMenuItemClickListener {
-            it.isChecked = true
-            if (DataStore.groupLayoutMode != 0) {
-                DataStore.groupLayoutMode = 0
-                (parentFragment as? ConfigurationFragment)?.switchAllGroupFragmentsLayout()
+        val layouts = mapOf(
+            R.id.action_layout_compact to GroupLayout.COMPACT,
+            R.id.action_layout_single to GroupLayout.CARDS,
+            R.id.action_layout_double to GroupLayout.TWO_COLUMNS,
+        )
+        val current = DataStore.groupLayoutMode
+        for ((id, layout) in layouts) {
+            val item = menu.findItem(id)
+            item.isChecked = layout == current
+            item.setOnMenuItemClickListener {
+                it.isChecked = true
+                if (DataStore.groupLayoutMode != layout) {
+                    DataStore.groupLayoutMode = layout
+                    (parentFragment as? ConfigurationFragment)?.switchAllGroupFragmentsLayout()
+                }
+                true
             }
-            true
-        }
-        layoutDouble.setOnMenuItemClickListener {
-            it.isChecked = true
-            if (DataStore.groupLayoutMode != 1) {
-                DataStore.groupLayoutMode = 1
-                (parentFragment as? ConfigurationFragment)?.switchAllGroupFragmentsLayout()
-            }
-            true
         }
     }
 
     private fun setupLayoutManager() {
-        layoutManager = if (DataStore.groupLayoutMode == 1) {
+        layoutManager = if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
             FixedGridLayoutManager(configurationListView, 2)
         } else {
             FixedLinearLayoutManager(configurationListView)
@@ -381,6 +378,9 @@ class ConfigurationGroupFragment : Fragment() {
         init {
             setHasStableIds(true)
         }
+
+        // Rows of the previous layout are not reused in another.
+        private var layoutMode = DataStore.groupLayoutMode
 
         var configurationIdList: MutableList<Long> = mutableListOf()
         val configurationList = HashMap<Long, ProxyEntity>()
@@ -641,13 +641,14 @@ class ConfigurationGroupFragment : Fragment() {
             }
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ConfigurationHolder = ConfigurationHolder(
-            LayoutProfileBinding.inflate(
-                LayoutInflater.from(parent.context),
-                parent,
-                false,
-            ),
-        )
+        override fun getItemViewType(position: Int) = layoutMode
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ConfigurationHolder {
+            // The compact row holds the card's views in one line, so the card's binding reads it too.
+            val layout = if (viewType == GroupLayout.COMPACT) R.layout.layout_profile_compact else R.layout.layout_profile
+            val view = LayoutInflater.from(parent.context).inflate(layout, parent, false)
+            return ConfigurationHolder(LayoutProfileBinding.bind(view), viewType)
+        }
 
         override fun getItemId(position: Int): Long = configurationIdList[position]
 
@@ -676,6 +677,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         fun onLayoutModeChanged() {
             if (disposed) return
+            layoutMode = DataStore.groupLayoutMode
             ++displayGeneration
             diffJob?.cancel()
             displayPending = false
@@ -709,7 +711,7 @@ class ConfigurationGroupFragment : Fragment() {
         fun move(from: Int, to: Int) {
             if (!dragInProgress || from == to) return
 
-            if (DataStore.groupLayoutMode == 1) {
+            if (layoutMode == GroupLayout.TWO_COLUMNS) {
                 moveDualColumn(from, to)
             } else {
                 moveLinear(from, to)
@@ -1042,7 +1044,7 @@ class ConfigurationGroupFragment : Fragment() {
     val profileAccess = Mutex()
     val reloadAccess = Mutex()
 
-    inner class ConfigurationHolder(val binding: LayoutProfileBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class ConfigurationHolder(val binding: LayoutProfileBinding, private val layout: Int) : RecyclerView.ViewHolder(binding.root) {
 
         val view: View get() = binding.root
 
@@ -1277,6 +1279,7 @@ class ConfigurationGroupFragment : Fragment() {
             val trafficRowEmpty =
                 (!showTraffic || proxyEntity.status <= 0) && address.isBlank()
             (trafficText.parent as View).visibility = when {
+                layout == GroupLayout.COMPACT -> View.GONE
                 !trafficRowEmpty -> View.VISIBLE
                 reserveMiddleRow -> View.INVISIBLE
                 else -> View.GONE
@@ -1319,9 +1322,8 @@ class ConfigurationGroupFragment : Fragment() {
                 profileStatus.alpha = 1f
             }
 
-            val isDoubleColumn = DataStore.groupLayoutMode == 1
-
-            if (isDoubleColumn) {
+            // Two columns and compact rows keep the actions under ⋮.
+            if (layout != GroupLayout.CARDS) {
                 editButton.isGone = true
                 shareLayout.isGone = true
                 removeButton.isGone = true

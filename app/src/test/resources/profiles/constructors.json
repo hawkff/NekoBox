@@ -293,7 +293,8 @@
       "name": null,
       "customOutboundJson": null,
       "customConfigJson": null,
-      "kcpLegacy": null
+      "kcpLegacy": null,
+      "tlsFragment": null
     },
     "defaults": {
       "username": "",
@@ -339,7 +340,8 @@
       "name": "",
       "customOutboundJson": "",
       "customConfigJson": "",
-      "kcpLegacy": false
+      "kcpLegacy": false,
+      "tlsFragment": false
     },
     "fields": {
       "username": "java.lang.String",
@@ -387,7 +389,8 @@
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
       "finalPort": "int",
-      "kcpLegacy": "java.lang.Boolean"
+      "kcpLegacy": "java.lang.Boolean",
+      "tlsFragment": "java.lang.Boolean"
     }
   },
   {
@@ -1059,7 +1062,8 @@
       "name": null,
       "customOutboundJson": null,
       "customConfigJson": null,
-      "kcpLegacy": null
+      "kcpLegacy": null,
+      "tlsFragment": null
     },
     "defaults": {
       "password": "",
@@ -1104,7 +1108,8 @@
       "name": "",
       "customOutboundJson": "",
       "customConfigJson": "",
-      "kcpLegacy": false
+      "kcpLegacy": false,
+      "tlsFragment": false
     },
     "fields": {
       "password": "java.lang.String",
@@ -1151,7 +1156,8 @@
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
       "finalPort": "int",
-      "kcpLegacy": "java.lang.Boolean"
+      "kcpLegacy": "java.lang.Boolean",
+      "tlsFragment": "java.lang.Boolean"
     }
   },
   {
@@ -1317,7 +1323,8 @@
       "name": null,
       "customOutboundJson": null,
       "customConfigJson": null,
-      "kcpLegacy": null
+      "kcpLegacy": null,
+      "tlsFragment": null
     },
     "defaults": {
       "alterId": 0,
@@ -1362,7 +1369,8 @@
       "name": "",
       "customOutboundJson": "",
       "customConfigJson": "",
-      "kcpLegacy": false
+      "kcpLegacy": false,
+      "tlsFragment": false
     },
     "fields": {
       "alterId": "java.lang.Integer",
@@ -1409,7 +1417,8 @@
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
       "finalPort": "int",
-      "kcpLegacy": "java.lang.Boolean"
+      "kcpLegacy": "java.lang.Boolean",
+      "tlsFragment": "java.lang.Boolean"
     }
   },
   {
@@ -1614,7 +1623,8 @@
       "name": null,
       "customOutboundJson": null,
       "customConfigJson": null,
-      "kcpLegacy": null
+      "kcpLegacy": null,
+      "tlsFragment": null
     },
     "defaults": {
       "version": 3,
@@ -1660,7 +1670,8 @@
       "name": "",
       "customOutboundJson": "",
       "customConfigJson": "",
-      "kcpLegacy": false
+      "kcpLegacy": false,
+      "tlsFragment": false
     },
     "fields": {
       "version": "java.lang.Integer",
@@ -1708,7 +1719,8 @@
       "customConfigJson": "java.lang.String",
       "finalAddress": "java.lang.String",
       "finalPort": "int",
-      "kcpLegacy": "java.lang.Boolean"
+      "kcpLegacy": "java.lang.Boolean",
+      "tlsFragment": "java.lang.Boolean"
     }
   }
 ]

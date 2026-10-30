@@ -82,14 +82,14 @@ class XrayJsonImportTest {
         .put("outbounds", JSONArray(outbounds.toList()).put(JSONObject().put("protocol", "freedom").put("tag", "direct")))
         .toString()
 
-    private fun vless(stream: JSONObject = JSONObject().put("network", "tcp").put("security", "none")) = JSONObject()
+    private fun vless(stream: JSONObject = JSONObject().put("network", "tcp").put("security", "none"), address: String = "192.0.2.1") = JSONObject()
         .put("protocol", "vless").put("tag", "proxy")
         .put(
             "settings",
             JSONObject().put(
                 "vnext",
                 JSONArray().put(
-                    JSONObject().put("address", "192.0.2.1").put("port", 443)
+                    JSONObject().put("address", address).put("port", 443)
                         .put("users", JSONArray().put(JSONObject().put("id", UUID).put("encryption", "none").put("flow", "xtls-rprx-vision"))),
                 ),
             ),
@@ -178,13 +178,19 @@ class XrayJsonImportTest {
             assertTrue("case $index", parsed == null || parsed.proxies.none { it.name == "node proxy" || it.name == "node" })
         }
 
-        // A local fragmenting outbound in front imports the node and reports what it drops.
+        // A local fragmenting outbound in front: the profile splits the ClientHello itself.
         val fragment = JSONObject().put("protocol", "freedom").put("tag", "fragment")
             .put("settings", JSONObject().put("fragment", JSONObject().put("packets", "tlshello").put("length", "100-200")))
-        val parsed = RawUpdater.parseImport(config(vless(JSONObject(reality.toString()).put("sockopt", JSONObject().put("dialerProxy", "fragment"))), fragment))!!
-        assertEquals("www.example.com", (parsed.proxies.single() as VMessBean).sni)
-        assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(parsed).dropped)
+        val behindFragment = vless(JSONObject(reality.toString()).put("sockopt", JSONObject().put("dialerProxy", "fragment")))
+        val parsed = RawUpdater.parseImport(config(behindFragment, fragment))!!
+        val fragmented = parsed.proxies.single() as VMessBean
+        assertEquals(listOf("www.example.com", true), listOf(fragmented.sni, fragmented.tlsFragment))
+        assertTrue(ImportPreview.of(parsed).dropped.isEmpty())
         assertNull(parsed.report.failed.firstOrNull())
+        // UDP noise is no setting of the node, so the import reports it.
+        val noise = JSONObject().put("protocol", "freedom").put("tag", "fragment")
+            .put("settings", JSONObject().put("noises", JSONArray().put(JSONObject().put("type", "rand").put("packet", "10-20"))))
+        assertEquals(listOf(ImportPreview.Section.NOISE), ImportPreview.of(RawUpdater.parseImport(config(behindFragment, noise))!!).dropped)
         // A freedom outbound that redirects the connection cannot be left out.
         val redirect = JSONObject().put("protocol", "freedom").put("tag", "fragment").put("settings", JSONObject().put("redirect", "203.0.113.1:443"))
         assertTrue(RawUpdater.parseImport(config(vless(JSONObject(reality.toString()).put("sockopt", JSONObject().put("dialerProxy", "fragment"))), redirect)) == null)
@@ -238,20 +244,29 @@ class XrayJsonImportTest {
     }
 
     @Test
-    fun finalmaskFragmentImportsWithoutIt() = runTest {
-        // REALITY with a fragmented ClientHello, as Remnawave serves it: the node imports without fragmenting.
+    fun finalmaskFragmentBecomesTheProfilesTlsFragmentation() = runTest {
+        // REALITY with a fragmented ClientHello, as Remnawave serves it: the profile splits it itself.
         val fragment = JSONObject().put("type", "fragment").put("settings", JSONObject().put("packets", "tlshello").put("length", "10-20").put("delay", "0"))
         fun reality(tcp: JSONArray) = JSONObject().put("network", "tcp").put("security", "reality")
             .put("realitySettings", JSONObject().put("serverName", "www.example.com").put("publicKey", "key").put("fingerprint", "firefox"))
             .put("finalmask", JSONObject().put("tcp", tcp))
         val parsed = RawUpdater.parseImport(config(vless(reality(JSONArray().put(fragment)))))!!
         val node = parsed.proxies.single() as VMessBean
-        assertEquals(listOf("www.example.com", "xtls-rprx-vision"), listOf(node.sni, node.encryption))
-        assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(parsed).dropped)
+        assertEquals(listOf("www.example.com", "xtls-rprx-vision", true), listOf(node.sni, node.encryption, node.tlsFragment))
+        assertTrue(ImportPreview.of(parsed).dropped.isEmpty())
         assertTrue(parsed.report.failed.isEmpty())
         // Another TCP mask beside it still refuses the node.
         val mixed = RawUpdater.parseImport(config(vless(reality(JSONArray().put(fragment).put(JSONObject().put("type", "header-custom"))))))
         assertTrue(mixed == null || mixed.proxies.isEmpty())
+        // Without TLS there is no ClientHello to split, and the import says what it left out.
+        val plain = JSONObject().put("network", "tcp").put("security", "none").put("finalmask", JSONObject().put("tcp", JSONArray().put(fragment)))
+        val unfragmented = RawUpdater.parseImport(config(vless(plain)))!!
+        assertEquals(false, (unfragmented.proxies.single() as VMessBean).tlsFragment)
+        assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(unfragmented).dropped)
+        // A share link without TLS says the same.
+        val mask = java.net.URLEncoder.encode(JSONObject().put("tcp", JSONArray().put(fragment)).toString(), "UTF-8")
+        val link = RawUpdater.parseImport("vless://$UUID@192.0.2.1:443?type=tcp&security=none&fm=$mask#plain")!!
+        assertEquals(listOf(ImportPreview.Section.FRAGMENT), ImportPreview.of(link).dropped)
     }
 
     @Test
@@ -263,6 +278,39 @@ class XrayJsonImportTest {
         assertEquals("/sh", node.path)
         assertEquals("cdn.example", node.host)
         assertEquals("packet-up", node.xhttpMode)
+    }
+
+    @Test
+    fun panelSubscriptionsKeepOneCopyOfEachServerAndTheRoutingMostConfigsUse() = runTest {
+        fun routing(domain: String, tag: String) = JSONObject().put(
+            "rules",
+            JSONArray().put(JSONObject().put("type", "field").put("ruleTag", tag).put("outboundTag", "direct").put("domain", JSONArray().put(domain))),
+        )
+        fun panelConfig(remarks: String, routing: JSONObject, vararg addresses: String) = JSONObject(
+            config(*addresses.mapIndexed { index, address -> vless(address = address).put("tag", if (index == 0) "proxy" else "proxy-${index + 1}") }.toTypedArray()),
+        ).put("remarks", remarks).put("routing", routing)
+        // An auto-select config first, as Remnawave serves it: a server of its own and a copy of the next config's.
+        // The server configs name their rules differently, which does not split their votes.
+        val subscription = JSONArray()
+            .put(panelConfig("auto", routing("domain:auto.example", "auto"), "192.0.2.10", "192.0.2.11"))
+            .put(panelConfig("first", routing("domain:server.example", "first"), "192.0.2.11"))
+            .put(panelConfig("second", routing("domain:server.example", "second"), "192.0.2.12"))
+        val parsed = RawUpdater.parseImport(subscription.toString())!!
+        assertEquals(listOf("auto proxy", "first", "second"), parsed.proxies.map { it.name })
+        val rules = parsed.report.routing!!.content.getJSONArray("rules")
+        assertEquals(listOf("domain:server.example"), (0 until rules.length()).map { rules.getJSONObject(it).getString("domains") })
+    }
+
+    @Test
+    fun refusedNodesReportWhatIsUnsupported() = runTest {
+        // A good node beside the refused one, so the import has something to return.
+        val chained = JSONObject(config(vless().put("proxySettings", JSONObject().put("tag", "other"))))
+        val parsed = RawUpdater.parseImport(JSONArray().put(JSONObject(config(vless()))).put(chained).toString())!!
+        assertEquals(listOf("vless"), parsed.report.failed)
+        assertEquals(listOf("unsupported proxySettings"), ImportPreview.of(parsed).reasons)
+        // Share links report their refused options the same way.
+        val links = RawUpdater.parseImport("vless://$UUID@192.0.2.1:443?type=tcp&security=tls&pcs=abcd#pinned\nvless://$UUID@192.0.2.2:443?type=tcp#plain")!!
+        assertEquals(listOf("unsupported pcs"), links.report.reasons.toList())
     }
 
     private companion object {

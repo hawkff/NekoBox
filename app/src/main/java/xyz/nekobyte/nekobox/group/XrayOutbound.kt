@@ -9,6 +9,7 @@ import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2
 import xyz.nekobyte.nekobox.fmt.shadowsocks.parseShadowsocks
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.trojan.parseTrojan
+import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.ktx.linkBuilder
@@ -27,32 +28,36 @@ internal object XrayOutbound {
 
     /** [outbound] as a profile named [name]. [outbounds] are the config's other outbounds. */
     fun parse(outbound: JSONObject, name: String, outbounds: List<JSONObject?>, report: ImportReport): AbstractBean {
-        require(outbound.optJSONObject("proxySettings") == null) { "unsupported proxySettings" }
+        requireSupported(outbound.optJSONObject("proxySettings") == null) { "unsupported proxySettings" }
         val settings = outbound.optJSONObject("settings") ?: JSONObject()
         val streamSettings = outbound.optJSONObject("streamSettings") ?: JSONObject()
-        // Finalmask can fragment the TLS ClientHello itself, as the freedom outbound below does; the
-        // node imports without it the same way.
+        // Finalmask can fragment the ClientHello too, as Remnawave writes it; the profile does that itself below.
         val stream = streamSettings.withoutFragmentMasks() ?: streamSettings
-        val fragmented = stream.optJSONObject("sockopt")?.optString("dialerProxy")?.takeIf { it.isNotEmpty() }?.let { tag ->
+        val freedom = stream.optJSONObject("sockopt")?.optString("dialerProxy")?.takeIf { it.isNotEmpty() }?.let { tag ->
             // 3x-ui can send the connection through a local freedom outbound that fragments the TLS
             // ClientHello or adds UDP noise. Another proxy in front would be a chain, which this
             // import does not build.
             val target = outbounds.firstOrNull { it?.optString("tag") == tag }
-            require(target?.optString("protocol") == "freedom") { "unsupported dialerProxy" }
+            requireSupported(target?.optString("protocol") == "freedom") { "unsupported dialerProxy" }
             // A freedom outbound that redirects or adds a PROXY header would change the connection itself.
             val freedom = target!!.optJSONObject("settings") ?: JSONObject()
-            require(freedom.optString("redirect").isEmpty() && freedom.optInt("proxyProtocol") == 0) { "unsupported dialerProxy" }
-        } != null || stream !== streamSettings
+            requireSupported(freedom.optString("redirect").isEmpty() && freedom.optInt("proxyProtocol") == 0) { "unsupported dialerProxy" }
+            freedom
+        }
         if (security(stream) == "tls") {
             // The core has no counterpart to a pinned certificate, checked names or a private CA,
             // so the node would trust certificates its provider meant to refuse.
             val tls = stream.optJSONObject("tlsSettings") ?: JSONObject()
-            require(tls.strings("pinnedPeerCertSha256").isEmpty()) { "unsupported pinned certificate" }
-            require(tls.strings("verifyPeerCertInNames").isEmpty()) { "unsupported checked names" }
-            require((tls.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
+            requireSupported(tls.strings("pinnedPeerCertSha256").isEmpty()) { "unsupported pinned certificate" }
+            requireSupported(tls.strings("verifyPeerCertInNames").isEmpty()) { "unsupported checked names" }
+            requireSupported((tls.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
         }
-        return parseProtocol(outbound, settings, stream, name).also {
-            if (fragmented) report.dropped += ImportPreview.Section.FRAGMENT
+        return parseProtocol(outbound, settings, stream, name).also { bean ->
+            if (freedom?.optJSONObject("fragment") != null || stream !== streamSettings) {
+                // The profile splits the ClientHello itself; a node without TLS has none to split.
+                if (bean is StandardV2RayBean && bean.security == "tls") bean.tlsFragment = true else report.dropped += ImportPreview.Section.FRAGMENT
+            }
+            if ((freedom?.optJSONArray("noises")?.length() ?: 0) > 0) report.dropped += ImportPreview.Section.NOISE
         }
     }
 
@@ -64,7 +69,7 @@ internal object XrayOutbound {
                 link.param("encryption", user.optString("encryption").ifEmpty { "none" }).param("flow", user.optString("flow"))
             } else {
                 // Only AEAD VMess; Xray-core no longer accepts a nonzero alterId.
-                require(user.optInt("alterId") == 0) { "unsupported VMess alterId" }
+                requireSupported(user.optInt("alterId") == 0) { "unsupported VMess alterId" }
                 link.param("encryption", user.optString("security").ifEmpty { "auto" })
             }
             applyStream(link, stream)
@@ -86,14 +91,14 @@ internal object XrayOutbound {
 
         "socks", "http" -> {
             val (server, user) = server(settings, "servers")
-            require(stream.optString("network").ifEmpty { "tcp" } in setOf("tcp", "raw")) { "unsupported transport" }
+            requireSupported(stream.optString("network").ifEmpty { "tcp" } in setOf("tcp", "raw")) { "unsupported transport" }
             val tls = when (security(stream)) {
                 "none" -> false
                 "tls" -> true
-                else -> error("unsupported security")
+                else -> refuse("unsupported security")
             }
             if (protocol == "socks") {
-                require(!tls) { "unsupported SOCKS over TLS" }
+                requireSupported(!tls) { "unsupported SOCKS over TLS" }
                 SOCKSBean().apply {
                     this.protocol = SOCKSBean.PROTOCOL_SOCKS5
                     username = user.optString("user")
@@ -105,7 +110,7 @@ internal object XrayOutbound {
                     password = user.optString("pass")
                     if (tls) {
                         val tlsSettings = stream.optJSONObject("tlsSettings") ?: JSONObject()
-                        require(tlsSettings.optString("echConfigList").isEmpty()) { "unsupported ECH" }
+                        requireSupported(tlsSettings.optString("echConfigList").isEmpty()) { "unsupported ECH" }
                         security = "tls"
                         sni = tlsSettings.optString("serverName")
                         allowInsecure = tlsSettings.optBoolean("allowInsecure")
@@ -118,7 +123,7 @@ internal object XrayOutbound {
             }
         }
 
-        else -> error("unsupported protocol")
+        else -> refuse("unsupported protocol")
     }
 
     /**
@@ -128,16 +133,16 @@ internal object XrayOutbound {
      */
     private fun server(settings: JSONObject, listKey: String): Pair<JSONObject, JSONObject> {
         val servers = settings.optJSONArray(listKey) ?: return settings to settings
-        require(servers.length() == 1) { "unsupported server list" }
+        requireSupported(servers.length() == 1) { "unsupported server list" }
         val server = servers.getJSONObject(0)
         val users = server.optJSONArray("users") ?: return server to server
-        require(users.length() == 1) { "unsupported user list" }
+        requireSupported(users.length() == 1) { "unsupported user list" }
         return server to users.getJSONObject(0)
     }
 
-    private fun JSONObject.text(key: String) = optString(key).takeIf { it.isNotEmpty() } ?: error("missing $key")
+    private fun JSONObject.text(key: String) = optString(key).takeIf { it.isNotEmpty() } ?: refuse("missing $key")
 
-    private fun JSONObject.port() = optInt("port").takeIf { it in 1..65535 } ?: error("invalid port")
+    private fun JSONObject.port() = optInt("port").takeIf { it in 1..65535 } ?: refuse("invalid port")
 
     private fun address(server: JSONObject) = linkBuilder().host(server.text("address")).port(server.port())
 
@@ -168,7 +173,7 @@ internal object XrayOutbound {
                         link.param("path", request.strings("path").joinToString(","))
                     }
 
-                    else -> error("unsupported TCP header")
+                    else -> refuse("unsupported TCP header")
                 }
             }
 
@@ -181,7 +186,7 @@ internal object XrayOutbound {
             "grpc" -> {
                 val grpc = stream.optJSONObject("grpcSettings") ?: JSONObject()
                 // The core sends no :authority of its own, and a CDN may route by it.
-                require(grpc.optString("authority").isEmpty()) { "unsupported gRPC authority" }
+                requireSupported(grpc.optString("authority").isEmpty()) { "unsupported gRPC authority" }
                 link.param("serviceName", grpc.optString("serviceName"))
             }
 
@@ -207,9 +212,9 @@ internal object XrayOutbound {
                 link.param("seed", kcp.optString("seed"))
             }
 
-            else -> error("unsupported transport")
+            else -> refuse("unsupported transport")
         }
-        // The link parsers accept only the mKCP masks.
+        // Fragment masks are gone by now; the link parsers accept only the mKCP masks.
         stream.optJSONObject("finalmask")?.let { link.param("fm", it.toString()) }
         when (val security = security(stream)) {
             "none" -> link.param("security", security)
@@ -236,7 +241,7 @@ internal object XrayOutbound {
                 link.param("pqv", reality.optString("mldsa65Verify"))
             }
 
-            else -> error("unsupported security")
+            else -> refuse("unsupported security")
         }
     }
 
@@ -249,13 +254,13 @@ internal object XrayOutbound {
         if (network == "tcp" && header?.optString("type") == "http") {
             val request = header.optJSONObject("request") ?: JSONObject()
             // obfs-local sends its requests to /.
-            require(request.strings("path").all { it == "/" }) { "unsupported HTTP header path" }
-            require(security(stream) == "none") { "unsupported shadowsocks transport" }
+            requireSupported(request.strings("path").all { it == "/" }) { "unsupported HTTP header path" }
+            requireSupported(security(stream) == "none") { "unsupported shadowsocks transport" }
             val host = request.optJSONObject("headers")?.strings("Host")?.firstOrNull()
             link.param("plugin", listOfNotNull("obfs-local", "obfs=http", host?.let { "obfs-host=$it" }).joinToString(";"))
         } else {
             // The plugin has no REALITY; the link parser would build such a node without it.
-            require(security(stream) in setOf("none", "tls")) { "unsupported shadowsocks security" }
+            requireSupported(security(stream) in setOf("none", "tls")) { "unsupported shadowsocks security" }
             applyStream(link, stream)
         }
         return parseShadowsocks(link.fragment(name).build().link("ss"))
@@ -268,9 +273,9 @@ internal object XrayOutbound {
      */
     private fun hysteria(settings: JSONObject, stream: JSONObject, name: String): AbstractBean {
         val hysteria = stream.optJSONObject("hysteriaSettings") ?: JSONObject()
-        require(settings.optInt("version", 2) == 2 && hysteria.optInt("version", 2) == 2) { "unsupported Hysteria version" }
-        require(stream.optString("network").ifEmpty { "hysteria" } == "hysteria") { "unsupported transport" }
-        require(security(stream) == "tls") { "unsupported security" }
+        requireSupported(settings.optInt("version", 2) == 2 && hysteria.optInt("version", 2) == 2) { "unsupported Hysteria version" }
+        requireSupported(stream.optString("network").ifEmpty { "hysteria" } == "hysteria") { "unsupported transport" }
+        requireSupported(security(stream) == "tls") { "unsupported security" }
         val tls = stream.optJSONObject("tlsSettings") ?: JSONObject()
         val link = address(settings).username(hysteria.optString("auth"))
             .param("security", "tls")
@@ -280,7 +285,7 @@ internal object XrayOutbound {
         if (tls.optBoolean("allowInsecure")) link.param("insecure", "1")
         var hopInterval: Int? = null
         val masks = stream.optJSONObject("finalmask")
-        require(masks == null || masks.keys().asSequence().all { it == "udp" || it == "quicParams" }) { "unsupported finalmask" }
+        requireSupported(masks == null || masks.keys().asSequence().all { it == "udp" || it == "quicParams" }) { "unsupported finalmask" }
         val quic = masks?.optJSONObject("quicParams") ?: JSONObject()
         // Brutal sends at brutalUp unless another congestion control is chosen; the receive rate is advertised either way.
         val upMbps = bandwidthMbps(quic.optString("brutalUp")).takeIf { quic.optString("congestion").lowercase() in BRUTAL }
@@ -312,7 +317,7 @@ internal object XrayOutbound {
                     hopInterval = maskSettings.optString("interval").substringBefore('-').trim().toIntOrNull()
                 }
 
-                else -> error("unsupported finalmask")
+                else -> refuse("unsupported finalmask")
             }
         }
         return parseHysteria2(link.fragment(name).build().link("hysteria2")).apply {
@@ -330,14 +335,14 @@ internal object XrayOutbound {
     /** An Xray bandwidth such as "100mbps", in whole Mbps for the core; Xray's units are binary. Null when unset. */
     private fun bandwidthMbps(value: String): Int? {
         if (value.isBlank()) return null
-        val (number, unit) = BANDWIDTH.matchEntire(value.trim().lowercase())?.destructured ?: error("invalid bandwidth")
+        val (number, unit) = BANDWIDTH.matchEntire(value.trim().lowercase())?.destructured ?: refuse("invalid bandwidth")
         val bits = number.toDouble() * when (unit) {
             "", "b", "bps" -> 1.0
             "k", "kb", "kbps" -> 1024.0
             "m", "mb", "mbps" -> 1048576.0
             "g", "gb", "gbps" -> 1073741824.0
             "t", "tb", "tbps" -> 1099511627776.0
-            else -> error("invalid bandwidth")
+            else -> refuse("invalid bandwidth")
         }
         // Zero leaves Brutal off, as an unset value does. A positive one that rounds to 0 would also turn
         // it off, so it keeps 1; Xray's own minimum is 512 kbps.
@@ -358,9 +363,9 @@ internal object XrayOutbound {
 
     /** WireGuard as the wg-quick config of the same tunnel. */
     private fun wireGuard(settings: JSONObject, name: String): AbstractBean {
-        val peers = settings.optJSONArray("peers") ?: error("missing peers")
+        val peers = settings.optJSONArray("peers") ?: refuse("missing peers")
         val reserved = settings.optJSONArray("reserved")?.let { list -> (0 until list.length()).map { list.getInt(it) } }.orEmpty()
-        require(reserved.all { it == 0 } || peers.length() == 1) { "unsupported reserved bytes" }
+        requireSupported(reserved.all { it == 0 } || peers.length() == 1) { "unsupported reserved bytes" }
         val conf = buildString {
             appendLine("[Interface]")
             appendLine("PrivateKey = ${settings.text("secretKey").line()}")
@@ -386,7 +391,7 @@ internal object XrayOutbound {
     }
 
     /** A value for one line of a wg-quick config; a line break would add settings of its own. */
-    private fun String.line() = also { require('\n' !in it && '\r' !in it) { "invalid WireGuard value" } }
+    private fun String.line() = also { requireSupported('\n' !in it && '\r' !in it) { "invalid WireGuard value" } }
 }
 
 /** A string or a list of strings, as Xray accepts for several fields. */
@@ -395,3 +400,10 @@ internal fun JSONObject.strings(key: String): List<String> = when (val value = o
     null, JSONObject.NULL -> emptyList()
     else -> listOf(value.toString())
 }.filter { it.isNotEmpty() }
+
+// Refusals name only the unsupported option, so the import warning can show them.
+private inline fun requireSupported(value: Boolean, reason: () -> String) {
+    if (!value) refuse(reason())
+}
+
+private fun refuse(reason: String): Nothing = throw UnsupportedEntryException(reason)

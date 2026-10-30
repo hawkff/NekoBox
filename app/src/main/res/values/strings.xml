@@ -37,8 +37,9 @@
         <item quantity="one">%d profile</item>
         <item quantity="other">%d profiles</item>
     </plurals>
-    <string name="layout_single_column">Single column</string>
-    <string name="layout_double_column">Double column</string>
+    <string name="layout_compact">Compact list</string>
+    <string name="layout_single_column">Cards</string>
+    <string name="layout_double_column">Cards in two columns</string>
     <string name="sort_and_layout">Sort and layout</string>
     <string name="group_no_difference">%s: no difference</string>
     <string name="group_updated">%s: updated %d proxies</string>
@@ -356,16 +357,17 @@
     <!-- import preview -->
     <string name="import_preview_title">Import preview</string>
     <string name="import_preview_confirm">Import</string>
-    <string name="import_preview_accepted">Accepted: %d nodes</string>
-    <string name="import_preview_skipped_builtin">Skipped: %d built-in or group outbounds</string>
-    <string name="import_preview_skipped_unparsed">Skipped: %d entries that are unsupported or did not parse</string>
+    <string name="import_preview_accepted">Nodes accepted: %d</string>
+    <string name="import_preview_skipped_builtin">Built-in or group outbounds skipped: %d</string>
+    <string name="import_preview_skipped_unparsed">Unsupported or unreadable entries skipped: %d</string>
     <string name="import_preview_dropped">Not imported: %s. Only nodes are imported, so the result will not behave like the source configuration.</string>
     <string name="import_section_proxy_groups">proxy groups</string>
     <string name="import_section_rules">routing rules</string>
     <string name="import_section_rule_providers">rule providers</string>
     <string name="import_section_dns">DNS settings</string>
     <string name="import_section_inbounds">inbounds</string>
-    <string name="import_section_fragment">TLS fragmentation and UDP noise</string>
+    <string name="import_section_fragment">TLS fragmentation</string>
+    <string name="import_section_noise">UDP noise</string>
     <!-- connection diagnostics -->
     <string name="menu_connections">Connections</string>
     <string name="connections_show_closed">Show closed connections</string>
@@ -769,8 +771,8 @@
     <string name="global_allow_insecure">Always allow insecure</string>
     <string name="fragment_settings">TLS fragmentation</string>
     <string name="enable_tls_fragment">Fragment the TLS ClientHello</string>
-    <string name="fragment_length">Fragment length (min-max)</string>
-    <string name="fragment_interval">Fragment interval (min-max)</string>
+    <string name="enable_tls_fragment_sum">Splits the TLS handshake with the server you connect to, the first one in a chain, into small TCP segments, so a firewall that reads the server name from one packet misses it. Connecting takes a little longer.</string>
+    <string name="tls_fragment_profile_sum">Splits the TLS handshake with this server even when the switch in Settings is off. Subscriptions turn this on for servers that ask for it.</string>
 
     <string name="backup_local">Local backup</string>
     <string name="backup_webdav">WebDAV backup</string>

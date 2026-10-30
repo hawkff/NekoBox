@@ -202,9 +202,6 @@ object Key {
 
     const val ENABLE_TLS_FRAGMENT = "enableTLSFragment"
 
-    const val FRAGMENT_LENGTH = "fragmentLength"
-    const val FRAGMENT_INTERVAL = "fragmentInterval"
-
     const val WEBDAV_SERVER = "webdavServer"
     const val WEBDAV_USERNAME = "webdavUsername"
     const val WEBDAV_PASSWORD = "webdavPassword"
@@ -235,6 +232,15 @@ object GroupOrder {
     const val ORIGIN = 0
     const val BY_NAME = 1
     const val BY_DELAY = 2
+}
+
+/** How Home lays out a group's profiles. */
+object GroupLayout {
+    const val CARDS = 0
+    const val TWO_COLUMNS = 1
+
+    // One line per profile, with its actions under ⋮.
+    const val COMPACT = 2
 }
 
 object SubscriptionFilterMode {
