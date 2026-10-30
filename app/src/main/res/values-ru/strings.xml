@@ -151,6 +151,7 @@
         <item quantity="other">%d профиля</item>
     </plurals>
 <string name="group_name">Имя группы</string>
+    <string name="group_rename">Переименовать группу</string>
 <string name="group_no_difference">%s: без изменений</string>
 <string name="group_not_subscription">Тип группы не является подпиской</string>
 <string name="group_order_by_delay">По задержке</string>

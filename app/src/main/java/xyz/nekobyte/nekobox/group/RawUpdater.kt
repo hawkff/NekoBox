@@ -774,6 +774,8 @@ object RawUpdater : GroupUpdater() {
         // Nothing is stored for an update that was canceled, for example while it asked the user.
         currentCoroutineContext().ensureActive()
         ProfileDatabase.instance.runInTransaction {
+            // A group deleted while the update ran takes no profiles: the update fails and stores nothing.
+            checkNotNull(ProfileDatabase.groupDao.getById(proxyGroup.id)) { "Group deleted during the update" }
             if (toInsert.isNotEmpty()) {
                 ProfileDatabase.proxyDao.insert(toInsert)
             }

@@ -84,6 +84,19 @@ class ProfileListStateTest {
     }
 
     @Test
+    fun countryRow_isKeptOnlyBesideACardThatShowsOne() {
+        // 1 and 2 share a row where only 2 has a country; 3 and 4 share one where neither has.
+        val countries = setOf(2L)
+        val stamps = buildProfileRowStamps(listOf(1L, 2L, 3L, 4L), mapOf(1L to 1, 2L to 2, 3L to 3, 4L to 4), 2, hasCountryRow = { it in countries }) { false }
+        assertTrue(stamps.getValue(1L).reserveCountryRow)
+        assertFalse(stamps.getValue(2L).reserveCountryRow)
+        assertFalse(stamps.getValue(3L).reserveCountryRow)
+        assertFalse(stamps.getValue(4L).reserveCountryRow)
+        // One column never keeps an empty row.
+        assertFalse(buildProfileRowStamps(listOf(1L, 2L), mapOf(1L to 1, 2L to 2), 1, hasCountryRow = { it == 2L }) { false }.getValue(1L).reserveCountryRow)
+    }
+
+    @Test
     fun findItemById_usesCurrentPosition() {
         val items = mapOf(1L to "one", 2L to "two", 3L to "three")
 

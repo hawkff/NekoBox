@@ -716,10 +716,14 @@ class ConfigurationGroupFragment : Fragment() {
 
         private fun getItemAt(index: Int) = getItem(configurationIdList[index])
 
+        // Two columns give the country a row of its own, so the middle row holds the address alone.
         private fun hasMiddleRow(profile: ProxyEntity): Boolean {
             val showTraffic = profile.rx + profile.tx != 0L
-            return !((!showTraffic || profile.status <= 0) && rowDetails(profile).isBlank())
+            val middle = if (layoutMode == GroupLayout.TWO_COLUMNS) rowAddress(profile).orEmpty() else rowDetails(profile)
+            return !((!showTraffic || profile.status <= 0) && middle.isBlank())
         }
+
+        private fun hasCountryRow(profile: ProxyEntity) = layoutMode == GroupLayout.TWO_COLUMNS && ProfileWords.country(profile) != null
 
         private fun displaySpanCount() = (layoutManager as? FixedGridLayoutManager)?.spanCount ?: 1
 
@@ -737,7 +741,7 @@ class ConfigurationGroupFragment : Fragment() {
                         ?: 0
                     )
             }
-            return buildProfileRowStamps(ids, baseStamps, displaySpanCount(), positions) { id ->
+            return buildProfileRowStamps(ids, baseStamps, displaySpanCount(), positions, hasCountryRow = { id -> profiles[id]?.let(::hasCountryRow) == true }) { id ->
                 profiles[id]?.let(::hasMiddleRow) == true
             }
         }
@@ -764,7 +768,7 @@ class ConfigurationGroupFragment : Fragment() {
             try {
                 val id = configurationIdList[position]
                 val rowStamp = configurationStamps[id] ?: return
-                holder.bind(getItemAt(position), rowStamp.reserveMiddleRow)
+                holder.bind(getItemAt(position), rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow)
             } catch (ignored: NullPointerException) { // when group deleted
             }
         }
@@ -1008,7 +1012,7 @@ class ConfigurationGroupFragment : Fragment() {
                 ?.let { configurationListView.getChildViewHolder(it) } as? ConfigurationHolder
                 ?: return
             if (holder.bindingAdapterPosition != position || !holder.isBoundTo(expectedId)) return
-            holder.bind(profile, rowStamp.reserveMiddleRow)
+            holder.bind(profile, rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow)
         }
 
         private fun applyTrafficUpdates(updates: List<TrafficData>) {
@@ -1154,11 +1158,13 @@ class ConfigurationGroupFragment : Fragment() {
     val profileAccess = Mutex()
     val reloadAccess = Mutex()
 
-    // Under the name: the server's country when the name does not show it, and its address when settings ask for it.
-    private fun rowDetails(profile: ProxyEntity): String {
-        val showAddress = (parentFragment as? ConfigurationFragment)?.alwaysShowAddress == true && !profile.requireBean().name.isNullOrBlank()
-        return listOfNotNull(ProfileWords.country(profile), profile.displayAddress().takeIf { showAddress }).joinToString(" · ")
+    // The address under the name, when settings ask for it; a nameless profile already shows it as its name.
+    private fun rowAddress(profile: ProxyEntity) = profile.displayAddress().takeIf {
+        (parentFragment as? ConfigurationFragment)?.alwaysShowAddress == true && !profile.requireBean().name.isNullOrBlank()
     }
+
+    // Under the name: the country of the server's address, and the address.
+    private fun rowDetails(profile: ProxyEntity) = listOfNotNull(ProfileWords.country(profile), rowAddress(profile)).joinToString(" · ")
 
     /** A section's header: its title and size; a tap folds or unfolds it. */
     private inner class SectionHolder(private val binding: LayoutProfileSectionBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -1225,6 +1231,7 @@ class ConfigurationGroupFragment : Fragment() {
         val profileName: TextView = binding.profileName
         val profileType: TextView = binding.profileType
         val profileAddress: TextView = binding.profileAddress
+        val profileCountry: TextView = binding.profileCountry
         val profileStatus: TextView = binding.profileStatus
 
         val trafficText: TextView = binding.trafficText
@@ -1372,7 +1379,7 @@ class ConfigurationGroupFragment : Fragment() {
             return TouchDelegate(bounds, profileStatus)
         }
 
-        fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean) {
+        fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean, reserveCountryRow: Boolean) {
             val pf = parentFragment as? ConfigurationFragment ?: return
 
             // A card shown again for the same profile changes in place: its selection and test result fade.
@@ -1411,14 +1418,26 @@ class ConfigurationGroupFragment : Fragment() {
                 TooltipCompat.setTooltipText(trafficText, null)
             }
 
-            val details = rowDetails(proxyEntity)
-            profileAddress.text = details
+            val country = ProfileWords.country(proxyEntity)
+            val address = rowAddress(proxyEntity)
+            val details = listOfNotNull(country, address).joinToString(" · ")
+            // Two columns give the country a row of its own, so the address keeps the card's width.
+            val stacked = layout == GroupLayout.TWO_COLUMNS
+            profileAddress.text = if (stacked) address.orEmpty() else details
             // A compact row keeps the traffic on its second line; a card without a test result shows it in the result's place.
             val compact = layout == GroupLayout.COMPACT
-            val trafficRowEmpty = details.isBlank() && (!showTraffic || (!compact && proxyEntity.status <= 0))
+            val middle = if (stacked) address.orEmpty() else details
+            val trafficRowEmpty = middle.isBlank() && (!showTraffic || (!compact && proxyEntity.status <= 0))
             (trafficText.parent as View).visibility = when {
                 !trafficRowEmpty -> View.VISIBLE
                 reserveMiddleRow -> View.INVISIBLE
+                else -> View.GONE
+            }
+            // Beside a card that shows a country, one without keeps the row empty, so both keep one height.
+            profileCountry.text = country.orEmpty()
+            profileCountry.visibility = when {
+                stacked && country != null -> View.VISIBLE
+                stacked && reserveCountryRow -> View.INVISIBLE
                 else -> View.GONE
             }
 

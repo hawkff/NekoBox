@@ -55,6 +55,7 @@
     <string name="group_editor_link">Ссылка на подписку</string>
     <string name="group_editor_link_help">Адрес, который дал провайдер</string>
     <string name="group_editor_wait_update">Дождитесь конца обновления и сохраните снова</string>
+    <string name="group_wait_update">Дождитесь конца обновления</string>
     <string name="group_editor_link_missing">Введите ссылку на подписку</string>
     <string name="group_editor_link_line">В ссылке есть перенос строки</string>
     <string name="group_editor_auto_update">Обновлять автоматически</string>

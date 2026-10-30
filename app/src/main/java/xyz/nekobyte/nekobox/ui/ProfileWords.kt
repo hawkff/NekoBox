@@ -46,12 +46,10 @@ object ProfileWords {
     }
 
     /**
-     * "🇩🇪 Germany" for the country the server's address is in, when its name shows no flag; null
-     * while the address is unknown or a name. A flag in the name names the exit, and the address
-     * may be a relay elsewhere, so the row does not contradict it.
+     * "🇩🇪 Germany" for the country the server's address is in, the address the connection goes
+     * to, even where the name's flag says otherwise; null while the address is unknown or a name.
      */
     fun country(profile: ProxyEntity): String? {
-        if (nameFlag(profile.displayName()) != null) return null
         val code = ServerCountries.cached(profile.requireBean().serverAddress ?: return null)?.takeIf { it.length == 2 } ?: return null
         return flag(code) + " " + Locale.Builder().setRegion(code).build().displayCountry
     }

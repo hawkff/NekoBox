@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.ui
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -16,6 +17,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.result.component1
@@ -32,6 +34,7 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.core.view.updateLayoutParams
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceDataStore
@@ -72,6 +75,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
 import xyz.nekobyte.nekobox.databinding.LayoutGroupListBinding
+import xyz.nekobyte.nekobox.databinding.LayoutGroupNameDialogBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProgressListBinding
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
@@ -336,20 +340,84 @@ class ConfigurationFragment @JvmOverloads constructor(
     }
 
     private fun showGroupMenu(anchor: View, position: Int) {
-        val groupId = adapter.groupList.getOrNull(position)?.id?.takeIf { it != FAVORITES_GROUP_ID } ?: return
-        val group = adapter.groupList[position]
+        val group = adapter.groupList.getOrNull(position)?.takeIf { it.id != FAVORITES_GROUP_ID } ?: return
         PopupMenu(requireContext(), anchor).apply {
             menu.add(0, R.string.group_edit, 0, R.string.group_edit)
             if (group.type == GroupType.SUBSCRIPTION) menu.add(0, R.string.group_update, 1, R.string.group_update)
+            // The default group keeps its name and stays, as on the Groups screen. An update under way
+            // writes the group back when it ends, over a new name, so neither is offered meanwhile.
+            if (!group.ungrouped && group.id !in GroupUpdater.updating) {
+                menu.add(0, R.string.group_rename, 2, R.string.group_rename)
+                // Removing comes last, apart from the rest.
+                menu.add(1, R.string.group_delete, 3, R.string.group_delete)
+            }
+            MenuCompat.setGroupDividerEnabled(menu, true)
             setOnMenuItemClickListener { item ->
-                if (item.itemId == R.string.group_edit) {
-                    startActivity(Intent(requireContext(), GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, groupId))
-                } else {
-                    runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(groupId)?.let { GroupUpdater.startUpdate(it, true) } }
+                when (item.itemId) {
+                    R.string.group_edit -> startActivity(Intent(requireContext(), GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, group.id))
+                    R.string.group_update -> runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
+                    R.string.group_rename -> renameGroup(group)
+                    R.string.group_delete -> confirmDeleteGroup(group)
                 }
                 true
             }
         }.show()
+    }
+
+    // A provider's title replaces only a placeholder name, so a name set here stays.
+    private fun renameGroup(group: ProxyGroup) {
+        val binding = LayoutGroupNameDialogBinding.inflate(layoutInflater)
+        binding.name.setText(group.name)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.group_rename)
+            .setView(binding.root)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val name = binding.name.text?.toString()?.trim().orEmpty()
+                if (name.isEmpty() || name == group.name) return@setPositiveButton
+                // An update that started while the dialog was open would write its own copy back.
+                if (group.id in GroupUpdater.updating) {
+                    snackbar(R.string.group_editor_wait_update).show()
+                    return@setPositiveButton
+                }
+                // The stored group, which an update may have changed since the tabs loaded.
+                runOnDefaultDispatcher {
+                    ProfileDatabase.groupDao.getById(group.id)?.let { GroupManager.updateGroup(it.apply { this.name = name }) }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        // The keyboard opens on the whole name, so typing replaces it.
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        binding.name.requestFocus()
+        binding.name.selectAll()
+        // OK stays off while the name is blank, from the start.
+        val ok = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        ok.isEnabled = !binding.name.text.isNullOrBlank()
+        binding.name.doAfterTextChanged { ok.isEnabled = !it.isNullOrBlank() }
+    }
+
+    // As on the Groups screen: names the group and how many profiles go with it, and asks first.
+    private fun confirmDeleteGroup(group: ProxyGroup) {
+        runOnDefaultDispatcher {
+            val count = ProfileDatabase.proxyDao.countByGroup(group.id).toInt()
+            onMainDispatcher {
+                if (!isAdded) return@onMainDispatcher
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(resources.getQuantityString(R.plurals.group_remove, 1, 1))
+                    .setMessage("${group.displayName()} · ${resources.getQuantityString(R.plurals.group_profiles, count, count)}")
+                    .setPositiveButton(R.string.delete) { _, _ ->
+                        // An update may have started since the menu opened; it would write the group back.
+                        if (group.id in GroupUpdater.updating) {
+                            snackbar(R.string.group_wait_update).show()
+                        } else {
+                            runOnDefaultDispatcher { GroupManager.deleteGroup(listOf(group)) }
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
     }
 
     // Each group with the facts its Groups row gives: profiles, traffic and when it ends.

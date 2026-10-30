@@ -60,7 +60,7 @@ class ProfileWordsTest {
     }
 
     @Test
-    fun aRowNamesTheCountryOnlyWhenItsNameHasNoFlag() {
+    fun aRowNamesTheCountryItsAddressIsIn() {
         ServerCountries.database = { 1L }
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { if (it == "192.0.2.77") "de" else "" } }
         // An address with a line break is never sent: it would shift the answers after it.
@@ -70,9 +70,9 @@ class ProfileWordsTest {
             serverAddress = address
         }
         assertEquals("🇩🇪 Germany", ProfileWords.country(named("Auto proxy-5", "192.0.2.77")))
-        assertNull(ProfileWords.country(named("🇩🇪 Frankfurt", "192.0.2.77")))
-        // A flag names the exit; the address may be a relay in another country.
-        assertNull(ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
+        assertEquals("🇩🇪 Germany", ProfileWords.country(named("🇩🇪 Frankfurt", "192.0.2.77")))
+        // A name's flag may name the exit while the connection goes through a relay elsewhere.
+        assertEquals("🇩🇪 Germany", ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
         assertNull(ProfileWords.country(named("Auto proxy-6", "node.example")))
         // A replaced database answers again for every known address, not only the one asked about.
         ServerCountries.database = { 2L }
