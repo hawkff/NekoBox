@@ -4,6 +4,7 @@ import android.graphics.Rect
 import android.os.Looper
 import android.os.SystemClock
 import android.view.View
+import androidx.core.view.isEmpty
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -150,7 +151,7 @@ fun RecyclerView.prefill(viewType: Int, count: Int) {
     recycledViewPool.setMaxRecycledViews(viewType, maxOf(count, 5))
     var made = 0
     whenStill {
-        val more = made < minOf(count, adapter.itemCount) && childCount == 0 && isAttachedToWindow && this.adapter === adapter
+        val more = made < minOf(count, adapter.itemCount) && isEmpty() && isAttachedToWindow && this.adapter === adapter
         if (more) recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
         more && ++made < minOf(count, adapter.itemCount)
     }

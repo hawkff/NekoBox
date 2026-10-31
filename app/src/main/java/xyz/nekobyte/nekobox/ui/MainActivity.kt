@@ -20,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.view.isNotEmpty
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceDataStore
@@ -617,7 +618,7 @@ class MainActivity :
     private var checkedScreen = R.id.nav_configuration
 
     private fun buildDrawerMenu() {
-        if (navigation.menu.size() > 0) return
+        if (navigation.menu.isNotEmpty()) return
         navigation.inflateMenu(R.menu.main_drawer_menu)
         navigation.menu.findItem(checkedScreen)?.isChecked = true
     }
