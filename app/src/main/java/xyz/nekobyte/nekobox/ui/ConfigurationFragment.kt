@@ -587,6 +587,12 @@ class ConfigurationFragment @JvmOverloads constructor(
         DataStore.profileCacheStore.registerChangeListener(this)
     }
 
+    // Showing again: global mode can be switched on other screens while this one stays hidden.
+    override fun onResume() {
+        super.onResume()
+        if (!select && view != null) toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
+    }
+
     override fun onPrepareOptionsMenu(menu: Menu) {
         menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
         super.onPrepareOptionsMenu(menu)
