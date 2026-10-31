@@ -221,6 +221,8 @@ object RoutingProfiles {
         ownProfile()?.let { return switchTo(it.id) }
         applyLock.withLock {
             syncActiveLocked()
+            // No rules stays no rules: the defaults are only for a table never filled.
+            DataStore.rulesFirstCreate = true
             applyLive(JSONObject().put("rules", JSONArray()), includeSettings = false)
             activeId = 0L
         }
@@ -250,6 +252,8 @@ object RoutingProfiles {
     fun delete(id: Long) {
         mutate { profiles -> profiles.removeAll { it.id == id } }
         if (activeId == id) activeId = 0L
+        // Ids are given again after a delete, and My rules must not become another profile.
+        if (ownId == id) ownId = 0L
     }
 
     fun subscriptionSource(groupId: Long) = "subscription:$groupId"

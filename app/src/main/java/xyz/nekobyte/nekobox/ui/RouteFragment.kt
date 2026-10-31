@@ -144,7 +144,7 @@ class RouteFragment :
                 val id = tab.tag as? Long ?: return
                 if (id == shownSet) return
                 // A removal waiting for undo belongs to the rules on screen: it is committed before they change.
-                undoManager.flush()
+                undoManager.commitNow()
                 shownSet = id
                 ruleAdapter.reload()
             }
@@ -158,7 +158,10 @@ class RouteFragment :
         // The table is replaced before the switch records which set is in use, so the list reads both again after it.
         header.useRules.setOnClickListener {
             val id = listedSet ?: return@setOnClickListener
+            // A removal committed on the way to this tab is written before the switch saves the rules.
+            val removing = ruleAdapter.removing
             runOnDefaultDispatcher {
+                removing?.join()
                 if (id == 0L) RoutingProfiles.switchToOwn() else RoutingProfiles.switchTo(id)
                 onMainDispatcher { ruleAdapter.reload() }
             }
@@ -484,19 +487,24 @@ class RouteFragment :
             test()
         }
 
+        /** The last removal's write. */
+        var removing: Job? = null
+
         override fun commit(actions: List<Pair<Int, RuleRow>>) {
             val rules = actions.map { it.second.rule }
-            runOnDefaultDispatcher { ProfileManager.deleteRules(rules) }
+            removing = runOnDefaultDispatcher { ProfileManager.deleteRules(rules) }
         }
 
-        // A change to the rules table shows only while the tab shows the set in use.
+        // A change to the rules table shows only while the tab shows the set in use; the service needs it either way.
         override suspend fun onAdd(rule: RuleEntity) {
             val row = rule.row(context ?: return)
             onMainDispatcher {
-                if (!isAdded || !live) return@onMainDispatcher
-                rows.add(row)
-                notifyItemInserted(rows.size - 1)
-                test()
+                if (!isAdded) return@onMainDispatcher
+                if (live) {
+                    rows.add(row)
+                    notifyItemInserted(rows.size - 1)
+                    test()
+                }
                 needReload()
             }
         }
@@ -505,18 +513,20 @@ class RouteFragment :
             val row = rule.row(context ?: return)
             onMainDispatcher {
                 val index = rows.indexOfFirst { it.rule.id == rule.id }
-                if (!isAdded || !live || index < 0) return@onMainDispatcher
-                rows[index] = row
-                notifyItemChanged(index)
-                test()
+                if (!isAdded || (live && index < 0)) return@onMainDispatcher
+                if (live) {
+                    rows[index] = row
+                    notifyItemChanged(index)
+                    test()
+                }
                 needReload()
             }
         }
 
         override suspend fun onRemoved(ruleId: Long) = onMainDispatcher {
-            if (!isAdded || !live) return@onMainDispatcher
+            if (!isAdded) return@onMainDispatcher
             val index = rows.indexOfFirst { it.rule.id == ruleId }
-            if (index >= 0) {
+            if (live && index >= 0) {
                 rows.removeAt(index)
                 notifyItemRemoved(index)
                 test()

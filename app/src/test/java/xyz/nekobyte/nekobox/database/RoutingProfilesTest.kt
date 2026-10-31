@@ -58,12 +58,15 @@ class RoutingProfilesTest {
         assertEquals(own.id, RoutingProfiles.ownProfile()?.id)
         assertEquals(2, RoutingProfiles.list().size)
 
-        // With My rules deleted there is nothing to go back to but no rules.
+        // With My rules deleted there is nothing to go back to but no rules, even once its id is given again.
         RoutingProfiles.delete(own.id)
+        assertEquals(own.id, RoutingProfiles.store(RoutingProfiles.Profile(0L, "Imported", JSONObject().put("rules", JSONArray()))).id)
+        assertNull(RoutingProfiles.ownProfile())
+        DataStore.rulesFirstCreate = false
         RoutingProfiles.switchToOwn()
         assertEquals(0L, RoutingProfiles.activeId)
-        assertTrue(ProfileDatabase.rulesDao.allRules().isEmpty())
-        assertEquals(listOf("theirs"), BackupFormatV2.decodeRules(RoutingProfiles.list().single().content.getJSONArray("rules")).map { it.name })
+        assertTrue(ProfileManager.getRules().isEmpty())
+        assertEquals(listOf("theirs"), BackupFormatV2.decodeRules(RoutingProfiles.list().single { it.id == provider.id }.content.getJSONArray("rules")).map { it.name })
     }
 
     @Test

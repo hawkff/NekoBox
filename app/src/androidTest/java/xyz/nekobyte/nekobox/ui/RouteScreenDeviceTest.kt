@@ -107,6 +107,7 @@ class RouteScreenDeviceTest {
 
     @Test
     fun aSubscriptionsRulesHaveATabThatPutsThemInUseAndMyRulesTakesThemBack() {
+        val before = RoutingProfiles.list().map { it.id }.toSet()
         val (group, provider) = runBlocking {
             val group = GroupManager.createGroup(ProxyGroup(name = "Route test provider"))
             val rules = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = names[5], enabled = true, domains = "domain:example.net", outbound = -2)))
@@ -165,7 +166,7 @@ class RouteScreenDeviceTest {
             runBlocking {
                 if (RoutingProfiles.activeId == provider.id) RoutingProfiles.switchToOwn()
                 GroupManager.deleteGroup(group.id)
-                RoutingProfiles.ownProfile()?.let { RoutingProfiles.delete(it.id) }
+                RoutingProfiles.list().filter { it.id !in before }.forEach { RoutingProfiles.delete(it.id) }
             }
         }
     }
