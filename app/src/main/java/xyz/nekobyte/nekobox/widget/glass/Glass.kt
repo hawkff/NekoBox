@@ -97,7 +97,6 @@ object Glass {
      */
     fun floatBars(bars: ViewGroup, content: GlassBackdropFrameLayout, toolbar: Toolbar, extra: GlassLayout.() -> Unit, onInset: (Int) -> Unit) {
         content.updateLayoutParams<RelativeLayout.LayoutParams> { removeRule(RelativeLayout.BELOW) }
-        content.backdrop.layered = true
         bars.findViewById<View>(R.id.appbar)?.background = null
         floatToolbar(toolbar)
         // The band fades out below the controls, inside the bars so the bars can draw it.

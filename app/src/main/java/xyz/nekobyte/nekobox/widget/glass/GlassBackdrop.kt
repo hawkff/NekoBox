@@ -35,10 +35,16 @@ class GlassBackdrop(val view: ViewGroup) {
         private set
 
     /**
-     * Draws the content into a layer: the screen and every pane's frost then use the drawn texture instead of
-     * drawing the content again. For the innermost backdrop only; one around it reuses its texture.
+     * While glass sweeps over content that stays still, as the drawer does, the content is drawn into a layer:
+     * the screen and every pane's frost then reuse the texture instead of drawing the content again each frame.
+     * Scrolling content does better without it, since the layer would be drawn again on every frame anyway.
      */
-    var layered = false
+    var still = false
+        set(value) {
+            if (field == value) return
+            field = value
+            if (Build.VERSION.SDK_INT >= 31) recorder?.node?.setUseCompositingLayer(value, null)
+        }
 
     fun dispatchDraw(canvas: Canvas, drawChildren: (Canvas) -> Unit) {
         val recorder = recorder
@@ -46,7 +52,7 @@ class GlassBackdrop(val view: ViewGroup) {
             drawChildren(canvas)
         } else {
             changes++
-            recorder.draw(canvas, view, layered, drawChildren)
+            recorder.draw(canvas, view, still, drawChildren)
         }
     }
 
@@ -71,8 +77,8 @@ class GlassBackdrop(val view: ViewGroup) {
     private class Recorder {
         val node = RenderNode("glass backdrop")
 
-        fun draw(canvas: Canvas, view: View, layered: Boolean, drawChildren: (Canvas) -> Unit) {
-            node.setUseCompositingLayer(layered, null)
+        fun draw(canvas: Canvas, view: View, still: Boolean, drawChildren: (Canvas) -> Unit) {
+            node.setUseCompositingLayer(still, null)
             node.setPosition(0, 0, view.width, view.height)
             drawChildren(node.beginRecording(view.width, view.height))
             node.endRecording()

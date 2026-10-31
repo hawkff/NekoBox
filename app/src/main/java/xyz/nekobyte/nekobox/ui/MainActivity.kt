@@ -68,6 +68,8 @@ import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassBackdrop
+import xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
 import xyz.nekobyte.nekobox.widget.glass.GlassBand
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
 import xyz.nekobyte.nekobox.widget.glass.followSwell
@@ -232,6 +234,21 @@ class MainActivity :
         binding.drawerLayout.addDrawerListener(
             object : DrawerLayout.SimpleDrawerListener() {
                 override fun onDrawerSlide(drawerView: View, slideOffset: Float) = drawerView.invalidate()
+
+                // While the drawer is out the screen behind it stays still, so its content is drawn once, into a
+                // layer the glass reuses.
+                override fun onDrawerStateChanged(newState: Int) {
+                    val out = newState != DrawerLayout.STATE_IDLE || binding.drawerLayout.isOpen
+                    if (out) {
+                        if (stillBackdrop == null) {
+                            stillBackdrop = supportFragmentManager.findFragmentById(R.id.fragment_holder)?.view
+                                ?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop?.also { it.still = true }
+                        }
+                    } else {
+                        stillBackdrop?.still = false
+                        stillBackdrop = null
+                    }
+                }
             },
         )
     }
@@ -553,6 +570,9 @@ class MainActivity :
             binding.fab.hide()
         }
     }
+
+    /** The backdrop drawn into a layer while the drawer is out. */
+    private var stillBackdrop: GlassBackdrop? = null
 
     // Home follows the connection while hidden too, so it shows the right state when it comes back.
     private fun refreshConfigurationProfileState() {
