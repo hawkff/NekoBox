@@ -54,8 +54,11 @@ object ProfileWords {
      */
     fun country(profile: ProxyEntity): String? {
         val code = ServerCountries.cached(serverIp(profile) ?: return null)?.takeIf { it.length == 2 } ?: return null
-        return flag(code) + " " + Locale.Builder().setRegion(code).build().displayCountry
+        return countryNames.getOrPut(Locale.getDefault() to code) { flag(code) + " " + Locale.Builder().setRegion(code).build().displayCountry }
     }
+
+    // Rows ask on every bind; a country's name is looked up once per language.
+    private val countryNames = ConcurrentHashMap<Pair<Locale, String>, String>()
 
     /** The server's IP: its own, or the one its name last resolved to through the core. */
     fun serverIp(profile: ProxyEntity): String? {
