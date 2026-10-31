@@ -174,7 +174,6 @@
     </plurals>  
     <plurals name="added_to">
         <item quantity="one">Se añadió %1$d perfil a «%2$s»</item>
-        <item quantity="many">Se añadieron %1$d perfiles a «%2$s»</item>
         <item quantity="other">Se añadieron %1$d perfiles a «%2$s»</item>
     </plurals>
     <string name="undo">Deshacer</string>

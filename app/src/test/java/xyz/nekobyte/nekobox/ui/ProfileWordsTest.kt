@@ -1,5 +1,6 @@
 package xyz.nekobyte.nekobox.ui
 
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -8,6 +9,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.AbstractBean
@@ -81,8 +83,11 @@ class ProfileWordsTest {
         assertEquals("🇩🇪 Germany", ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
         assertNull(ProfileWords.country(named("Auto proxy-6", "node.example")))
         // A server given by name takes the country of the address a test or a connection resolved it to.
-        DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.77"))
+        DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.77"), learned = 1_700_000_000_000)
         assertEquals("🇩🇪 Germany", ProfileWords.country(named("Auto proxy-6", "node.example")))
+        // Each name keeps when it was learned; the next lookup replaces both.
+        val stored = JSONObject(DataStore.configurationStore.getString(Key.SERVER_ADDRESSES)!!).getJSONObject("node.example")
+        assertEquals("192.0.2.77" to 1_700_000_000_000L, stored.getString("address") to stored.getLong("learned"))
         // A replaced database answers again for every known address, not only the one asked about.
         ServerCountries.database = { 2L }
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { "fr" } }
