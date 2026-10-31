@@ -22,6 +22,7 @@ internal object ApiUi {
     private val pages = mapOf(
         "profiles" to R.id.nav_configuration,
         "groups" to R.id.nav_group,
+        "proxies" to R.id.nav_proxies,
         "routes" to R.id.nav_route,
         "tailscale" to R.id.nav_tailscale,
         "nebula" to R.id.nav_nebula,

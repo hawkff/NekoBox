@@ -1391,7 +1391,7 @@ class ConfigurationGroupFragment : Fragment() {
                             reloadAccess.unlock()
                         }
                     }
-                } else if (NekoBox.isTv) {
+                } else if (!connect && NekoBox.isTv) {
                     if (DataStore.serviceState.started) {
                         NekoBox.stopService()
                     } else {
