@@ -332,7 +332,12 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             isEnabled = vpnMode
             isChecked = DataStore.gpsSpoofing
         }
-        findPreference<Preference>(Key.GPS_SPOOFING_REMOVE)?.isVisible = LocationSpoofing.mayRemain(requireContext())
+        // The record of a simulated location is a file: read off the main thread, the row follows once it is read.
+        val context = requireContext()
+        runOnDefaultDispatcher {
+            val mayRemain = LocationSpoofing.mayRemain(context)
+            onMainDispatcher { if (isAdded) findPreference<Preference>(Key.GPS_SPOOFING_REMOVE)?.isVisible = mayRemain }
+        }
         when {
             DataStore.serviceMode != Key.MODE_VPN -> {
                 alwaysOn.setSummary(R.string.protection_proxy_mode)
