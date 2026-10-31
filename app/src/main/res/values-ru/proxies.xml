@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="menu_proxies">Прокси</string>
-    <string name="proxies_empty">Здесь хранятся прокси, за которые вы платите: SOCKS5 и HTTP с логином, например от Mullvad или от провайдера резидентных адресов. Чтобы начать, вставьте список, который дал провайдер.</string>
+    <string name="proxies_empty">Здесь будут ваши прокси.</string>
     <string name="proxies_paste">Вставить прокси</string>
     <string name="proxies_paste_formats">Один прокси в строке: host:port:user:password, user:password@host:port, host:port или ссылка socks5:// или http://.</string>
     <string name="proxies_paste_field">Прокси</string>
