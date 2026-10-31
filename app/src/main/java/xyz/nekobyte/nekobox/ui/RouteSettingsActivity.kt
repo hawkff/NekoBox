@@ -9,6 +9,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.TextView
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.IntentCompat
@@ -230,6 +231,7 @@ class RouteSettingsActivity : ThemedActivity() {
             pickApps.launch(Intent(this, AppListActivity::class.java))
         }
         binding.customJson.setOnClickListener {
+            if (shown != null) return@setOnClickListener showJsonToRead()
             DataStore.serverConfig = draft.config
             editJson.launch(Intent(this, ConfigEditActivity::class.java))
         }
@@ -251,7 +253,17 @@ class RouteSettingsActivity : ThemedActivity() {
         }
         filling = false
         val choices = listOf(binding.outbound, binding.network, binding.siteLists, binding.addressLists).flatMap { it.children.toList() }
-        for (view in choices + listOf(binding.dns, binding.apps, binding.customJson)) view.isClickable = false
+        for (view in choices + listOf(binding.dns, binding.apps)) view.isClickable = false
+        binding.customJson.isClickable = draft.config.isNotBlank()
+    }
+
+    private fun showJsonToRead() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.custom_config)
+            .setMessage(draft.config)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+            .findViewById<TextView>(android.R.id.message)?.setTextIsSelectable(true)
     }
 
     /** Opens or folds what few rules need: detected protocols, where traffic starts, rule DNS and custom JSON. */
@@ -313,7 +325,12 @@ class RouteSettingsActivity : ThemedActivity() {
         val packages = draft.packages
         if (packages.isEmpty()) return binding.appsSummary.setText(R.string.route_editor_any_app)
         lifecycleScope.launch {
-            binding.appsSummary.text = withContext(Dispatchers.Default) { RuleWords.apps(this@RouteSettingsActivity, packages) }
+            binding.appsSummary.text = withContext(Dispatchers.Default) {
+                // A rule shown to read has no app list to open, so it names every app.
+                if (shown == null) return@withContext RuleWords.apps(this@RouteSettingsActivity, packages)
+                PackageCache.awaitLoadSync()
+                packages.joinToString(", ") { PackageCache.loadLabel(it) }
+            }
         }
     }
 
