@@ -29,6 +29,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.net.toUri
 import androidx.core.view.MenuCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -181,6 +182,10 @@ class ConfigurationFragment @JvmOverloads constructor(
     private var favoritesShown = false
 
     val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
+
+    override val keepsAlive get() = true
+
+    override fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
 
     private var selectedProfileSnapshot = 0L
     private var currentProfileSnapshot = 0L
@@ -531,7 +536,8 @@ class ConfigurationFragment @JvmOverloads constructor(
         GroupManager.addListener(adapter)
 
         groupPager.adapter = adapter
-        groupPager.offscreenPageLimit = 2
+        // The open group's page is built first, and its neighbors once it has drawn, ready for a swipe.
+        groupPager.doOnPreDraw { groupPager.post { groupPager.offscreenPageLimit = 2 } }
         updatePaging()
 
         tabLayoutMediator = TabLayoutMediator(tabLayout, groupPager) { tab, position ->
@@ -581,6 +587,13 @@ class ConfigurationFragment @JvmOverloads constructor(
         DataStore.profileCacheStore.registerChangeListener(this)
     }
 
+    // Showing again: global mode, profiles and groups can change on other screens while this one stays hidden.
+    override fun onResume() {
+        super.onResume()
+        if (!select && view != null) toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
+        searchView?.query?.toString()?.takeIf { searchOpen && it.isNotBlank() }?.let(::searchAllGroups)
+    }
+
     override fun onPrepareOptionsMenu(menu: Menu) {
         menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
         super.onPrepareOptionsMenu(menu)
@@ -592,8 +605,10 @@ class ConfigurationFragment @JvmOverloads constructor(
             // editingGroup
             if (key == Key.PROFILE_GROUP) {
                 val targetId = DataStore.editingGroup
-                if (targetId > 0 && targetId != DataStore.selectedGroup) {
-                    DataStore.selectedGroup = targetId
+                if (targetId > 0 && targetId != DataStore.selectedGroup) DataStore.selectedGroup = targetId
+                // Compared with the tab on screen: Home lives on under other screens, and whoever asks for
+                // a group may have set selectedGroup already.
+                if (targetId > 0 && targetId != adapter.groupList.getOrNull(groupPager.currentItem)?.id) {
                     val targetIndex = adapter.groupList.indexOfFirst { it.id == targetId }
                     if (targetIndex >= 0) {
                         groupPager.setCurrentItem(targetIndex, false)

@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +18,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.snackbar.Snackbar
 import xyz.nekobyte.nekobox.R
@@ -58,13 +58,12 @@ abstract class ThemedActivity : AppCompatActivity {
         // findViewById (not ViewBinding): ThemedActivity is a base class applied over arbitrary
         // child-activity layouts. android.R.id.content is a framework id, and appbar/stats are
         // resolved across whatever layout the subclass set - no single binding owns them.
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { content, insets ->
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
             )
-            findViewById<AppBarLayout>(R.id.appbar)?.apply {
-                updatePadding(top = bars.top)
-            }
+            // Every app bar: Home stays, hidden, under the other screens, so a window can hold more than one.
+            content.forEachWithId(R.id.appbar) { it.updatePadding(top = bars.top) }
             // An app bar that scrolls away moves its status bar padding with it: the scrim stays there.
             findViewById<View>(R.id.status_scrim)?.updateLayoutParams { height = bars.top }
             // Lift the bottom bar (and the FAB docked into it, plus the FAB's
@@ -119,6 +118,12 @@ abstract class ThemedActivity : AppCompatActivity {
         Glass.onTouch(cancel, window.decorView)
         window.superDispatchTouchEvent(cancel)
         cancel.recycle()
+    }
+
+    /** Calls [action] on this view and on each descendant whose id is [id]. */
+    private fun View.forEachWithId(id: Int, action: (View) -> Unit) {
+        if (this.id == id) action(this)
+        if (this is ViewGroup) for (i in 0 until childCount) getChildAt(i).forEachWithId(id, action)
     }
 
     override fun onContentChanged() {

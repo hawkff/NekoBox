@@ -68,8 +68,11 @@ import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
+import xyz.nekobyte.nekobox.widget.glass.GlassBackdrop
+import xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
 import xyz.nekobyte.nekobox.widget.glass.GlassBand
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
+import xyz.nekobyte.nekobox.widget.glass.WarmUp
 import xyz.nekobyte.nekobox.widget.glass.followSwell
 import java.util.Locale
 
@@ -90,6 +93,8 @@ class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The render thread loads the first frame's GPU programs while the screen is being built.
+        WarmUp.start(this)
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 
@@ -109,10 +114,10 @@ class MainActivity :
             displayFragmentWithId(R.id.nav_configuration)
         } else {
             // A recreated activity, after a theme or glass change, restores its screen without displayFragment.
-            (supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment)?.let(::fitBottomBar)
+            currentScreen()?.let(::fitBottomBar)
         }
         onBackPressedDispatcher.addCallback {
-            val current = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+            val current = currentScreen()
             // An open drawer goes first: Back closes it, and leaves the screen as it was.
             when {
                 binding.drawerLayout.isOpen -> binding.drawerLayout.close()
@@ -218,7 +223,7 @@ class MainActivity :
             },
         )
         val reach = 64 * resources.displayMetrics.density
-        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this)) { bounds ->
+        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this), sweeps = true) { bounds ->
             // Open at the screen's edges: only the inner edge shows a rim, the left one when the drawer opens from the right.
             val rtl = navigation.layoutDirection == View.LAYOUT_DIRECTION_RTL
             pane().rect.set(
@@ -232,6 +237,21 @@ class MainActivity :
         binding.drawerLayout.addDrawerListener(
             object : DrawerLayout.SimpleDrawerListener() {
                 override fun onDrawerSlide(drawerView: View, slideOffset: Float) = drawerView.invalidate()
+
+                // While the drawer is out the screen behind it stays still, so its content is drawn once, into a
+                // layer the glass reuses.
+                override fun onDrawerStateChanged(newState: Int) {
+                    val out = newState != DrawerLayout.STATE_IDLE || binding.drawerLayout.isOpen
+                    if (out) {
+                        if (stillBackdrop == null) {
+                            stillBackdrop = currentScreen()?.view
+                                ?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop?.also { it.still = true }
+                        }
+                    } else {
+                        stillBackdrop?.still = false
+                        stillBackdrop = null
+                    }
+                }
             },
         )
     }
@@ -514,15 +534,38 @@ class MainActivity :
     @SuppressLint("CommitTransaction")
     fun displayFragment(fragment: ToolbarFragment) {
         fitBottomBar(fragment)
-        val transaction = supportFragmentManager.beginTransaction()
+        val manager = supportFragmentManager
+        // A request made before the last one ran would not see the screen it added.
+        manager.executePendingTransactions()
+        val transaction = manager.beginTransaction()
         // The drawer's destinations are peers: one fades through to the next, as Material moves between them.
         // The first screen just appears.
-        if (supportFragmentManager.findFragmentById(R.id.fragment_holder) != null) {
+        if (currentScreen() != null) {
             transaction.setCustomAnimations(R.animator.fade_through_in, R.animator.fade_through_out)
         }
-        transaction.replace(R.id.fragment_holder, fragment).commitAllowingStateLoss()
+        // Screens that keep stay under the others, hidden and paused, so going back shows them as they were
+        // instead of building them again; one built before a setting it reads changed is built anew.
+        val tag = fragment.javaClass.name
+        val kept = (manager.findFragmentByTag(tag) as? ToolbarFragment)?.takeIf { it.keepsAlive && it.current() }
+        for (other in manager.fragments) {
+            if (other.id != R.id.fragment_holder || other === kept) continue
+            if (other is ToolbarFragment && other.keepsAlive && other.current()) {
+                if (!other.isHidden) transaction.hide(other).setMaxLifecycle(other, Lifecycle.State.STARTED)
+            } else {
+                transaction.remove(other)
+            }
+        }
+        if (kept != null) {
+            transaction.show(kept).setMaxLifecycle(kept, Lifecycle.State.RESUMED)
+        } else {
+            transaction.add(R.id.fragment_holder, fragment, tag)
+        }
+        transaction.commitAllowingStateLoss()
         binding.drawerLayout.closeDrawers()
     }
+
+    /** The screen on show; screens that keep stay added under it, hidden. */
+    private fun currentScreen() = supportFragmentManager.fragments.lastOrNull { it.id == R.id.fragment_holder && !it.isHidden } as? ToolbarFragment
 
     /** The connect button and the stats bar show on Home, and on every screen while the user wants them there. */
     private fun fitBottomBar(screen: ToolbarFragment) {
@@ -539,9 +582,12 @@ class MainActivity :
         }
     }
 
+    /** The backdrop drawn into a layer while the drawer is out. */
+    private var stillBackdrop: GlassBackdrop? = null
+
+    // Home follows the connection while hidden too, so it shows the right state when it comes back.
     private fun refreshConfigurationProfileState() {
-        (supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment)
-            ?.refreshProfileState()
+        (supportFragmentManager.findFragmentByTag(ConfigurationFragment::class.java.name) as? ConfigurationFragment)?.refreshProfileState()
     }
 
     fun displayFragmentWithId(@IdRes id: Int): Boolean {
@@ -727,7 +773,7 @@ class MainActivity :
         super.onStop()
     }
 
-    private fun home() = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
+    private fun home() = currentScreen() as? ConfigurationFragment
 
     override fun canSwipeBack() = home().let { wideSwipeAllowed(binding.drawerLayout.isOpen, it?.searchOpen, it?.atFirstGroup == true) }
 
@@ -766,8 +812,7 @@ class MainActivity :
         if (super.onKeyDown(keyCode, event)) return true
         if (binding.drawerLayout.isOpen) return false
 
-        val fragment =
-            supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+        val fragment = currentScreen()
         return fragment != null && fragment.onKeyDown(keyCode, event)
     }
 }
