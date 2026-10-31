@@ -135,7 +135,7 @@ class MainActivity :
             when {
                 binding.drawerLayout.isOpen -> binding.drawerLayout.close()
                 current?.onBackPressed() == true -> Unit
-                current is ConfigurationFragment -> moveTaskToBack(true)
+                current is ConfigurationFragment && !current.proxies -> moveTaskToBack(true)
                 else -> displayFragmentWithId(R.id.nav_configuration)
             }
         }
@@ -656,7 +656,9 @@ class MainActivity :
 
     // Home follows the connection while hidden too, so it shows the right state when it comes back.
     private fun refreshConfigurationProfileState() {
-        (supportFragmentManager.findFragmentByTag(ConfigurationFragment::class.java.name) as? ConfigurationFragment)?.refreshProfileState()
+        for (screen in listOf(ConfigurationFragment::class.java, ProxiesFragment::class.java)) {
+            (supportFragmentManager.findFragmentByTag(screen.name) as? ConfigurationFragment)?.refreshProfileState()
+        }
     }
 
     fun displayFragmentWithId(@IdRes id: Int): Boolean {
@@ -666,6 +668,8 @@ class MainActivity :
             }
 
             R.id.nav_group -> displayFragment(GroupFragment())
+
+            R.id.nav_proxies -> displayFragment(ProxiesFragment())
 
             R.id.nav_route -> displayFragment(RouteFragment())
 
@@ -767,6 +771,9 @@ class MainActivity :
         connection.disconnect(this)
         connection.connect(this, this)
     }
+
+    /** Starts the service for the selected profile, asking for the VPN permission first where needed. */
+    fun startConnecting() = connect.launch(null)
 
     private val connect = registerForActivityResult(VpnRequestActivity.StartService()) {
         if (it) snackbar(R.string.vpn_permission_denied).show()

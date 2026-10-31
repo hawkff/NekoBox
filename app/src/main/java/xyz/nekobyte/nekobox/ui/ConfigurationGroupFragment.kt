@@ -13,6 +13,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.BundleCompat
+import androidx.core.view.MenuCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import androidx.core.view.isGone
@@ -52,6 +53,7 @@ import xyz.nekobyte.nekobox.ktx.FixedGridLayoutManager
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.alert
+import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.byteCount
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
@@ -473,7 +475,8 @@ class ConfigurationGroupFragment : Fragment() {
             profile.lifetimeTx,
             profile.lifetimeRx,
             ProfileWords.connection(profile),
-            ProfileWords.country(profile),
+            rowCountry(profile),
+            rowAddress(profile),
         )
 
         private fun profileStateStamp(contentStamp: Int, profileId: Long): Int {
@@ -723,7 +726,7 @@ class ConfigurationGroupFragment : Fragment() {
             return !((!showTraffic || profile.status <= 0) && middle.isBlank())
         }
 
-        private fun hasCountryRow(profile: ProxyEntity) = layoutMode == GroupLayout.TWO_COLUMNS && ProfileWords.country(profile) != null
+        private fun hasCountryRow(profile: ProxyEntity) = layoutMode == GroupLayout.TWO_COLUMNS && rowCountry(profile) != null
 
         private fun displaySpanCount() = (layoutManager as? FixedGridLayoutManager)?.spanCount ?: 1
 
@@ -1158,13 +1161,23 @@ class ConfigurationGroupFragment : Fragment() {
     val profileAccess = Mutex()
     val reloadAccess = Mutex()
 
-    // The address under the name, when settings ask for it; a nameless profile already shows it as its name.
-    private fun rowAddress(profile: ProxyEntity) = profile.displayAddress().takeIf {
+    // Where a checked proxy left from, on the Proxies screen.
+    private fun exitOf(profile: ProxyEntity) = DataStore.proxyExits[profile.id]?.takeIf { (parentFragment as? ConfigurationFragment)?.proxies == true }
+
+    // The country under the name: of the address a checked proxy leaves from, else of the server's address.
+    private fun rowCountry(profile: ProxyEntity): String? {
+        val exit = exitOf(profile) ?: return ProfileWords.country(profile)
+        return ProfileWords.countryOf(exit)
+    }
+
+    // The address under the name, when settings ask for it; a nameless profile already shows it as its name. A
+    // checked proxy shows the address it leaves from instead.
+    private fun rowAddress(profile: ProxyEntity) = exitOf(profile)?.let { app.getString(R.string.proxies_exit, it) } ?: profile.displayAddress().takeIf {
         (parentFragment as? ConfigurationFragment)?.alwaysShowAddress == true && !profile.requireBean().name.isNullOrBlank()
     }
 
     // Under the name: the country of the server's address, and the address.
-    private fun rowDetails(profile: ProxyEntity) = listOfNotNull(ProfileWords.country(profile), rowAddress(profile)).joinToString(" · ")
+    private fun rowDetails(profile: ProxyEntity) = listOfNotNull(rowCountry(profile), rowAddress(profile)).joinToString(" · ")
 
     /** A section's header: its title and size; a tap folds or unfolds it. */
     private inner class SectionHolder(private val binding: LayoutProfileSectionBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -1202,6 +1215,8 @@ class ConfigurationGroupFragment : Fragment() {
             val profile = adapter?.profileById(profileId) ?: return
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
+            // Favorites is a tab on Home, which keeps to servers.
+            if ((parentFragment as? ConfigurationFragment)?.proxies == true) popup.menu.removeItem(R.id.action_favorite)
             popup.menu.findItem(R.id.action_favorite)?.setTitle(
                 if (profileId in DataStore.favoriteProfiles) R.string.favorite_remove else R.string.favorite_add,
             )
@@ -1300,6 +1315,16 @@ class ConfigurationGroupFragment : Fragment() {
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.double_column_item_menu, popup.menu)
             if (select) popup.menu.removeItem(R.id.action_delete)
+            // A proxy connects at once or becomes a group's exit; Remove comes last, apart.
+            if (host.proxies && !select) {
+                popup.menu.clear()
+                popup.menu.add(0, R.string.proxies_connect, 0, R.string.proxies_connect)
+                popup.menu.add(0, R.id.action_edit, 1, R.string.edit)
+                popup.menu.add(0, R.string.proxies_use_as_exit, 2, R.string.proxies_use_as_exit)
+                popup.menu.add(0, R.id.action_share, 3, R.string.share)
+                popup.menu.add(1, R.id.action_delete, 4, R.string.delete)
+                MenuCompat.setGroupDividerEnabled(popup.menu, true)
+            }
             val running = host.isRunningProfile(profileId)
             popup.menu.findItem(R.id.action_edit)?.isVisible = adapter?.profileById(profileId)?.haveSettings() == true
             popup.menu.findItem(R.id.action_edit)?.isEnabled = !running
@@ -1321,13 +1346,23 @@ class ConfigurationGroupFragment : Fragment() {
                         true
                     }
 
+                    R.string.proxies_connect -> {
+                        selectProfile(profileId, connect = true)
+                        true
+                    }
+
+                    R.string.proxies_use_as_exit -> {
+                        host.useAsExit(profileId)
+                        true
+                    }
+
                     else -> false
                 }
             }
             popup.show()
         }
 
-        private fun selectProfile(profileId: Long) {
+        private fun selectProfile(profileId: Long, connect: Boolean = false) {
             val host = parentFragment as? ConfigurationFragment ?: return
             val profile = adapter?.profileById(profileId) ?: return
             runOnDefaultDispatcher {
@@ -1344,7 +1379,10 @@ class ConfigurationGroupFragment : Fragment() {
                 }
                 host.refreshProfileState()
 
-                if (update) {
+                if (connect && !DataStore.serviceState.started) {
+                    if (update) ProfileManager.postUpdate(lastSelected, noTraffic = true)
+                    onMainDispatcher { (activity as? MainActivity)?.startConnecting() }
+                } else if (update) {
                     ProfileManager.postUpdate(lastSelected, noTraffic = true)
                     if (DataStore.serviceState.canStop && reloadAccess.tryLock()) {
                         try {
@@ -1353,7 +1391,7 @@ class ConfigurationGroupFragment : Fragment() {
                             reloadAccess.unlock()
                         }
                     }
-                } else if (NekoBox.isTv) {
+                } else if (!connect && NekoBox.isTv) {
                     if (DataStore.serviceState.started) {
                         NekoBox.stopService()
                     } else {
@@ -1418,7 +1456,7 @@ class ConfigurationGroupFragment : Fragment() {
                 TooltipCompat.setTooltipText(trafficText, null)
             }
 
-            val country = ProfileWords.country(proxyEntity)
+            val country = rowCountry(proxyEntity)
             val address = rowAddress(proxyEntity)
             val details = listOfNotNull(country, address).joinToString(" · ")
             // Two columns give the country a row of its own, so the address keeps the card's width.
@@ -1479,7 +1517,7 @@ class ConfigurationGroupFragment : Fragment() {
             }
 
             // Two columns and compact rows keep the actions under ⋮.
-            if (layout != GroupLayout.CARDS) {
+            if (layout != GroupLayout.CARDS || pf.proxies) {
                 editButton.isGone = true
                 shareLayout.isGone = true
                 removeButton.isGone = true

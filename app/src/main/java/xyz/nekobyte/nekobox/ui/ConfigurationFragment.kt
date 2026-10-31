@@ -77,8 +77,10 @@ import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
 import xyz.nekobyte.nekobox.databinding.LayoutGroupListBinding
 import xyz.nekobyte.nekobox.databinding.LayoutGroupNameDialogBinding
+import xyz.nekobyte.nekobox.databinding.LayoutPasteProxiesBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProgressListBinding
 import xyz.nekobyte.nekobox.fmt.AbstractBean
+import xyz.nekobyte.nekobox.fmt.ProxyLines
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.chainContains
 import xyz.nekobyte.nekobox.fmt.internal.chainHops
@@ -92,6 +94,7 @@ import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.dp2px
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.isIpAddress
+import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.readBytesBounded
 import xyz.nekobyte.nekobox.ktx.readTextBounded
@@ -100,6 +103,7 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnLifecycleDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
+import xyz.nekobyte.nekobox.net.ConnectionProbes
 import xyz.nekobyte.nekobox.plugin.PluginManager
 import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSSettingsActivity
 import xyz.nekobyte.nekobox.proxy.config.ConfigSettingActivity
@@ -111,6 +115,7 @@ import xyz.nekobyte.nekobox.ui.profile.HysteriaSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.JuicitySettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.MieruSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.NaiveSettingsActivity
+import xyz.nekobyte.nekobox.ui.profile.ProfileSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.SSHSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.ShadowsocksRSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.ShadowsocksSettingsActivity
@@ -132,10 +137,15 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 import kotlin.collections.set
 
-class ConfigurationFragment @JvmOverloads constructor(
+/**
+ * Home: the profiles of every group, a tab each. As a picker ([select]) it returns the profile tapped; as the
+ * Proxies screen ([proxies], see ProxiesFragment) it shows only the lists of proxies, which Home leaves out.
+ */
+open class ConfigurationFragment @JvmOverloads constructor(
     val select: Boolean = false,
     val selectedItem: ProxyEntity? = null,
     val titleRes: Int = 0,
+    val proxies: Boolean = false,
 ) : ToolbarFragment(R.layout.layout_group_list),
     PopupMenu.OnMenuItemClickListener,
     Toolbar.OnMenuItemClickListener,
@@ -148,6 +158,10 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     private companion object {
         const val KEY_EXIT_PROXY_BASE = "exitProxyBase"
+        const val KEY_THROUGH_LIST = "throughList"
+
+        // What a checked proxy's connection reports about itself, its address among it.
+        const val EXIT_TRACE = "https://www.cloudflare.com/cdn-cgi/trace"
         const val MAX_SEARCH_RESULTS = 500
 
         // Actions on the open group; Favorites is no group, so they hide there. Update subscription
@@ -186,6 +200,19 @@ class ConfigurationFragment @JvmOverloads constructor(
     override val keepsAlive get() = true
 
     override fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
+
+    /** Whether this screen has a tab for [group]: Home the servers, the Proxies screen the proxy lists, a picker both. */
+    internal fun shows(group: ProxyGroup) = select || (group.type == GroupType.PROXIES) == proxies
+
+    // The tab this screen opens on: Home's group, the Proxies screen's list.
+    private var openGroupId: Long
+        get() = if (proxies) DataStore.selectedProxyList else DataStore.selectedGroup
+        set(value) {
+            if (proxies) DataStore.selectedProxyList = value else DataStore.selectedGroup = value
+        }
+
+    /** The group of the tab on screen, read on the main thread; 0 on Favorites or without a tab. */
+    private fun tabGroupId() = adapter.groupList.getOrNull(groupPager.currentItem)?.id?.takeIf { it > 0L } ?: 0L
 
     private var selectedProfileSnapshot = 0L
     private var currentProfileSnapshot = 0L
@@ -239,7 +266,7 @@ class ConfigurationFragment @JvmOverloads constructor(
     internal fun isConnectingProfile(profileId: Long) = !select && connectingSnapshot && selectedProfileSnapshot == profileId
 
     fun getCurrentGroupFragment(): ConfigurationGroupFragment? = try {
-        childFragmentManager.findFragmentByTag("f" + DataStore.selectedGroup) as ConfigurationGroupFragment?
+        childFragmentManager.findFragmentByTag("f" + openGroupId) as ConfigurationGroupFragment?
     } catch (e: Exception) {
         Logs.e(e)
         null
@@ -266,7 +293,7 @@ class ConfigurationFragment @JvmOverloads constructor(
             if (adapter.groupList.size > position) {
                 val groupId = adapter.groupList[position].id
                 setFavoritesShown(groupId == FAVORITES_GROUP_ID)
-                if (groupId != FAVORITES_GROUP_ID) DataStore.selectedGroup = groupId
+                if (groupId != FAVORITES_GROUP_ID) openGroupId = groupId
             }
         }
     }
@@ -310,8 +337,9 @@ class ConfigurationFragment @JvmOverloads constructor(
         searchJob = viewLifecycleOwner.lifecycleScope.launch {
             delay(150)
             val results = withContext(Dispatchers.IO) {
-                val groups = ProfileDatabase.groupDao.allGroups().associate { it.id to it.displayName() }
+                val groups = ProfileDatabase.groupDao.allGroups().filter(::shows).associate { it.id to it.displayName() }
                 ProfileDatabase.proxyDao.getAll().asSequence()
+                    .filter { it.groupId in groups }
                     .filter { profile -> listOf(profile.displayName(), profile.displayType(), profile.displayAddress()).any { it.lowercase().contains(needle) } }
                     .take(MAX_SEARCH_RESULTS)
                     .map { SearchResult(it.id, it.displayName(), "${groups[it.groupId].orEmpty()} · ${it.displayType()}") }
@@ -347,21 +375,36 @@ class ConfigurationFragment @JvmOverloads constructor(
     private fun showGroupMenu(anchor: View, position: Int) {
         val group = adapter.groupList.getOrNull(position)?.takeIf { it.id != FAVORITES_GROUP_ID } ?: return
         PopupMenu(requireContext(), anchor).apply {
-            menu.add(0, R.string.group_edit, 0, R.string.group_edit)
+            if (group.type == GroupType.PROXIES) {
+                menu.add(0, R.string.proxies_connect_through, 0, R.string.proxies_connect_through)
+                if (group.frontProxy > 0L) menu.add(0, R.string.proxies_connect_directly, 1, R.string.proxies_connect_directly)
+            } else {
+                menu.add(0, R.string.group_edit, 0, R.string.group_edit)
+            }
             if (group.type == GroupType.SUBSCRIPTION) menu.add(0, R.string.group_update, 1, R.string.group_update)
             // The default group keeps its name and stays, as on the Groups screen. An update under way
             // writes the group back when it ends, over a new name, so neither is offered meanwhile.
             if (!group.ungrouped && group.id !in GroupUpdater.updating) {
-                menu.add(0, R.string.group_rename, 2, R.string.group_rename)
+                menu.add(0, R.string.group_rename, 2, if (group.type == GroupType.PROXIES) R.string.proxies_rename_list else R.string.group_rename)
                 // Removing comes last, apart from the rest.
-                menu.add(1, R.string.group_delete, 3, R.string.group_delete)
+                menu.add(1, R.string.group_delete, 3, if (group.type == GroupType.PROXIES) R.string.proxies_delete_list else R.string.group_delete)
             }
             MenuCompat.setGroupDividerEnabled(menu, true)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.string.group_edit -> startActivity(Intent(requireContext(), GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_GROUP_ID, group.id))
+
+                    R.string.proxies_connect_through -> {
+                        throughListId = group.id
+                        selectThrough.launch(Intent(requireActivity(), ProfileSelectActivity::class.java))
+                    }
+
+                    R.string.proxies_connect_directly -> setThrough(group.id, -1L)
+
                     R.string.group_update -> runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
+
                     R.string.group_rename -> renameGroup(group)
+
                     R.string.group_delete -> confirmDeleteGroup(group)
                 }
                 true
@@ -374,7 +417,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         val binding = LayoutGroupNameDialogBinding.inflate(layoutInflater)
         binding.name.setText(group.name)
         val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.group_rename)
+            .setTitle(if (group.type == GroupType.PROXIES) R.string.proxies_rename_list else R.string.group_rename)
             .setView(binding.root)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val name = binding.name.text?.toString()?.trim().orEmpty()
@@ -461,6 +504,7 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         if (savedInstanceState != null) {
             exitProxyBaseId = savedInstanceState.getLong(KEY_EXIT_PROXY_BASE, 0L)
+            throughListId = savedInstanceState.getLong(KEY_THROUGH_LIST, 0L)
             parentFragmentManager.beginTransaction()
                 .setReorderingAllowed(false)
                 .detach(this)
@@ -472,6 +516,7 @@ class ConfigurationFragment @JvmOverloads constructor(
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putLong(KEY_EXIT_PROXY_BASE, exitProxyBaseId)
+        outState.putLong(KEY_THROUGH_LIST, throughListId)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -480,6 +525,7 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         if (!select) {
             toolbar.inflateMenu(R.menu.add_profile_menu)
+            if (proxies) fitProxiesMenu(toolbar.menu)
             MenuCompat.setGroupDividerEnabled(toolbar.menu, true)
             toolbar.menu.findItem(R.id.action_add)?.subMenu?.let { MenuCompat.setGroupDividerEnabled(it, true) }
             toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
@@ -529,6 +575,9 @@ class ConfigurationFragment @JvmOverloads constructor(
         searchResults.adapter = searchResultAdapter
         groupPicker = groupListBinding.groupPicker
         groupPicker.setOnClickListener { showGroupPicker() }
+        emptyState = groupListBinding.groupEmpty
+        groupListBinding.groupEmptyAction.setOnClickListener { pasteProxies() }
+        if (proxies) toolbar.setTitle(R.string.menu_proxies)
         TooltipCompat.setTooltipText(groupPicker, getString(R.string.all_groups))
         syncProfileState()
         adapter = GroupPagerAdapter()
@@ -605,7 +654,10 @@ class ConfigurationFragment @JvmOverloads constructor(
             // editingGroup
             if (key == Key.PROFILE_GROUP) {
                 val targetId = DataStore.editingGroup
-                if (targetId > 0 && targetId != DataStore.selectedGroup) DataStore.selectedGroup = targetId
+                // Home leaves the Proxies screen's lists to it, and the other way round.
+                val target = if (targetId > 0) onDefaultDispatcher { ProfileDatabase.groupDao.getById(targetId) } else null
+                if (target == null || !shows(target) || view == null) return@runOnMainDispatcher
+                if (targetId != openGroupId) openGroupId = targetId
                 // Compared with the tab on screen: Home lives on under other screens, and whoever asks for
                 // a group may have set selectedGroup already.
                 if (targetId > 0 && targetId != adapter.groupList.getOrNull(groupPager.currentItem)?.id) {
@@ -803,6 +855,223 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
         }
 
+    private lateinit var emptyState: View
+
+    // The Proxies screen without a list says what goes there and starts one; the tabs wait for the first list.
+    private fun showEmpty() {
+        if (!proxies || view == null) return
+        val empty = adapter.groupList.isEmpty()
+        emptyState.isVisible = empty
+        tabBar.isVisible = !empty
+    }
+
+    // Home's menu on the Proxies screen: its own ways to add, a check that also reads where each proxy leaves
+    // from, and none of what belongs to Home (subscriptions, the exit picker, global mode).
+    private fun fitProxiesMenu(menu: Menu) {
+        menu.findItem(R.id.action_add)?.subMenu?.apply {
+            removeGroup(R.id.group_add_profile)
+            removeGroup(R.id.group_add_group)
+            add(R.id.group_add_profile, R.id.action_paste_proxies, 0, R.string.proxies_paste)
+            add(R.id.group_add_profile, R.id.action_new_socks, 1, R.string.proxies_new_socks)
+            add(R.id.group_add_profile, R.id.action_new_http, 2, R.string.proxies_new_http)
+            add(R.id.group_add_group, R.id.action_new_proxy_list, 3, R.string.proxies_new_list)
+        }
+        menu.findItem(R.id.action_misc)?.subMenu?.apply {
+            findItem(R.id.action_connection_url_test)?.setTitle(R.string.proxies_check)
+            removeItem(R.id.action_update_subscription)
+            removeGroup(R.id.group_connection)
+        }
+    }
+
+    private suspend fun createProxyList(name: String) = GroupManager.createGroup(ProxyGroup(name = name, type = GroupType.PROXIES))
+
+    // A new profile goes where this screen adds: the open list on the Proxies screen, or a first list made when the
+    // proxy is saved; Home's import target otherwise.
+    private fun newProfile(editor: Class<out Activity>) {
+        val intent = Intent(requireActivity(), editor)
+        if (proxies) {
+            val open = tabGroupId()
+            if (open > 0L) {
+                intent.putExtra(ProfileSettingsActivity.EXTRA_GROUP_ID, open)
+            } else {
+                intent.putExtra(ProfileSettingsActivity.EXTRA_NEW_PROXY_LIST, getString(R.string.proxies_default_list))
+            }
+        }
+        startActivity(intent)
+    }
+
+    // A name for a new list of proxies, as a group's name is asked for.
+    private fun newProxyList() {
+        val binding = LayoutGroupNameDialogBinding.inflate(layoutInflater)
+        binding.nameLayout.hint = getString(R.string.proxies_list_name)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.proxies_new_list)
+            .setView(binding.root)
+            .setPositiveButton(R.string.add) { _, _ ->
+                val name = binding.name.text?.toString()?.trim().orEmpty()
+                if (name.isNotEmpty()) runOnDefaultDispatcher { createProxyList(name) }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        binding.name.requestFocus()
+        val ok = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        ok.isEnabled = false
+        binding.name.doAfterTextChanged { ok.isEnabled = !it.isNullOrBlank() }
+    }
+
+    /**
+     * Proxies as a provider lists them, into the open list; the first paste also names the first list. A list on
+     * the clipboard fills the field, and the count of proxies and skipped lines follows the text. A provider's list
+     * can hold thousands of lines, so they are read off the main thread once typing pauses.
+     */
+    private fun pasteProxies() {
+        val binding = LayoutPasteProxiesBinding.inflate(layoutInflater)
+        val open = adapter.groupList.getOrNull(groupPager.currentItem)
+        binding.listLayout.isVisible = open == null
+        binding.listName.setText(R.string.proxies_default_list)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.proxies_paste)
+            .setView(binding.root)
+            .setPositiveButton(R.string.add, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        val scope = viewLifecycleOwner.lifecycleScope
+        var parsing: Job? = null
+        // What the text held when it was last read; Add stays off until the text on screen has been read.
+        var read: ProxyLines.Result? = null
+        fun refresh() {
+            val text = binding.proxies.text?.toString().orEmpty()
+            val plain = if (binding.kind.checkedChipId == R.id.kind_http) ProxyLines.Plain.HTTP else ProxyLines.Plain.SOCKS5
+            read = null
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.isEnabled = false
+            parsing?.cancel()
+            parsing = scope.launch {
+                delay(150)
+                val result = withContext(Dispatchers.Default) { ProxyLines.parse(text, plain) }
+                read = result
+                val count = result.proxies.size
+                binding.proxiesLayout.helperText = listOfNotNull(
+                    resources.getQuantityString(R.plurals.proxies_found, count, count),
+                    result.skipped.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.proxies_skipped, it, it) },
+                ).joinToString(" · ")
+                dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.isEnabled = count > 0 && (open != null || !binding.listName.text.isNullOrBlank())
+            }
+        }
+        dialog.setOnShowListener {
+            refresh()
+            // A provider's list on the clipboard fills the empty field.
+            val clipboard = NekoBox.getClipboardText()
+            scope.launch {
+                val found = withContext(Dispatchers.Default) { ProxyLines.parse(clipboard, ProxyLines.Plain.SOCKS5).proxies.isNotEmpty() }
+                if (found && binding.proxies.text.isNullOrEmpty()) binding.proxies.setText(clipboard)
+            }
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val found = read?.proxies ?: return@setOnClickListener
+                val name = binding.listName.text?.toString()?.trim().orEmpty()
+                dialog.dismiss()
+                runOnDefaultDispatcher {
+                    val list = open ?: createProxyList(name)
+                    try {
+                        ProfileManager.createProfiles(list.id, found)
+                    } catch (e: Exception) {
+                        Logs.w(e)
+                        if (open == null) GroupManager.deleteGroup(listOf(list))
+                        onMainDispatcher { snackbar(e.readableMessage).show() }
+                        return@runOnDefaultDispatcher
+                    }
+                    onMainDispatcher {
+                        snackbar(resources.getQuantityString(R.plurals.proxies_added, found.size, found.size, list.displayName())).show()
+                    }
+                }
+            }
+        }
+        binding.proxies.doAfterTextChanged { refresh() }
+        binding.listName.doAfterTextChanged { refresh() }
+        binding.kind.setOnCheckedStateChangeListener { _, _ -> refresh() }
+        dialog.show()
+    }
+
+    // The list whose first hop the picker is choosing, kept while it is open.
+    private var throughListId = 0L
+
+    private val selectThrough =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { (resultCode, data) ->
+            if (resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val id = data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0L) ?: 0L
+            if (id > 0L && throughListId > 0L) setThrough(throughListId, id)
+        }
+
+    /**
+     * Makes the proxies of [listId] connect through [profileId] first, or directly for a negative id: Mullvad's
+     * SOCKS5 proxies answer only inside its WireGuard tunnel, and a residential exit can sit behind the user's own
+     * server. The message offers to undo it.
+     */
+    private fun setThrough(listId: Long, profileId: Long) {
+        runOnDefaultDispatcher {
+            val list = ProfileDatabase.groupDao.getById(listId) ?: return@runOnDefaultDispatcher
+            val through = if (profileId > 0L) ProfileManager.getProfile(profileId) else null
+            if (through != null && through.groupId == listId) {
+                onMainDispatcher { snackbar(R.string.proxies_through_own_list).show() }
+                return@runOnDefaultDispatcher
+            }
+            val previous = list.frontProxy
+            GroupManager.updateGroup(list.apply { frontProxy = through?.id ?: -1L })
+            reloadIfRunningIn(listId)
+            onMainDispatcher {
+                val message = if (through == null) {
+                    getString(R.string.proxies_now_direct, list.displayName())
+                } else {
+                    getString(R.string.proxies_now_through, list.displayName(), through.displayName())
+                }
+                snackbar(message).setAction(R.string.undo) { setThrough(listId, previous) }.show()
+            }
+        }
+    }
+
+    /** Makes the servers of a group the user picks leave through [profileId], so sites see the proxy's address. */
+    internal fun useAsExit(profileId: Long) {
+        val context = requireContext()
+        runOnDefaultDispatcher {
+            val proxy = ProfileManager.getProfile(profileId) ?: return@runOnDefaultDispatcher
+            val groups = ProfileDatabase.groupDao.allGroups().filter { it.type != GroupType.PROXIES }
+            onMainDispatcher {
+                if (!isAdded) return@onMainDispatcher
+                // A group that leaves through it already says so; picking it again stops that.
+                val rows = groups.map { it.displayName() to getString(R.string.proxies_exit_now).takeIf { _ -> it.landingProxy == profileId } }
+                showChoiceDialog(context, getString(R.string.proxies_exit_title, proxy.displayName()), rows, -1) { index ->
+                    val group = groups[index]
+                    setExit(group.id, if (group.landingProxy == profileId) -1L else profileId)
+                }
+            }
+        }
+    }
+
+    private fun setExit(groupId: Long, profileId: Long) {
+        runOnDefaultDispatcher {
+            val group = ProfileDatabase.groupDao.getById(groupId) ?: return@runOnDefaultDispatcher
+            val previous = group.landingProxy
+            val proxy = if (profileId > 0L) ProfileManager.getProfile(profileId) else null
+            GroupManager.updateGroup(group.apply { landingProxy = proxy?.id ?: -1L })
+            reloadIfRunningIn(groupId)
+            onMainDispatcher {
+                val message = if (proxy == null) {
+                    getString(R.string.proxies_exit_cleared, group.displayName())
+                } else {
+                    getString(R.string.proxies_exit_set, group.displayName(), proxy.displayName())
+                }
+                snackbar(message).setAction(R.string.undo) { setExit(groupId, previous) }.show()
+            }
+        }
+    }
+
+    // A new route for the running profile's group applies at once.
+    private suspend fun reloadIfRunningIn(groupId: Long) {
+        if (!DataStore.serviceState.canStop) return
+        if (ProfileDatabase.proxyDao.getById(DataStore.selectedProxy)?.groupId == groupId) NekoBox.reloadService()
+    }
+
     // A running connection cannot grow a hop: build a chain profile that ends at the exit,
     // select it and reconnect. The hop order is the profile name. Both sides stay references,
     // so later edits to either chain apply to this one as well.
@@ -868,8 +1137,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                     if (view != null && ::adapter.isInitialized) {
                         adapter.groupFragments[groupId]?.adapter?.removeProfiles(profileIds)
                         if (groupEmptied) {
-                            if (fallbackGroupId != null && DataStore.selectedGroup == groupId) {
-                                DataStore.selectedGroup = fallbackGroupId
+                            if (fallbackGroupId != null && openGroupId == groupId) {
+                                openGroupId = fallbackGroupId
                             }
                             adapter.reload()
                         }
@@ -945,13 +1214,13 @@ class ConfigurationFragment @JvmOverloads constructor(
                 startFilesForResult(importFile, "*/*")
             }
 
-            R.id.action_new_socks -> {
-                startActivity(Intent(requireActivity(), SocksSettingsActivity::class.java))
-            }
+            R.id.action_new_socks -> newProfile(SocksSettingsActivity::class.java)
 
-            R.id.action_new_http -> {
-                startActivity(Intent(requireActivity(), HttpSettingsActivity::class.java))
-            }
+            R.id.action_new_http -> newProfile(HttpSettingsActivity::class.java)
+
+            R.id.action_paste_proxies -> pasteProxies()
+
+            R.id.action_new_proxy_list -> newProxyList()
 
             R.id.action_new_ss -> {
                 startActivity(Intent(requireActivity(), ShadowsocksSettingsActivity::class.java))
@@ -1064,8 +1333,9 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_clear_traffic_statistics -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(DataStore.currentGroupId())
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     val toClear = mutableListOf<ProxyEntity>()
                     if (profiles.isNotEmpty()) {
                         for (profile in profiles) {
@@ -1083,8 +1353,9 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_connection_test_clear_results -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(DataStore.currentGroupId())
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     val toClear = mutableListOf<ProxyEntity>()
                     if (profiles.isNotEmpty()) {
                         for (profile in profiles) {
@@ -1096,6 +1367,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                             }
                         }
                     }
+                    DataStore.forgetProxyExits(profiles.map { it.id })
                     if (toClear.isNotEmpty()) {
                         ProfileManager.updateProfile(toClear)
                     }
@@ -1103,8 +1375,9 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_connection_test_delete_unavailable -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(DataStore.currentGroupId())
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     // Status 0 is untested, 1 available; the rest failed their last test.
                     val failed = profiles.filter { it.status != 0 && it.status != 1 }
                     onMainDispatcher { confirmRemove(failed, R.string.no_unavailable_profiles) }
@@ -1112,8 +1385,9 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_remove_duplicate -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(DataStore.currentGroupId())
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     val seen = HashSet<Protocols.Deduplication>()
                     val duplicates = profiles.filterNot { seen.add(Protocols.Deduplication(it.requireBean())) }
                     onMainDispatcher { confirmRemove(duplicates, R.string.no_duplicate_profiles) }
@@ -1282,8 +1556,9 @@ class ConfigurationFragment @JvmOverloads constructor(
         // callback (which fires later, on user tap).
         var groupName = ""
 
+        val groupId = tabGroupId()
         val mainJob = runOnDefaultDispatcher {
-            val group = DataStore.currentGroup()
+            val group = ProfileDatabase.groupDao.getById(groupId) ?: return@runOnDefaultDispatcher
             groupName = group.displayName()
             val profilesList = ProfileDatabase.proxyDao.getByGroup(group.id).filter {
                 if (icmpPing) {
@@ -1434,8 +1709,9 @@ class ConfigurationFragment @JvmOverloads constructor(
 
         // Profiles whose Tailscale node the running service drives are measured through it.
         val service = { (activity as? MainActivity)?.connection?.service }
+        val groupId = tabGroupId()
         val mainJob = runOnDefaultDispatcher {
-            val group = DataStore.currentGroup()
+            val group = ProfileDatabase.groupDao.getById(groupId) ?: return@runOnDefaultDispatcher
             groupName = group.displayName()
             val profilesList = ProfileDatabase.proxyDao.getByGroup(group.id)
             test.proxyN = profilesList.size
@@ -1450,7 +1726,18 @@ class ConfigurationFragment @JvmOverloads constructor(
                             profile.status = 0
 
                             try {
-                                val latency = urlTest.doTest(profile, result.prepareUrlTest())
+                                val latency = if (proxies) {
+                                    // An earlier answer stands only until this check: it fails or reads a new one.
+                                    DataStore.forgetProxyExits(listOf(profile.id))
+                                    val (latency, trace) = urlTest.check(profile, EXIT_TRACE, result.prepareUrlTest())
+                                    ConnectionProbes.traceAddress(trace)?.let { exit ->
+                                        ServerCountries.lookUp(listOf(exit))
+                                        DataStore.rememberProxyExits(mapOf(profile.id to exit))
+                                    }
+                                    latency
+                                } else {
+                                    urlTest.doTest(profile, result.prepareUrlTest())
+                                }
                                 profile.status = 1
                                 profile.ping = latency
                                 // Clear any stale error from a previous failed test so a now-passing
@@ -1530,10 +1817,10 @@ class ConfigurationFragment @JvmOverloads constructor(
             }
 
             runOnDefaultDispatcher {
-                var newGroupList = ArrayList(ProfileDatabase.groupDao.allGroups())
-                if (newGroupList.isEmpty()) {
+                var newGroupList = ArrayList(ProfileDatabase.groupDao.allGroups().filter(::shows))
+                if (newGroupList.isEmpty() && !proxies) {
                     ProfileDatabase.groupDao.createGroup(ProxyGroup(ungrouped = true))
-                    newGroupList = ArrayList(ProfileDatabase.groupDao.allGroups())
+                    newGroupList = ArrayList(ProfileDatabase.groupDao.allGroups().filter(::shows))
                 }
                 newGroupList.find { it.ungrouped }?.let {
                     if (newGroupList.size > 1 && ProfileDatabase.proxyDao.countByGroup(it.id) == 0L) {
@@ -1546,9 +1833,9 @@ class ConfigurationFragment @JvmOverloads constructor(
                 // Only pins known to be gone are dropped; one added meanwhile stays.
                 val gone = favorites.toSet() - liveFavorites
                 if (gone.isNotEmpty()) DataStore.updateFavoriteProfiles { it - gone }
-                if (liveFavorites.isNotEmpty()) newGroupList.add(0, ProxyGroup(id = FAVORITES_GROUP_ID, name = app.getString(R.string.favorites)))
+                if (liveFavorites.isNotEmpty() && !proxies) newGroupList.add(0, ProxyGroup(id = FAVORITES_GROUP_ID, name = app.getString(R.string.favorites)))
 
-                var selectedGroup = selectedItem?.groupId ?: DataStore.currentGroupId()
+                var selectedGroup = selectedItem?.groupId ?: if (proxies) DataStore.selectedProxyList else DataStore.currentGroupId()
                 var set = false
                 if (selectedGroup > 0L) {
                     val index = newGroupList.indexOfFirst { it.id == selectedGroup }
@@ -1561,8 +1848,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                 if (!set && firstGroup >= 0) {
                     selectedGroupIndex = firstGroup
                     selectedGroup = newGroupList[firstGroup].id
-                    if (DataStore.selectedGroup != selectedGroup) {
-                        DataStore.selectedGroup = selectedGroup
+                    if (openGroupId != selectedGroup) {
+                        openGroupId = selectedGroup
                     }
                     set = true
                 }
@@ -1578,6 +1865,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                             groupList = newGroupList
                             notifyDataSetChanged()
                             updateGroupPicker()
+                            showEmpty()
                             if (set) groupPager.setCurrentItem(selectedGroupIndex, false)
                             if (!select) {
                                 groupPager.registerOnPageChangeCallback(updateSelectedCallback)
@@ -1607,12 +1895,13 @@ class ConfigurationFragment @JvmOverloads constructor(
         override fun containsItem(itemId: Long): Boolean = groupList.any { it.id == itemId }
 
         override suspend fun groupAdd(group: ProxyGroup) {
-            if (disposed) return
+            if (disposed || !shows(group)) return
             tabLayout.post {
                 if (disposed) return@post
                 groupList.add(group)
                 notifyItemInserted(groupList.size - 1)
                 updateGroupPicker()
+                showEmpty()
                 tabLayout.getTabAt(groupList.size - 1)?.select()
             }
         }
@@ -1627,6 +1916,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 groupList.removeAt(index)
                 notifyItemRemoved(index)
                 updateGroupPicker()
+                showEmpty()
             }
         }
 
@@ -1651,7 +1941,8 @@ class ConfigurationFragment @JvmOverloads constructor(
         override suspend fun onAdd(profile: ProxyEntity) {
             if (disposed) return
             if (groupList.find { it.id == profile.groupId } == null) {
-                DataStore.selectedGroup = profile.groupId
+                if (ProfileDatabase.groupDao.getById(profile.groupId)?.let(::shows) != true) return
+                openGroupId = profile.groupId
                 reload()
             }
         }

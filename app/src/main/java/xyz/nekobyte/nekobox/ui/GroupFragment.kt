@@ -278,7 +278,8 @@ class GroupFragment :
 
         suspend fun reload() {
             val started = onMainDispatcher { deletions }
-            val groups = ProfileDatabase.groupDao.allGroups().toMutableList()
+            // Lists of proxies live on the Proxies screen.
+            val groups = ProfileDatabase.groupDao.allGroups().filterTo(ArrayList()) { it.type != GroupType.PROXIES }
             val ungrouped = groups.find { it.ungrouped }
             if (groups.size > 1 && ungrouped != null &&
                 ProfileDatabase.proxyDao.countByGroup(ungrouped.id) == 0L
@@ -424,6 +425,7 @@ class GroupFragment :
         }
 
         override suspend fun groupAdd(group: ProxyGroup) {
+            if (group.type == GroupType.PROXIES) return
             delay(300L)
             val size = ProfileDatabase.proxyDao.countByGroup(group.id)
             onMainDispatcher {
@@ -453,6 +455,7 @@ class GroupFragment :
         }
 
         override suspend fun groupUpdated(group: ProxyGroup) {
+            if (group.type == GroupType.PROXIES) return
             val size = ProfileDatabase.proxyDao.countByGroup(group.id)
             onMainDispatcher {
                 val index = groupList.indexOfFirst { it.id == group.id }

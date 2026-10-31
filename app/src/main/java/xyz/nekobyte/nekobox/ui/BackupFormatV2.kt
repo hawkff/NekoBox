@@ -13,6 +13,9 @@ import java.util.Base64
 internal object BackupFormatV2 {
     const val VERSION = 2
 
+    // What this device approved or measured: plugin signers, the addresses server names resolved to, where proxies left from.
+    private val DEVICE_ONLY = setOf(Key.PLUGIN_SIGNER_APPROVALS, Key.SERVER_ADDRESSES, Key.PROXY_EXITS)
+
     fun encodeProfiles(profiles: List<ProxyEntity>): JSONArray = JSONArray().apply {
         profiles.forEach { put(encodeProfile(it)) }
     }
@@ -32,12 +35,12 @@ internal object BackupFormatV2 {
     fun decodeRules(array: JSONArray): List<RuleEntity> = array.mapObjects(::decodeRule)
 
     fun encodeSettings(settings: List<KeyValuePair>): JSONArray = JSONArray().apply {
-        settings.filterNot { it.key == Key.PLUGIN_SIGNER_APPROVALS || it.key == Key.SERVER_ADDRESSES }.forEach { put(encodeSetting(it)) }
+        settings.filterNot { it.key in DEVICE_ONLY }.forEach { put(encodeSetting(it)) }
     }
 
     fun decodeSettings(array: JSONArray): List<KeyValuePair> = sanitizeSettings(array.mapObjects(::decodeSetting))
 
-    fun sanitizeSettings(settings: List<KeyValuePair>) = settings.filterNot { it.key == Key.PLUGIN_SIGNER_APPROVALS || it.key == Key.SERVER_ADDRESSES }
+    fun sanitizeSettings(settings: List<KeyValuePair>) = settings.filterNot { it.key in DEVICE_ONLY }
         .onEach { it.validateValue() }
 
     fun encodeProfile(profile: ProxyEntity): JSONObject = JSONObject().apply {

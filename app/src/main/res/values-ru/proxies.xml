@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu_proxies">Прокси</string>
+    <string name="proxies_empty">Здесь хранятся прокси, за которые вы платите: SOCKS5 и HTTP с логином, например от Mullvad или от провайдера резидентных адресов. Чтобы начать, вставьте список, который дал провайдер.</string>
+    <string name="proxies_paste">Вставить прокси</string>
+    <string name="proxies_paste_formats">Один прокси в строке: host:port:user:password, user:password@host:port, host:port или ссылка socks5:// или http://.</string>
+    <string name="proxies_paste_field">Прокси</string>
+    <string name="proxies_plain_kind">Тип строк, которые не являются ссылками</string>
+    <string name="proxies_list_name">Название списка</string>
+    <string name="proxies_default_list">Мои прокси</string>
+    <string name="proxies_new_socks">Новый прокси SOCKS5</string>
+    <string name="proxies_new_http">Новый прокси HTTP</string>
+    <string name="proxies_new_list">Новый список</string>
+    <string name="proxies_check">Проверить прокси</string>
+    <string name="proxies_rename_list">Переименовать список</string>
+    <string name="proxies_delete_list">Удалить список</string>
+    <plurals name="proxies_found">
+        <item quantity="one">%d прокси</item>
+        <item quantity="few">%d прокси</item>
+        <item quantity="many">%d прокси</item>
+        <item quantity="other">%d прокси</item>
+    </plurals>
+    <plurals name="proxies_added">
+        <item quantity="one">В список %2$s добавлен %1$d прокси</item>
+        <item quantity="few">В список %2$s добавлено %1$d прокси</item>
+        <item quantity="many">В список %2$s добавлено %1$d прокси</item>
+        <item quantity="other">В список %2$s добавлено %1$d прокси</item>
+    </plurals>
+    <plurals name="proxies_skipped">
+        <item quantity="one">пропущена %d строка</item>
+        <item quantity="few">пропущены %d строки</item>
+        <item quantity="many">пропущено %d строк</item>
+        <item quantity="other">пропущено %d строки</item>
+    </plurals>
+
+    <string name="proxies_connect_through">Подключать через…</string>
+    <string name="proxies_connect_directly">Подключать напрямую</string>
+    <string name="proxies_now_through">%1$s теперь подключается через %2$s</string>
+    <string name="proxies_now_direct">%s теперь подключается напрямую</string>
+    <string name="proxies_through_own_list">Список не может подключаться через свой же прокси</string>
+
+    <string name="proxies_connect">Подключить</string>
+    <string name="proxies_use_as_exit">Сделать выходом группы…</string>
+    <string name="proxies_exit_title">Группа с выходом через %s</string>
+    <string name="proxies_exit_now">Уже выходит через него. Выберите, чтобы отменить.</string>
+    <string name="proxies_exit_set">Серверы группы %1$s теперь выходят через %2$s</string>
+    <string name="proxies_exit_cleared">Серверы группы %s теперь выходят напрямую</string>
+    <string name="proxies_exit">выход %s</string>
+</resources>

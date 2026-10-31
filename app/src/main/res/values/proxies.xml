@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Proxies screen: lists of proxies kept apart from Home. -->
+    <string name="menu_proxies">Proxies</string>
+    <string name="proxies_empty">Keep the proxies you pay for here: SOCKS5 and HTTP proxies with a login, such as Mullvad\'s or a residential provider\'s. Paste the list your provider gave you to start.</string>
+    <string name="proxies_paste">Paste proxies</string>
+    <string name="proxies_paste_formats">One proxy a line: host:port:user:password, user:password@host:port, host:port, or a socks5:// or http:// link.</string>
+    <string name="proxies_paste_field">Proxies</string>
+    <string name="proxies_plain_kind">Lines that are not links are</string>
+    <string name="proxies_kind_socks" translatable="false">SOCKS5</string>
+    <string name="proxies_kind_http" translatable="false">HTTP</string>
+    <string name="proxies_list_name">List name</string>
+    <string name="proxies_default_list">My proxies</string>
+    <string name="proxies_new_socks">New SOCKS5 proxy</string>
+    <string name="proxies_new_http">New HTTP proxy</string>
+    <string name="proxies_new_list">New list</string>
+    <string name="proxies_check">Check proxies</string>
+    <string name="proxies_rename_list">Rename list</string>
+    <string name="proxies_delete_list">Delete list</string>
+    <plurals name="proxies_found">
+        <item quantity="one">%d proxy</item>
+        <item quantity="other">%d proxies</item>
+    </plurals>
+    <plurals name="proxies_added">
+        <item quantity="one">Added %1$d proxy to %2$s</item>
+        <item quantity="other">Added %1$d proxies to %2$s</item>
+    </plurals>
+    <plurals name="proxies_skipped">
+        <item quantity="one">%d line skipped</item>
+        <item quantity="other">%d lines skipped</item>
+    </plurals>
+
+    <!-- What a list's proxies connect through first. -->
+    <string name="proxies_connect_through">Connect through…</string>
+    <string name="proxies_connect_directly">Connect directly</string>
+    <string name="proxies_now_through">%1$s now connects through %2$s</string>
+    <string name="proxies_now_direct">%s now connects directly</string>
+    <string name="proxies_through_own_list">A list can\'t connect through one of its own proxies</string>
+
+    <!-- A proxy's actions, and where it leaves from. -->
+    <string name="proxies_connect">Connect</string>
+    <string name="proxies_use_as_exit">Use as exit for a group…</string>
+    <string name="proxies_exit_title">Group to leave through %s</string>
+    <string name="proxies_exit_now">Leaves through it now. Pick to stop.</string>
+    <string name="proxies_exit_set">Servers in %1$s now leave through %2$s</string>
+    <string name="proxies_exit_cleared">Servers in %s now leave directly</string>
+    <string name="proxies_exit">exit %s</string>
+</resources>

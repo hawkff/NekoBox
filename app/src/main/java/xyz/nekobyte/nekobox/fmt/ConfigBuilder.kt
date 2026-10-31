@@ -255,13 +255,33 @@ private fun resolveChain(entity: ProxyEntity, lookupCache: BuildLookupCache): Mu
     }
     val frontProxy = requiredHop(thisGroup?.frontProxy)
     val landingProxy = requiredHop(thisGroup?.landingProxy)
+
+    // A proxy from a list of proxies keeps the list's first hop wherever it is dialed: as a group's first hop or
+    // exit, a Mullvad SOCKS5 relay still goes through Mullvad's WireGuard. In this list's order, the last first.
+    fun withListPath(hop: ProxyEntity): List<ProxyEntity> {
+        val path = arrayListOf(hop)
+        val seen = hashSetOf(entity.id, hop.id)
+        var list = lookupCache.group(hop.groupId)?.takeIf { it.type == GroupType.PROXIES }
+        while (list != null) {
+            val first = requiredHop(list.frontProxy)?.takeIf { seen.add(it.id) } ?: break
+            path += first
+            list = lookupCache.group(first.groupId)?.takeIf { it.type == GroupType.PROXIES }
+        }
+        return path
+    }
+
     val list = resolveChainInternal(entity)
     if (frontProxy != null) {
-        list.add(frontProxy)
+        list.addAll(withListPath(frontProxy))
     }
     if (landingProxy != null) {
-        list.add(0, landingProxy)
+        list.addAll(0, withListPath(landingProxy))
     }
+    // A hop dialed twice would share one outbound tag and loop: the path is refused, naming the hop. A Tailscale
+    // node twice gets the Tailscale message when the chain is built.
+    val seen = HashSet<Long>()
+    val twice = list.firstOrNull { !seen.add(it.id) }?.takeIf { it.requireBean() !is TailscaleBean }
+    require(twice == null) { NekoBox.application.getString(R.string.chain_repeated_hop, entity.displayName(), twice?.displayName()) }
     return list
 }
 

@@ -285,6 +285,16 @@ func UrlTest(i *BoxInstance, link string, timeout int32) (latency int32, err err
 	return urlTest(boxapi.CreateProxyHttpClient(i.Box, connectionTracker), link, timeout)
 }
 
+// FetchText reads a short answer from link through the instance's route, as UrlTest reaches its link: for a
+// test instance, through the profile under test. The Proxies screen reads the address a proxy leaves from.
+func FetchText(i *BoxInstance, link string, timeout int32) (text string, err error) {
+	defer deferPanicToError("box.FetchText", func(err_ error) { err = err_ })
+	if i == nil {
+		return "", errors.New("no instance")
+	}
+	return fetchText(boxapi.CreateProxyHttpClient(i.Box, nil), link, timeout)
+}
+
 // ServeProtect keeps socket protection available to the UI process while the kill switch holds
 // the tun with no core running; SetAsMain replaces the server once a core starts again.
 func ServeProtect(start bool) {

@@ -516,6 +516,7 @@
     <string name="chain_no_hops">В цепочке %s нет звеньев</string>
     <string name="chain_missing_hop">Цепочка %s ссылается на удалённый профиль</string>
     <string name="chain_circular">Цепочка %s содержит саму себя</string>
+    <string name="chain_repeated_hop">%1$s прошёл бы через %2$s дважды</string>
     <string name="chain_hop_unsupported">К %s нельзя подключиться: это полная своя конфигурация или неподдерживаемый тип профиля</string>
     <string name="chain_hint_empty">Звенья подключаются сверху вниз: к первому приложение подключается напрямую, последнее подключается к цели.</string>
     <string name="chain_hint_order">Это устройство → %s → цель</string>

@@ -166,6 +166,10 @@ object ConnectionProbes {
         )
     }
 
+    /** The address a Cloudflare trace says the request came from; null when the text names none. */
+    internal fun traceAddress(text: String?): String? = text?.lineSequence()?.firstOrNull { it.startsWith("ip=") }
+        ?.substringAfter("ip=")?.trim()?.takeIf { AddressReputation.numeric(it) != null }
+
     internal fun parseTrace(text: String): Trace {
         val fields = text.lines().mapNotNull { line -> line.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
         val sni = when (fields["sni"]) {

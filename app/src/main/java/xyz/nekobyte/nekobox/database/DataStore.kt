@@ -180,6 +180,49 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         configurationStore.putString(Key.SERVER_ADDRESSES, JSONObject(addresses as Map<*, *>).toString())
     }
 
+    /** The list open on the Proxies screen. */
+    var selectedProxyList by configurationStore.long(Key.PROXY_LIST)
+
+    /** The address each checked proxy leaves from, by profile: what sites saw at the last check. */
+    val proxyExits: Map<Long, String>
+        get() {
+            val raw = configurationStore.getString(Key.PROXY_EXITS).orEmpty()
+            parsedProxyExits.let { (from, exits) -> if (from == raw) return exits }
+            val exits = runCatching {
+                JSONObject(raw).let { json -> json.keys().asSequence().mapNotNull { id -> id.toLongOrNull()?.let { it to json.optString(id) }?.takeIf { it.second.isNotEmpty() } }.toMap() }
+            }.getOrDefault(emptyMap())
+            parsedProxyExits = raw to exits
+            return exits
+        }
+
+    @Volatile
+    private var parsedProxyExits: Pair<String, Map<Long, String>> = "" to emptyMap()
+
+    /** Keeps where [found] proxies left from, the newest last, at most 1000. */
+    fun rememberProxyExits(found: Map<Long, String>) = synchronized(addressLock) {
+        val stored = runCatching { JSONObject(configurationStore.getString(Key.PROXY_EXITS).orEmpty()) }.getOrDefault(JSONObject())
+        val exits = LinkedHashMap<String, String>()
+        for (id in stored.keys()) stored.optString(id).takeIf { it.isNotEmpty() }?.let { exits[id] = it }
+        for ((id, address) in found) {
+            exits.remove(id.toString())
+            exits[id.toString()] = address
+        }
+        while (exits.size > 1000) exits.remove(exits.keys.first())
+        configurationStore.putString(Key.PROXY_EXITS, JSONObject(exits as Map<*, *>).toString())
+    }
+
+    /** Forgets where [ids] left from, or every proxy's exit when null: a failed check, an edit, a restore. */
+    fun forgetProxyExits(ids: Collection<Long>? = null) = synchronized(addressLock) {
+        if (ids == null) {
+            configurationStore.putString(Key.PROXY_EXITS, "")
+            return@synchronized
+        }
+        val stored = runCatching { JSONObject(configurationStore.getString(Key.PROXY_EXITS).orEmpty()) }.getOrNull() ?: return@synchronized
+        if (ids.none { stored.has(it.toString()) }) return@synchronized
+        for (id in ids) stored.remove(id.toString())
+        configurationStore.putString(Key.PROXY_EXITS, stored.toString())
+    }
+
     /** Changes the pins in one step; pinning, unpinning and pruning run in separate jobs. */
     fun updateFavoriteProfiles(change: (List<Long>) -> List<Long>) = synchronized(favoriteLock) { favoriteProfiles = change(favoriteProfiles) }
 
