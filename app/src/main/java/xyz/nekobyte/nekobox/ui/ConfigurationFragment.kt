@@ -182,6 +182,9 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
 
+    /** Whether the settings this screen reads once, when built, still have the values it was built with. */
+    fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
+
     private var selectedProfileSnapshot = 0L
     private var currentProfileSnapshot = 0L
     private var serviceStartedSnapshot = false
@@ -592,7 +595,9 @@ class ConfigurationFragment @JvmOverloads constructor(
             // editingGroup
             if (key == Key.PROFILE_GROUP) {
                 val targetId = DataStore.editingGroup
-                if (targetId > 0 && targetId != DataStore.selectedGroup) {
+                // Compared with the tab on screen: Home lives on under other screens, and whoever asks for
+                // a group may have set selectedGroup already.
+                if (targetId > 0 && targetId != adapter.groupList.getOrNull(groupPager.currentItem)?.id) {
                     DataStore.selectedGroup = targetId
                     val targetIndex = adapter.groupList.indexOfFirst { it.id == targetId }
                     if (targetIndex >= 0) {

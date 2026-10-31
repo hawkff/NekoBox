@@ -514,13 +514,28 @@ class MainActivity :
     @SuppressLint("CommitTransaction")
     fun displayFragment(fragment: ToolbarFragment) {
         fitBottomBar(fragment)
-        val transaction = supportFragmentManager.beginTransaction()
+        val manager = supportFragmentManager
+        val transaction = manager.beginTransaction()
         // The drawer's destinations are peers: one fades through to the next, as Material moves between them.
         // The first screen just appears.
-        if (supportFragmentManager.findFragmentById(R.id.fragment_holder) != null) {
+        if (manager.findFragmentById(R.id.fragment_holder) != null) {
             transaction.setCustomAnimations(R.animator.fade_through_in, R.animator.fade_through_out)
         }
-        transaction.replace(R.id.fragment_holder, fragment).commitAllowingStateLoss()
+        // Home stays under the other screens, hidden, so going back shows it as it was instead of building it
+        // again; one built before a setting it reads changed is replaced.
+        val home = (manager.findFragmentByTag(HOME) as? ConfigurationFragment)?.takeIf { it.current() }
+        for (other in manager.fragments) if (other.id == R.id.fragment_holder && other !== home) transaction.remove(other)
+        when {
+            fragment !is ConfigurationFragment -> {
+                home?.let(transaction::hide)
+                transaction.add(R.id.fragment_holder, fragment)
+            }
+
+            home != null -> transaction.show(home)
+
+            else -> transaction.add(R.id.fragment_holder, fragment, HOME)
+        }
+        transaction.commitAllowingStateLoss()
         binding.drawerLayout.closeDrawers()
     }
 
@@ -539,9 +554,9 @@ class MainActivity :
         }
     }
 
+    // Home follows the connection while hidden too, so it shows the right state when it comes back.
     private fun refreshConfigurationProfileState() {
-        (supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment)
-            ?.refreshProfileState()
+        (supportFragmentManager.findFragmentByTag(HOME) as? ConfigurationFragment)?.refreshProfileState()
     }
 
     fun displayFragmentWithId(@IdRes id: Int): Boolean {
@@ -773,6 +788,9 @@ class MainActivity :
 }
 
 private const val BACKGROUND_USE_ASKED = "backgroundUseAsked"
+
+/** The tag of Home, which stays added, hidden, while other screens show. */
+private const val HOME = "home"
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a
