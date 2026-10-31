@@ -69,6 +69,13 @@ open class ToolbarFragment : Fragment {
         }
     }
 
+    // A screen kept while hidden shows again here, after the connect button may have been turned on elsewhere.
+    override fun onResume() {
+        super.onResume()
+        val view = view ?: return
+        if (DataStore.showBottomBar) view.post { clearBottomBar(view) }
+    }
+
     /** Panes for what floats with the toolbar besides its buttons, such as tabs or a search field. */
     open fun GlassLayout.glassPanes(bars: ViewGroup) = Unit
 

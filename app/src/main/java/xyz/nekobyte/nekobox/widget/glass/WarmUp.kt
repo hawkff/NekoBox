@@ -33,7 +33,23 @@ object WarmUp {
     @RequiresApi(31)
     private fun draw(context: Context) {
         val reader = ImageReader.newInstance(SIZE, SIZE, PixelFormat.RGBA_8888, 1, HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE)
-        val renderer = HardwareRenderer()
+        val renderer = try {
+            HardwareRenderer()
+        } catch (e: RuntimeException) {
+            reader.close()
+            throw e
+        }
+        try {
+            record(context, renderer, reader)
+        } catch (e: RuntimeException) {
+            renderer.destroy()
+            reader.close()
+            throw e
+        }
+    }
+
+    @RequiresApi(31)
+    private fun record(context: Context, renderer: HardwareRenderer, reader: ImageReader) {
         renderer.setSurface(reader.surface)
         val scene = RenderNode("warm up scene").apply { setPosition(0, 0, SIZE, SIZE) }
         val canvas = scene.beginRecording()

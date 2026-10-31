@@ -535,6 +535,8 @@ class MainActivity :
     fun displayFragment(fragment: ToolbarFragment) {
         fitBottomBar(fragment)
         val manager = supportFragmentManager
+        // A request made before the last one ran would not see the screen it added.
+        manager.executePendingTransactions()
         val transaction = manager.beginTransaction()
         // The drawer's destinations are peers: one fades through to the next, as Material moves between them.
         // The first screen just appears.

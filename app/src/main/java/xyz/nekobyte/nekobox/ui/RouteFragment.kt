@@ -315,11 +315,6 @@ class RouteFragment :
 
     private fun show(result: Tested?) {
         testing = null
-        // No answer before and none now: the rows already look as they should.
-        if (result == null && tested == null) {
-            showMatchWhenAnswered = false
-            return
-        }
         tested = result
         val header = binding.header
         header.answer.isVisible = result != null

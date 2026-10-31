@@ -587,10 +587,11 @@ class ConfigurationFragment @JvmOverloads constructor(
         DataStore.profileCacheStore.registerChangeListener(this)
     }
 
-    // Showing again: global mode can be switched on other screens while this one stays hidden.
+    // Showing again: global mode, profiles and groups can change on other screens while this one stays hidden.
     override fun onResume() {
         super.onResume()
         if (!select && view != null) toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
+        searchView?.query?.toString()?.takeIf { searchOpen && it.isNotBlank() }?.let(::searchAllGroups)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -604,10 +605,10 @@ class ConfigurationFragment @JvmOverloads constructor(
             // editingGroup
             if (key == Key.PROFILE_GROUP) {
                 val targetId = DataStore.editingGroup
+                if (targetId > 0 && targetId != DataStore.selectedGroup) DataStore.selectedGroup = targetId
                 // Compared with the tab on screen: Home lives on under other screens, and whoever asks for
                 // a group may have set selectedGroup already.
                 if (targetId > 0 && targetId != adapter.groupList.getOrNull(groupPager.currentItem)?.id) {
-                    DataStore.selectedGroup = targetId
                     val targetIndex = adapter.groupList.indexOfFirst { it.id == targetId }
                     if (targetIndex >= 0) {
                         groupPager.setCurrentItem(targetIndex, false)
