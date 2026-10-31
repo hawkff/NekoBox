@@ -140,19 +140,18 @@ fun View.whenStill(step: () -> Boolean) {
 }
 
 /**
- * Makes up to [count] rows of [viewType] one at a time while the window is still (see [whenStill]), or in any
- * idle moment with [anyIdle], and keeps them in this list's pool, so the first layout with data binds them
- * instead of making each one. Stops once the list has laid out rows of its own, or when its adapter changes.
+ * Makes rows of [viewType] for up to [count] of the adapter's items, one at a time while the window is still
+ * (see [whenStill]), and keeps them in this list's pool, so a screen built ahead of its first visit binds them
+ * then instead of making each one. Stops once the list has laid out rows of its own, or when it leaves the window
+ * or its adapter changes.
  */
-fun RecyclerView.prefill(viewType: Int, count: Int, anyIdle: Boolean = false) {
+fun RecyclerView.prefill(viewType: Int, count: Int) {
     val adapter = adapter ?: return
-    if (count <= 0) return
     recycledViewPool.setMaxRecycledViews(viewType, maxOf(count, 5))
     var made = 0
-    val step = {
-        val more = made < count && childCount == 0 && this.adapter === adapter
+    whenStill {
+        val more = made < minOf(count, adapter.itemCount) && childCount == 0 && isAttachedToWindow && this.adapter === adapter
         if (more) recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
-        more && ++made < count
+        more && ++made < minOf(count, adapter.itemCount)
     }
-    if (anyIdle) Looper.myQueue().addIdleHandler { step() } else whenStill(step)
 }

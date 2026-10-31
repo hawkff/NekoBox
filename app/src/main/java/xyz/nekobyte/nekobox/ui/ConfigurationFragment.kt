@@ -185,9 +185,6 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     override val keepsAlive get() = true
 
-    /** Whether the pager shows [groupId]'s page. */
-    fun shows(groupId: Long) = ::adapter.isInitialized && adapter.groupList.getOrNull(groupPager.currentItem)?.id == groupId
-
     override fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
 
     private var selectedProfileSnapshot = 0L

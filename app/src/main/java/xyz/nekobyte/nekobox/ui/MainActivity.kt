@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Looper
 import android.os.RemoteException
 import android.provider.Settings
 import android.view.KeyEvent
@@ -21,7 +20,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.core.view.doOnPreDraw
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceDataStore
@@ -111,15 +109,7 @@ class MainActivity :
             binding.drawerLayout.removeView(binding.navView)
         }
         navigation.setNavigationItemSelectedListener(this)
-        // The drawer's items are built once the first frame has drawn, or as the drawer starts to open if sooner.
-        binding.root.doOnPreDraw {
-            binding.root.post {
-                Looper.myQueue().addIdleHandler {
-                    buildDrawerMenu()
-                    false
-                }
-            }
-        }
+        // The drawer's items are built after start-up (see buildAhead), or as the drawer starts to open if sooner.
         binding.drawerLayout.addDrawerListener(
             object : DrawerLayout.SimpleDrawerListener() {
                 override fun onDrawerStateChanged(newState: Int) {
@@ -129,9 +119,9 @@ class MainActivity :
         )
         if (Glass.enabled) decorateGlass()
 
+        binding.root.postDelayed(::buildAhead, 2000)
         if (savedInstanceState == null) {
             displayFragmentWithId(R.id.nav_configuration)
-            binding.root.postDelayed(::buildScreensAhead, 2000)
         } else {
             // A recreated activity, after a theme or glass change, restores its screen without displayFragment.
             currentScreen()?.let(::fitBottomBar)
@@ -585,22 +575,26 @@ class MainActivity :
     }
 
     /**
-     * Builds the screens visited most once start-up settles, hidden and paused, one at a time while the window is
-     * still, so their first visit shows them as a second one would. One opened before then is built as usual.
+     * Once start-up settles, builds the drawer's items and then the screens visited most, hidden and paused, one at
+     * a time while the window is still, so the drawer and each first visit show as they would the second time.
+     * A screen opened before its turn is built as usual.
      */
-    private fun buildScreensAhead() {
-        val screens = ArrayDeque<() -> ToolbarFragment>(listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment))
+    private fun buildAhead() {
+        val steps = ArrayDeque<() -> Unit>()
+        steps += ::buildDrawerMenu
+        for (screen in listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment)) steps += { buildHidden(screen()) }
         binding.root.whenStill {
-            val manager = supportFragmentManager
-            if (isFinishing || isDestroyed || manager.isStateSaved) return@whenStill false
-            val fragment = screens.removeFirstOrNull()?.invoke() ?: return@whenStill false
-            val tag = fragment.javaClass.name
-            if (manager.findFragmentByTag(tag) == null) {
-                manager.beginTransaction().add(R.id.fragment_holder, fragment, tag).hide(fragment)
-                    .setMaxLifecycle(fragment, Lifecycle.State.STARTED).commitNow()
-            }
-            screens.isNotEmpty()
+            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return@whenStill false
+            steps.removeFirstOrNull()?.invoke()
+            steps.isNotEmpty()
         }
+    }
+
+    private fun buildHidden(screen: ToolbarFragment) {
+        val tag = screen.javaClass.name
+        if (supportFragmentManager.findFragmentByTag(tag) != null) return
+        supportFragmentManager.beginTransaction().add(R.id.fragment_holder, screen, tag).hide(screen)
+            .setMaxLifecycle(screen, Lifecycle.State.STARTED).commitNow()
     }
 
     /** The screen on show; screens that keep stay added under it, hidden. */
