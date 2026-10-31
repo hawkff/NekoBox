@@ -13,6 +13,11 @@
             android:title="@string/menu_group" />
 
         <item
+            android:id="@+id/nav_proxies"
+            android:icon="@drawable/nav_proxies"
+            android:title="@string/menu_proxies" />
+
+        <item
             android:id="@+id/nav_route"
             android:icon="@drawable/nav_route"
             android:title="@string/menu_route" />

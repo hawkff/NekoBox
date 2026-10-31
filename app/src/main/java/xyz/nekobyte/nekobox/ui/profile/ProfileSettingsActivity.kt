@@ -81,6 +81,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
     companion object {
         const val EXTRA_PROFILE_ID = "id"
         const val EXTRA_IS_SUBSCRIPTION = "sub"
+
+        /** The group a new profile goes to, such as the list open on the Proxies screen; else the import target. */
+        const val EXTRA_GROUP_ID = "group"
     }
 
     abstract fun createEntity(): T
@@ -118,7 +121,7 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             DataStore.editingId = editingId
             runOnDefaultDispatcher {
                 if (editingId == 0L) {
-                    DataStore.editingGroup = DataStore.selectedGroupForImport()
+                    DataStore.editingGroup = intent.getLongExtra(EXTRA_GROUP_ID, 0L).takeIf { it > 0L } ?: DataStore.selectedGroupForImport()
                     canMoveToOtherBasicGroup = false
                     moveTargetGroups = emptyList()
                     createEntity().applyDefaultValues().init()

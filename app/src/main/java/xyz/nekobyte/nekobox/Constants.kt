@@ -26,6 +26,10 @@ object Key {
     // What server names last resolved to: a cache of this device, kept out of backups.
     const val SERVER_ADDRESSES = "serverAddresses"
 
+    // The list open on the Proxies screen, and the address each checked proxy leaves from (kept out of backups).
+    const val PROXY_LIST = "proxyList"
+    const val PROXY_EXITS = "proxyExits"
+
     const val APP_THEME = "appTheme"
     const val NIGHT_THEME = "nightTheme"
     const val LIQUID_GLASS = "liquidGlass"
@@ -232,6 +236,9 @@ object IPv6Mode {
 object GroupType {
     const val BASIC = 0
     const val SUBSCRIPTION = 1
+
+    // A list of proxies kept on the Proxies screen, apart from Home and Groups.
+    const val PROXIES = 2
 }
 
 object GroupOrder {

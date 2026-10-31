@@ -6,4 +6,7 @@
     <item name="row_remove" type="id" />
     <!-- A scrolling view's own top padding, kept while liquid glass adds room for the floating bars. -->
     <item name="glass_own_padding" type="id" />
+    <!-- The Proxies screen's own entries in Home's + menu. -->
+    <item name="action_paste_proxies" type="id" />
+    <item name="action_new_proxy_list" type="id" />
 </resources>

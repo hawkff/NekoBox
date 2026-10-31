@@ -36,6 +36,34 @@
             android:textAppearance="?attr/textAppearanceBody1"
             android:visibility="gone" />
 
+        <!-- The Proxies screen before its first list: what goes here, and the action that starts one. -->
+        <LinearLayout
+            android:id="@+id/group_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/proxies_empty"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/group_empty_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/proxies_paste" />
+
+        </LinearLayout>
+
     </xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout>
 
     <LinearLayout

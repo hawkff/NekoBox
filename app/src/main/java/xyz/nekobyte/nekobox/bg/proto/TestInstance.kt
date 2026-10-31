@@ -37,7 +37,13 @@ class TestInstance(
     val link: String,
     private val timeout: Int,
     private val preparedConfig: ConfigBuildResult? = null,
+    // A page to read through the profile once the test passes, such as one that reports the caller's address.
+    private val answerUrl: String? = null,
 ) : BoxInstance(profile) {
+
+    /** What [answerUrl] said, after [doTest]; null when it was not asked or could not be read. */
+    var answer: String? = null
+        private set
 
     suspend fun doTest(): Int = runProbe {
         for (endpoint in config.tailscaleEndpoints.values) {
@@ -47,6 +53,8 @@ class TestInstance(
         Libcore.urlTest(box, link, timeout).also {
             // The test's connection resolved the server name, so the answer comes from the core's cache.
             lookUpServer()
+            // A page that cannot be read leaves the answer unknown; the test itself passed.
+            answerUrl?.let { url -> answer = runCatching { Libcore.fetchText(box, url, timeout) }.getOrNull() }
         }
     }
 
