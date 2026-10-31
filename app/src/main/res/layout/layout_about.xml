@@ -122,7 +122,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="@string/about_check_updates"
-                    app:icon="@drawable/ic_baseline_update_24" />
+                    app:icon="@drawable/ic_update" />
 
                 <!-- The project's pages, one per line so they stay centered in any language: each opens the
                      browser, and says so to TalkBack. -->
@@ -133,7 +133,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/github"
-                    app:icon="@drawable/ic_open_in_new_24"
+                    app:icon="@drawable/ic_open_in_new"
                     app:iconGravity="textEnd" />
 
                 <Button
@@ -142,7 +142,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/about_releases"
-                    app:icon="@drawable/ic_open_in_new_24"
+                    app:icon="@drawable/ic_open_in_new"
                     app:iconGravity="textEnd" />
 
                 <Button
@@ -151,7 +151,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/license"
-                    app:icon="@drawable/ic_open_in_new_24"
+                    app:icon="@drawable/ic_open_in_new"
                     app:iconGravity="textEnd" />
 
                 <!-- Takes up what the page leaves, so the cat sits at the bottom of a short page. -->

@@ -62,7 +62,7 @@ open class ToolbarFragment : Fragment {
 
     /** The navigation button opens the drawer. */
     protected fun showDrawerButton() {
-        toolbar.setNavigationIcon(R.drawable.ic_navigation_menu)
+        toolbar.setNavigationIcon(R.drawable.ic_menu)
         toolbar.setNavigationContentDescription(R.string.open_menu)
         toolbar.setNavigationOnClickListener {
             (activity as MainActivity).binding.drawerLayout.openDrawer(GravityCompat.START)

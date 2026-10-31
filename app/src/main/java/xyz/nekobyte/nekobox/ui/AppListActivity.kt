@@ -219,7 +219,7 @@ class AppListActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.select_apps)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
 
         initProxiedUids()

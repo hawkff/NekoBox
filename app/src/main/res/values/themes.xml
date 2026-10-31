@@ -36,7 +36,9 @@
         <!-- Widget styles -->
         <item name="actionBarStyle">@style/Widget.Material3.ActionBar.Solid</item>
         <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
-        <item name="actionModeCloseDrawable">@drawable/ic_navigation_close</item>
+        <item name="actionModeCloseDrawable">@drawable/ic_close</item>
+        <item name="homeAsUpIndicator">@drawable/ic_arrow_back</item>
+        <item name="searchViewStyle">@style/Widget.NekoBox.SearchView</item>
         <item name="bottomAppBarStyle">@style/Widget.NekoBox.BottomAppBar</item>
         <item name="floatingActionButtonStyle">@style/Widget.NekoBox.FloatingActionButton</item>
         <item name="chipStyle">@style/Widget.NekoBox.Chip.Choice</item>
@@ -722,6 +724,13 @@
     <!-- The overflow button keeps a 48 dp touch target; AppCompat's is narrower. -->
     <style name="Widget.NekoBox.ActionButton.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
         <item name="android:minWidth">48dp</item>
+        <item name="srcCompat">@drawable/ic_more_vert</item>
+    </style>
+
+    <style name="Widget.NekoBox.SearchView" parent="Widget.AppCompat.SearchView.ActionBar">
+        <item name="searchIcon">@drawable/ic_search</item>
+        <item name="searchHintIcon">@drawable/ic_search</item>
+        <item name="closeIcon">@drawable/ic_close</item>
     </style>
 
     <!-- The button that runs a network check, inside a CheckButton: a capsule with an icon that
@@ -758,8 +767,13 @@
         <item name="textEndPadding">30dp</item>
         <item name="chipBackgroundColor">@color/chip_background</item>
         <item name="android:textColor">@color/chip_text_color</item>
+        <item name="checkedIcon">@drawable/ic_check</item>
         <item name="checkedIconTint">?primaryOrTextPrimary</item>
         <item name="rippleColor">@color/chip_ripple_color</item>
+    </style>
+
+    <style name="Widget.NekoBox.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="checkedIcon">@drawable/ic_check</item>
     </style>
 
     <style name="Widget.NekoBox.BottomAppBar" parent="Widget.Material3.BottomAppBar">

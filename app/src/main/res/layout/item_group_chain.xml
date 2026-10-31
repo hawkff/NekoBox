@@ -43,7 +43,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:visibility="gone"
-        app:icon="@drawable/ic_navigation_close"
+        app:icon="@drawable/ic_close"
         tools:visibility="visible" />
 
 </LinearLayout>

@@ -30,7 +30,7 @@ class WebDAVSettingsActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.webdav_settings)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
 
         supportFragmentManager.beginTransaction()

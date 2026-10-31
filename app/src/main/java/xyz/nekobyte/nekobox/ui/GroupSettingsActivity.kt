@@ -176,7 +176,7 @@ class GroupSettingsActivity :
         supportActionBar?.apply {
             setTitle(if (editingId == 0L) R.string.group_editor_new else R.string.group_editor_edit)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
         val bottom = binding.scroll.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(binding.scroll) { view, insets ->
@@ -428,7 +428,7 @@ class GroupSettingsActivity :
         if (animate) (binding.scroll.getChildAt(0) as ViewGroup).beginFold(binding.moreToggle)
         binding.more.isVisible = open
         binding.moreToggle.setText(if (open) R.string.route_editor_fewer else R.string.route_editor_more)
-        binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)
+        binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less else R.drawable.ic_expand_more)
     }
 
     // A line break never belongs in a link and blocks saving; a cleartext link is allowed, and the help line says what it risks.

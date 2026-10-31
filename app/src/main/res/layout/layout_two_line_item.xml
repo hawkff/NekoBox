@@ -48,7 +48,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/more_options"
             android:padding="12dp"
-            android:src="@drawable/ic_baseline_more_vert_24"
+            android:src="@drawable/ic_more_vert"
             app:tint="?android:attr/textColorSecondary" />
     </LinearLayout>
 

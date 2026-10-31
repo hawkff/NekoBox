@@ -89,7 +89,7 @@ class RouteSettingsActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(if (editingId == 0L) R.string.route_editor_new else R.string.route_editor_edit)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
         val bottom = binding.scroll.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(binding.scroll) { view, insets ->
@@ -236,7 +236,7 @@ class RouteSettingsActivity : ThemedActivity() {
         if (animate) (binding.scroll.getChildAt(0) as ViewGroup).beginFold(binding.moreToggle)
         binding.more.isVisible = open
         binding.moreToggle.setText(if (open) R.string.route_editor_fewer else R.string.route_editor_more)
-        binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less_24 else R.drawable.ic_expand_more_24)
+        binding.moreToggle.setIconResource(if (open) R.drawable.ic_expand_less else R.drawable.ic_expand_more)
     }
 
     /** Chips for common lists under [field]: checked while the field holds the list, and tapping one adds or removes it. */

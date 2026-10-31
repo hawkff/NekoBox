@@ -62,9 +62,9 @@ class ConnectionCheckActivity : ThemedActivity() {
     private var order = 0
 
     private enum class Path(val label: Int, val icon: Int) {
-        VPN(R.string.connection_check_path_vpn, R.drawable.ic_baseline_vpn_key_24),
-        PROXY(R.string.connection_check_path_proxy, R.drawable.ic_hardware_router),
-        DIRECT(R.string.connection_check_path_direct, R.drawable.baseline_public_24),
+        VPN(R.string.connection_check_path_vpn, R.drawable.ic_vpn_key),
+        PROXY(R.string.connection_check_path_proxy, R.drawable.ic_router),
+        DIRECT(R.string.connection_check_path_direct, R.drawable.ic_public),
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,7 +75,7 @@ class ConnectionCheckActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.connection_check)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24)
+            setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         }
         // The page runs edge to edge; its end stays clear of the navigation bar.
         val bottom = binding.connectionCheckScroll.paddingBottom
@@ -216,7 +216,7 @@ class ConnectionCheckActivity : ThemedActivity() {
         }
         val color = getColorAttr(androidx.appcompat.R.attr.colorError)
         setTextColor(color)
-        val icon = ContextCompat.getDrawable(context, R.drawable.ic_baseline_warning_24)?.mutate()?.apply { setTint(color) }
+        val icon = ContextCompat.getDrawable(context, R.drawable.ic_warning)?.mutate()?.apply { setTint(color) }
         setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
         isVisible = true
         reveal(0)

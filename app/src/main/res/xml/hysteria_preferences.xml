@@ -1,7 +1,7 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <EditTextPreference
-        app:icon="@drawable/ic_social_emoji_symbols"
+        app:icon="@drawable/ic_emoji_symbols"
         app:key="profileName"
         app:title="@string/profile_name"
         app:useSimpleSummaryProvider="true" />
@@ -9,12 +9,12 @@
     <PreferenceCategory app:title="@string/proxy_cat">
 
         <EditTextPreference
-            app:icon="@drawable/ic_hardware_router"
+            app:icon="@drawable/ic_router"
             app:key="serverAddress"
             app:title="@string/server_address"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_maps_directions_boat"
+            app:icon="@drawable/ic_directions_boat"
             app:key="serverPorts"
             app:title="@string/server_port"
             app:useSimpleSummaryProvider="true" />
@@ -22,53 +22,53 @@
             app:defaultValue="0"
             app:entries="@array/hysteria2_obfs_type"
             app:entryValues="@array/hysteria2_obfs_type_value"
-            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:icon="@drawable/ic_swap_horiz"
             app:key="serverHy2ObfsType"
             app:title="@string/hysteria2_obfs_type"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogLayout="@layout/layout_password_dialog"
-            app:icon="@drawable/ic_baseline_texture_24"
+            app:icon="@drawable/ic_texture"
             app:key="serverObfs"
             app:title="@string/hysteria_obfs"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_texture_24"
+            app:icon="@drawable/ic_texture"
             app:key="serverHy2GeckoMinPacket"
             app:title="@string/hysteria2_gecko_min_packet"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_texture_24"
+            app:icon="@drawable/ic_texture"
             app:key="serverHy2GeckoMaxPacket"
             app:title="@string/hysteria2_gecko_max_packet"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogLayout="@layout/layout_password_dialog"
-            app:icon="@drawable/ic_settings_password"
+            app:icon="@drawable/ic_password"
             app:key="serverPassword"
             app:title="@string/password" />
         <EditTextPreference
-            app:icon="@drawable/ic_action_copyright"
+            app:icon="@drawable/ic_copyright"
             app:key="serverSNI"
             app:title="@string/sni"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:icon="@drawable/ic_vpn_key"
             app:key="serverCertificates"
             app:title="@string/certificates"
             app:useSimpleSummaryProvider="true" />
         <SwitchPreference
-            app:icon="@drawable/ic_notification_enhanced_encryption"
+            app:icon="@drawable/ic_enhanced_encryption"
             app:key="serverAllowInsecure"
             app:summary="@string/allow_insecure_sum"
             app:title="@string/allow_insecure" />
         <EditTextPreference
-            app:icon="@drawable/ic_file_file_upload"
+            app:icon="@drawable/ic_upload"
             app:key="serverUploadSpeed"
             app:title="@string/hysteria_upload_mbps"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_download_24"
+            app:icon="@drawable/ic_download"
             app:key="serverDownloadSpeed"
             app:title="@string/hysteria_download_mbps"
             app:useSimpleSummaryProvider="true" />
@@ -83,13 +83,13 @@
         app:title="@string/ech_settings">
         <SwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_security_24"
+            app:icon="@drawable/ic_security"
             app:key="serverHy2EchEnabled"
             app:summary="@string/hysteria2_ech_summary"
             app:title="@string/enable_ech" />
         <EditTextPreference
             app:dialogMessage="@string/hysteria2_ech_config_hint"
-            app:icon="@drawable/ic_baseline_nfc_24"
+            app:icon="@drawable/ic_nfc"
             app:key="serverHy2EchConfig"
             app:title="@string/ech_config"
             app:useSimpleSummaryProvider="true" />

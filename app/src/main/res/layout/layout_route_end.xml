@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_marginVertical="4dp"
         android:text="@string/route_add"
-        app:icon="@drawable/ic_baseline_add_road_24" />
+        app:icon="@drawable/ic_add_road" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/fallback"
@@ -53,7 +53,7 @@
                 android:layout_height="28dp"
                 android:importantForAccessibility="no"
                 android:padding="2dp"
-                app:srcCompat="@drawable/ic_hardware_router"
+                app:srcCompat="@drawable/ic_router"
                 app:tint="?android:attr/textColorSecondary" />
 
             <LinearLayout

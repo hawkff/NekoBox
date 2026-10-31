@@ -147,7 +147,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 // The check may outlive the page.
                 val binding = _binding ?: return@runOnMainDispatcher
                 binding.checkUpdates.isEnabled = true
-                binding.checkUpdates.setIconResource(R.drawable.ic_baseline_update_24)
+                binding.checkUpdates.setIconResource(R.drawable.ic_update)
                 found.onFailure { Toast.makeText(app, it.readableMessage, Toast.LENGTH_SHORT).show() }
                 found.onSuccess { update ->
                     if (update == null) return@onSuccess Toast.makeText(app, R.string.check_update_no, Toast.LENGTH_SHORT).show()

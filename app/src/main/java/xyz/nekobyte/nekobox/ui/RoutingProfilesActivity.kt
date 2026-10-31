@@ -40,7 +40,7 @@ class RoutingProfilesActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.routing_profiles)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
         binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
         binding.recyclerView.adapter = adapter

@@ -78,7 +78,7 @@ class ConfigEditActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.config_settings)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
 
         // sora-editor: load the TextMate engine (JSON grammar + themes) once, then wire the

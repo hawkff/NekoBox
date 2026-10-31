@@ -3,7 +3,7 @@
       xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/action_apply"
           android:title="@string/apply"
-          android:icon="@drawable/ic_action_done"
+          android:icon="@drawable/ic_check"
           android:alphabeticShortcut="s"
           app:showAsAction="always"/>
 </menu>

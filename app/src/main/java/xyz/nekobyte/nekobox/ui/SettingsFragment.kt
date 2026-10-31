@@ -63,7 +63,7 @@ class SettingsFragment :
             showDrawerButton()
         } else {
             toolbar.title = childFragmentManager.getBackStackEntryAt(depth - 1).name
-            toolbar.setNavigationIcon(R.drawable.baseline_arrow_back_24)
+            toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationContentDescription(androidx.appcompat.R.string.abc_action_bar_up_description)
             toolbar.setNavigationOnClickListener { childFragmentManager.popBackStack() }
         }

@@ -38,7 +38,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:importantForAccessibility="no"
-                app:srcCompat="@drawable/ic_expand_more_24"
+                app:srcCompat="@drawable/ic_expand_more"
                 app:tint="?android:attr/textColorSecondary" />
 
             <TextView
@@ -92,7 +92,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:contentDescription="@string/group_update"
-                app:icon="@drawable/ic_baseline_update_24" />
+                app:icon="@drawable/ic_update" />
 
             <!-- Holds the place of the update button on a group that has none. -->
             <Space
@@ -226,7 +226,7 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:contentDescription="@string/more_options"
-                    app:icon="@drawable/ic_baseline_more_vert_24" />
+                    app:icon="@drawable/ic_more_vert" />
 
             </LinearLayout>
 

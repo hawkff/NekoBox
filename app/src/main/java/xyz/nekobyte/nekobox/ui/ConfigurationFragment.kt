@@ -486,7 +486,7 @@ class ConfigurationFragment @JvmOverloads constructor(
             toolbar.setOnMenuItemClickListener(this)
         } else {
             toolbar.setTitle(titleRes)
-            toolbar.setNavigationIcon(R.drawable.ic_navigation_close)
+            toolbar.setNavigationIcon(R.drawable.ic_close)
             toolbar.setNavigationContentDescription(R.string.close)
             toolbar.setNavigationOnClickListener {
                 requireActivity().finish()
