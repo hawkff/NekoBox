@@ -20,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.view.isNotEmpty
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceDataStore
@@ -63,6 +64,7 @@ import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
+import xyz.nekobyte.nekobox.ktx.whenStill
 import xyz.nekobyte.nekobox.plugin.PluginTrust
 import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.utils.Theme
@@ -108,8 +110,19 @@ class MainActivity :
             binding.drawerLayout.removeView(binding.navView)
         }
         navigation.setNavigationItemSelectedListener(this)
+        // The drawer's items are built after start-up (see buildAhead), or as the drawer starts to open if sooner.
+        // A recreated activity builds them now, so the drawer restores its checked item, and opens with items.
+        if (savedInstanceState != null) buildDrawerMenu()
+        binding.drawerLayout.addDrawerListener(
+            object : DrawerLayout.SimpleDrawerListener() {
+                override fun onDrawerStateChanged(newState: Int) {
+                    if (newState != DrawerLayout.STATE_IDLE) buildDrawerMenu()
+                }
+            },
+        )
         if (Glass.enabled) decorateGlass()
 
+        binding.root.postDelayed(::buildAhead, 2000)
         if (savedInstanceState == null) {
             displayFragmentWithId(R.id.nav_configuration)
         } else {
@@ -175,6 +188,7 @@ class MainActivity :
 
     override fun onResume() {
         super.onResume()
+        if (ahead?.isNotEmpty() == true) buildAhead()
         MessageStore.setCurrentActivity(this)
         ApiUi.attach(this)
         LocalApiAccess.sync(this)
@@ -198,8 +212,9 @@ class MainActivity :
         val fab = binding.fab
         fab.compatElevation = 0f
         fab.compatPressedTranslationZ = 0f
+        // The glass at the bottom shows the screen's own backdrop, which the screen's bars frost already.
         fab.useGlass(
-            GlassDrawable(fab, content, tint) { bounds ->
+            GlassDrawable(fab, content, tint, source = ::shownBackdrop) { bounds ->
                 pane().apply {
                     rect.set(bounds)
                     radius = rect.width() / 2
@@ -212,7 +227,7 @@ class MainActivity :
         val inset = resources.getDimension(R.dimen.glass_capsule_inset)
         stats.elevation = 0f
         stats.useGlass(
-            GlassDrawable(stats, content, tint) { bounds ->
+            GlassDrawable(stats, content, tint, source = ::shownBackdrop) { bounds ->
                 val capsule = pane()
                 capsule.rect.set(bounds.left + inset, bounds.top + inset, bounds.right - inset, bounds.bottom - stats.paddingBottom - inset)
                 capsule.radius = 2 * inset
@@ -243,10 +258,7 @@ class MainActivity :
                 override fun onDrawerStateChanged(newState: Int) {
                     val out = newState != DrawerLayout.STATE_IDLE || binding.drawerLayout.isOpen
                     if (out) {
-                        if (stillBackdrop == null) {
-                            stillBackdrop = currentScreen()?.view
-                                ?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop?.also { it.still = true }
-                        }
+                        if (stillBackdrop == null) stillBackdrop = shownBackdrop()?.also { it.still = true }
                     } else {
                         stillBackdrop?.still = false
                         stillBackdrop = null
@@ -564,8 +576,43 @@ class MainActivity :
         binding.drawerLayout.closeDrawers()
     }
 
+    /**
+     * Once start-up settles, builds the drawer's items and then the screens visited most, hidden and paused, one at
+     * a time while the window is still, so the drawer and each first visit show as they would the second time.
+     * A screen opened before its turn is built as usual.
+     */
+    private fun buildAhead() {
+        val steps = ahead ?: ArrayDeque<() -> Unit>().also { steps ->
+            steps += ::buildDrawerMenu
+            for (screen in listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment)) steps += { buildHidden(screen()) }
+            ahead = steps
+        }
+        if (buildingAhead) return
+        buildingAhead = true
+        binding.root.whenStill {
+            // A stopped activity cannot add screens: onResume goes on from here.
+            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) {
+                buildingAhead = false
+                return@whenStill false
+            }
+            steps.removeFirstOrNull()?.invoke()
+            steps.isNotEmpty().also { buildingAhead = it }
+        }
+    }
+
+    /** The steps of [buildAhead] still to run, once it has started. */
+    private var ahead: ArrayDeque<() -> Unit>? = null
+    private var buildingAhead = false
+
+    private fun buildHidden(screen: ToolbarFragment) {
+        val tag = screen.javaClass.name
+        if (supportFragmentManager.findFragmentByTag(tag) != null) return
+        supportFragmentManager.beginTransaction().add(R.id.fragment_holder, screen, tag).hide(screen)
+            .setMaxLifecycle(screen, Lifecycle.State.STARTED).commitNow()
+    }
+
     /** The screen on show; screens that keep stay added under it, hidden. */
-    private fun currentScreen() = supportFragmentManager.fragments.lastOrNull { it.id == R.id.fragment_holder && !it.isHidden } as? ToolbarFragment
+    fun currentScreen() = supportFragmentManager.fragments.lastOrNull { it.id == R.id.fragment_holder && !it.isHidden } as? ToolbarFragment
 
     /** The connect button and the stats bar show on Home, and on every screen while the user wants them there. */
     private fun fitBottomBar(screen: ToolbarFragment) {
@@ -580,6 +627,28 @@ class MainActivity :
             binding.stats.post { binding.stats.performHide() }
             binding.fab.hide()
         }
+    }
+
+    /** The drawer item of the screen on show, checked once the drawer's items are built. */
+    private var checkedScreen = R.id.nav_configuration
+
+    private fun buildDrawerMenu() {
+        if (navigation.menu.isNotEmpty()) return
+        navigation.inflateMenu(R.menu.main_drawer_menu)
+        navigation.menu.findItem(checkedScreen)?.isChecked = true
+    }
+
+    private var backdropScreen: View? = null
+    private var screenBackdrop: GlassBackdrop? = null
+
+    /** The backdrop of the screen on show, under its bars, if it has one. */
+    private fun shownBackdrop(): GlassBackdrop? {
+        val view = currentScreen()?.view
+        if (view !== backdropScreen) {
+            backdropScreen = view
+            screenBackdrop = view?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop
+        }
+        return screenBackdrop
     }
 
     /** The backdrop drawn into a layer while the drawer is out. */
@@ -618,7 +687,8 @@ class MainActivity :
 
             else -> return false
         }
-        navigation.menu.findItem(id).isChecked = true
+        checkedScreen = id
+        navigation.menu.findItem(id)?.isChecked = true
         return true
     }
 

@@ -148,7 +148,7 @@ class GroupPagingDeviceTest {
             settle()
             scenario.onActivity {
                 assertFalse(it.binding.drawerLayout.isOpen)
-                assertTrue(it.supportFragmentManager.findFragmentById(R.id.fragment_holder) is RouteFragment)
+                assertTrue(it.currentScreen() is RouteFragment)
             }
         }
     }

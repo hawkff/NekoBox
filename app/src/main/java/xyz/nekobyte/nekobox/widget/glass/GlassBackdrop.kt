@@ -26,6 +26,9 @@ class GlassBackdrop(val view: ViewGroup) {
     @get:RequiresApi(31)
     val node: RenderNode? get() = recorder?.node?.takeIf { it.hasDisplayList() }
 
+    /** The frosted copy of the content that all the glass in front of it shares; made by the first to draw. */
+    internal var frost: SharedFrost? = null
+
     /** Counts changes behind the glass: a copy of the content made at one count is current while it stays. */
     var changes = 0L
         private set

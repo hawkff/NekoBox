@@ -147,7 +147,7 @@ class GroupsScreenDeviceTest {
             lateinit var screen: GroupFragment
             scenario.onActivity {
                 activity = it
-                screen = it.supportFragmentManager.findFragmentById(R.id.fragment_holder) as GroupFragment
+                screen = it.currentScreen() as GroupFragment
             }
             val list = screen.groupListView
             instrumentation.runOnMainSync { list.scrollToPosition(list.adapter!!.itemCount - 1) }

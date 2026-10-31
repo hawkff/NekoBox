@@ -57,7 +57,7 @@ class BottomBarRoomDeviceTest {
                 scenario.onActivity { activity ->
                     val name = activity.resources.getResourceEntryName(screen)
                     val room = activity.resources.getDimensionPixelSize(R.dimen.bottom_bar_room)
-                    val fragment = activity.supportFragmentManager.findFragmentById(R.id.fragment_holder) as ToolbarFragment
+                    val fragment = activity.currentScreen()!!
                     val pages = fragment.childFragmentManager.fragments.mapNotNull { it.view }
                     scrollers = (listOf(fragment.requireView()) + pages).flatMap { Glass.verticalScrollers(it) }.distinct().filter { it.isShown }
                     assertFalse(name, scrollers.isEmpty())

@@ -923,7 +923,6 @@ class ConfigurationFragment @JvmOverloads constructor(
                                     group.name = ""
                                     startActivity(
                                         Intent(requireContext(), GroupSettingsActivity::class.java).apply {
-                                            putExtra(GroupSettingsActivity.EXTRA_FROM_CLIPBOARD, true)
                                             putExtra(
                                                 GroupSettingsActivity.EXTRA_GROUP_SUBSCRIPTION_LINK,
                                                 subscriptionLink,

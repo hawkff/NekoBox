@@ -577,7 +577,7 @@ class LocationSpoofingDeviceTest {
         scenario.onActivity { activity ->
             activity.displayFragmentWithId(R.id.nav_settings)
             activity.supportFragmentManager.executePendingTransactions()
-            val settings = activity.supportFragmentManager.findFragmentById(R.id.fragment_holder) as SettingsFragment
+            val settings = activity.currentScreen() as SettingsFragment
             settings.childFragmentManager.executePendingTransactions()
             val hub = settings.childFragmentManager.findFragmentById(R.id.settings) as SettingsPreferenceFragment
             settings.onPreferenceStartScreen(hub, checkNotNull(hub.findPreference<PreferenceScreen>("screen_protection")))
@@ -598,7 +598,13 @@ class LocationSpoofingDeviceTest {
 
         val page = openProtectionSettings(scenario)
         val remove = checkNotNull(page.findPreference<Preference>(Key.GPS_SPOOFING_REMOVE))
-        assertTrue("removal offered", remove.isVisible)
+        // The row follows the record, which Settings reads off the main thread.
+        val offered = {
+            var shown = false
+            onMain { shown = remove.isVisible }
+            shown
+        }
+        awaitTrue({ "removal offered" }, condition = offered)
         val tap = { scenario.onActivity { checkNotNull(remove.onPreferenceClickListener).onPreferenceClick(remove) } }
         val switch = checkNotNull(page.findPreference<SwitchPreference>(Key.GPS_SPOOFING))
         val turnOn = {
@@ -641,9 +647,7 @@ class LocationSpoofingDeviceTest {
         assertFalse(LocationSpoofing.mayRemain(context))
         awaitTrue({ "notice removed" }) { notice() == null }
         assertFalse(DataStore.gpsSpoofing)
-        var shown = true
-        onMain { shown = remove.isVisible }
-        assertFalse("removal still offered", shown)
+        awaitTrue({ "removal still offered" }) { !offered() }
 
         // Once removed, turning on goes to the usual warning, and stays off when canceled.
         turnOn()

@@ -50,6 +50,7 @@ import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
+import xyz.nekobyte.nekobox.ktx.prefill
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.widget.CardHighlight
 import xyz.nekobyte.nekobox.widget.ListListener
@@ -114,6 +115,10 @@ class RouteFragment :
         ruleAdapter = RuleAdapter()
         ProfileManager.addListener(ruleAdapter)
         list.adapter = ruleAdapter
+        // Rules load as soon as the screen is built, and their rows are made while the window is still: a screen
+        // built ahead of its first visit shows them without waiting.
+        ruleAdapter.reload()
+        list.prefill(RULE, 8)
         FastScrollerBuilder(list).useMd2Style().build()
         undoManager = UndoSnackbarManager(requireActivity() as MainActivity, ruleAdapter)
         list.attachItemTouch(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START) {

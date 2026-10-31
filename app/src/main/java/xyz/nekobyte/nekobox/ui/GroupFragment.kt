@@ -37,6 +37,7 @@ import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.launchCustomTab
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
+import xyz.nekobyte.nekobox.ktx.prefill
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
@@ -86,6 +87,9 @@ class GroupFragment :
         groupAdapter = GroupAdapter()
         GroupManager.addListener(groupAdapter)
         groupListView.adapter = groupAdapter
+        // The adapter loads the groups as it is made; their rows are made while the window is still, so a screen
+        // built ahead of its first visit shows them without waiting.
+        groupListView.prefill(0, 8)
         FastScrollerBuilder(groupListView).useMd2Style().build()
 
         undoManager = UndoSnackbarManager(activity, groupAdapter)
@@ -427,19 +431,16 @@ class GroupFragment :
                 groupList.add(group)
                 counts[group.id] = size
                 notifyItemInserted(groupList.size - 1)
-
-                if (group.type == GroupType.SUBSCRIPTION) {
-                    GroupUpdater.startUpdate(group, true)
-                }
             }
         }
 
         override suspend fun groupRemoved(groupId: Long) {
+            val few = ProfileDatabase.groupDao.allGroups().size <= 2
             onMainDispatcher {
                 val index = groupList.indexOfFirst { it.id == groupId }
                 if (index == -1) return@onMainDispatcher
                 undoManager.flush()
-                if (ProfileDatabase.groupDao.allGroups().size <= 2) {
+                if (few) {
                     runOnDefaultDispatcher {
                         reload()
                     }

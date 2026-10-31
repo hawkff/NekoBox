@@ -127,7 +127,7 @@ class ConnectingOutlineDeviceTest {
     // The app sets the state and asks Home to refresh, as a connection's progress does.
     private fun state(scenario: ActivityScenario<MainActivity>, state: BaseService.State) {
         DataStore.serviceState = state
-        scenario.onActivity { (it.supportFragmentManager.findFragmentById(R.id.fragment_holder) as ConfigurationFragment).refreshProfileState() }
+        scenario.onActivity { (it.currentScreen() as ConfigurationFragment).refreshProfileState() }
         settle()
     }
 
