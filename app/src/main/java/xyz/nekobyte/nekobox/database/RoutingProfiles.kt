@@ -97,6 +97,12 @@ object RoutingProfiles {
 
     fun ownProfile(): Profile? = list().firstOrNull { it.id == ownId && it.source.isEmpty() }
 
+    /** The rules a set not in use keeps: My rules' (id 0) or a routing profile's; none when it is gone or unreadable. */
+    fun storedRules(id: Long): List<RuleEntity> {
+        val content = if (id == 0L) ownProfile()?.content else list().firstOrNull { it.id == id }?.content
+        return content?.optJSONArray("rules")?.let { runCatching { BackupFormatV2.decodeRules(it) }.getOrNull() }.orEmpty()
+    }
+
     fun list(): List<Profile> {
         val raw = DataStore.configurationStore.getString(Key.ROUTING_PROFILES) ?: return emptyList()
         val array = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()

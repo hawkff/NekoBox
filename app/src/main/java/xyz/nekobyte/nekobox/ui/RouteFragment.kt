@@ -408,12 +408,7 @@ class RouteFragment :
                             RuleSet(profile.id, group?.displayName() ?: profile.name)
                         }
                     val shown = wanted?.takeIf { id -> found.any { it.id == id } } ?: used
-                    val rules = if (shown == used) {
-                        ProfileManager.getRules()
-                    } else {
-                        val content = if (shown == 0L) RoutingProfiles.ownProfile()?.content else profiles.first { it.id == shown }.content
-                        content?.optJSONArray("rules")?.let { runCatching { BackupFormatV2.decodeRules(it) }.getOrNull() }.orEmpty()
-                    }
+                    val rules = if (shown == used) ProfileManager.getRules() else RoutingProfiles.storedRules(shown)
                     Loaded(found, used, shown, rules.map { it.row(context) })
                 }
                 // Showing the screen again reads everything again: rows that did not change keep their views.
@@ -566,9 +561,15 @@ class RouteFragment :
         private val highlight = CardHighlight(card)
 
         init {
+            // A rule of the table opens by its id, one of a set not in use by its place in that set.
             card.setOnClickListener {
-                val intent = Intent(it.context, RouteSettingsActivity::class.java)
-                startActivity(if (editable) intent.putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, row.rule.id) else intent.putExtra(RouteSettingsActivity.EXTRA_RULE, row.rule))
+                val intent = Intent(it.context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_READ_ONLY, !editable)
+                if (live) {
+                    intent.putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, row.rule.id)
+                } else {
+                    intent.putExtra(RouteSettingsActivity.EXTRA_RULE_SET, listedSet ?: return@setOnClickListener).putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, bindingAdapterPosition)
+                }
+                startActivity(intent)
             }
             binding.enable.setOnCheckedChangeListener { _, on ->
                 if (on == row.rule.enabled) return@setOnCheckedChangeListener

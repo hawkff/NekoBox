@@ -205,24 +205,35 @@ class RouteScreenDeviceTest {
 
     @Test
     fun aRuleShownToReadHasNoWayToChangeOrSaveIt() {
-        val rule = RuleEntity(name = names[5], enabled = true, domains = "domain:example.net\ndomain:example.org", outbound = -2)
-        val intent = Intent(context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_RULE, rule)
-        ActivityScenario.launch<RouteSettingsActivity>(intent).use { scenario ->
-            settle()
-            lateinit var root: View
-            scenario.onActivity { root = it.window.decorView }
-            instrumentation.runOnMainSync {
-                val sites = root.findViewById<EditText>(R.id.sites)
-                assertEquals(rule.domains, sites.text.toString())
-                assertFalse(sites.onCheckIsTextEditor())
-                assertTrue(sites.isTextSelectable)
-                assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
-                assertFalse(root.findViewById<View>(R.id.apps).isClickable)
-                assertEquals(null, root.findViewById<View>(R.id.action_apply))
-                root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
+        val before = RoutingProfiles.list().map { it.id }.toSet()
+        val rule = RuleEntity(name = names[5], enabled = true, domains = "domain:example.net\ndomain:example.org", packages = setOf(context.packageName), outbound = -2)
+        val rules = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = "first", domains = "first.example"))).put(BackupFormatV2.encodeRule(rule))
+        val provider = runBlocking { RoutingProfiles.store(RoutingProfiles.Profile(0L, "Provider", JSONObject().put("rules", rules), RoutingProfiles.subscriptionSource(Long.MAX_VALUE))) }
+        // A set not in use gives the rule by its place in the set.
+        val intent = Intent(context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_READ_ONLY, true)
+            .putExtra(RouteSettingsActivity.EXTRA_RULE_SET, provider.id).putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, 1)
+        try {
+            ActivityScenario.launch<RouteSettingsActivity>(intent).use { scenario ->
+                settle()
+                lateinit var root: View
+                scenario.onActivity { root = it.window.decorView }
+                instrumentation.runOnMainSync {
+                    val sites = root.findViewById<EditText>(R.id.sites)
+                    assertEquals(rule.domains, sites.text.toString())
+                    assertFalse(sites.onCheckIsTextEditor())
+                    assertTrue(sites.isTextSelectable)
+                    assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
+                    assertFalse(root.findViewById<View>(R.id.apps).isClickable)
+                    // Every app by name, as there is no list to open.
+                    assertEquals(context.packageManager.getApplicationLabel(context.applicationInfo).toString(), text(root, R.id.apps_summary))
+                    assertEquals(null, root.findViewById<View>(R.id.action_apply))
+                    root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
+                }
+                settle()
+                assertEquals(context.getString(R.string.route_editor_try_catches), text(root, R.id.try_result))
             }
-            settle()
-            assertEquals(context.getString(R.string.route_editor_try_catches), text(root, R.id.try_result))
+        } finally {
+            RoutingProfiles.list().filter { it.id !in before }.forEach { RoutingProfiles.delete(it.id) }
         }
         assertFalse(ProfileDatabase.rulesDao.allRules().any { it.name == names[5] })
     }
