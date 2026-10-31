@@ -29,6 +29,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.net.toUri
 import androidx.core.view.MenuCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -535,7 +536,8 @@ class ConfigurationFragment @JvmOverloads constructor(
         GroupManager.addListener(adapter)
 
         groupPager.adapter = adapter
-        groupPager.offscreenPageLimit = 2
+        // The open group's page is built first, and its neighbors once it has drawn, ready for a swipe.
+        groupPager.doOnPreDraw { groupPager.post { groupPager.offscreenPageLimit = 2 } }
         updatePaging()
 
         tabLayoutMediator = TabLayoutMediator(tabLayout, groupPager) { tab, position ->

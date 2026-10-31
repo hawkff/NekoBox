@@ -333,6 +333,16 @@ class GlassDrawable(
     }
 }
 
+/** The two effects live glass draws with, the frost's blur and the glass shader, for [WarmUp] to draw once ahead of a first frame. */
+@RequiresApi(33)
+internal fun liveGlassEffects(res: Resources): List<RenderEffect> {
+    val blur = res.getDimension(R.dimen.glass_blur) * LiveGlass.FROST
+    return listOf(
+        RenderEffect.createBlurEffect(blur, blur, Shader.TileMode.CLAMP),
+        RenderEffect.createRuntimeShaderEffect(LiveGlass.shader(res), "content"),
+    )
+}
+
 /** The content behind the glass, frosted and bent at the rims of the panes, and faded into the canvas in the band. */
 @RequiresApi(33)
 private class LiveGlass private constructor(
@@ -500,21 +510,17 @@ private class LiveGlass private constructor(
         const val FROST = 0.25f
 
         fun create(host: View, backdrop: GlassBackdrop, res: Resources, sweeps: Boolean): LiveGlass? = try {
-            LiveGlass(
-                host,
-                backdrop,
-                res,
-                RuntimeShader(LIQUID).apply {
-                    setFloatUniform("bezel", res.getDimension(R.dimen.glass_bezel))
-                    setFloatUniform("refraction", res.getDimension(R.dimen.glass_refraction))
-                    setFloatUniform("dims", 0.62f, 0.4f)
-                },
-                sweeps,
-            )
+            LiveGlass(host, backdrop, res, shader(res), sweeps)
         } catch (e: RuntimeException) {
             // The panes keep their tint and rim when the shader cannot run.
             Logs.w("Liquid glass unavailable", e)
             null
+        }
+
+        fun shader(res: Resources) = RuntimeShader(LIQUID).apply {
+            setFloatUniform("bezel", res.getDimension(R.dimen.glass_bezel))
+            setFloatUniform("refraction", res.getDimension(R.dimen.glass_refraction))
+            setFloatUniform("dims", 0.62f, 0.4f)
         }
 
         /**

@@ -72,6 +72,7 @@ import xyz.nekobyte.nekobox.widget.glass.GlassBackdrop
 import xyz.nekobyte.nekobox.widget.glass.GlassBackdropFrameLayout
 import xyz.nekobyte.nekobox.widget.glass.GlassBand
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
+import xyz.nekobyte.nekobox.widget.glass.WarmUp
 import xyz.nekobyte.nekobox.widget.glass.followSwell
 import java.util.Locale
 
@@ -92,6 +93,8 @@ class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The render thread loads the first frame's GPU programs while the screen is being built.
+        WarmUp.start(this)
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 
