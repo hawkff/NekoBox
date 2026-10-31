@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import android.os.RemoteException
 import android.provider.Settings
 import android.view.KeyEvent
@@ -112,6 +113,7 @@ class MainActivity :
 
         if (savedInstanceState == null) {
             displayFragmentWithId(R.id.nav_configuration)
+            binding.root.postDelayed(::buildScreensAhead, 2000)
         } else {
             // A recreated activity, after a theme or glass change, restores its screen without displayFragment.
             currentScreen()?.let(::fitBottomBar)
@@ -564,8 +566,27 @@ class MainActivity :
         binding.drawerLayout.closeDrawers()
     }
 
+    /**
+     * Builds the screens visited most once start-up settles, hidden and paused, one per idle moment of the main
+     * thread, so their first visit shows them as a second one would. One opened before then is built as usual.
+     */
+    private fun buildScreensAhead() {
+        val screens = ArrayDeque<() -> ToolbarFragment>(listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment))
+        Looper.myQueue().addIdleHandler {
+            val manager = supportFragmentManager
+            if (isFinishing || isDestroyed || manager.isStateSaved) return@addIdleHandler false
+            val fragment = screens.removeFirstOrNull()?.invoke() ?: return@addIdleHandler false
+            val tag = fragment.javaClass.name
+            if (manager.findFragmentByTag(tag) == null) {
+                manager.beginTransaction().add(R.id.fragment_holder, fragment, tag).hide(fragment)
+                    .setMaxLifecycle(fragment, Lifecycle.State.STARTED).commitNow()
+            }
+            screens.isNotEmpty()
+        }
+    }
+
     /** The screen on show; screens that keep stay added under it, hidden. */
-    private fun currentScreen() = supportFragmentManager.fragments.lastOrNull { it.id == R.id.fragment_holder && !it.isHidden } as? ToolbarFragment
+    fun currentScreen() = supportFragmentManager.fragments.lastOrNull { it.id == R.id.fragment_holder && !it.isHidden } as? ToolbarFragment
 
     /** The connect button and the stats bar show on Home, and on every screen while the user wants them there. */
     private fun fitBottomBar(screen: ToolbarFragment) {

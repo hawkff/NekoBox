@@ -48,7 +48,7 @@ class GlassScreensDeviceTest {
                 Thread.sleep(1500)
                 scenario.onActivity { activity ->
                     val name = activity.resources.getResourceEntryName(screen)
-                    val fragment = activity.supportFragmentManager.findFragmentById(R.id.fragment_holder) as ToolbarFragment
+                    val fragment = activity.currentScreen()!!
                     val root = fragment.requireView()
                     val bars = root.findViewById<View>(R.id.glass_bars)
                     val content = root.findViewById<View>(R.id.glass_content)

@@ -37,6 +37,7 @@ import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.launchCustomTab
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
+import xyz.nekobyte.nekobox.ktx.prefill
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
@@ -86,6 +87,8 @@ class GroupFragment :
         groupAdapter = GroupAdapter()
         GroupManager.addListener(groupAdapter)
         groupListView.adapter = groupAdapter
+        // Rows are made while the main thread is idle, for a screen built ahead of its first visit.
+        groupListView.prefill(0, 8)
         FastScrollerBuilder(groupListView).useMd2Style().build()
 
         undoManager = UndoSnackbarManager(activity, groupAdapter)

@@ -57,6 +57,7 @@ import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
+import xyz.nekobyte.nekobox.ktx.prefill
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
@@ -352,6 +353,19 @@ class ConfigurationGroupFragment : Fragment() {
         GroupManager.addListener(adapter!!)
         configurationListView.adapter = adapter
         configurationListView.setItemViewCacheSize(20)
+        // The open group's first rows are made while its profiles load.
+        if (proxyGroup.id == DataStore.selectedGroup) {
+            val mode = DataStore.groupLayoutMode
+            val rowDp = when (mode) {
+                GroupLayout.COMPACT -> 64
+                GroupLayout.TWO_COLUMNS -> 140
+                else -> 120
+            }
+            val metrics = resources.displayMetrics
+            val rows = (metrics.heightPixels / (rowDp * metrics.density)).toInt() + 1
+            configurationListView.prefill(mode, if (mode == GroupLayout.TWO_COLUMNS) rows * 2 else rows)
+            if (DataStore.profileSections) configurationListView.prefill(SECTION_VIEW, 2)
+        }
         FastScrollerBuilder(configurationListView).useMd2Style().build()
 
         // Hide the docked FAB while scrolling down (so it never overlaps the

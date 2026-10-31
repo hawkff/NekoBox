@@ -577,7 +577,7 @@ class LocationSpoofingDeviceTest {
         scenario.onActivity { activity ->
             activity.displayFragmentWithId(R.id.nav_settings)
             activity.supportFragmentManager.executePendingTransactions()
-            val settings = activity.supportFragmentManager.findFragmentById(R.id.fragment_holder) as SettingsFragment
+            val settings = activity.currentScreen() as SettingsFragment
             settings.childFragmentManager.executePendingTransactions()
             val hub = settings.childFragmentManager.findFragmentById(R.id.settings) as SettingsPreferenceFragment
             settings.onPreferenceStartScreen(hub, checkNotNull(hub.findPreference<PreferenceScreen>("screen_protection")))

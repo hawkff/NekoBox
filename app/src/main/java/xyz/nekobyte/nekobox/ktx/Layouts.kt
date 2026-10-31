@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.ktx
 
 import android.graphics.Rect
+import android.os.Looper
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -113,5 +114,24 @@ class FixedGridLayoutManager(val recyclerView: RecyclerView, spanCount: Int) : G
             if (!activity.fabView.isShown) activity.showFab()
         }
         return scrollRange
+    }
+}
+
+/**
+ * Makes up to [count] rows of [viewType] while the main thread is idle, one per idle moment, and keeps them in
+ * this list's pool, so the first layout with data binds them instead of inflating each one: rows load after a
+ * screen first draws, and a screen built ahead of its first visit lays them out only when it shows. Stops once
+ * the list has laid out rows of its own, or when its adapter changes.
+ */
+fun RecyclerView.prefill(viewType: Int, count: Int) {
+    val adapter = adapter ?: return
+    if (count <= 0) return
+    recycledViewPool.setMaxRecycledViews(viewType, maxOf(count, 5))
+    var made = 0
+    Looper.myQueue().addIdleHandler {
+        if (made >= count || childCount > 0 || this.adapter !== adapter) return@addIdleHandler false
+        recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
+        made++
+        made < count
     }
 }
