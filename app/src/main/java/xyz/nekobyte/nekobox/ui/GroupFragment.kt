@@ -87,7 +87,9 @@ class GroupFragment :
         groupAdapter = GroupAdapter()
         GroupManager.addListener(groupAdapter)
         groupListView.adapter = groupAdapter
-        // Rows are made while the window is still, for a screen built ahead of its first visit.
+        // Groups load as soon as the screen is built, and their rows are made while the window is still: a screen
+        // built ahead of its first visit shows them without waiting.
+        runOnDefaultDispatcher { groupAdapter.reload() }
         groupListView.prefill(0, 8)
         FastScrollerBuilder(groupListView).useMd2Style().build()
 
@@ -431,18 +433,20 @@ class GroupFragment :
                 counts[group.id] = size
                 notifyItemInserted(groupList.size - 1)
 
-                if (group.type == GroupType.SUBSCRIPTION) {
+                // A subscription made from this screen updates at once; one made elsewhere while it is hidden is left to its maker.
+                if (group.type == GroupType.SUBSCRIPTION && !isHidden) {
                     GroupUpdater.startUpdate(group, true)
                 }
             }
         }
 
         override suspend fun groupRemoved(groupId: Long) {
+            val few = ProfileDatabase.groupDao.allGroups().size <= 2
             onMainDispatcher {
                 val index = groupList.indexOfFirst { it.id == groupId }
                 if (index == -1) return@onMainDispatcher
                 undoManager.flush()
-                if (ProfileDatabase.groupDao.allGroups().size <= 2) {
+                if (few) {
                     runOnDefaultDispatcher {
                         reload()
                     }
