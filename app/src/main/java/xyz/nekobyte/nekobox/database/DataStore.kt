@@ -211,6 +211,18 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         configurationStore.putString(Key.PROXY_EXITS, JSONObject(exits as Map<*, *>).toString())
     }
 
+    /** Forgets where [ids] left from, or every proxy's exit when null: a failed check, an edit, a restore. */
+    fun forgetProxyExits(ids: Collection<Long>? = null) = synchronized(addressLock) {
+        if (ids == null) {
+            configurationStore.putString(Key.PROXY_EXITS, "")
+            return@synchronized
+        }
+        val stored = runCatching { JSONObject(configurationStore.getString(Key.PROXY_EXITS).orEmpty()) }.getOrNull() ?: return@synchronized
+        if (ids.none { stored.has(it.toString()) }) return@synchronized
+        for (id in ids) stored.remove(id.toString())
+        configurationStore.putString(Key.PROXY_EXITS, stored.toString())
+    }
+
     /** Changes the pins in one step; pinning, unpinning and pruning run in separate jobs. */
     fun updateFavoriteProfiles(change: (List<Long>) -> List<Long>) = synchronized(favoriteLock) { favoriteProfiles = change(favoriteProfiles) }
 

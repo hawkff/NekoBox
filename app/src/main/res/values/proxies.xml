@@ -6,7 +6,7 @@
     <string name="proxies_paste">Paste proxies</string>
     <string name="proxies_paste_formats">One proxy a line: host:port:user:password, user:password@host:port, host:port, or a socks5:// or http:// link.</string>
     <string name="proxies_paste_field">Proxies</string>
-    <string name="proxies_plain_kind">Lines without socks5:// or http:// are</string>
+    <string name="proxies_plain_kind">Lines that are not links are</string>
     <string name="proxies_kind_socks" translatable="false">SOCKS5</string>
     <string name="proxies_kind_http" translatable="false">HTTP</string>
     <string name="proxies_list_name">List name</string>

@@ -26,7 +26,8 @@ object Key {
     // What server names last resolved to: a cache of this device, kept out of backups.
     const val SERVER_ADDRESSES = "serverAddresses"
 
-    // The list open on the Proxies screen, and the address each checked proxy leaves from (kept out of backups).
+    // The list open on the Proxies screen, and the address each checked proxy left from; the second is a
+    // measurement of this device, kept out of backups.
     const val PROXY_LIST = "proxyList"
     const val PROXY_EXITS = "proxyExits"
 

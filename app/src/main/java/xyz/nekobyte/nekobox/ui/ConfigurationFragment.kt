@@ -211,8 +211,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
             if (proxies) DataStore.selectedProxyList = value else DataStore.selectedGroup = value
         }
 
-    /** The group on the open tab; read off the main thread. */
-    private fun openGroup(): ProxyGroup? = if (proxies) ProfileDatabase.groupDao.getById(DataStore.selectedProxyList) else DataStore.currentGroup()
+    /** The group of the tab on screen, read on the main thread; 0 on Favorites or without a tab. */
+    private fun tabGroupId() = adapter.groupList.getOrNull(groupPager.currentItem)?.id?.takeIf { it > 0L } ?: 0L
 
     private var selectedProfileSnapshot = 0L
     private var currentProfileSnapshot = 0L
@@ -885,21 +885,19 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
     private suspend fun createProxyList(name: String) = GroupManager.createGroup(ProxyGroup(name = name, type = GroupType.PROXIES))
 
-    // A new profile goes where this screen adds: the open list on the Proxies screen (a first list when there is
-    // none), Home's import target otherwise.
+    // A new profile goes where this screen adds: the open list on the Proxies screen, or a first list made when the
+    // proxy is saved; Home's import target otherwise.
     private fun newProfile(editor: Class<out Activity>) {
-        if (!proxies) {
-            startActivity(Intent(requireActivity(), editor))
-            return
-        }
-        val open = adapter.groupList.getOrNull(groupPager.currentItem)?.id
-        val name = getString(R.string.proxies_default_list)
-        runOnDefaultDispatcher {
-            val listId = open ?: createProxyList(name).id
-            onMainDispatcher {
-                if (isAdded) startActivity(Intent(requireActivity(), editor).putExtra(ProfileSettingsActivity.EXTRA_GROUP_ID, listId))
+        val intent = Intent(requireActivity(), editor)
+        if (proxies) {
+            val open = tabGroupId()
+            if (open > 0L) {
+                intent.putExtra(ProfileSettingsActivity.EXTRA_GROUP_ID, open)
+            } else {
+                intent.putExtra(ProfileSettingsActivity.EXTRA_NEW_PROXY_LIST, getString(R.string.proxies_default_list))
             }
         }
+        startActivity(intent)
     }
 
     // A name for a new list of proxies, as a group's name is asked for.
@@ -975,7 +973,14 @@ open class ConfigurationFragment @JvmOverloads constructor(
                 dialog.dismiss()
                 runOnDefaultDispatcher {
                     val list = open ?: createProxyList(name)
-                    ProfileManager.createProfiles(list.id, found)
+                    try {
+                        ProfileManager.createProfiles(list.id, found)
+                    } catch (e: Exception) {
+                        Logs.w(e)
+                        if (open == null) GroupManager.deleteGroup(listOf(list))
+                        onMainDispatcher { snackbar(e.readableMessage).show() }
+                        return@runOnDefaultDispatcher
+                    }
                     onMainDispatcher {
                         snackbar(resources.getQuantityString(R.plurals.proxies_added, found.size, found.size, list.displayName())).show()
                     }
@@ -1328,8 +1333,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_clear_traffic_statistics -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(openGroupId)
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     val toClear = mutableListOf<ProxyEntity>()
                     if (profiles.isNotEmpty()) {
                         for (profile in profiles) {
@@ -1347,8 +1353,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_connection_test_clear_results -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(openGroupId)
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     val toClear = mutableListOf<ProxyEntity>()
                     if (profiles.isNotEmpty()) {
                         for (profile in profiles) {
@@ -1360,6 +1367,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
                             }
                         }
                     }
+                    DataStore.forgetProxyExits(profiles.map { it.id })
                     if (toClear.isNotEmpty()) {
                         ProfileManager.updateProfile(toClear)
                     }
@@ -1367,8 +1375,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_connection_test_delete_unavailable -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(openGroupId)
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     // Status 0 is untested, 1 available; the rest failed their last test.
                     val failed = profiles.filter { it.status != 0 && it.status != 1 }
                     onMainDispatcher { confirmRemove(failed, R.string.no_unavailable_profiles) }
@@ -1376,8 +1385,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_remove_duplicate -> {
+                val groupId = tabGroupId()
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(openGroupId)
+                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
                     val seen = HashSet<Protocols.Deduplication>()
                     val duplicates = profiles.filterNot { seen.add(Protocols.Deduplication(it.requireBean())) }
                     onMainDispatcher { confirmRemove(duplicates, R.string.no_duplicate_profiles) }
@@ -1546,8 +1556,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
         // callback (which fires later, on user tap).
         var groupName = ""
 
+        val groupId = tabGroupId()
         val mainJob = runOnDefaultDispatcher {
-            val group = openGroup() ?: return@runOnDefaultDispatcher
+            val group = ProfileDatabase.groupDao.getById(groupId) ?: return@runOnDefaultDispatcher
             groupName = group.displayName()
             val profilesList = ProfileDatabase.proxyDao.getByGroup(group.id).filter {
                 if (icmpPing) {
@@ -1698,8 +1709,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
         // Profiles whose Tailscale node the running service drives are measured through it.
         val service = { (activity as? MainActivity)?.connection?.service }
+        val groupId = tabGroupId()
         val mainJob = runOnDefaultDispatcher {
-            val group = openGroup() ?: return@runOnDefaultDispatcher
+            val group = ProfileDatabase.groupDao.getById(groupId) ?: return@runOnDefaultDispatcher
             groupName = group.displayName()
             val profilesList = ProfileDatabase.proxyDao.getByGroup(group.id)
             test.proxyN = profilesList.size
@@ -1715,6 +1727,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
                             try {
                                 val latency = if (proxies) {
+                                    // An earlier answer stands only until this check: it fails or reads a new one.
+                                    DataStore.forgetProxyExits(listOf(profile.id))
                                     val (latency, trace) = urlTest.check(profile, EXIT_TRACE, result.prepareUrlTest())
                                     ConnectionProbes.traceAddress(trace)?.let { exit ->
                                         ServerCountries.lookUp(listOf(exit))

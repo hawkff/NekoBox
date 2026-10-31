@@ -5,7 +5,7 @@
     <string name="proxies_paste">Вставить прокси</string>
     <string name="proxies_paste_formats">Один прокси в строке: host:port:user:password, user:password@host:port, host:port или ссылка socks5:// или http://.</string>
     <string name="proxies_paste_field">Прокси</string>
-    <string name="proxies_plain_kind">Тип строк без socks5:// или http://</string>
+    <string name="proxies_plain_kind">Тип строк, которые не являются ссылками</string>
     <string name="proxies_list_name">Название списка</string>
     <string name="proxies_default_list">Мои прокси</string>
     <string name="proxies_new_socks">Новый прокси SOCKS5</string>

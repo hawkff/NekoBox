@@ -111,6 +111,8 @@ class ProxyLinesTest {
         assertNull(ProxyLines.parseLine("host:99999", Plain.SOCKS5))
         assertNull(ProxyLines.parseLine("vmess://abc", Plain.SOCKS5))
         assertNull(ProxyLines.parseLine("justahost", Plain.SOCKS5))
+        // A host with colons is an IPv6 address only in brackets.
+        assertNull(ProxyLines.parseLine("u:p@foo:bar:1080", Plain.SOCKS5))
     }
 
     @Test

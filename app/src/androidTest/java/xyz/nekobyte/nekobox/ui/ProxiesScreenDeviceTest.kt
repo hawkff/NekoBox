@@ -17,6 +17,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.GroupType
+import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -35,6 +36,7 @@ class ProxiesScreenDeviceTest {
     private val groups = ArrayList<Long>()
     private var savedGroup = 0L
     private var savedList = 0L
+    private var savedExits: String? = null
 
     @Before
     fun setUp() {
@@ -43,6 +45,7 @@ class ProxiesScreenDeviceTest {
         }
         savedGroup = DataStore.selectedGroup
         savedList = DataStore.selectedProxyList
+        savedExits = DataStore.configurationStore.getString(Key.PROXY_EXITS)
         groups += group(serversName, GroupType.BASIC, "192.0.2.10")
         groups += group(listName, GroupType.PROXIES, "198.51.100.7", "198.51.100.8")
         // A checked proxy shows the address it leaves from.
@@ -75,6 +78,7 @@ class ProxiesScreenDeviceTest {
         }
         DataStore.selectedGroup = savedGroup
         DataStore.selectedProxyList = savedList
+        DataStore.configurationStore.putString(Key.PROXY_EXITS, savedExits.orEmpty())
     }
 
     private fun settle() {

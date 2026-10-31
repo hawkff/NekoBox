@@ -28,6 +28,7 @@ import androidx.preference.PreferenceFragmentCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.parcelize.Parcelize
 import xyz.nekobyte.nekobox.*
+import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -84,6 +85,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
         /** The group a new profile goes to, such as the list open on the Proxies screen; else the import target. */
         const val EXTRA_GROUP_ID = "group"
+
+        /** The name of a first list of proxies, made when the new proxy is saved, so a canceled editor leaves none. */
+        const val EXTRA_NEW_PROXY_LIST = "newProxyList"
     }
 
     abstract fun createEntity(): T
@@ -121,7 +125,8 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             DataStore.editingId = editingId
             runOnDefaultDispatcher {
                 if (editingId == 0L) {
-                    DataStore.editingGroup = intent.getLongExtra(EXTRA_GROUP_ID, 0L).takeIf { it > 0L } ?: DataStore.selectedGroupForImport()
+                    DataStore.editingGroup = intent.getLongExtra(EXTRA_GROUP_ID, 0L).takeIf { it > 0L }
+                        ?: if (intent.hasExtra(EXTRA_NEW_PROXY_LIST)) 0L else DataStore.selectedGroupForImport()
                     canMoveToOtherBasicGroup = false
                     moveTargetGroups = emptyList()
                     createEntity().applyDefaultValues().init()
@@ -161,7 +166,8 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
     open suspend fun saveAndExit() {
         val editingId = DataStore.editingId
         if (editingId == 0L) {
-            val editingGroup = DataStore.editingGroup
+            val editingGroup = DataStore.editingGroup.takeIf { it > 0L }
+                ?: GroupManager.createGroup(ProxyGroup(name = intent.getStringExtra(EXTRA_NEW_PROXY_LIST), type = GroupType.PROXIES)).id
             ProfileManager.createProfile(editingGroup, createEntity().apply { serialize() })
         } else {
             if (proxyEntity == null) {
@@ -171,6 +177,8 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             if (proxyEntity!!.id == DataStore.selectedProxy) {
                 NekoBox.stopService()
             }
+            // Where it left from was measured with the old settings.
+            DataStore.forgetProxyExits(listOf(proxyEntity!!.id))
             ProfileManager.updateProfile(proxyEntity!!.apply { (requireBean() as T).serialize() })
         }
         finish()

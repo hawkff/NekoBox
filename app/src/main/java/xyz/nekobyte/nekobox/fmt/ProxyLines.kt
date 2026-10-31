@@ -116,7 +116,9 @@ object ProxyLines {
             return text.substring(1, end) to (port(text.substringAfter("]:", "")) ?: return null)
         }
         val colon = text.lastIndexOf(':').takeIf { it > 0 } ?: return null
-        return text.substring(0, colon) to (port(text.substring(colon + 1)) ?: return null)
+        // Only a bracketed IPv6 address holds colons.
+        val host = text.substring(0, colon).takeIf { ':' !in it } ?: return null
+        return host to (port(text.substring(colon + 1)) ?: return null)
     }
 
     private fun port(text: String) = text.toIntOrNull()?.takeIf { it in 1..65535 }
