@@ -37,6 +37,16 @@ class ProxyLinesTest {
     }
 
     @Test
+    fun passwordsMayHoldAtSignsSchemesAndSpaces() {
+        assertEquals("p@ss", socks("proxy.example:1080:alice:p@ss").password)
+        assertEquals("pa://ss", socks("proxy.example:1080:alice:pa://ss").password)
+        assertEquals("two words", socks("proxy.example:1080:alice:two words").password)
+        val at = socks("bob:p@ss@proxy.example:1080")
+        assertEquals("proxy.example", at.serverAddress)
+        assertEquals("p@ss", at.password)
+    }
+
+    @Test
     fun userPasswordAtHostPort() {
         val bean = socks("bob:pw@proxy.example.org:1080")
         assertEquals("proxy.example.org", bean.serverAddress)

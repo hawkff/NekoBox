@@ -42,8 +42,8 @@ object ProxyLines {
     }
 
     internal fun parseLine(line: String, plain: Plain): AbstractBean? {
-        if (line.any { it.isWhitespace() }) return null
-        val scheme = line.substringBefore("://", "").lowercase()
+        // Only a word before :// is a scheme; a password may hold :// as well.
+        val scheme = line.substringBefore("://", "").lowercase().takeIf { SCHEME.matches(it) }.orEmpty()
         if (scheme.isNotEmpty()) {
             val bean = when (scheme) {
                 "socks", "socks5", "socks5h", "socks4", "socks4a" -> parseSOCKS(line)
@@ -52,13 +52,15 @@ object ProxyLines {
             }
             return bean.takeIf { valid(it.serverAddress, it.serverPort) }
         }
+        // An @ separates the login from the address only when an address follows it: a password may hold @ too.
         val at = line.lastIndexOf('@')
+        val afterAt = if (at >= 0) hostPort(line.substring(at + 1)) else null
         val login: Pair<String, String>
         val address: Pair<String, Int>
-        if (at >= 0) {
+        if (afterAt != null) {
             val credentials = line.substring(0, at)
             login = credentials.substringBefore(':') to credentials.substringAfter(':', "")
-            address = hostPort(line.substring(at + 1)) ?: return null
+            address = afterAt
         } else if (line.startsWith("[")) {
             // [IPv6]:port, then an optional :user:password.
             val host = line.substring(1, line.indexOf(']').takeIf { it > 0 } ?: return null)
@@ -122,5 +124,8 @@ object ProxyLines {
     // A host name has a dot; so does an IPv4 address.
     private fun hostLike(text: String) = '.' in text
 
-    private fun valid(host: String?, port: Int?) = !host.isNullOrBlank() && host.none { it == '/' || it == '@' } && port != null && port in 1..65535
+    private fun valid(host: String?, port: Int?) = !host.isNullOrBlank() && host.none { it == '/' || it == '@' || it.isWhitespace() } &&
+        port != null && port in 1..65535
+
+    private val SCHEME = Regex("[a-z][a-z0-9+.-]*")
 }

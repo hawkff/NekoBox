@@ -528,6 +528,33 @@ class ConfigBuilderGoldenTest {
     }
 
     @Test
+    fun aProxyListKeepsItsFirstHopWhenItsProxyIsAGroupsExit() {
+        // A relay that answers only inside a tunnel, as Mullvad's SOCKS5 proxies do inside its WireGuard.
+        val tunnel = addSocks(addGroup(), "192.0.2.60", 1060, "list-first-hop")
+        val list = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "relays", type = GroupType.PROXIES, frontProxy = tunnel.id)) }
+        val relay = addSocks(list, "10.64.0.1", 1080, "relay")
+        val servers = addGroup()
+        val server = addSocks(servers, "192.0.2.61", 1061, "own-server")
+        ConfigBuilderTestEnv.io {
+            ProfileDatabase.groupDao.getById(servers)!!.also {
+                it.landingProxy = relay.id
+                ProfileDatabase.groupDao.updateGroup(it)
+            }
+        }
+
+        val socks = objects(JSONObject(build(server).config).getJSONArray("outbounds")).filter { it.optString("type") == "socks" }
+        fun at(address: String) = socks.single { it.getString("server") == address }
+        // Dialed in order: the server, the list's first hop through it, then the relay through that hop.
+        assertFalse(at("192.0.2.61").has("detour"))
+        assertEquals(at("192.0.2.61").getString("tag"), at("192.0.2.60").getString("detour"))
+        assertEquals(at("192.0.2.60").getString("tag"), at("10.64.0.1").getString("detour"))
+
+        // Connected directly, the relay goes through its list's first hop as well.
+        val direct = objects(JSONObject(build(relay).config).getJSONArray("outbounds")).filter { it.optString("type") == "socks" }
+        assertEquals(direct.single { it.getString("server") == "192.0.2.60" }.getString("tag"), direct.single { it.getString("server") == "10.64.0.1" }.getString("detour"))
+    }
+
+    @Test
     fun forExport_omitsDeviceSecretsAndLanBinding() {
         DataStore.allowAccess = true
         val profile = addSocks(addGroup(), "192.0.2.50", 1080, "export-socks")

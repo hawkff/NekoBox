@@ -925,37 +925,52 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
     /**
      * Proxies as a provider lists them, into the open list; the first paste also names the first list. A list on
-     * the clipboard fills the field, and the count of proxies and skipped lines follows the text.
+     * the clipboard fills the field, and the count of proxies and skipped lines follows the text. A provider's list
+     * can hold thousands of lines, so they are read off the main thread once typing pauses.
      */
     private fun pasteProxies() {
         val binding = LayoutPasteProxiesBinding.inflate(layoutInflater)
         val open = adapter.groupList.getOrNull(groupPager.currentItem)
         binding.listLayout.isVisible = open == null
         binding.listName.setText(R.string.proxies_default_list)
-        NekoBox.getClipboardText().takeIf { ProxyLines.parse(it, ProxyLines.Plain.SOCKS5).proxies.isNotEmpty() }?.let(binding.proxies::setText)
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.proxies_paste)
             .setView(binding.root)
             .setPositiveButton(R.string.add, null)
             .setNegativeButton(android.R.string.cancel, null)
             .create()
-        fun parsed() = ProxyLines.parse(
-            binding.proxies.text?.toString().orEmpty(),
-            if (binding.kind.checkedChipId == R.id.kind_http) ProxyLines.Plain.HTTP else ProxyLines.Plain.SOCKS5,
-        )
+        val scope = viewLifecycleOwner.lifecycleScope
+        var parsing: Job? = null
+        // What the text held when it was last read; Add stays off until the text on screen has been read.
+        var read: ProxyLines.Result? = null
         fun refresh() {
-            val result = parsed()
-            val count = result.proxies.size
-            binding.proxiesLayout.helperText = listOfNotNull(
-                resources.getQuantityString(R.plurals.proxies_found, count, count),
-                result.skipped.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.proxies_skipped, it, it) },
-            ).joinToString(" · ")
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.isEnabled = count > 0 && (open != null || !binding.listName.text.isNullOrBlank())
+            val text = binding.proxies.text?.toString().orEmpty()
+            val plain = if (binding.kind.checkedChipId == R.id.kind_http) ProxyLines.Plain.HTTP else ProxyLines.Plain.SOCKS5
+            read = null
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.isEnabled = false
+            parsing?.cancel()
+            parsing = scope.launch {
+                delay(150)
+                val result = withContext(Dispatchers.Default) { ProxyLines.parse(text, plain) }
+                read = result
+                val count = result.proxies.size
+                binding.proxiesLayout.helperText = listOfNotNull(
+                    resources.getQuantityString(R.plurals.proxies_found, count, count),
+                    result.skipped.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.proxies_skipped, it, it) },
+                ).joinToString(" · ")
+                dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.isEnabled = count > 0 && (open != null || !binding.listName.text.isNullOrBlank())
+            }
         }
         dialog.setOnShowListener {
             refresh()
+            // A provider's list on the clipboard fills the empty field.
+            val clipboard = NekoBox.getClipboardText()
+            scope.launch {
+                val found = withContext(Dispatchers.Default) { ProxyLines.parse(clipboard, ProxyLines.Plain.SOCKS5).proxies.isNotEmpty() }
+                if (found && binding.proxies.text.isNullOrEmpty()) binding.proxies.setText(clipboard)
+            }
             dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
-                val found = parsed().proxies
+                val found = read?.proxies ?: return@setOnClickListener
                 val name = binding.listName.text?.toString()?.trim().orEmpty()
                 dialog.dismiss()
                 runOnDefaultDispatcher {

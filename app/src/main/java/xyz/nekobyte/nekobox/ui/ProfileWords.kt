@@ -52,7 +52,7 @@ object ProfileWords {
      * "🇩🇪 Germany" for the country of the address the connection goes to, even where the name's
      * flag says otherwise; null while that address or its country is unknown.
      */
-    fun country(profile: ProxyEntity): String? = countryOf(serverIp(profile) ?: return null)
+    fun country(profile: ProxyEntity): String? = serverIp(profile)?.let(::countryOf)
 
     /** The country of [address] with its flag, in the device's language; null while it is unknown. */
     fun countryOf(address: String): String? {
