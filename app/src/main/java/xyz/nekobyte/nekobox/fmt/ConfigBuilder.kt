@@ -664,41 +664,40 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     // last hop's group (a front/landing proxy may come from another group).
                     // We record the server hostnames of the chain hops that belong to that
                     // same subscription, so the resolver is scoped to its own servers only.
-                    if (!forTest) {
-                        val ownerGid = entity.groupId
-                        val ownerGroup = lookupCache.group(ownerGid)
-                        val resolver = ownerGroup
-                            ?.takeIf { it.type == GroupType.SUBSCRIPTION }
-                            ?.subscription?.customDnsResolver
-                            ?.let { sanitizeDnsEntry(it) }
-                            ?.takeIf { it.isNotBlank() }
+                    // Tests and lookups use it too, so they reach the address the connection would.
+                    val ownerGid = entity.groupId
+                    val ownerGroup = lookupCache.group(ownerGid)
+                    val resolver = ownerGroup
+                        ?.takeIf { it.type == GroupType.SUBSCRIPTION }
+                        ?.subscription?.customDnsResolver
+                        ?.let { sanitizeDnsEntry(it) }
+                        ?.takeIf { it.isNotBlank() }
 
-                        if (resolver != null) {
-                            // Record hosts of every chain hop owned by this subscription.
-                            profileList.forEach { hop ->
-                                if (hop.groupId == ownerGid) {
-                                    val host = serverHostOf(hop.requireBean())
-                                    if (host != null && !host.isIpAddress()) {
-                                        changes.put(perGroupResolver, ownerGid, resolver)
-                                        changes.add(perGroupServerHosts, ownerGid, host)
-                                        changes.add(hostResolvers, host, resolver)
-                                    }
-                                } else {
-                                    // hop from another (non-custom) group sharing this chain
-                                    val host = serverHostOf(hop.requireBean())
-                                    if (host != null && !host.isIpAddress()) {
-                                        changes.add(nonCustomFinalHosts, host)
-                                    }
+                    if (resolver != null) {
+                        // Record hosts of every chain hop owned by this subscription.
+                        profileList.forEach { hop ->
+                            if (hop.groupId == ownerGid) {
+                                val host = serverHostOf(hop.requireBean())
+                                if (host != null && !host.isIpAddress()) {
+                                    changes.put(perGroupResolver, ownerGid, resolver)
+                                    changes.add(perGroupServerHosts, ownerGid, host)
+                                    changes.add(hostResolvers, host, resolver)
                                 }
-                            }
-                        } else {
-                            // No custom resolver for this chain: none of its hosts (any hop)
-                            // must be hijacked by another subscription's resolver.
-                            profileList.forEach { hop ->
+                            } else {
+                                // hop from another (non-custom) group sharing this chain
                                 val host = serverHostOf(hop.requireBean())
                                 if (host != null && !host.isIpAddress()) {
                                     changes.add(nonCustomFinalHosts, host)
                                 }
+                            }
+                        }
+                    } else {
+                        // No custom resolver for this chain: none of its hosts (any hop)
+                        // must be hijacked by another subscription's resolver.
+                        profileList.forEach { hop ->
+                            val host = serverHostOf(hop.requireBean())
+                            if (host != null && !host.isIpAddress()) {
+                                changes.add(nonCustomFinalHosts, host)
                             }
                         }
                     }
@@ -1515,29 +1514,29 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     },
                 )
             }
+        }
 
-            // Per-subscription custom resolver (#71): one DNS server per subscription group,
-            // routed directly (TAG_DIRECT) so it never loops through the proxy outbound, and
-            // a DNS rule matching ONLY that subscription's server domains. Inserted at the top
-            // so it takes precedence over the global direct-DNS force rule above. Hosts shared
-            // by multiple subscriptions with different resolvers are ambiguous and are skipped
-            // here (they stay on the global direct path).
-            perGroupResolver.forEach { (gid, resolver) ->
-                val hosts = perGroupServerHosts[gid]
-                    ?.filter { it.isNotBlank() && isExclusiveCustomHost(it) }
-                    ?.map { "full:$it" }
-                if (hosts.isNullOrEmpty()) return@forEach
+        // Per-subscription custom resolver (#71): one DNS server per subscription group,
+        // routed directly (TAG_DIRECT) so it never loops through the proxy outbound, and
+        // a DNS rule matching ONLY that subscription's server domains. Inserted at the top
+        // so it takes precedence over the global direct-DNS force rule above. Hosts shared
+        // by multiple subscriptions with different resolvers are ambiguous and are skipped
+        // here (they stay on the global direct path).
+        perGroupResolver.forEach { (gid, resolver) ->
+            val hosts = perGroupServerHosts[gid]
+                ?.filter { it.isNotBlank() && isExclusiveCustomHost(it) }
+                ?.map { "full:$it" }
+            if (hosts.isNullOrEmpty()) return@forEach
 
-                val serverTag = "dns-sub-$gid"
-                dnsServers.add(dnsServer(resolver, serverTag, "dns-local"))
-                dnsRules.add(
-                    0,
-                    DNSRule_DefaultOptions().apply {
-                        makeSingBoxRule(hosts)
-                        server = serverTag
-                    },
-                )
-            }
+            val serverTag = "dns-sub-$gid"
+            dnsServers.add(dnsServer(resolver, serverTag, "dns-local"))
+            dnsRules.add(
+                0,
+                DNSRule_DefaultOptions().apply {
+                    makeSingBoxRule(hosts)
+                    server = serverTag
+                },
+            )
         }
 
         fun resolverFor(host: String?): String {
