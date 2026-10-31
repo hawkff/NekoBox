@@ -206,6 +206,7 @@ class RouteScreenDeviceTest {
     @Test
     fun aRuleShownToReadHasNoWayToChangeOrSaveIt() {
         val before = RoutingProfiles.list().map { it.id }.toSet()
+        val label = context.packageManager.getApplicationLabel(context.applicationInfo).toString()
         val rule = RuleEntity(name = names[5], enabled = true, domains = "domain:example.net\ndomain:example.org", packages = setOf(context.packageName), outbound = -2)
         val rules = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = "first", domains = "first.example"))).put(BackupFormatV2.encodeRule(rule))
         val provider = runBlocking { RoutingProfiles.store(RoutingProfiles.Profile(0L, "Provider", JSONObject().put("rules", rules), RoutingProfiles.subscriptionSource(Long.MAX_VALUE))) }
@@ -226,12 +227,13 @@ class RouteScreenDeviceTest {
                     assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
                     assertFalse(root.findViewById<View>(R.id.apps).isClickable)
                     // Every app by name, as there is no list to open.
-                    assertEquals(context.packageManager.getApplicationLabel(context.applicationInfo).toString(), root.findViewById<TextView>(R.id.apps_summary).text.toString())
+                    assertEquals(label, root.findViewById<TextView>(R.id.apps_summary).text.toString())
                     assertEquals(null, root.findViewById<View>(R.id.action_apply))
                     root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
                 }
                 settle()
-                assertEquals(context.getString(R.string.route_editor_try_catches), text(root, R.id.try_result))
+                // Try it checks the rule shown: it catches the site for its app only.
+                assertEquals(context.getString(R.string.route_editor_try_maybe, label), text(root, R.id.try_result))
             }
         } finally {
             RoutingProfiles.list().filter { it.id !in before }.forEach { RoutingProfiles.delete(it.id) }
