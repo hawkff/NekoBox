@@ -277,6 +277,10 @@ private fun resolveChain(entity: ProxyEntity, lookupCache: BuildLookupCache): Mu
     if (landingProxy != null) {
         list.addAll(0, withListPath(landingProxy))
     }
+    // A hop dialed twice would share one outbound tag and loop: the path is refused, naming the hop.
+    val seen = HashSet<Long>()
+    val twice = list.firstOrNull { !seen.add(it.id) }
+    require(twice == null) { NekoBox.application.getString(R.string.chain_repeated_hop, entity.displayName(), twice?.displayName()) }
     return list
 }
 
