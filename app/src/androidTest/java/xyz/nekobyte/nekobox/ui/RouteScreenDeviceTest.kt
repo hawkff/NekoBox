@@ -209,9 +209,10 @@ class RouteScreenDeviceTest {
         val rule = RuleEntity(name = names[5], enabled = true, domains = "domain:example.net\ndomain:example.org", packages = setOf(context.packageName), outbound = -2)
         val rules = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = "first", domains = "first.example"))).put(BackupFormatV2.encodeRule(rule))
         val provider = runBlocking { RoutingProfiles.store(RoutingProfiles.Profile(0L, "Provider", JSONObject().put("rules", rules), RoutingProfiles.subscriptionSource(Long.MAX_VALUE))) }
-        // A set not in use gives the rule by its place in the set.
+        // A set not in use gives the rule by its place in the set and its hash; a stale place still finds it.
         val intent = Intent(context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_READ_ONLY, true)
-            .putExtra(RouteSettingsActivity.EXTRA_RULE_SET, provider.id).putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, 1)
+            .putExtra(RouteSettingsActivity.EXTRA_RULE_SET, provider.id).putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, 0)
+            .putExtra(RouteSettingsActivity.EXTRA_RULE_HASH, RoutingProfiles.storedRules(provider.id)[1].hashCode())
         try {
             ActivityScenario.launch<RouteSettingsActivity>(intent).use { scenario ->
                 settle()
@@ -225,7 +226,7 @@ class RouteScreenDeviceTest {
                     assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
                     assertFalse(root.findViewById<View>(R.id.apps).isClickable)
                     // Every app by name, as there is no list to open.
-                    assertEquals(context.packageManager.getApplicationLabel(context.applicationInfo).toString(), text(root, R.id.apps_summary))
+                    assertEquals(context.packageManager.getApplicationLabel(context.applicationInfo).toString(), root.findViewById<TextView>(R.id.apps_summary).text.toString())
                     assertEquals(null, root.findViewById<View>(R.id.action_apply))
                     root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
                 }

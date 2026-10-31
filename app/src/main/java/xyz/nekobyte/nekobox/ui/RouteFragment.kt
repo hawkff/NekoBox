@@ -567,7 +567,9 @@ class RouteFragment :
                 if (live) {
                     intent.putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, row.rule.id)
                 } else {
-                    intent.putExtra(RouteSettingsActivity.EXTRA_RULE_SET, listedSet ?: return@setOnClickListener).putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, bindingAdapterPosition)
+                    intent.putExtra(RouteSettingsActivity.EXTRA_RULE_SET, listedSet ?: return@setOnClickListener)
+                        .putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, bindingAdapterPosition)
+                        .putExtra(RouteSettingsActivity.EXTRA_RULE_HASH, row.rule.hashCode())
                 }
                 startActivity(intent)
             }

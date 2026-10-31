@@ -120,16 +120,26 @@ class RouteSettingsActivity : ThemedActivity() {
             return
         }
         lifecycleScope.launch {
-            // A rule of a set not in use comes by its place there: a subscription's can be megabytes, more than an Intent carries.
             val rule = withContext(Dispatchers.IO) {
                 when {
-                    intent.hasExtra(EXTRA_RULE_SET) -> RoutingProfiles.storedRules(intent.getLongExtra(EXTRA_RULE_SET, 0L)).getOrNull(intent.getIntExtra(EXTRA_RULE_INDEX, -1))
+                    intent.hasExtra(EXTRA_RULE_SET) -> setRule()
                     editingId == 0L -> newRule()
                     else -> ProfileDatabase.rulesDao.getById(editingId)
                 }
             }
             if (rule == null) finish() else start(stored = rule, edited = rule.copy())
         }
+    }
+
+    /**
+     * A rule of a set not in use, which comes by its place there and its hash: a subscription's can be megabytes, more than
+     * an Intent carries. The set may have updated since the list showed it, so the rule is the one tapped wherever it moved,
+     * or none.
+     */
+    private fun setRule(): RuleEntity? {
+        val rules = RoutingProfiles.storedRules(intent.getLongExtra(EXTRA_RULE_SET, 0L))
+        val hash = intent.getIntExtra(EXTRA_RULE_HASH, 0)
+        return rules.getOrNull(intent.getIntExtra(EXTRA_RULE_INDEX, -1))?.takeIf { it.hashCode() == hash } ?: rules.firstOrNull { it.hashCode() == hash }
     }
 
     // A rule made from the connections list starts with the app, site or address it came from.
@@ -474,6 +484,7 @@ class RouteSettingsActivity : ThemedActivity() {
         const val EXTRA_READ_ONLY = "read_only"
         const val EXTRA_RULE_SET = "rule_set"
         const val EXTRA_RULE_INDEX = "rule_index"
+        const val EXTRA_RULE_HASH = "rule_hash"
 
         private const val DRAFT = "draft"
         private const val ORIGINAL = "original"
