@@ -99,6 +99,7 @@ class MainActivity :
         WarmUp.start(this)
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
+        checkedScreen = savedInstanceState?.getInt(CHECKED_SCREEN, checkedScreen) ?: checkedScreen
 
         binding = LayoutMainBinding.inflate(layoutInflater)
         binding.fab.initProgress(binding.fabProgress)
@@ -736,6 +737,8 @@ class MainActivity :
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(BACKGROUND_USE_ASKED, backgroundUseAsked)
+        // The drawer's items are built after the screen is restored, so they cannot restore their own check.
+        outState.putInt(CHECKED_SCREEN, checkedScreen)
     }
 
     val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
@@ -873,6 +876,7 @@ class MainActivity :
 }
 
 private const val BACKGROUND_USE_ASKED = "backgroundUseAsked"
+private const val CHECKED_SCREEN = "checkedScreen"
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a
