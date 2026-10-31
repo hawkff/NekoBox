@@ -71,7 +71,10 @@ class RouteFragment :
     override val keepsAlive get() = true
 
     /** A rule and its words, made off the main thread. */
-    class RuleRow(val rule: RuleEntity, val title: String, val summary: String, val destination: String, @param:ColorInt val color: Int)
+    class RuleRow(val rule: RuleEntity, val title: String, val summary: String, val destination: String, @param:ColorInt val color: Int) {
+        /** What the row shows, to tell whether a fresh read changed it. */
+        fun words() = listOf(rule, title, summary, destination, color)
+    }
 
     /** The tester's answer and its words, made off the main thread. [verdicts] has the line under each rule. */
     private class Tested(val answer: RouteAnswer?, val destination: String?, @param:ColorInt val color: Int, val by: String, val notes: String?, val verdicts: List<String?>)
@@ -312,6 +315,8 @@ class RouteFragment :
 
     private fun show(result: Tested?) {
         testing = null
+        // No answer before and none now: the rows already look as they should.
+        if (result == null && tested == null) return
         tested = result
         val header = binding.header
         header.answer.isVisible = result != null
@@ -407,6 +412,15 @@ class RouteFragment :
                         content?.optJSONArray("rules")?.let { runCatching { BackupFormatV2.decodeRules(it) }.getOrNull() }.orEmpty()
                     }
                     Loaded(found, used, shown, rules.map { it.row(context) })
+                }
+                // Showing the screen again reads everything again: rows that did not change keep their views.
+                val unchanged = loaded && fresh.used == usedSet && fresh.shown == listedSet &&
+                    fresh.sets.map { it.id to it.name } == sets.map { it.id to it.name } &&
+                    fresh.rows.map { it.words() } == rows.map { it.words() }
+                if (unchanged) {
+                    // Settings read by the tester may have changed elsewhere.
+                    if (!binding.header.probe.text.isNullOrBlank()) test()
+                    return@launch
                 }
                 sets = fresh.sets
                 usedSet = fresh.used
