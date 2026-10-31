@@ -208,8 +208,9 @@ class MainActivity :
         val fab = binding.fab
         fab.compatElevation = 0f
         fab.compatPressedTranslationZ = 0f
+        // The glass at the bottom shows the screen's own backdrop, which the screen's bars frost already.
         fab.useGlass(
-            GlassDrawable(fab, content, tint) { bounds ->
+            GlassDrawable(fab, content, tint, source = ::shownBackdrop) { bounds ->
                 pane().apply {
                     rect.set(bounds)
                     radius = rect.width() / 2
@@ -222,7 +223,7 @@ class MainActivity :
         val inset = resources.getDimension(R.dimen.glass_capsule_inset)
         stats.elevation = 0f
         stats.useGlass(
-            GlassDrawable(stats, content, tint) { bounds ->
+            GlassDrawable(stats, content, tint, source = ::shownBackdrop) { bounds ->
                 val capsule = pane()
                 capsule.rect.set(bounds.left + inset, bounds.top + inset, bounds.right - inset, bounds.bottom - stats.paddingBottom - inset)
                 capsule.radius = 2 * inset
@@ -253,10 +254,7 @@ class MainActivity :
                 override fun onDrawerStateChanged(newState: Int) {
                     val out = newState != DrawerLayout.STATE_IDLE || binding.drawerLayout.isOpen
                     if (out) {
-                        if (stillBackdrop == null) {
-                            stillBackdrop = currentScreen()?.view
-                                ?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop?.also { it.still = true }
-                        }
+                        if (stillBackdrop == null) stillBackdrop = shownBackdrop()?.also { it.still = true }
                     } else {
                         stillBackdrop?.still = false
                         stillBackdrop = null
@@ -622,6 +620,19 @@ class MainActivity :
         if (navigation.menu.size() > 0) return
         navigation.inflateMenu(R.menu.main_drawer_menu)
         navigation.menu.findItem(checkedScreen)?.isChecked = true
+    }
+
+    private var backdropScreen: View? = null
+    private var screenBackdrop: GlassBackdrop? = null
+
+    /** The backdrop of the screen on show, under its bars, if it has one. */
+    private fun shownBackdrop(): GlassBackdrop? {
+        val view = currentScreen()?.view
+        if (view !== backdropScreen) {
+            backdropScreen = view
+            screenBackdrop = view?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop
+        }
+        return screenBackdrop
     }
 
     /** The backdrop drawn into a layer while the drawer is out. */
