@@ -137,7 +137,8 @@ class RouteScreenDeviceTest {
                     assertEquals(View.GONE, root.findViewById<View>(R.id.probe_layout).visibility)
                     assertEquals(View.GONE, root.findViewById<View>(R.id.add).visibility)
                     val list = root.findViewById<RecyclerView>(R.id.route_list)
-                    assertFalse(list.children.single { names[5] in it.contentDescription?.toString().orEmpty() }.isClickable)
+                    // A rule that can't be edited still opens, to read.
+                    assertTrue(list.children.single { names[5] in it.contentDescription?.toString().orEmpty() }.isClickable)
                     root.findViewById<View>(R.id.use_rules).performClick()
                 }
                 settle()
@@ -200,6 +201,30 @@ class RouteScreenDeviceTest {
         assertEquals("example.net", made.domains)
         assertEquals(-2L, made.outbound)
         assertTrue(made.enabled)
+    }
+
+    @Test
+    fun aRuleShownToReadHasNoWayToChangeOrSaveIt() {
+        val rule = RuleEntity(name = names[5], enabled = true, domains = "domain:example.net\ndomain:example.org", outbound = -2)
+        val intent = Intent(context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_RULE, rule)
+        ActivityScenario.launch<RouteSettingsActivity>(intent).use { scenario ->
+            settle()
+            lateinit var root: View
+            scenario.onActivity { root = it.window.decorView }
+            instrumentation.runOnMainSync {
+                val sites = root.findViewById<EditText>(R.id.sites)
+                assertEquals(rule.domains, sites.text.toString())
+                assertFalse(sites.onCheckIsTextEditor())
+                assertTrue(sites.isTextSelectable)
+                assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
+                assertFalse(root.findViewById<View>(R.id.apps).isClickable)
+                assertEquals(null, root.findViewById<View>(R.id.action_apply))
+                root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
+            }
+            settle()
+            assertEquals(context.getString(R.string.route_editor_try_catches), text(root, R.id.try_result))
+        }
+        assertFalse(ProfileDatabase.rulesDao.allRules().any { it.name == names[5] })
     }
 
     @Test

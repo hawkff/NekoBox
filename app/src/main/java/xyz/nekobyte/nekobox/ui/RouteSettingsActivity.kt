@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.IntentCompat
 import androidx.core.os.BundleCompat
 import androidx.core.os.ConfigurationCompat
 import androidx.core.view.ViewCompat
@@ -47,7 +48,8 @@ import java.util.Locale
 
 /**
  * Makes or changes a route rule. The form edits a draft, which survives the screen being recreated;
- * nothing is stored until Save, and leaving with changes asks first.
+ * nothing is stored until Save, and leaving with changes asks first. A rule passed in [EXTRA_RULE], a subscription's
+ * or one of a set not in use, shows in full to read: nothing on the form changes it and there is no Save.
  */
 class RouteSettingsActivity : ThemedActivity() {
 
@@ -59,6 +61,7 @@ class RouteSettingsActivity : ThemedActivity() {
     private var filling = false
     private var describing: Job? = null
     private var trying: Job? = null
+    private val shown by lazy { IntentCompat.getParcelableExtra(intent, EXTRA_RULE, RuleEntity::class.java) }
 
     private val pickProfile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val id = result.data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0L) ?: 0L
@@ -87,9 +90,16 @@ class RouteSettingsActivity : ThemedActivity() {
         setSupportActionBar(findViewById(R.id.toolbar))
         val editingId = intent.getLongExtra(EXTRA_ROUTE_ID, 0L)
         supportActionBar?.apply {
-            setTitle(if (editingId == 0L) R.string.route_editor_new else R.string.route_editor_edit)
+            setTitle(
+                when {
+                    shown != null -> R.string.route_editor_view
+                    editingId == 0L -> R.string.route_editor_new
+                    else -> R.string.route_editor_edit
+                },
+            )
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_close)
+            // Closing an editor drops its changes; a rule shown to read just goes back.
+            if (shown == null) setHomeAsUpIndicator(R.drawable.ic_close)
         }
         val bottom = binding.scroll.paddingBottom
         ViewCompat.setOnApplyWindowInsetsListener(binding.scroll) { view, insets ->
@@ -97,7 +107,7 @@ class RouteSettingsActivity : ThemedActivity() {
             insets
         }
         onBackPressedDispatcher.addCallback(this) {
-            if (::draft.isInitialized && draft != original) askToSave() else finish()
+            if (shown == null && ::draft.isInitialized && draft != original) askToSave() else finish()
         }
 
         val savedDraft = savedInstanceState?.let { BundleCompat.getParcelable(it, DRAFT, RuleEntity::class.java) }
@@ -109,7 +119,7 @@ class RouteSettingsActivity : ThemedActivity() {
             return
         }
         lifecycleScope.launch {
-            val rule = withContext(Dispatchers.IO) { if (editingId == 0L) newRule() else ProfileDatabase.rulesDao.getById(editingId) }
+            val rule = shown ?: withContext(Dispatchers.IO) { if (editingId == 0L) newRule() else ProfileDatabase.rulesDao.getById(editingId) }
             if (rule == null) finish() else start(stored = rule, edited = rule.copy())
         }
     }
@@ -229,6 +239,19 @@ class RouteSettingsActivity : ThemedActivity() {
             draft.dnsThroughOutbound || draft.dnsServer.isNotBlank() || draft.config.isNotBlank()
         showMore(usesMore, animate = false)
         changed()
+        if (shown != null) readOnly()
+    }
+
+    /** The form shows the rule to read: its text can be selected and copied, and no field or choice changes it. Try it still works. */
+    private fun readOnly() {
+        filling = true
+        for (field in listOf(binding.name, binding.sites, binding.addresses, binding.downloaded, binding.ports, binding.protocols, binding.source, binding.sourcePorts, binding.dnsServer)) {
+            field.keyListener = null
+            field.setTextIsSelectable(true)
+        }
+        filling = false
+        val choices = listOf(binding.outbound, binding.network, binding.siteLists, binding.addressLists).flatMap { it.children.toList() }
+        for (view in choices + listOf(binding.dns, binding.apps, binding.customJson)) view.isClickable = false
     }
 
     /** Opens or folds what few rules need: detected protocols, where traffic starts, rule DNS and custom JSON. */
@@ -378,6 +401,8 @@ class RouteSettingsActivity : ThemedActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        // A rule shown to read has nothing to save or delete.
+        if (shown != null) return false
         menuInflater.inflate(R.menu.profile_config_menu, menu)
         // A rule not saved yet has nothing to delete; closing discards it, as in the group editor.
         menu.findItem(R.id.action_delete)?.isVisible = intent.getLongExtra(EXTRA_ROUTE_ID, 0L) != 0L
@@ -420,6 +445,7 @@ class RouteSettingsActivity : ThemedActivity() {
         const val EXTRA_PACKAGE_NAME = "pkg"
         const val EXTRA_DOMAIN = "domain"
         const val EXTRA_IP = "ip"
+        const val EXTRA_RULE = "rule"
 
         private const val DRAFT = "draft"
         private const val ORIGINAL = "original"

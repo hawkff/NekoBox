@@ -63,7 +63,7 @@ import xyz.nekobyte.nekobox.widget.glass.GlassLayout
  * The route rules in the order the core tries them, and a tester above them that says where a site,
  * an address or an app goes: the rules it passes fade, and the one that catches it stands out.
  * Once a subscription brings rules, tabs show them next to the user's own, read-only, and switch
- * which set is in use; the tester checks the set in use.
+ * which set is in use; the tester checks the set in use. A rule that can't be edited opens to read in full.
  */
 class RouteFragment :
     ToolbarFragment(R.layout.layout_route),
@@ -567,7 +567,8 @@ class RouteFragment :
 
         init {
             card.setOnClickListener {
-                startActivity(Intent(it.context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, row.rule.id))
+                val intent = Intent(it.context, RouteSettingsActivity::class.java)
+                startActivity(if (editable) intent.putExtra(RouteSettingsActivity.EXTRA_ROUTE_ID, row.rule.id) else intent.putExtra(RouteSettingsActivity.EXTRA_RULE, row.rule))
             }
             binding.enable.setOnCheckedChangeListener { _, on ->
                 if (on == row.rule.enabled) return@setOnCheckedChangeListener
@@ -589,7 +590,6 @@ class RouteFragment :
             binding.enable.isChecked = row.rule.enabled
             binding.enable.contentDescription = row.title
             binding.enable.isEnabled = editable
-            card.isClickable = editable
             show(animate)
         }
 
