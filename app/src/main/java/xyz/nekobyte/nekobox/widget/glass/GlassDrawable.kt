@@ -26,6 +26,8 @@ import android.view.animation.OvershootInterpolator
 import androidx.annotation.ColorInt
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withClip
+import androidx.core.graphics.withScale
 import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -122,11 +124,13 @@ internal fun GlassPane.followSwell() {
  * scroll edge band.
  * [place] lays out the panes for the drawable's bounds on every frame. With a [backdrop] on
  * Android 13+ the glass refracts the live content; elsewhere it is a tinted pane over the canvas.
+ * Glass that [sweeps] moves over content that stays still, as the drawer does.
  */
 class GlassDrawable(
     internal val host: View,
     backdrop: GlassBackdrop?,
     @ColorInt tint: Int,
+    sweeps: Boolean = false,
     private val place: GlassLayout.(bounds: Rect) -> Unit,
 ) : Drawable() {
 
@@ -146,7 +150,7 @@ class GlassDrawable(
     @ColorInt
     private val canvasColor = Glass.canvasColor(host.context)
     private val dark = ColorUtils.calculateLuminance(canvasColor) < 0.5
-    private val live = if (backdrop != null && Build.VERSION.SDK_INT >= 33) LiveGlass.create(host, backdrop, res) else null
+    private val live = if (backdrop != null && Build.VERSION.SDK_INT >= 33) LiveGlass.create(host, backdrop, res, sweeps) else null
 
     // Flat paint only: a tint, a hairline rim, and on light canvases a soft edge, as thin glass shows.
     private val tintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint }
@@ -331,7 +335,13 @@ class GlassDrawable(
 
 /** The content behind the glass, frosted and bent at the rims of the panes, and faded into the canvas in the band. */
 @RequiresApi(33)
-private class LiveGlass private constructor(private val host: View, private val backdrop: GlassBackdrop, res: Resources, private val shader: RuntimeShader) {
+private class LiveGlass private constructor(
+    private val host: View,
+    private val backdrop: GlassBackdrop,
+    res: Resources,
+    private val shader: RuntimeShader,
+    private val sweeps: Boolean,
+) {
     private val node = RenderNode("glass")
     private val blur = res.getDimension(R.dimen.glass_blur)
 
@@ -341,6 +351,12 @@ private class LiveGlass private constructor(private val host: View, private val 
     private val frost = RenderNode("glass frost").apply {
         setRenderEffect(RenderEffect.createBlurEffect(blur * FROST, blur * FROST, Shader.TileMode.CLAMP))
     }
+
+    // Where the frost's origin lies in the host's coordinates; for glass that sweeps, what the window frost was made from.
+    private var frostX = 0f
+    private var frostY = 0f
+    private var frostChanges = -1L
+    private val frostWindow = IntArray(4)
 
     // The frost and the bend reach past the panes, so the copy covers that much more.
     private val margin = blur + res.getDimension(R.dimen.glass_refraction)
@@ -377,21 +393,16 @@ private class LiveGlass private constructor(private val host: View, private val 
         val width = (min(area.right + margin, (root.width - hostInWindow[0]).toFloat()) - left).roundToInt()
         val height = (min(area.bottom + margin, (root.height - hostInWindow[1]).toFloat()) - top).roundToInt()
         if (width <= 0 || height <= 0) return false
-        val frostWidth = ceil(width * FROST).toInt()
-        val frostHeight = ceil(height * FROST).toInt()
-        frost.setPosition(0, 0, frostWidth, frostHeight)
-        val copy = frost.beginRecording(frostWidth, frostHeight)
-        copy.scale(FROST, FROST)
-        copy.translate(-hostInWindow[0] - left, -hostInWindow[1] - top)
-        // The window's canvas goes under the content, so the glass hides what it covers instead of showing it sharp.
-        root.background?.draw(copy)
-        copy.translate(backdropInWindow[0].toFloat(), backdropInWindow[1].toFloat())
-        copy.drawRenderNode(content)
-        frost.endRecording()
+        if (sweeps) frostWindow(root, content) else frostArea(root, content, left, top, width, height)
+        // Square panes and no band: the shader would show the frost unchanged, so it is drawn as it is.
+        if (edge == GlassBand.NONE && (0 until count).all { layout.panes[it].radius == 0f }) {
+            for (i in 0 until count) canvas.withClip(layout.panes[i].rect) { drawFrost(this) }
+            return true
+        }
         node.setPosition(0, 0, width, height)
         val recording = node.beginRecording(width, height)
-        recording.scale(1 / FROST, 1 / FROST)
-        recording.drawRenderNode(frost)
+        recording.translate(-left, -top)
+        drawFrost(recording)
         node.endRecording()
 
         panes.fill(0f)
@@ -428,6 +439,53 @@ private class LiveGlass private constructor(private val host: View, private val 
         return true
     }
 
+    /** Frosts the content under the glass's area: the panes and the band, with the reach of the blur and the bend. */
+    private fun frostArea(root: View, content: RenderNode, left: Float, top: Float, width: Int, height: Int) {
+        val frostWidth = ceil(width * FROST).toInt()
+        val frostHeight = ceil(height * FROST).toInt()
+        frost.setPosition(0, 0, frostWidth, frostHeight)
+        val copy = frost.beginRecording(frostWidth, frostHeight)
+        copy.scale(FROST, FROST)
+        copy.translate(-hostInWindow[0] - left, -hostInWindow[1] - top)
+        // The window's canvas goes under the content, so the glass hides what it covers instead of showing it sharp.
+        root.background?.draw(copy)
+        copy.translate(backdropInWindow[0].toFloat(), backdropInWindow[1].toFloat())
+        copy.drawRenderNode(content)
+        frost.endRecording()
+        frostX = left
+        frostY = top
+    }
+
+    /**
+     * Frosts the whole window for glass that sweeps over still content: the copy is made again only when
+     * something behind the glass changed, and each frame shows the part under the panes.
+     */
+    private fun frostWindow(root: View, content: RenderNode) {
+        frostX = -hostInWindow[0].toFloat()
+        frostY = -hostInWindow[1].toFloat()
+        val made = frostChanges == backdrop.changes && frostWindow[0] == root.width && frostWindow[1] == root.height &&
+            frostWindow[2] == backdropInWindow[0] && frostWindow[3] == backdropInWindow[1]
+        if (made) return
+        frostChanges = backdrop.changes
+        frostWindow[0] = root.width
+        frostWindow[1] = root.height
+        frostWindow[2] = backdropInWindow[0]
+        frostWindow[3] = backdropInWindow[1]
+        val frostWidth = ceil(root.width * FROST).toInt()
+        val frostHeight = ceil(root.height * FROST).toInt()
+        frost.setPosition(0, 0, frostWidth, frostHeight)
+        val copy = frost.beginRecording(frostWidth, frostHeight)
+        copy.scale(FROST, FROST)
+        root.background?.draw(copy)
+        copy.translate(backdropInWindow[0].toFloat(), backdropInWindow[1].toFloat())
+        copy.drawRenderNode(content)
+        frost.endRecording()
+    }
+
+    private fun drawFrost(canvas: Canvas) = canvas.withTranslation(frostX, frostY) {
+        withScale(1 / FROST, 1 / FROST, 0f, 0f) { drawRenderNode(frost) }
+    }
+
     private fun FloatArray.set(a: Float, b: Float, c: Float, d: Float) {
         this[0] = a
         this[1] = b
@@ -441,7 +499,7 @@ private class LiveGlass private constructor(private val host: View, private val 
         /** The scale of the frosted copy: a 12 dp blur stays about 8 px wide there on a 440 dpi screen. */
         const val FROST = 0.25f
 
-        fun create(host: View, backdrop: GlassBackdrop, res: Resources): LiveGlass? = try {
+        fun create(host: View, backdrop: GlassBackdrop, res: Resources, sweeps: Boolean): LiveGlass? = try {
             LiveGlass(
                 host,
                 backdrop,
@@ -451,6 +509,7 @@ private class LiveGlass private constructor(private val host: View, private val 
                     setFloatUniform("refraction", res.getDimension(R.dimen.glass_refraction))
                     setFloatUniform("dims", 0.62f, 0.4f)
                 },
+                sweeps,
             )
         } catch (e: RuntimeException) {
             // The panes keep their tint and rim when the shader cannot run.

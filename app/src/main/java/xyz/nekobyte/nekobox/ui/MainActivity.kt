@@ -218,7 +218,7 @@ class MainActivity :
             },
         )
         val reach = 64 * resources.displayMetrics.density
-        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this)) { bounds ->
+        navigation.background = GlassDrawable(navigation, binding.coordinator.backdrop, Glass.surfaceTint(this), sweeps = true) { bounds ->
             // Open at the screen's edges: only the inner edge shows a rim, the left one when the drawer opens from the right.
             val rtl = navigation.layoutDirection == View.LAYOUT_DIRECTION_RTL
             pane().rect.set(

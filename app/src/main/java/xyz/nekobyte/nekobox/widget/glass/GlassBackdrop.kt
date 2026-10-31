@@ -30,17 +30,23 @@ class GlassBackdrop(val view: ViewGroup) {
     @get:RequiresApi(31)
     val node: RenderNode? get() = recorder?.node?.takeIf { it.hasDisplayList() }
 
+    /** Counts changes behind the glass: a copy of the content made at one count is current while it stays. */
+    var changes = 0L
+        private set
+
     fun dispatchDraw(canvas: Canvas, drawChildren: (Canvas) -> Unit) {
         val recorder = recorder
         if (Build.VERSION.SDK_INT < 31 || recorder == null || !Glass.enabled || !canvas.isHardwareAccelerated || view.width == 0 || view.height == 0) {
             drawChildren(canvas)
         } else {
+            changes++
             recorder.draw(canvas, view, drawChildren)
         }
     }
 
     /** Something behind the glass changed: the glass that shows it draws again in the same frame. */
     fun onDescendantInvalidated() {
+        changes++
         if (invalidated || hosts.isEmpty()) return
         invalidated = true
         view.postOnAnimation(nextFrame)
