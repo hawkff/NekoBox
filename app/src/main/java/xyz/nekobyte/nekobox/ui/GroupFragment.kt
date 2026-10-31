@@ -87,9 +87,8 @@ class GroupFragment :
         groupAdapter = GroupAdapter()
         GroupManager.addListener(groupAdapter)
         groupListView.adapter = groupAdapter
-        // Groups load as soon as the screen is built, and their rows are made while the window is still: a screen
+        // The adapter loads the groups as it is made; their rows are made while the window is still, so a screen
         // built ahead of its first visit shows them without waiting.
-        runOnDefaultDispatcher { groupAdapter.reload() }
         groupListView.prefill(0, 8)
         FastScrollerBuilder(groupListView).useMd2Style().build()
 
@@ -432,11 +431,6 @@ class GroupFragment :
                 groupList.add(group)
                 counts[group.id] = size
                 notifyItemInserted(groupList.size - 1)
-
-                // A subscription made from this screen updates at once; one made elsewhere while it is hidden is left to its maker.
-                if (group.type == GroupType.SUBSCRIPTION && !isHidden) {
-                    GroupUpdater.startUpdate(group, true)
-                }
             }
         }
 

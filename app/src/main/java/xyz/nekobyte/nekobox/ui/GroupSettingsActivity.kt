@@ -67,7 +67,6 @@ class GroupSettingsActivity :
     // Links the provider proposed in its last update; shown for approval, never fetched before.
     private var pendingLinkOffer = ""
     private var pendingBackupOffer = ""
-    private var isFromClipboard = false
 
     // The group as stored, for what the provider reported; null for a new one.
     private var stored: ProxyGroup? = null
@@ -189,7 +188,6 @@ class GroupSettingsActivity :
             // The settings store still holds the draft; the offers and the flag come back from the state.
             pendingLinkOffer = savedInstanceState.getString(LINK_OFFER).orEmpty()
             pendingBackupOffer = savedInstanceState.getString(BACKUP_OFFER).orEmpty()
-            isFromClipboard = savedInstanceState.getBoolean(EXTRA_FROM_CLIPBOARD)
             start(open = savedInstanceState.getBoolean(MORE))
             DataStore.profileCacheStore.registerChangeListener(this)
             runOnDefaultDispatcher {
@@ -201,7 +199,6 @@ class GroupSettingsActivity :
             }
             return
         }
-        isFromClipboard = intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false)
         val subscriptionLink = intent.getStringExtra(EXTRA_GROUP_SUBSCRIPTION_LINK)
         DataStore.editingId = editingId
         runOnDefaultDispatcher {
@@ -246,7 +243,6 @@ class GroupSettingsActivity :
         super.onSaveInstanceState(outState)
         outState.putString(LINK_OFFER, pendingLinkOffer)
         outState.putString(BACKUP_OFFER, pendingBackupOffer)
-        outState.putBoolean(EXTRA_FROM_CLIPBOARD, isFromClipboard)
         if (::binding.isInitialized) outState.putBoolean(MORE, binding.more.isVisible)
     }
 
@@ -628,7 +624,8 @@ class GroupSettingsActivity :
         val editingId = DataStore.editingId
         if (editingId == 0L) {
             val newGroup = GroupManager.createGroup(ProxyGroup().apply { serialize() })
-            if (isFromClipboard && newGroup.type == GroupType.SUBSCRIPTION && !newGroup.subscription?.link.isNullOrEmpty()) {
+            // A new subscription updates at once, wherever the editor was opened from.
+            if (newGroup.type == GroupType.SUBSCRIPTION && !newGroup.subscription?.link.isNullOrEmpty()) {
                 GroupUpdater.startUpdate(newGroup, true)
             }
         } else if (needSave()) {
@@ -738,7 +735,6 @@ class GroupSettingsActivity :
 
     companion object {
         const val EXTRA_GROUP_ID = "id"
-        const val EXTRA_FROM_CLIPBOARD = "fromClipboard"
         const val EXTRA_GROUP_SUBSCRIPTION_LINK = "subscription_link"
 
         /** A new group that starts as a subscription, waiting for its link. */

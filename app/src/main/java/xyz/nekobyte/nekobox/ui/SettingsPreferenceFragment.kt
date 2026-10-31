@@ -322,6 +322,8 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
     // Summaries reflect system state that changes outside the app, so they are recomputed on
     // every resume (after the user returns from the system settings).
+    private var protectionReads = 0
+
     private fun refreshProtection() {
         val alwaysOn = findPreference<Preference>(Key.PROTECTION_ALWAYS_ON) ?: return
         val lockdown = findPreference<Preference>(Key.PROTECTION_LOCKDOWN) ?: return
@@ -332,11 +334,14 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             isEnabled = vpnMode
             isChecked = DataStore.gpsSpoofing
         }
-        // The record of a simulated location is a file: read off the main thread, the row follows once it is read.
+        // The record of a simulated location is a file: read off the main thread, the row follows the newest read.
         val context = requireContext()
+        val read = ++protectionReads
         runOnDefaultDispatcher {
             val mayRemain = LocationSpoofing.mayRemain(context)
-            onMainDispatcher { if (isAdded) findPreference<Preference>(Key.GPS_SPOOFING_REMOVE)?.isVisible = mayRemain }
+            onMainDispatcher {
+                if (isAdded && read == protectionReads) findPreference<Preference>(Key.GPS_SPOOFING_REMOVE)?.isVisible = mayRemain
+            }
         }
         when {
             DataStore.serviceMode != Key.MODE_VPN -> {

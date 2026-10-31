@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.ktx
 
 import android.graphics.Rect
+import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.View
@@ -127,32 +128,51 @@ private const val STILL_MS = 500L
  * until it returns false: deferred work in pieces that never land under a scroll, a fling or an animation.
  */
 fun View.whenStill(step: () -> Boolean) {
+    // An idle handler runs again only once the queue has handled a message, so it posts an empty one to come back.
+    val queue = Handler(Looper.myLooper()!!)
     val wake = Runnable {}
     Looper.myQueue().addIdleHandler {
         // A view that is not attached has drawn nothing: its drawing time reads 0.
-        if (SystemClock.uptimeMillis() - drawingTime >= STILL_MS) return@addIdleHandler step()
-        // Something drew lately: look again once it may have stopped, even if no other message wakes the queue.
-        handler?.run {
-            removeCallbacks(wake)
-            postDelayed(wake, STILL_MS)
+        val still = SystemClock.uptimeMillis() - drawingTime
+        queue.removeCallbacks(wake)
+        if (still >= STILL_MS) {
+            step().also { if (it) queue.post(wake) }
+        } else {
+            queue.postDelayed(wake, STILL_MS - still)
+            true
         }
-        true
     }
 }
 
 /**
- * Makes rows of [viewType] for up to [count] of the adapter's items, one at a time while the window is still
- * (see [whenStill]), and keeps them in this list's pool, so a screen built ahead of its first visit binds them
- * then instead of making each one. Stops once the list has laid out rows of its own, or when it leaves the window
- * or its adapter changes.
+ * Makes rows of [viewType] for up to [count] of the adapter's items of that type, one at a time while the window
+ * is still (see [whenStill]), and keeps them in this list's pool, so a screen built ahead of its first visit binds
+ * them then instead of making each one. Starts once the adapter has such items; stops once the list has laid out
+ * rows of its own, or when it leaves the window or its adapter changes.
  */
 fun RecyclerView.prefill(viewType: Int, count: Int) {
     val adapter = adapter ?: return
     recycledViewPool.setMaxRecycledViews(viewType, maxOf(count, 5))
-    var made = 0
-    whenStill {
-        val more = made < minOf(count, adapter.itemCount) && isEmpty() && isAttachedToWindow && this.adapter === adapter
-        if (more) recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
-        more && ++made < minOf(count, adapter.itemCount)
+    val wanted = { minOf(count, (0 until adapter.itemCount).count { adapter.getItemViewType(it) == viewType }) }
+    val start = {
+        var made = 0
+        whenStill {
+            val more = made < wanted() && isEmpty() && isAttachedToWindow && this.adapter === adapter
+            if (more) recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
+            more && ++made < wanted()
+        }
     }
+    if (wanted() > 0) return start()
+    // The items are still loading: start when they come.
+    adapter.registerAdapterDataObserver(
+        object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() {
+                if (wanted() == 0) return
+                adapter.unregisterAdapterDataObserver(this)
+                start()
+            }
+
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = onChanged()
+        },
+    )
 }

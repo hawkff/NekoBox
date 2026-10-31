@@ -99,7 +99,6 @@ class MainActivity :
         WarmUp.start(this)
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
-        checkedScreen = savedInstanceState?.getInt(CHECKED_SCREEN, checkedScreen) ?: checkedScreen
 
         binding = LayoutMainBinding.inflate(layoutInflater)
         binding.fab.initProgress(binding.fabProgress)
@@ -112,6 +111,8 @@ class MainActivity :
         }
         navigation.setNavigationItemSelectedListener(this)
         // The drawer's items are built after start-up (see buildAhead), or as the drawer starts to open if sooner.
+        // A recreated activity builds them now, so the drawer restores its checked item, and opens with items.
+        if (savedInstanceState != null) buildDrawerMenu()
         binding.drawerLayout.addDrawerListener(
             object : DrawerLayout.SimpleDrawerListener() {
                 override fun onDrawerStateChanged(newState: Int) {
@@ -187,6 +188,7 @@ class MainActivity :
 
     override fun onResume() {
         super.onResume()
+        if (ahead?.isNotEmpty() == true) buildAhead()
         MessageStore.setCurrentActivity(this)
         ApiUi.attach(this)
         LocalApiAccess.sync(this)
@@ -580,15 +582,27 @@ class MainActivity :
      * A screen opened before its turn is built as usual.
      */
     private fun buildAhead() {
-        val steps = ArrayDeque<() -> Unit>()
-        steps += ::buildDrawerMenu
-        for (screen in listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment)) steps += { buildHidden(screen()) }
+        val steps = ahead ?: ArrayDeque<() -> Unit>().also { steps ->
+            steps += ::buildDrawerMenu
+            for (screen in listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment)) steps += { buildHidden(screen()) }
+            ahead = steps
+        }
+        if (buildingAhead) return
+        buildingAhead = true
         binding.root.whenStill {
-            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return@whenStill false
+            // A stopped activity cannot add screens: onResume goes on from here.
+            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) {
+                buildingAhead = false
+                return@whenStill false
+            }
             steps.removeFirstOrNull()?.invoke()
-            steps.isNotEmpty()
+            steps.isNotEmpty().also { buildingAhead = it }
         }
     }
+
+    /** The steps of [buildAhead] still to run, once it has started. */
+    private var ahead: ArrayDeque<() -> Unit>? = null
+    private var buildingAhead = false
 
     private fun buildHidden(screen: ToolbarFragment) {
         val tag = screen.javaClass.name
@@ -737,8 +751,6 @@ class MainActivity :
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(BACKGROUND_USE_ASKED, backgroundUseAsked)
-        // The drawer's items are built after the screen is restored, so they cannot restore their own check.
-        outState.putInt(CHECKED_SCREEN, checkedScreen)
     }
 
     val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND, true)
@@ -876,7 +888,6 @@ class MainActivity :
 }
 
 private const val BACKGROUND_USE_ASKED = "backgroundUseAsked"
-private const val CHECKED_SCREEN = "checkedScreen"
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a
