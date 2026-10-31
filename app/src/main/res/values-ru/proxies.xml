@@ -12,6 +12,8 @@
     <string name="proxies_new_http">Новый прокси HTTP</string>
     <string name="proxies_new_list">Новый список</string>
     <string name="proxies_check">Проверить прокси</string>
+    <string name="proxies_rename_list">Переименовать список</string>
+    <string name="proxies_delete_list">Удалить список</string>
     <plurals name="proxies_found">
         <item quantity="one">%d прокси</item>
         <item quantity="few">%d прокси</item>

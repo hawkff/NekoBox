@@ -13,6 +13,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.os.BundleCompat
+import androidx.core.view.MenuCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import androidx.core.view.isGone
@@ -1314,9 +1315,15 @@ class ConfigurationGroupFragment : Fragment() {
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.double_column_item_menu, popup.menu)
             if (select) popup.menu.removeItem(R.id.action_delete)
+            // A proxy connects at once or becomes a group's exit; Remove comes last, apart.
             if (host.proxies && !select) {
+                popup.menu.clear()
                 popup.menu.add(0, R.string.proxies_connect, 0, R.string.proxies_connect)
+                popup.menu.add(0, R.id.action_edit, 1, R.string.edit)
                 popup.menu.add(0, R.string.proxies_use_as_exit, 2, R.string.proxies_use_as_exit)
+                popup.menu.add(0, R.id.action_share, 3, R.string.share)
+                popup.menu.add(1, R.id.action_delete, 4, R.string.delete)
+                MenuCompat.setGroupDividerEnabled(popup.menu, true)
             }
             val running = host.isRunningProfile(profileId)
             popup.menu.findItem(R.id.action_edit)?.isVisible = adapter?.profileById(profileId)?.haveSettings() == true

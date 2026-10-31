@@ -385,9 +385,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
             // The default group keeps its name and stays, as on the Groups screen. An update under way
             // writes the group back when it ends, over a new name, so neither is offered meanwhile.
             if (!group.ungrouped && group.id !in GroupUpdater.updating) {
-                menu.add(0, R.string.group_rename, 2, R.string.group_rename)
+                menu.add(0, R.string.group_rename, 2, if (group.type == GroupType.PROXIES) R.string.proxies_rename_list else R.string.group_rename)
                 // Removing comes last, apart from the rest.
-                menu.add(1, R.string.group_delete, 3, R.string.group_delete)
+                menu.add(1, R.string.group_delete, 3, if (group.type == GroupType.PROXIES) R.string.proxies_delete_list else R.string.group_delete)
             }
             MenuCompat.setGroupDividerEnabled(menu, true)
             setOnMenuItemClickListener { item ->
@@ -417,7 +417,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
         val binding = LayoutGroupNameDialogBinding.inflate(layoutInflater)
         binding.name.setText(group.name)
         val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.group_rename)
+            .setTitle(if (group.type == GroupType.PROXIES) R.string.proxies_rename_list else R.string.group_rename)
             .setView(binding.root)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val name = binding.name.text?.toString()?.trim().orEmpty()

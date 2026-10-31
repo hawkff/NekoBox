@@ -15,6 +15,8 @@
     <string name="proxies_new_http">New HTTP proxy</string>
     <string name="proxies_new_list">New list</string>
     <string name="proxies_check">Check proxies</string>
+    <string name="proxies_rename_list">Rename list</string>
+    <string name="proxies_delete_list">Delete list</string>
     <plurals name="proxies_found">
         <item quantity="one">%d proxy</item>
         <item quantity="other">%d proxies</item>
