@@ -2,6 +2,8 @@ package xyz.nekobyte.nekobox.ktx
 
 import android.graphics.Rect
 import android.os.Looper
+import android.os.SystemClock
+import android.view.View
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -117,21 +119,40 @@ class FixedGridLayoutManager(val recyclerView: RecyclerView, spanCount: Int) : G
     }
 }
 
+private const val STILL_MS = 500L
+
 /**
- * Makes up to [count] rows of [viewType] while the main thread is idle, one per idle moment, and keeps them in
- * this list's pool, so the first layout with data binds them instead of inflating each one: rows load after a
- * screen first draws, and a screen built ahead of its first visit lays them out only when it shows. Stops once
- * the list has laid out rows of its own, or when its adapter changes.
+ * Runs [step] while the main thread is idle and this view's window has drawn nothing for [STILL_MS], again
+ * until it returns false: deferred work in pieces that never land under a scroll, a fling or an animation.
  */
-fun RecyclerView.prefill(viewType: Int, count: Int) {
+fun View.whenStill(step: () -> Boolean) {
+    val wake = Runnable {}
+    Looper.myQueue().addIdleHandler {
+        // A view that is not attached has drawn nothing: its drawing time reads 0.
+        if (SystemClock.uptimeMillis() - drawingTime >= STILL_MS) return@addIdleHandler step()
+        // Something drew lately: look again once it may have stopped, even if no other message wakes the queue.
+        handler?.run {
+            removeCallbacks(wake)
+            postDelayed(wake, STILL_MS)
+        }
+        true
+    }
+}
+
+/**
+ * Makes up to [count] rows of [viewType] one at a time while the window is still (see [whenStill]), or in any
+ * idle moment with [anyIdle], and keeps them in this list's pool, so the first layout with data binds them
+ * instead of making each one. Stops once the list has laid out rows of its own, or when its adapter changes.
+ */
+fun RecyclerView.prefill(viewType: Int, count: Int, anyIdle: Boolean = false) {
     val adapter = adapter ?: return
     if (count <= 0) return
     recycledViewPool.setMaxRecycledViews(viewType, maxOf(count, 5))
     var made = 0
-    Looper.myQueue().addIdleHandler {
-        if (made >= count || childCount > 0 || this.adapter !== adapter) return@addIdleHandler false
-        recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
-        made++
-        made < count
+    val step = {
+        val more = made < count && childCount == 0 && this.adapter === adapter
+        if (more) recycledViewPool.putRecycledView(adapter.createViewHolder(this, viewType))
+        more && ++made < count
     }
+    if (anyIdle) Looper.myQueue().addIdleHandler { step() } else whenStill(step)
 }

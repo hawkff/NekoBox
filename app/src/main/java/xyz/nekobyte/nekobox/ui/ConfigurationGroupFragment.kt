@@ -353,8 +353,9 @@ class ConfigurationGroupFragment : Fragment() {
         GroupManager.addListener(adapter!!)
         configurationListView.adapter = adapter
         configurationListView.setItemViewCacheSize(20)
-        // The open group's first rows are made while its profiles load.
-        if (proxyGroup.id == DataStore.selectedGroup) {
+        // The open group's list stays empty until its profiles load: rows made meanwhile are rows the first
+        // frame with data does not have to make.
+        if ((parentFragment as? ConfigurationFragment)?.shows(proxyGroup.id) == true) {
             val mode = DataStore.groupLayoutMode
             val rowDp = when (mode) {
                 GroupLayout.COMPACT -> 64
@@ -363,8 +364,8 @@ class ConfigurationGroupFragment : Fragment() {
             }
             val metrics = resources.displayMetrics
             val rows = (metrics.heightPixels / (rowDp * metrics.density)).toInt() + 1
-            configurationListView.prefill(mode, if (mode == GroupLayout.TWO_COLUMNS) rows * 2 else rows)
-            if (DataStore.profileSections) configurationListView.prefill(SECTION_VIEW, 2)
+            configurationListView.prefill(mode, if (mode == GroupLayout.TWO_COLUMNS) rows * 2 else rows, anyIdle = true)
+            if (DataStore.profileSections) configurationListView.prefill(SECTION_VIEW, 2, anyIdle = true)
         }
         FastScrollerBuilder(configurationListView).useMd2Style().build()
 

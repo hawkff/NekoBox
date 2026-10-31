@@ -115,7 +115,7 @@ class RouteFragment :
         ruleAdapter = RuleAdapter()
         ProfileManager.addListener(ruleAdapter)
         list.adapter = ruleAdapter
-        // Rules load as soon as the screen is built, and their rows are made while the main thread is idle: a screen
+        // Rules load as soon as the screen is built, and their rows are made while the window is still: a screen
         // built ahead of its first visit shows them without waiting.
         ruleAdapter.reload()
         list.prefill(RULE, 8)

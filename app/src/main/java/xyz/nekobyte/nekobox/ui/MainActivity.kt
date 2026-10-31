@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.view.doOnPreDraw
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceDataStore
@@ -64,6 +65,7 @@ import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
+import xyz.nekobyte.nekobox.ktx.whenStill
 import xyz.nekobyte.nekobox.plugin.PluginTrust
 import xyz.nekobyte.nekobox.plugin.Plugins
 import xyz.nekobyte.nekobox.utils.Theme
@@ -109,6 +111,22 @@ class MainActivity :
             binding.drawerLayout.removeView(binding.navView)
         }
         navigation.setNavigationItemSelectedListener(this)
+        // The drawer's items are built once the first frame has drawn, or as the drawer starts to open if sooner.
+        binding.root.doOnPreDraw {
+            binding.root.post {
+                Looper.myQueue().addIdleHandler {
+                    buildDrawerMenu()
+                    false
+                }
+            }
+        }
+        binding.drawerLayout.addDrawerListener(
+            object : DrawerLayout.SimpleDrawerListener() {
+                override fun onDrawerStateChanged(newState: Int) {
+                    if (newState != DrawerLayout.STATE_IDLE) buildDrawerMenu()
+                }
+            },
+        )
         if (Glass.enabled) decorateGlass()
 
         if (savedInstanceState == null) {
@@ -567,15 +585,15 @@ class MainActivity :
     }
 
     /**
-     * Builds the screens visited most once start-up settles, hidden and paused, one per idle moment of the main
-     * thread, so their first visit shows them as a second one would. One opened before then is built as usual.
+     * Builds the screens visited most once start-up settles, hidden and paused, one at a time while the window is
+     * still, so their first visit shows them as a second one would. One opened before then is built as usual.
      */
     private fun buildScreensAhead() {
         val screens = ArrayDeque<() -> ToolbarFragment>(listOf(::GroupFragment, ::RouteFragment, ::ToolsFragment))
-        Looper.myQueue().addIdleHandler {
+        binding.root.whenStill {
             val manager = supportFragmentManager
-            if (isFinishing || isDestroyed || manager.isStateSaved) return@addIdleHandler false
-            val fragment = screens.removeFirstOrNull()?.invoke() ?: return@addIdleHandler false
+            if (isFinishing || isDestroyed || manager.isStateSaved) return@whenStill false
+            val fragment = screens.removeFirstOrNull()?.invoke() ?: return@whenStill false
             val tag = fragment.javaClass.name
             if (manager.findFragmentByTag(tag) == null) {
                 manager.beginTransaction().add(R.id.fragment_holder, fragment, tag).hide(fragment)
@@ -601,6 +619,15 @@ class MainActivity :
             binding.stats.post { binding.stats.performHide() }
             binding.fab.hide()
         }
+    }
+
+    /** The drawer item of the screen on show, checked once the drawer's items are built. */
+    private var checkedScreen = R.id.nav_configuration
+
+    private fun buildDrawerMenu() {
+        if (navigation.menu.size() > 0) return
+        navigation.inflateMenu(R.menu.main_drawer_menu)
+        navigation.menu.findItem(checkedScreen)?.isChecked = true
     }
 
     /** The backdrop drawn into a layer while the drawer is out. */
@@ -639,7 +666,8 @@ class MainActivity :
 
             else -> return false
         }
-        navigation.menu.findItem(id).isChecked = true
+        checkedScreen = id
+        navigation.menu.findItem(id)?.isChecked = true
         return true
     }
 

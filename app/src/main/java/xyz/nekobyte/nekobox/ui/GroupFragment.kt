@@ -87,7 +87,7 @@ class GroupFragment :
         groupAdapter = GroupAdapter()
         GroupManager.addListener(groupAdapter)
         groupListView.adapter = groupAdapter
-        // Rows are made while the main thread is idle, for a screen built ahead of its first visit.
+        // Rows are made while the window is still, for a screen built ahead of its first visit.
         groupListView.prefill(0, 8)
         FastScrollerBuilder(groupListView).useMd2Style().build()
 
