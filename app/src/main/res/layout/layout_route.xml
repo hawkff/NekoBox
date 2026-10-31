@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -39,6 +40,23 @@
                 layout="@layout/layout_appbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
+            <!-- My rules and the rules each subscription brought, once one has. -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/route_tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/appBarBackgroundColor"
+                android:elevation="0dp"
+                android:visibility="gone"
+                app:tabIndicatorColor="?tabIndicatorColor"
+                app:tabIndicatorFullWidth="false"
+                app:tabMode="scrollable"
+                app:tabPaddingStart="16dp"
+                app:tabRippleColor="?tabRippleColor"
+                app:tabSelectedTextColor="?tabSelectedTextColor"
+                app:tabTextColor="?tabTextColor"
+                app:tabUnboundedRipple="false" />
 
             <include
                 android:id="@+id/header"

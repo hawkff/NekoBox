@@ -11,16 +11,23 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.database.RoutingProfiles
 import xyz.nekobyte.nekobox.database.RuleEntity
 
 /** The Route screen says where traffic goes with the core's own matching, and the editor makes the rule it shows. */
@@ -28,7 +35,7 @@ import xyz.nekobyte.nekobox.database.RuleEntity
 class RouteScreenDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
-    private val names = listOf("Route test sites", "Route test port", "Route test made", "Route test off", "Route test protocol")
+    private val names = listOf("Route test sites", "Route test port", "Route test made", "Route test off", "Route test protocol", "Route test theirs")
 
     @Before
     fun rules() {
@@ -95,6 +102,71 @@ class RouteScreenDeviceTest {
             // A package name reads like a site, but an installed app's means the app.
             ask(root, context.packageName)
             assertTrue(text(root, R.id.answer_notes).startsWith(context.getString(R.string.route_test_app, label)))
+        }
+    }
+
+    @Test
+    fun aSubscriptionsRulesHaveATabThatPutsThemInUseAndMyRulesTakesThemBack() {
+        val (group, provider) = runBlocking {
+            val group = GroupManager.createGroup(ProxyGroup(name = "Route test provider"))
+            val rules = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = names[5], enabled = true, domains = "domain:example.net", outbound = -2)))
+            group to RoutingProfiles.store(RoutingProfiles.Profile(0L, "Provider", JSONObject().put("rules", rules), RoutingProfiles.subscriptionSource(group.id)))
+        }
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { it.displayFragmentWithId(R.id.nav_route) }
+                settle()
+                lateinit var root: View
+                scenario.onActivity { root = it.window.decorView }
+
+                // My rules are in use: they open first and change as before.
+                instrumentation.runOnMainSync {
+                    val tabs = root.findViewById<TabLayout>(R.id.route_tabs)
+                    assertEquals(View.VISIBLE, tabs.visibility)
+                    assertEquals(context.getString(R.string.route_rules_mine), tabs.getTabAt(tabs.selectedTabPosition)?.text.toString())
+                    assertEquals(View.GONE, root.findViewById<View>(R.id.rules_notice).visibility)
+                    tabs.getTabAt((0 until tabs.tabCount).single { tabs.getTabAt(it)?.text.toString() == group.displayName() })?.select()
+                }
+                settle()
+
+                // The subscription's rules read only, with the switch to them in place of the tester.
+                assertEquals(context.getString(R.string.route_rules_from_unused, group.displayName()), text(root, R.id.rules_notice_text))
+                instrumentation.runOnMainSync {
+                    assertEquals(View.VISIBLE, root.findViewById<View>(R.id.use_rules).visibility)
+                    assertEquals(View.GONE, root.findViewById<View>(R.id.probe_layout).visibility)
+                    assertEquals(View.GONE, root.findViewById<View>(R.id.add).visibility)
+                    val list = root.findViewById<RecyclerView>(R.id.route_list)
+                    assertFalse(list.children.single { names[5] in it.contentDescription?.toString().orEmpty() }.isClickable)
+                    root.findViewById<View>(R.id.use_rules).performClick()
+                }
+                settle()
+
+                assertEquals(provider.id, RoutingProfiles.activeId)
+                assertEquals(context.getString(R.string.route_rules_from_used, group.displayName()), text(root, R.id.rules_notice_text))
+                // The tester checks the rules in use.
+                ask(root, "www.example.net")
+                assertEquals(context.getString(R.string.route_block), text(root, R.id.answer_destination))
+                ask(root, "")
+
+                instrumentation.runOnMainSync {
+                    val tabs = root.findViewById<TabLayout>(R.id.route_tabs)
+                    tabs.getTabAt((0 until tabs.tabCount).single { tabs.getTabAt(it)?.text.toString() == context.getString(R.string.route_rules_mine) })?.select()
+                }
+                settle()
+                assertEquals(context.getString(R.string.route_rules_mine_unused), text(root, R.id.rules_notice_text))
+                instrumentation.runOnMainSync { root.findViewById<View>(R.id.use_rules).performClick() }
+                settle()
+
+                assertEquals(RoutingProfiles.ownProfile()?.id, RoutingProfiles.activeId)
+                assertTrue(ProfileDatabase.rulesDao.allRules().any { it.name == names[0] })
+                instrumentation.runOnMainSync { assertEquals(View.GONE, root.findViewById<View>(R.id.rules_notice).visibility) }
+            }
+        } finally {
+            runBlocking {
+                if (RoutingProfiles.activeId == provider.id) RoutingProfiles.switchToOwn()
+                GroupManager.deleteGroup(group.id)
+                RoutingProfiles.ownProfile()?.let { RoutingProfiles.delete(it.id) }
+            }
         }
     }
 
