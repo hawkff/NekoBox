@@ -21,7 +21,10 @@ class GlassBackdrop(val view: ViewGroup) {
     private val recorder = if (Build.VERSION.SDK_INT >= 31) Recorder() else null
     private val hosts = LinkedHashSet<View>()
     private val visible = Rect()
-    private var notifying = false
+
+    // A scroll invalidates many views each frame; the glass needs drawing again once per frame.
+    private var invalidated = false
+    private val nextFrame = Runnable { invalidated = false }
 
     /** The children as drawn in the last frame; null until the container has drawn with glass on. */
     @get:RequiresApi(31)
@@ -38,13 +41,10 @@ class GlassBackdrop(val view: ViewGroup) {
 
     /** Something behind the glass changed: the glass that shows it draws again in the same frame. */
     fun onDescendantInvalidated() {
-        if (notifying || hosts.isEmpty()) return
-        notifying = true
-        try {
-            for (host in hosts) if (host.isShown && host.getGlobalVisibleRect(visible)) host.invalidate()
-        } finally {
-            notifying = false
-        }
+        if (invalidated || hosts.isEmpty()) return
+        invalidated = true
+        view.postOnAnimation(nextFrame)
+        for (host in hosts) if (host.isShown && host.getGlobalVisibleRect(visible)) host.invalidate()
     }
 
     fun register(host: View) {
