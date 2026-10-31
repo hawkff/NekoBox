@@ -41,7 +41,7 @@
         android:layout_gravity="center_horizontal|bottom"
         android:layout_marginBottom="48dp"
         android:contentDescription="@string/scan_torch_turn_on"
-        android:src="@drawable/ic_baseline_flash_off_24"
+        android:src="@drawable/ic_flash_off"
         app:fabSize="normal" />
 
 </FrameLayout>

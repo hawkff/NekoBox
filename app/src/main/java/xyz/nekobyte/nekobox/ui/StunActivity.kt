@@ -50,7 +50,7 @@ class StunActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.stun_test)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24)
+            setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         }
         // The page runs edge to edge; its end stays clear of the navigation bar.
         val bottom = binding.natScroll.paddingBottom
@@ -84,7 +84,7 @@ class StunActivity : ThemedActivity() {
             else -> R.string.connection_check_path_direct
         }
         binding.natPath.setText(label)
-        val icon = ContextCompat.getDrawable(this, if (vpn()) R.drawable.ic_baseline_vpn_key_24 else R.drawable.baseline_public_24)?.mutate()
+        val icon = ContextCompat.getDrawable(this, if (vpn()) R.drawable.ic_vpn_key else R.drawable.ic_public)?.mutate()
         icon?.setTint(getColorAttr(android.R.attr.textColorSecondary))
         binding.natPath.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
     }

@@ -55,6 +55,7 @@
                 android:layout_marginTop="16dp"
                 android:hint="@string/nat_stun_server_hint"
                 app:endIconMode="dropdown_menu"
+                app:endIconDrawable="@drawable/ic_arrow_drop_down"
                 app:helperText="@string/nat_stun_server_helper">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -77,7 +78,7 @@
                     android:id="@+id/nat_start"
                     style="@style/Widget.NekoBox.Button.Check"
                     android:text="@string/connection_check_start"
-                    app:icon="@drawable/ic_baseline_nat_24" />
+                    app:icon="@drawable/ic_nat" />
 
             </xyz.nekobyte.nekobox.widget.CheckButton>
 

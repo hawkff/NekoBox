@@ -33,8 +33,8 @@ class NetworkFragment : NamedFragment(R.layout.layout_network) {
 
     private companion object {
         val TOOLS = listOf(
-            Tool(R.drawable.ic_baseline_security_24, R.string.connection_check, R.string.connection_check_summary, ConnectionCheckActivity::class.java),
-            Tool(R.drawable.ic_baseline_nat_24, R.string.stun_test, R.string.stun_test_summary, StunActivity::class.java),
+            Tool(R.drawable.ic_security, R.string.connection_check, R.string.connection_check_summary, ConnectionCheckActivity::class.java),
+            Tool(R.drawable.ic_nat, R.string.stun_test, R.string.stun_test_summary, StunActivity::class.java),
         )
     }
 }

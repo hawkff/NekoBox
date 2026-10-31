@@ -8,19 +8,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceScreen
-        app:icon="@drawable/ic_baseline_color_lens_24"
+        app:icon="@drawable/ic_palette"
         app:key="screen_appearance"
         app:summary="@string/settings_appearance_summary"
         app:title="@string/settings_appearance">
         <xyz.nekobyte.nekobox.ui.ThemePickerPreference
             android:title="@string/theme"
-            app:icon="@drawable/ic_baseline_color_lens_24"
+            app:icon="@drawable/ic_palette"
             app:key="appTheme" />
         <xyz.nekobyte.nekobox.ui.ChoicePreference
             app:defaultValue="0"
             app:entries="@array/night_mode"
             app:entryValues="@array/int_array_4"
-            app:icon="@drawable/ic_baseline_wb_sunny_24"
+            app:icon="@drawable/ic_light_mode"
             app:key="nightTheme"
             app:title="@string/night_mode"
             app:useSimpleSummaryProvider="true" />
@@ -32,7 +32,7 @@
             app:defaultValue=""
             app:entries="@array/language_entries"
             app:entryValues="@array/language_values"
-            app:icon="@drawable/baseline_translate_24"
+            app:icon="@drawable/ic_translate"
             app:key="appLanguage"
             app:title="@string/language"
             app:useSimpleSummaryProvider="true" />
@@ -42,7 +42,7 @@
             app:title="@string/show_bottom_bar" />
         <SwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/ic_baseline_center_focus_weak_24"
+            app:icon="@drawable/ic_center_focus_weak"
             app:key="alwaysShowAddress"
             app:summary="@string/always_show_address_sum"
             app:title="@string/always_show_address" />
@@ -56,13 +56,13 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_hardware_router"
+        app:icon="@drawable/ic_router"
         app:key="screen_connection"
         app:summary="@string/settings_connection_summary"
         app:title="@string/settings_connection">
         <SwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_communication_phonelink_ring"
+            app:icon="@drawable/ic_phonelink_ring"
             app:key="isAutoConnect"
             app:summary="@string/auto_connect_summary"
             app:title="@string/auto_connect" />
@@ -71,7 +71,7 @@
             app:entries="@array/service_modes"
             app:entrySummaries="@array/service_mode_summaries"
             app:entryValues="@array/service_mode_values"
-            app:icon="@drawable/ic_device_developer_mode"
+            app:icon="@drawable/ic_developer_mode"
             app:key="serviceMode"
             app:title="@string/service_mode"
             app:useSimpleSummaryProvider="true" />
@@ -80,7 +80,7 @@
             app:entries="@array/tun_implementation"
             app:entrySummaries="@array/tun_implementation_summaries"
             app:entryValues="@array/int_array_3"
-            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:icon="@drawable/ic_flip_camera_android"
             app:key="tunImplementation"
             app:title="@string/tun_implementation"
             app:useSimpleSummaryProvider="true" />
@@ -89,23 +89,23 @@
             app:entries="@array/mtu_entries"
             app:entrySummaries="@array/mtu_summaries"
             app:entryValues="@array/mtu_values"
-            app:icon="@drawable/baseline_public_24"
+            app:icon="@drawable/ic_public"
             app:key="mtu"
             app:title="@string/mtu" />
         <SwitchPreference
-            app:icon="@drawable/ic_device_data_usage"
+            app:icon="@drawable/ic_data_usage"
             app:key="meteredNetwork"
             app:summary="@string/metered_summary"
             app:title="@string/metered" />
         <SwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/baseline_developer_board_24"
+            app:icon="@drawable/ic_developer_board"
             app:key="acquireWakeLock"
             app:summary="@string/acquire_wake_lock_summary"
             app:title="@string/acquire_wake_lock" />
         <SwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/ic_baseline_flip_camera_android_24"
+            app:icon="@drawable/ic_flip_camera_android"
             app:key="networkChangeResetConnections"
             app:title="@string/network_change_reset_connections"
             app:useSimpleSummaryProvider="true" />
@@ -115,7 +115,7 @@
             app:useSimpleSummaryProvider="true" />
         <SwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_legend_toggle_24"
+            app:icon="@drawable/ic_legend_toggle"
             app:key="networkAutomation"
             app:summary="@string/network_automation_summary"
             app:title="@string/network_automation" />
@@ -126,36 +126,36 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_baseline_security_24"
+        app:icon="@drawable/ic_security"
         app:key="screen_protection"
         app:summary="@string/settings_protection_summary"
         app:title="@string/settings_protection">
         <SwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/ic_baseline_security_24"
+            app:icon="@drawable/ic_security"
             app:key="killSwitch"
             app:summary="@string/kill_switch_summary"
             app:title="@string/kill_switch" />
         <SwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:icon="@drawable/ic_fingerprint"
             app:key="webrtcLeakProtection"
             app:summary="@string/webrtc_leak_protection_summary"
             app:title="@string/webrtc_leak_protection" />
         <Preference
-            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:icon="@drawable/ic_vpn_key"
             app:key="protectionAlwaysOn"
             app:title="@string/protection_always_on" />
         <Preference
-            app:icon="@drawable/ic_action_lock"
+            app:icon="@drawable/ic_lock"
             app:key="protectionLockdown"
             app:title="@string/protection_lockdown" />
         <Preference
-            app:icon="@drawable/baseline_developer_board_24"
+            app:icon="@drawable/ic_developer_board"
             app:key="protectionBattery"
             app:title="@string/protection_battery" />
         <Preference
-            app:icon="@drawable/ic_baseline_info_24"
+            app:icon="@drawable/ic_info"
             app:key="protectionNotes"
             app:selectable="false"
             app:summary="@string/protection_notes"
@@ -167,7 +167,7 @@
                 app:summary="@string/gps_spoofing_summary"
                 app:title="@string/gps_spoofing_switch" />
             <Preference
-                app:icon="@drawable/ic_baseline_info_24"
+                app:icon="@drawable/ic_info"
                 app:key="gpsSpoofingNotice"
                 app:selectable="false"
                 app:summary="@string/gps_spoofing_navigation_notice"
@@ -192,17 +192,17 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_maps_directions"
+        app:icon="@drawable/ic_alt_route"
         app:key="screen_route"
         app:summary="@string/settings_route_summary"
         app:title="@string/settings_routing">
         <SwitchPreference
-            app:icon="@drawable/ic_navigation_apps"
+            app:icon="@drawable/ic_apps"
             app:key="proxyApps"
             app:summary="@string/proxied_apps_summary"
             app:title="@string/proxied_apps" />
         <SwitchPreference
-            app:icon="@drawable/ic_baseline_legend_toggle_24"
+            app:icon="@drawable/ic_legend_toggle"
             app:key="bypassLan"
             app:summary="@string/bypass_lan_summary"
             app:title="@string/route_opt_bypass_lan" />
@@ -215,11 +215,11 @@
             app:entries="@array/traffic_sniffing_values"
             app:entrySummaries="@array/traffic_sniffing_summaries"
             app:entryValues="@array/int_array_3"
-            app:icon="@drawable/ic_baseline_manage_search_24"
+            app:icon="@drawable/ic_manage_search"
             app:key="trafficSniffing"
             app:title="@string/traffic_sniffing" />
         <SwitchPreference
-            app:icon="@drawable/baseline_wrap_text_24"
+            app:icon="@drawable/ic_wrap_text"
             app:key="resolveDestination"
             app:summary="@string/resolve_destination_summary"
             app:title="@string/resolve_destination" />
@@ -227,7 +227,7 @@
             app:defaultValue="0"
             app:entries="@array/ipv6_mode"
             app:entryValues="@array/int_array_4"
-            app:icon="@drawable/ic_image_looks_6"
+            app:icon="@drawable/ic_looks_6"
             app:key="ipv6Mode"
             app:title="@string/ipv6"
             app:useSimpleSummaryProvider="true" />
@@ -236,7 +236,7 @@
             app:entries="@array/rules_dat_provider"
             app:entrySummaries="@array/rules_provider_summaries"
             app:entryValues="@array/int_array_5"
-            app:icon="@drawable/ic_baseline_rule_folder_24"
+            app:icon="@drawable/ic_rule_folder"
             app:key="rulesProvider"
             app:title="@string/route_rules_provider"
             app:useSimpleSummaryProvider="true" />
@@ -252,20 +252,20 @@
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:defaultValue="0"
-            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:icon="@drawable/ic_shutter_speed"
             app:key="rulesUpdateInterval"
             app:summary="@string/ruleset_update_interval_summary"
             app:title="@string/ruleset_update_interval" />
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_action_dns"
+        app:icon="@drawable/ic_dns"
         app:key="screen_dns"
         app:summary="@string/settings_dns_summary"
         app:title="@string/cag_dns">
         <EditTextPreference
             app:defaultValue="https://dns.quad9.net/dns-query"
-            app:icon="@drawable/ic_action_dns"
+            app:icon="@drawable/ic_dns"
             app:key="remoteDns"
             app:title="@string/remote_dns"
             app:useSimpleSummaryProvider="true" />
@@ -278,7 +278,7 @@
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:defaultValue="https://1.1.1.1/dns-query"
-            app:icon="@drawable/ic_action_dns"
+            app:icon="@drawable/ic_dns"
             app:key="directDns"
             app:title="@string/direct_dns"
             app:useSimpleSummaryProvider="true" />
@@ -298,31 +298,31 @@
             app:useSimpleSummaryProvider="true" />
         <SwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_camera_24"
+            app:icon="@drawable/ic_camera"
             app:key="enableDnsRouting"
             app:summary="@string/dns_routing_message"
             app:title="@string/enable_dns_routing" />
         <SwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/ic_action_lock"
+            app:icon="@drawable/ic_lock"
             app:key="enableFakeDns"
             app:summary="@string/fakedns_message"
             app:title="@string/enable_fakedns" />
         <EditTextPreference
             app:defaultValue=""
             app:dialogMessage="@string/dns_hosts_dialog_message"
-            app:icon="@drawable/ic_baseline_transform_24"
+            app:icon="@drawable/ic_transform"
             app:key="dnsHosts"
             app:title="@string/dns_hosts" />
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_baseline_nat_24"
+        app:icon="@drawable/ic_nat"
         app:key="screen_inbound"
         app:summary="@string/settings_inbound_summary"
         app:title="@string/inbound_settings">
         <EditTextPreference
-            app:icon="@drawable/ic_maps_directions_boat"
+            app:icon="@drawable/ic_directions_boat"
             app:key="mixedPort"
             app:title="@string/port_proxy"
             app:useSimpleSummaryProvider="true" />
@@ -336,7 +336,7 @@
             app:summary="@string/http_proxy_bypass_sum"
             app:title="@string/http_proxy_bypass" />
         <SwitchPreference
-            app:icon="@drawable/ic_baseline_nat_24"
+            app:icon="@drawable/ic_nat"
             app:key="allowAccess"
             app:summary="@string/allow_access_sum"
             app:title="@string/allow_access" />
@@ -353,12 +353,12 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_notification_enhanced_encryption"
+        app:icon="@drawable/ic_enhanced_encryption"
         app:key="screen_tls"
         app:summary="@string/settings_tls_summary"
         app:title="@string/security_settings">
         <SwitchPreference
-            app:icon="@drawable/ic_action_lock_open"
+            app:icon="@drawable/ic_lock_open"
             app:key="globalAllowInsecure"
             app:summary="@string/global_allow_insecure_summary"
             app:title="@string/global_allow_insecure" />
@@ -381,7 +381,7 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_baseline_speed_24"
+        app:icon="@drawable/ic_speed"
         app:key="screen_notification"
         app:summary="@string/settings_notification_summary"
         app:title="@string/settings_notification">
@@ -389,7 +389,7 @@
             app:defaultValue="1000"
             app:entries="@array/notification_entry"
             app:entryValues="@array/notification_value"
-            app:icon="@drawable/ic_baseline_shutter_speed_24"
+            app:icon="@drawable/ic_shutter_speed"
             app:key="speedInterval"
             app:title="@string/speed_interval"
             app:useSimpleSummaryProvider="true" />
@@ -400,7 +400,7 @@
             app:title="@string/profile_traffic_statistics" />
         <SwitchPreference
             app:defaultValue="true"
-            app:icon="@drawable/ic_baseline_speed_24"
+            app:icon="@drawable/ic_speed"
             app:key="showDirectSpeed"
             app:summary="@string/show_direct_speed_sum"
             app:title="@string/show_direct_speed"
@@ -411,13 +411,13 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        app:icon="@drawable/ic_baseline_tune_24"
+        app:icon="@drawable/ic_tune"
         app:key="screen_advanced"
         app:summary="@string/settings_advanced_summary"
         app:title="@string/settings_advanced">
         <SwitchPreference
             app:defaultValue="false"
-            app:icon="@drawable/ic_baseline_bug_report_24"
+            app:icon="@drawable/ic_bug_report"
             app:key="helpToImprove"
             app:summary="@string/help_to_improve_summary"
             app:title="@string/help_to_improve" />
@@ -425,7 +425,7 @@
             app:defaultValue="0"
             app:entries="@array/log_level"
             app:entryValues="@array/int_array_5"
-            app:icon="@drawable/ic_baseline_bug_report_24"
+            app:icon="@drawable/ic_bug_report"
             app:key="logLevel"
             app:title="@string/log_level"
             app:useSimpleSummaryProvider="true" />
@@ -433,22 +433,22 @@
             app:key="logBufSize"
             app:title="@string/log_buffer_size" />
         <xyz.nekobyte.nekobox.ui.EditConfigPreference
-            app:icon="@drawable/ic_baseline_layers_24"
+            app:icon="@drawable/ic_layers"
             app:key="globalCustomConfig"
             app:title="@string/custom_config"
             app:useSimpleSummaryProvider="true" />
         <xyz.nekobyte.nekobox.ui.UrlTestPreference
             app:defaultValue="http://www.gstatic.com/generate_204"
-            app:icon="@drawable/ic_baseline_cast_connected_24"
+            app:icon="@drawable/ic_cast_connected"
             app:key="connectionTestURL"
             app:title="@string/connection_test_url"
             app:useSimpleSummaryProvider="true" />
         <Preference
-            app:icon="@drawable/baseline_undo_24"
+            app:icon="@drawable/ic_undo"
             app:key="resetSettings"
             app:title="@string/reset_settings" />
         <Preference
-            app:icon="@drawable/ic_baseline_delete_24"
+            app:icon="@drawable/ic_delete"
             app:key="clearCache"
             app:summary="@string/clear_cache_summary"
             app:title="@string/clear_cache" />

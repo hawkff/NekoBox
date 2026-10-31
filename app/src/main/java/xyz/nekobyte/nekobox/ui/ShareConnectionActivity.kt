@@ -60,7 +60,7 @@ class ShareConnectionActivity :
         supportActionBar?.apply {
             setTitle(R.string.share_connection)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24)
+            setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         }
 
         binding.shareSwitch.setOnCheckedChangeListener { _, checked ->

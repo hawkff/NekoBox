@@ -3,18 +3,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_update_all"
-        android:icon="@drawable/ic_baseline_update_24"
+        android:icon="@drawable/ic_update"
         android:title="@string/update_all_subscription"
         app:showAsAction="always" />
     <item
         android:id="@+id/action_new_group"
-        android:icon="@drawable/ic_av_playlist_add"
+        android:icon="@drawable/ic_playlist_add"
         android:title="@string/group_create"
         app:showAsAction="always" />
     <!-- Instead of the two above while groups are selected. -->
     <item
         android:id="@+id/action_remove_selected"
-        android:icon="@drawable/ic_action_delete"
+        android:icon="@drawable/ic_delete"
         android:title="@string/delete"
         android:visible="false"
         app:showAsAction="ifRoom" />

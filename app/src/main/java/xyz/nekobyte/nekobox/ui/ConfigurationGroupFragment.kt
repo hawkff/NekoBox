@@ -1180,7 +1180,7 @@ class ConfigurationGroupFragment : Fragment() {
             val context = binding.root.context
             binding.title.text = row.title
             binding.count.text = row.count.toString()
-            binding.chevron.setImageResource(if (row.folded) R.drawable.ic_expand_more_24 else R.drawable.ic_expand_less_24)
+            binding.chevron.setImageResource(if (row.folded) R.drawable.ic_expand_more else R.drawable.ic_expand_less)
             binding.root.contentDescription = "${row.title}, " + context.resources.getQuantityString(R.plurals.group_profiles, row.count, row.count)
             ViewCompat.setStateDescription(binding.root, context.getString(if (row.folded) R.string.group_collapsed else R.string.group_expanded))
             ViewCompat.replaceAccessibilityAction(

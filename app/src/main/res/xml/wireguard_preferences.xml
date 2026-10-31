@@ -1,74 +1,74 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <EditTextPreference
-        app:icon="@drawable/ic_social_emoji_symbols"
+        app:icon="@drawable/ic_emoji_symbols"
         app:key="name"
         app:title="@string/profile_name"
         app:useSimpleSummaryProvider="true" />
 
     <Preference
-        app:icon="@drawable/ic_baseline_info_24"
+        app:icon="@drawable/ic_info"
         app:key="wireguardStatus"
         app:summary="@string/wireguard_status_summary"
         app:title="@string/wireguard_status" />
 
     <PreferenceCategory app:title="@string/proxy_cat">
         <EditTextPreference
-            app:icon="@drawable/ic_hardware_router"
+            app:icon="@drawable/ic_router"
             app:key="serverAddress"
             app:title="@string/server_address"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_maps_directions_boat"
+            app:icon="@drawable/ic_directions_boat"
             app:key="serverPort"
             app:title="@string/server_port"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_domain_24"
+            app:icon="@drawable/ic_domain"
             app:key="localAddress"
             app:title="@string/wireguard_local_address"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_vpn_key_24"
+            app:icon="@drawable/ic_vpn_key"
             app:key="privateKey"
             app:title="@string/ssh_private_key"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_action_copyright"
+            app:icon="@drawable/ic_copyright"
             app:key="peerPublicKey"
             app:title="@string/wireguard_public_key"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogLayout="@layout/layout_password_dialog"
-            app:icon="@drawable/ic_settings_password"
+            app:icon="@drawable/ic_password"
             app:key="peerPreSharedKey"
             app:title="@string/wireguard_psk" />
         <EditTextPreference
             app:defaultValue="1420"
-            app:icon="@drawable/baseline_public_24"
+            app:icon="@drawable/ic_public"
             app:key="mtu"
             app:title="@string/mtu"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
-            app:icon="@drawable/ic_baseline_fingerprint_24"
+            app:icon="@drawable/ic_fingerprint"
             app:key="reserved"
             app:title="@string/reserved_bytes"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogMessage="@string/wireguard_allowed_ips_hint"
-            app:icon="@drawable/ic_baseline_compare_arrows_24"
+            app:icon="@drawable/ic_swap_horiz"
             app:key="allowedIPs"
             app:title="@string/wireguard_allowed_ips"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogMessage="@string/wireguard_persistent_keepalive_hint"
-            app:icon="@drawable/ic_baseline_timelapse_24"
+            app:icon="@drawable/ic_timelapse"
             app:key="persistentKeepalive"
             app:title="@string/wireguard_persistent_keepalive"
             app:useSimpleSummaryProvider="true" />
         <EditTextPreference
             app:dialogMessage="@string/wireguard_extra_peers_hint"
-            app:icon="@drawable/ic_hardware_router"
+            app:icon="@drawable/ic_router"
             app:key="extraPeers"
             app:title="@string/wireguard_extra_peers" />
         <EditTextPreference
@@ -84,7 +84,7 @@
             app:defaultValue="0"
             app:entries="@array/wireguard_dns_modes"
             app:entryValues="@array/int_array_3"
-            app:icon="@drawable/ic_action_dns"
+            app:icon="@drawable/ic_dns"
             app:key="dnsMode"
             app:title="@string/wireguard_dns_mode"
             app:useSimpleSummaryProvider="true" />

@@ -9,7 +9,7 @@
 
     <item
         android:id="@+id/action_add"
-        android:icon="@drawable/ic_add_24"
+        android:icon="@drawable/ic_add"
         android:title="@string/add"
         app:showAsAction="ifRoom">
         <!-- Profiles first; a new group last, apart from them (ConfigurationFragment enables the divider). -->
@@ -102,7 +102,7 @@
 
     <item
         android:id="@+id/action_misc"
-        android:icon="@drawable/ic_baseline_more_vert_24"
+        android:icon="@drawable/ic_more_vert"
         android:title="@string/more_options"
         app:showAsAction="always">
         <!-- Dividers part the groups (ConfigurationFragment enables them): the tests, the open group,

@@ -150,7 +150,7 @@ class ThemePickerPreference
             buildRow(
                 name = context.getString(R.string.theme_classic_colors),
                 swatchColor = null,
-                icon = R.drawable.ic_baseline_color_lens_24,
+                icon = R.drawable.ic_palette,
             ) {
                 dialog.dismiss()
                 showClassicGrid()

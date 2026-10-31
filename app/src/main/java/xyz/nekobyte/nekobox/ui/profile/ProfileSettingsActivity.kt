@@ -109,7 +109,7 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
         supportActionBar?.apply {
             setTitle(R.string.profile_config)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
 
         if (savedInstanceState == null) {

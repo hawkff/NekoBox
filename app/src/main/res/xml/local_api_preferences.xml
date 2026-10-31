@@ -3,27 +3,27 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <SwitchPreference
-        app:icon="@drawable/ic_device_developer_mode"
+        app:icon="@drawable/ic_api"
         app:key="localApiEnabled"
         app:persistent="false"
         app:summary="@string/local_api_summary"
         app:title="@string/local_api_title" />
     <Preference
-        app:icon="@drawable/ic_baseline_vpn_key_24"
+        app:icon="@drawable/ic_vpn_key"
         app:isPreferenceVisible="false"
         app:key="localApiCopyToken"
         app:persistent="false"
         app:summary="@string/local_api_copy_token_summary"
         app:title="@string/local_api_copy_token" />
     <Preference
-        app:icon="@drawable/ic_baseline_refresh_24"
+        app:icon="@drawable/ic_refresh"
         app:isPreferenceVisible="false"
         app:key="localApiReplaceToken"
         app:persistent="false"
         app:summary="@string/local_api_rotate_summary"
         app:title="@string/local_api_rotate" />
     <Preference
-        app:icon="@drawable/ic_baseline_info_24"
+        app:icon="@drawable/ic_info"
         app:key="localApiNotes"
         app:persistent="false"
         app:selectable="false"

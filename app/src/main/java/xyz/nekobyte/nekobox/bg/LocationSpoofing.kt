@@ -389,7 +389,7 @@ class LocationSpoofing internal constructor(
         )
         val text = context.getString(notice.text, *textArgs)
         val builder = NotificationCompat.Builder(context, NOTICE_CHANNEL)
-            .setSmallIcon(R.drawable.ic_baseline_push_pin_24)
+            .setSmallIcon(R.drawable.ic_push_pin)
             .setContentTitle(context.getString(notice.title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

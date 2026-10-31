@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_save_current"
-        android:icon="@drawable/ic_action_note_add"
+        android:icon="@drawable/ic_note_add"
         android:title="@string/routing_profile_save_current"
         app:showAsAction="ifRoom" />
     <item

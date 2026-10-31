@@ -58,7 +58,7 @@
                     android:id="@+id/connection_check_start"
                     style="@style/Widget.NekoBox.Button.Check"
                     android:text="@string/connection_check_start"
-                    app:icon="@drawable/ic_baseline_security_24" />
+                    app:icon="@drawable/ic_security" />
 
             </xyz.nekobyte.nekobox.widget.CheckButton>
 

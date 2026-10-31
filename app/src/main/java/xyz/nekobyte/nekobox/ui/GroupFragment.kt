@@ -205,7 +205,7 @@ class GroupFragment :
             showDrawerButton()
         } else {
             toolbar.title = toolbar.resources.getQuantityString(R.plurals.group_selected, count, count)
-            toolbar.setNavigationIcon(R.drawable.ic_navigation_close)
+            toolbar.setNavigationIcon(R.drawable.ic_close)
             toolbar.setNavigationContentDescription(R.string.close)
             toolbar.setNavigationOnClickListener { groupAdapter.clearSelection() }
         }
@@ -626,9 +626,9 @@ class GroupFragment :
             binding.count.text = count.toString()
             binding.chevron.setImageResource(
                 when {
-                    picked -> R.drawable.ic_action_done
-                    open -> R.drawable.ic_expand_less_24
-                    else -> R.drawable.ic_expand_more_24
+                    picked -> R.drawable.ic_check
+                    open -> R.drawable.ic_expand_less
+                    else -> R.drawable.ic_expand_more
                 },
             )
             binding.details.isVisible = open

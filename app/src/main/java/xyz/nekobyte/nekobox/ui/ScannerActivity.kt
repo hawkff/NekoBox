@@ -77,7 +77,7 @@ class ScannerActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.add_profile_methods_scan_qr_code)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -179,7 +179,7 @@ class ScannerActivity : ThemedActivity() {
         torchOn = !torchOn
         cam.cameraControl.enableTorch(torchOn)
         binding.fabTorch.setImageResource(
-            if (torchOn) R.drawable.ic_baseline_flash_on_24 else R.drawable.ic_baseline_flash_off_24,
+            if (torchOn) R.drawable.ic_flash_on else R.drawable.ic_flash_off,
         )
         // Keep the accessibility label describing the action the button will perform.
         binding.fabTorch.contentDescription = getString(

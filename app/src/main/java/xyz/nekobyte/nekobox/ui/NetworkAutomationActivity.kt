@@ -43,7 +43,7 @@ class NetworkAutomationActivity : ThemedActivity() {
         supportActionBar?.apply {
             setTitle(R.string.network_automation)
             setDisplayHomeAsUpEnabled(true)
-            setHomeAsUpIndicator(R.drawable.ic_navigation_close)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
         binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
         binding.recyclerView.adapter = adapter
@@ -192,7 +192,7 @@ class NetworkAutomationActivity : ThemedActivity() {
         fun bind(rule: Rule) {
             binding.title.text = if (rule.kind == Kind.SSID) getString(R.string.network_rule_wifi_named, rule.ssid) else kindLabel(rule.kind)
             binding.more.setOnClickListener { adapter.removeAt(bindingAdapterPosition) }
-            binding.more.setImageResource(R.drawable.ic_baseline_delete_24)
+            binding.more.setImageResource(R.drawable.ic_delete)
             binding.more.contentDescription = getString(R.string.delete)
             binding.summary.text = when {
                 rule.action == Action.DISCONNECT -> getString(R.string.network_rule_disconnect)

@@ -18,9 +18,9 @@ enum class CheckTone { OK, WARNING, INFO }
 private class ToneLook(val icon: Int, val color: Int, val name: Int)
 
 private fun Context.look(tone: CheckTone) = when (tone) {
-    CheckTone.OK -> ToneLook(R.drawable.ic_action_done, getColorAttr(androidx.appcompat.R.attr.colorPrimary), R.string.check_tone_ok)
-    CheckTone.WARNING -> ToneLook(R.drawable.ic_baseline_warning_24, getColorAttr(androidx.appcompat.R.attr.colorError), R.string.check_tone_warning)
-    CheckTone.INFO -> ToneLook(R.drawable.ic_baseline_info_24, getColorAttr(android.R.attr.textColorSecondary), R.string.check_tone_info)
+    CheckTone.OK -> ToneLook(R.drawable.ic_check, getColorAttr(androidx.appcompat.R.attr.colorPrimary), R.string.check_tone_ok)
+    CheckTone.WARNING -> ToneLook(R.drawable.ic_warning, getColorAttr(androidx.appcompat.R.attr.colorError), R.string.check_tone_warning)
+    CheckTone.INFO -> ToneLook(R.drawable.ic_info, getColorAttr(android.R.attr.textColorSecondary), R.string.check_tone_info)
 }
 
 /** One finding: the tone's icon, named for screen readers, then what was checked and what came out. */
