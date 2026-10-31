@@ -1,28 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<animated-vector
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Stopped: the cat shuts its eyes and blushes again. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:drawable="@drawable/ic_service_idle">
-    <target android:name="strike_thru_path">
+    <target android:name="head">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:propertyName="pathData"
                 android:duration="@android:integer/config_mediumAnimTime"
-                android:valueFrom="M 2 4.27 L 3.27 3 L 3.27 3 L 2 4.27 Z"
-                android:valueTo="M 19.73 22 L 21 20.73 L 3.27 3 L 2 4.27 Z"
-                android:valueType="pathType"
-                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="pathData"
+                android:valueFrom="M12,20.4 C7.4,20.4 3.6,17.6 3.6,13.4 C3.6,11.6 4.0,10.2 4.4,9.2 L5.30,3.40 L9.3,7.0 C10.9,6.5 13.1,6.5 14.7,7.0 L18.70,3.40 L19.6,9.2 C20.0,10.2 20.4,11.6 20.4,13.4 C20.4,17.6 16.6,20.4 12,20.4 Z"
+                android:valueTo="M12,20.4 C7.4,20.4 3.6,17.6 3.6,13.4 C3.6,11.6 4.0,10.2 4.4,9.2 L4.70,4.40 L9.3,7.0 C10.9,6.5 13.1,6.5 14.7,7.0 L19.30,4.40 L19.6,9.2 C20.0,10.2 20.4,11.6 20.4,13.4 C20.4,17.6 16.6,20.4 12,20.4 Z"
+                android:valueType="pathType" />
         </aapt:attr>
     </target>
-    <target android:name="strike_thru_mask">
+    <target android:name="eyes">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:propertyName="pathData"
                 android:duration="@android:integer/config_mediumAnimTime"
-                android:valueFrom="M 0 0 L 24 0 L 24 24 L 0 24 L 0 0 Z M 4.54 1.73 L 3.27 3 L 3.27 3 L 4.54 1.73 Z"
-                android:valueTo="M 0 0 L 24 0 L 24 24 L 0 24 L 0 0 Z M 4.54 1.73 L 3.27 3 L 21 20.73 L 22.27 19.46 Z"
-                android:valueType="pathType"
-                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="pathData"
+                android:valueFrom="M7.85,11.90 C7.85,11.10 8.36,10.45 9.00,10.45 C9.64,10.45 10.15,11.10 10.15,11.90 C10.15,12.70 9.64,13.35 9.00,13.35 C8.36,13.35 7.85,12.70 7.85,11.90 Z M13.85,11.90 C13.85,11.10 14.36,10.45 15.00,10.45 C15.64,10.45 16.15,11.10 16.15,11.90 C16.15,12.70 15.64,13.35 15.00,13.35 C14.36,13.35 13.85,12.70 13.85,11.90 Z"
+                android:valueTo="M7.65,12.00 C7.90,12.64 8.26,12.23 9.00,12.23 C9.74,12.23 10.10,12.64 10.35,12.00 C10.20,13.15 9.74,13.59 9.00,13.59 C8.26,13.59 7.80,13.15 7.65,12.00 Z M13.65,12.00 C13.90,12.64 14.26,12.23 15.00,12.23 C15.74,12.23 16.10,12.64 16.35,12.00 C16.20,13.15 15.74,13.59 15.00,13.59 C14.26,13.59 13.80,13.15 13.65,12.00 Z"
+                android:valueType="pathType" />
+        </aapt:attr>
+    </target>
+    <target android:name="mouth">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="@android:integer/config_mediumAnimTime"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="pathData"
+                android:valueFrom="M10.45,15.75 C10.85,16.65 11.8,16.65 12,15.45 C12.2,16.65 13.15,16.65 13.55,15.75"
+                android:valueTo="M10.95,15.75 C11.25,16.3 11.85,16.3 12,15.45 C12.15,16.3 12.75,16.3 13.05,15.75"
+                android:valueType="pathType" />
+        </aapt:attr>
+    </target>
+    <target android:name="blush">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="@android:integer/config_mediumAnimTime"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="fillAlpha"
+                android:valueFrom="0.0"
+                android:valueTo="0.5"
+                android:valueType="floatType" />
         </aapt:attr>
     </target>
 </animated-vector>

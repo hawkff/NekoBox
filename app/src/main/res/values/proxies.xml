@@ -2,7 +2,7 @@
 <resources>
     <!-- The Proxies screen: lists of proxies kept apart from Home. -->
     <string name="menu_proxies">Proxies</string>
-    <string name="proxies_empty">Keep the proxies you pay for here: SOCKS5 and HTTP proxies with a login, such as Mullvad\'s or a residential provider\'s. Paste the list your provider gave you to start.</string>
+    <string name="proxies_empty">Your proxies go here.</string>
     <string name="proxies_paste">Paste proxies</string>
     <string name="proxies_paste_formats">One proxy a line: host:port:user:password, user:password@host:port, host:port, or a socks5:// or http:// link.</string>
     <string name="proxies_paste_field">Proxies</string>

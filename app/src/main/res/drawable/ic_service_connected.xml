@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<animated-vector
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Connected: the cat narrows its eyes into a smirk. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:drawable="@drawable/ic_service_busy">
-    <target android:name="path">
+    <target android:name="eyes">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:propertyName="pathData"
                 android:duration="@android:integer/config_mediumAnimTime"
-                android:valueFrom="M19.8,12.925L4.4,19.425Q3.9,19.625 3.45,19.338Q3,19.05 3,18.5L3,14L3,12L3,10L3,5.5Q3,4.95 3.45,4.663Q3.9,4.375 4.4,4.575L19.8,11.075Q20.425,11.35 20.425,12Q20.425,12.65 19.8,12.925ZM5,17L16.85,12L5,7L5,10.5L11,12L5,13.5L5,17Z"
-                android:valueTo="M19.8,12.925L4.4,19.425Q3.9,19.625 3.45,19.338Q3,19.05 3,18.5L3,14L11,12L3,10L3,5.5Q3,4.95 3.45,4.663Q3.9,4.375 4.4,4.575L19.8,11.075Q20.425,11.35 20.425,12Q20.425,12.65 19.8,12.925ZM11,12L11,12L11,12L11,12L11,12L11,12L11,12Z"
-                android:valueType="pathType"
-                android:interpolator="@android:interpolator/fast_out_slow_in"/>
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="pathData"
+                android:valueFrom="M7.85,11.90 C7.85,11.10 8.36,10.45 9.00,10.45 C9.64,10.45 10.15,11.10 10.15,11.90 C10.15,12.70 9.64,13.35 9.00,13.35 C8.36,13.35 7.85,12.70 7.85,11.90 Z M13.85,11.90 C13.85,11.10 14.36,10.45 15.00,10.45 C15.64,10.45 16.15,11.10 16.15,11.90 C16.15,12.70 15.64,13.35 15.00,13.35 C14.36,13.35 13.85,12.70 13.85,11.90 Z"
+                android:valueTo="M7.70,12.35 C8.00,12.29 8.35,12.10 9.00,11.95 C9.65,11.80 10.00,11.69 10.30,11.75 C10.30,12.47 9.72,13.35 9.00,13.35 C8.28,13.35 7.70,13.07 7.70,12.35 Z M13.70,12.35 C14.00,12.29 14.35,12.10 15.00,11.95 C15.65,11.80 16.00,11.69 16.30,11.75 C16.30,12.47 15.72,13.35 15.00,13.35 C14.28,13.35 13.70,13.07 13.70,12.35 Z"
+                android:valueType="pathType" />
+        </aapt:attr>
+    </target>
+    <target android:name="mouth">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="@android:integer/config_mediumAnimTime"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="pathData"
+                android:valueFrom="M10.45,15.75 C10.85,16.65 11.8,16.65 12,15.45 C12.2,16.65 13.15,16.65 13.55,15.75"
+                android:valueTo="M10.5,16.0 C11.0,16.45 11.75,16.4 12,15.45 C12.35,16.55 13.55,16.5 14.3,15.2"
+                android:valueType="pathType" />
         </aapt:attr>
     </target>
 </animated-vector>
