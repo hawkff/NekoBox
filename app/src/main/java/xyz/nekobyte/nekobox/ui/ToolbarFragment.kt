@@ -106,6 +106,12 @@ open class ToolbarFragment : Fragment {
         super.onDestroyView()
     }
 
+    /** Whether this screen stays, hidden and paused, while another shows, so coming back to it is instant. */
+    open val keepsAlive get() = false
+
+    /** Whether the settings this screen reads once, when built, still have the values it was built with. */
+    open fun current() = true
+
     open fun onKeyDown(ketCode: Int, event: KeyEvent) = false
     open fun onBackPressed(): Boolean = false
 }

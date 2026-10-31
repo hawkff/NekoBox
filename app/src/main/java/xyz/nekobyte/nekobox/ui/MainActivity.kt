@@ -111,10 +111,10 @@ class MainActivity :
             displayFragmentWithId(R.id.nav_configuration)
         } else {
             // A recreated activity, after a theme or glass change, restores its screen without displayFragment.
-            (supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment)?.let(::fitBottomBar)
+            currentScreen()?.let(::fitBottomBar)
         }
         onBackPressedDispatcher.addCallback {
-            val current = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+            val current = currentScreen()
             // An open drawer goes first: Back closes it, and leaves the screen as it was.
             when {
                 binding.drawerLayout.isOpen -> binding.drawerLayout.close()
@@ -241,7 +241,7 @@ class MainActivity :
                     val out = newState != DrawerLayout.STATE_IDLE || binding.drawerLayout.isOpen
                     if (out) {
                         if (stillBackdrop == null) {
-                            stillBackdrop = supportFragmentManager.findFragmentById(R.id.fragment_holder)?.view
+                            stillBackdrop = currentScreen()?.view
                                 ?.findViewById<GlassBackdropFrameLayout>(R.id.glass_content)?.backdrop?.also { it.still = true }
                         }
                     } else {
@@ -535,26 +535,32 @@ class MainActivity :
         val transaction = manager.beginTransaction()
         // The drawer's destinations are peers: one fades through to the next, as Material moves between them.
         // The first screen just appears.
-        if (manager.findFragmentById(R.id.fragment_holder) != null) {
+        if (currentScreen() != null) {
             transaction.setCustomAnimations(R.animator.fade_through_in, R.animator.fade_through_out)
         }
-        // Home stays under the other screens, hidden, so going back shows it as it was instead of building it
-        // again; one built before a setting it reads changed is replaced.
-        val home = (manager.findFragmentByTag(HOME) as? ConfigurationFragment)?.takeIf { it.current() }
-        for (other in manager.fragments) if (other.id == R.id.fragment_holder && other !== home) transaction.remove(other)
-        when {
-            fragment !is ConfigurationFragment -> {
-                home?.let(transaction::hide)
-                transaction.add(R.id.fragment_holder, fragment)
+        // Screens that keep stay under the others, hidden and paused, so going back shows them as they were
+        // instead of building them again; one built before a setting it reads changed is built anew.
+        val tag = fragment.javaClass.name
+        val kept = (manager.findFragmentByTag(tag) as? ToolbarFragment)?.takeIf { it.keepsAlive && it.current() }
+        for (other in manager.fragments) {
+            if (other.id != R.id.fragment_holder || other === kept) continue
+            if (other is ToolbarFragment && other.keepsAlive && other.current()) {
+                if (!other.isHidden) transaction.hide(other).setMaxLifecycle(other, Lifecycle.State.STARTED)
+            } else {
+                transaction.remove(other)
             }
-
-            home != null -> transaction.show(home)
-
-            else -> transaction.add(R.id.fragment_holder, fragment, HOME)
+        }
+        if (kept != null) {
+            transaction.show(kept).setMaxLifecycle(kept, Lifecycle.State.RESUMED)
+        } else {
+            transaction.add(R.id.fragment_holder, fragment, tag)
         }
         transaction.commitAllowingStateLoss()
         binding.drawerLayout.closeDrawers()
     }
+
+    /** The screen on show; screens that keep stay added under it, hidden. */
+    private fun currentScreen() = supportFragmentManager.fragments.lastOrNull { it.id == R.id.fragment_holder && !it.isHidden } as? ToolbarFragment
 
     /** The connect button and the stats bar show on Home, and on every screen while the user wants them there. */
     private fun fitBottomBar(screen: ToolbarFragment) {
@@ -576,7 +582,7 @@ class MainActivity :
 
     // Home follows the connection while hidden too, so it shows the right state when it comes back.
     private fun refreshConfigurationProfileState() {
-        (supportFragmentManager.findFragmentByTag(HOME) as? ConfigurationFragment)?.refreshProfileState()
+        (supportFragmentManager.findFragmentByTag(ConfigurationFragment::class.java.name) as? ConfigurationFragment)?.refreshProfileState()
     }
 
     fun displayFragmentWithId(@IdRes id: Int): Boolean {
@@ -762,7 +768,7 @@ class MainActivity :
         super.onStop()
     }
 
-    private fun home() = supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ConfigurationFragment
+    private fun home() = currentScreen() as? ConfigurationFragment
 
     override fun canSwipeBack() = home().let { wideSwipeAllowed(binding.drawerLayout.isOpen, it?.searchOpen, it?.atFirstGroup == true) }
 
@@ -801,16 +807,12 @@ class MainActivity :
         if (super.onKeyDown(keyCode, event)) return true
         if (binding.drawerLayout.isOpen) return false
 
-        val fragment =
-            supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+        val fragment = currentScreen()
         return fragment != null && fragment.onKeyDown(keyCode, event)
     }
 }
 
 private const val BACKGROUND_USE_ASKED = "backgroundUseAsked"
-
-/** The tag of Home, which stays added, hidden, while other screens show. */
-private const val HOME = "home"
 
 /**
  * Whether the wide swipe may start: never over an open drawer. On Home ([searchOpen] not null) a

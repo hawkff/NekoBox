@@ -13,6 +13,8 @@ import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassLayout
 
 class ToolsFragment : ToolbarFragment(R.layout.layout_tools) {
+    // Its tabs keep what they last showed, as they do while open.
+    override val keepsAlive get() = true
 
     private lateinit var tabs: TabLayout
 

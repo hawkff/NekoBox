@@ -67,6 +67,8 @@ import xyz.nekobyte.nekobox.widget.glass.GlassLayout
 class RouteFragment :
     ToolbarFragment(R.layout.layout_route),
     Toolbar.OnMenuItemClickListener {
+    // Reads its rules and tabs again in onResume, which runs again whenever it shows.
+    override val keepsAlive get() = true
 
     /** A rule and its words, made off the main thread. */
     class RuleRow(val rule: RuleEntity, val title: String, val summary: String, val destination: String, @param:ColorInt val color: Int)

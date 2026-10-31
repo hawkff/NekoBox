@@ -182,8 +182,9 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
 
-    /** Whether the settings this screen reads once, when built, still have the values it was built with. */
-    fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
+    override val keepsAlive get() = true
+
+    override fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
 
     private var selectedProfileSnapshot = 0L
     private var currentProfileSnapshot = 0L

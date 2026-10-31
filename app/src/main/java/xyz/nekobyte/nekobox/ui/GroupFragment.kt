@@ -56,6 +56,8 @@ import kotlin.math.abs
 class GroupFragment :
     ToolbarFragment(R.layout.layout_group),
     Toolbar.OnMenuItemClickListener {
+    // Reloads its groups in onResume, which runs again whenever it shows.
+    override val keepsAlive get() = true
 
     lateinit var activity: MainActivity
     lateinit var groupListView: RecyclerView

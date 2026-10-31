@@ -40,6 +40,8 @@ import xyz.nekobyte.nekobox.widget.ListListener
  * check and the project's pages, and the cat by its ramen closing the page.
  */
 class AboutFragment : ToolbarFragment(R.layout.layout_about) {
+    // Nothing on it changes while it is hidden.
+    override val keepsAlive get() = true
 
     private var _binding: LayoutAboutBinding? = null
     private val binding get() = _binding!!
