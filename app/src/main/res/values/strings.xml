@@ -227,6 +227,7 @@
     <string name="edit">Edit</string>
     <string name="share">Share</string>
     <string name="add_profile">Add profile</string>
+    <string name="add">Add</string>
     <string name="select_profile">Select profile</string>
     <string name="action_socks" translatable="false">SOCKS</string>
     <string name="action_http" translatable="false">HTTP</string>
@@ -313,9 +314,9 @@
         <item quantity="one">Removed</item>
         <item quantity="other">%d items removed</item>
     </plurals>
-    <plurals name="added">
-        <item quantity="one">Added</item>
-        <item quantity="other">%d proxies added</item>
+    <plurals name="added_to">
+        <item quantity="one">Added %1$d profile to %2$s</item>
+        <item quantity="other">Added %1$d profiles to %2$s</item>
     </plurals>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>

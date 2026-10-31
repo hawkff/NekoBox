@@ -58,6 +58,25 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
         box = Libcore.newSingBoxInstance(config.config, LocalResolverImpl)
     }
 
+    /**
+     * What the profile's server name stands for, looked up by this core with the resolver its
+     * connection uses (Direct DNS, or the subscription's own), and kept for the row's country on
+     * Home. An address needs no lookup; null when the lookup fails.
+     */
+    fun lookUpServer(): String? {
+        val name = profile.requireBean().serverAddress?.takeIf { it.isNotBlank() } ?: return null
+        if (name.isIpAddress()) return name
+        val tag = config.profileTagMap[profile.id] ?: return null
+        val address = try {
+            Libcore.resolveServer(box, tag, name).lineSequence().firstOrNull { it.isNotBlank() }
+        } catch (e: Exception) {
+            Logs.w(e)
+            null
+        } ?: return null
+        DataStore.rememberServerAddresses(mapOf(name to address))
+        return address
+    }
+
     open suspend fun init() {
         buildConfig()
         val nodes = config.tailscaleEndpoints.keys

@@ -171,11 +171,11 @@
     <plurals name="removed"> 
         <item quantity="one">Eliminado</item> 
         <item quantity="other">%d elementos eliminados</item> 
-    </plurals> 
-    <plurals name="added"> 
-        <item quantity="one">Añadido</item> 
-        <item quantity="other">%d proxys añadidos</item> 
-    </plurals> 
+    </plurals>  
+    <plurals name="added_to">
+        <item quantity="one">Se añadió %1$d perfil a «%2$s»</item>
+        <item quantity="other">Se añadieron %1$d perfiles a «%2$s»</item>
+    </plurals>
     <string name="undo">Deshacer</string>
     <!-- status --> 
     <string name="connecting">Conectando…</string> 

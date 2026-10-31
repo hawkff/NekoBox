@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.Manifest
+import android.graphics.Rect
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -52,12 +53,35 @@ class AccessibleControlsDeviceTest {
         if (!view.isShown || view.importantForAccessibility == View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS) return
         if ((view.isClickable || view.isLongClickable) && view.isEnabled && view.importantForAccessibility != View.IMPORTANT_FOR_ACCESSIBILITY_NO) {
             if (spoken(view).isBlank()) problems += "$screen: ${describe(view)} has no name"
-            val density = view.resources.displayMetrics.density
-            val width = (view.width / density).roundToInt()
-            val height = (view.height / density).roundToInt()
+            val (width, height) = tapArea(view)
             if (width < 48 || height < 48) problems += "$screen: ${describe(view)} is $width x $height dp"
         }
         if (view is ViewGroup) for (i in 0 until view.childCount) walk(view.getChildAt(i), screen, problems)
+    }
+
+    /** The area in dp that a tap on [view] answers: its own, or the larger one an ancestor's TouchDelegate hands it. */
+    private fun tapArea(view: View): Pair<Int, Int> {
+        var width = view.width
+        var height = view.height
+        var ancestor = view.parent as? ViewGroup
+        while (ancestor != null) {
+            val delegate = ancestor.touchDelegate
+            if (delegate != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val own = Rect().also { view.getDrawingRect(it) }
+                ancestor.offsetDescendantRectToMyCoords(view, own)
+                val info = delegate.touchDelegateInfo
+                for (i in 0 until info.regionCount) {
+                    val area = info.getRegionAt(i).bounds
+                    if (area.contains(own)) {
+                        width = maxOf(width, area.width())
+                        height = maxOf(height, area.height())
+                    }
+                }
+            }
+            ancestor = ancestor.parent as? ViewGroup
+        }
+        val density = view.resources.displayMetrics.density
+        return (width / density).roundToInt() to (height / density).roundToInt()
     }
 
     /** What a screen reader says for [view]: its own name, or for a container the names of what it holds. */

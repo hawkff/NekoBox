@@ -16,6 +16,7 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.ktx.Logs
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -23,10 +24,31 @@ class ConnectionTestsTest {
     @Before fun setup() = ConfigBuilderTestEnv.reset()
 
     @Test
-    fun offlineHostnamesFailWithoutThrowingWhileIpLiteralsRemainUsable() {
-        assertNull(resolvePingAddress("proxy.example", null))
-        assertEquals("192.0.2.1", resolvePingAddress("192.0.2.1", null))
-        assertEquals("2001:db8::1", resolvePingAddress("2001:db8::1", null))
+    fun pingsResolveNamesThroughTheCoreAndLeaveAddressesAlone() = runBlocking {
+        fun profile(server: String) = ProxyEntity().putBean(
+            SOCKSBean().apply {
+                serverAddress = server
+                serverPort = 1080
+            },
+        )
+        var asked = 0
+        val core: suspend (ProxyEntity) -> String? = {
+            asked++
+            "192.0.2.7"
+        }
+        assertEquals("192.0.2.1", resolvePingAddress(profile("192.0.2.1"), core))
+        assertEquals("2001:db8::1", resolvePingAddress(profile("2001:db8::1"), core))
+        assertEquals(0, asked)
+        assertEquals("192.0.2.7", resolvePingAddress(profile("proxy.example"), core))
+        assertNull(resolvePingAddress(profile("proxy.example")) { null })
+        // A failed lookup is a name that does not resolve, not a crash.
+        val sink = Logs.sink
+        Logs.sink = {}
+        try {
+            assertNull(resolvePingAddress(profile("proxy.example")) { error("offline") })
+        } finally {
+            Logs.sink = sink
+        }
     }
 
     @Test

@@ -23,6 +23,9 @@ object Key {
     const val GPS_SPOOFING_REMOVE = "gpsSpoofingRemove"
     const val PLUGIN_SIGNER_APPROVALS = "pluginSignerApprovals"
 
+    // What server names last resolved to: a cache of this device, kept out of backups.
+    const val SERVER_ADDRESSES = "serverAddresses"
+
     const val APP_THEME = "appTheme"
     const val NIGHT_THEME = "nightTheme"
     const val LIQUID_GLASS = "liquidGlass"

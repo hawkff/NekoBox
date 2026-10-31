@@ -476,6 +476,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         if (!select) {
             toolbar.inflateMenu(R.menu.add_profile_menu)
             MenuCompat.setGroupDividerEnabled(toolbar.menu, true)
+            toolbar.menu.findItem(R.id.action_add)?.subMenu?.let { MenuCompat.setGroupDividerEnabled(it, true) }
             toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
             toolbar.setOnMenuItemClickListener(this)
         } else {
@@ -756,18 +757,14 @@ class ConfigurationFragment @JvmOverloads constructor(
         }
     }
 
+    // A subscription's group cannot take them, so the message names the group that did; Home opens its tab.
     suspend fun import(proxies: List<AbstractBean>) {
         val targetId = DataStore.selectedGroupForImport()
         ProfileManager.createProfiles(targetId, proxies)
+        val group = ProfileDatabase.groupDao.getById(targetId)?.displayName().orEmpty()
         onMainDispatcher {
             DataStore.editingGroup = targetId
-            snackbar(
-                requireContext().resources.getQuantityString(
-                    R.plurals.added,
-                    proxies.size,
-                    proxies.size,
-                ),
-            ).show()
+            snackbar(resources.getQuantityString(R.plurals.added_to, proxies.size, proxies.size, group)).show()
         }
     }
 
@@ -875,6 +872,8 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     override fun onMenuItemClick(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.action_create_group -> showNewGroupChoices(requireContext())
+
             R.id.action_scan_qr_code -> {
                 startActivity(Intent(context, ScannerActivity::class.java))
             }
@@ -1294,7 +1293,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                             val profile = result.profile
 
                             profile.status = 0
-                            val address = resolvePingAddress(profile.requireBean().serverAddress!!, NekoBox.underlyingNetwork)
+                            val address = resolvePingAddress(profile)
                             if (!isActive) break
                             if (address == null) {
                                 profile.status = 2

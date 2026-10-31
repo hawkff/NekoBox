@@ -3,6 +3,7 @@ package xyz.nekobyte.nekobox.database
 import android.os.Binder
 import android.os.Build
 import androidx.preference.PreferenceDataStore
+import org.json.JSONObject
 import xyz.nekobyte.nekobox.CONNECTION_TEST_URL
 import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.GroupType
@@ -143,6 +144,41 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         set(value) = configurationStore.putString(Key.FAVORITE_PROFILES, value.distinct().joinToString(","))
 
     private val favoriteLock = Any()
+
+    /**
+     * What server names last resolved to, through the core's resolver for each connection: the row
+     * of a server given by name shows the country of that address. Tests and connections fill it,
+     * and each entry keeps when it was learned.
+     */
+    val serverAddresses: Map<String, String>
+        get() {
+            val raw = configurationStore.getString(Key.SERVER_ADDRESSES).orEmpty()
+            parsedServerAddresses.let { (from, addresses) -> if (from == raw) return addresses }
+            val addresses = runCatching {
+                JSONObject(raw).let { json -> json.keys().asSequence().mapNotNull { name -> json.optJSONObject(name)?.optString("address")?.ifEmpty { null }?.let { name to it } }.toMap() }
+            }.getOrDefault(emptyMap())
+            parsedServerAddresses = raw to addresses
+            return addresses
+        }
+
+    // Rows read the map on every bind; it is parsed again only when the stored text changes.
+    @Volatile
+    private var parsedServerAddresses: Pair<String, Map<String, String>> = "" to emptyMap()
+
+    private val addressLock = Any()
+
+    /** Keeps what [found] names resolved to and when, the newest last, at most 1000 names. */
+    fun rememberServerAddresses(found: Map<String, String>, learned: Long = System.currentTimeMillis()) = synchronized(addressLock) {
+        val stored = runCatching { JSONObject(configurationStore.getString(Key.SERVER_ADDRESSES).orEmpty()) }.getOrDefault(JSONObject())
+        val addresses = LinkedHashMap<String, JSONObject>()
+        for (name in stored.keys()) stored.optJSONObject(name)?.let { addresses[name] = it }
+        for ((name, address) in found) {
+            addresses.remove(name)
+            addresses[name] = JSONObject().put("address", address).put("learned", learned)
+        }
+        while (addresses.size > 1000) addresses.remove(addresses.keys.first())
+        configurationStore.putString(Key.SERVER_ADDRESSES, JSONObject(addresses as Map<*, *>).toString())
+    }
 
     /** Changes the pins in one step; pinning, unpinning and pruning run in separate jobs. */
     fun updateFavoriteProfiles(change: (List<Long>) -> List<Long>) = synchronized(favoriteLock) { favoriteProfiles = change(favoriteProfiles) }

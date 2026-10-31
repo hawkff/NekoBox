@@ -1,5 +1,6 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.os.Bundle
@@ -225,20 +226,7 @@ class GroupFragment :
         return true
     }
 
-    // One button, three ways to start a group.
-    private fun newGroup() {
-        val choices = arrayOf(getString(R.string.group_new_subscription), getString(R.string.group_new_scan), getString(R.string.group_new_empty))
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.group_new_title)
-            .setItems(choices) { _, which ->
-                when (which) {
-                    0 -> startActivity(Intent(context, GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_SUBSCRIPTION, true))
-                    1 -> startActivity(Intent(context, ScannerActivity::class.java))
-                    else -> startActivity(Intent(context, GroupSettingsActivity::class.java))
-                }
-            }
-            .show()
-    }
+    private fun newGroup() = showNewGroupChoices(requireContext())
 
     private lateinit var selectedGroup: ProxyGroup
 
@@ -720,4 +708,19 @@ class GroupFragment :
         const val SELECT = "select"
         const val OPEN_FADE = 200L
     }
+}
+
+/** One button, three ways to start a group: a subscription link, a scanned one, or a group of your own. */
+internal fun showNewGroupChoices(context: Context) {
+    val choices = arrayOf(context.getString(R.string.group_new_subscription), context.getString(R.string.group_new_scan), context.getString(R.string.group_new_empty))
+    MaterialAlertDialogBuilder(context)
+        .setTitle(R.string.group_new_title)
+        .setItems(choices) { _, which ->
+            when (which) {
+                0 -> context.startActivity(Intent(context, GroupSettingsActivity::class.java).putExtra(GroupSettingsActivity.EXTRA_SUBSCRIPTION, true))
+                1 -> context.startActivity(Intent(context, ScannerActivity::class.java))
+                else -> context.startActivity(Intent(context, GroupSettingsActivity::class.java))
+            }
+        }
+        .show()
 }

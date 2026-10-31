@@ -44,7 +44,23 @@ class TestInstance(
             awaitTailscaleReady(box, endpoint.tag, endpoint.waitForExitNode)
         }
         currentCoroutineContext().ensureActive()
-        Libcore.urlTest(box, link, timeout)
+        Libcore.urlTest(box, link, timeout).also {
+            // The test's connection resolved the server name, so the answer comes from the core's cache.
+            lookUpServer()
+        }
+    }
+
+    // A lookup alone starts the core without the sidecar processes a URL test needs.
+    private var lookupOnly = false
+
+    /** What the profile's server name stands for, through this core's resolver for the profile. */
+    suspend fun resolveServer(): String? {
+        lookupOnly = true
+        return runProbe { lookUpServer() }
+    }
+
+    override fun launch() {
+        if (lookupOnly) box.start() else super.launch()
     }
 
     override fun buildConfig() {

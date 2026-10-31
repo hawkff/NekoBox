@@ -120,6 +120,8 @@ class DnsConfigTest {
         val probe = ConfigBuilderTestEnv.io { buildConfig(profile, forTest = true) }
         directory.resolve("probe.json").writeText(probe.config)
         assertEquals("dns-direct", JSONObject(probe.config).getJSONObject("dns").getString("final"))
+        // A test or a lookup reaches the server through the subscription's resolver, as the connection does.
+        assertEquals("dns-sub-${profile.groupId}", objects(JSONObject(probe.config).getJSONArray("outbounds")).first().getJSONObject("domain_resolver").getString("server"))
     }
 
     private fun objects(array: JSONArray) = (0 until array.length()).map(array::getJSONObject)

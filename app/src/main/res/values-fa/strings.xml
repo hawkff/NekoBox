@@ -189,9 +189,9 @@
         <item quantity="one">حذف شد</item>
         <item quantity="other">%d حذف شدند</item>
     </plurals>
-    <plurals name="added">
-        <item quantity="one">پراکسی اضافه شد</item>
-        <item quantity="other">%d پراکسی اضافه شدند</item>
+    <plurals name="added_to">
+        <item quantity="one">%1$d پروفایل به «%2$s» اضافه شد</item>
+        <item quantity="other">%1$d پروفایل به «%2$s» اضافه شد</item>
     </plurals>
     <string name="undo">برگشت</string>
     <!-- status -->
