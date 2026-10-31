@@ -18,6 +18,12 @@
         <item quantity="many">%d прокси</item>
         <item quantity="other">%d прокси</item>
     </plurals>
+    <plurals name="proxies_added">
+        <item quantity="one">В список %2$s добавлен %1$d прокси</item>
+        <item quantity="few">В список %2$s добавлено %1$d прокси</item>
+        <item quantity="many">В список %2$s добавлено %1$d прокси</item>
+        <item quantity="other">В список %2$s добавлено %1$d прокси</item>
+    </plurals>
     <plurals name="proxies_skipped">
         <item quantity="one">пропущена %d строка</item>
         <item quantity="few">пропущены %d строки</item>

@@ -101,7 +101,8 @@ class ProxiesScreenDeviceTest {
                 assertTrue(proxies.proxies)
                 assertEquals(listOf(listName), tabs(proxies).filter { it.startsWith("Proxies test") })
                 assertFalse(serversName in tabs(proxies))
-                assertEquals(context.getString(R.string.menu_proxies), activity.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar).title.toString())
+                // Home stays under it with a toolbar of its own: this screen's is the one in its view.
+                assertEquals(context.getString(R.string.menu_proxies), proxies.requireView().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar).title.toString())
                 assertEquals(View.GONE, proxies.requireView().findViewById<View>(R.id.group_empty).visibility)
                 proxies.groupPager.setCurrentItem(proxies.adapter.groupList.indexOfFirst { it.displayName() == listName }, false)
             }

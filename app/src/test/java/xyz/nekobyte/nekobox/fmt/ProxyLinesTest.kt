@@ -125,8 +125,8 @@ class ProxyLinesTest {
             "gate.example.net:7000:user-session-a:pw\ngate.example.net:7000:user-session-b:pw\n203.0.113.4:1080:solo:pw",
             Plain.SOCKS5,
         )
-        assertEquals("gate.example.net:7000 · user-session-a", result.proxies[0].name)
-        assertEquals("gate.example.net:7000 · user-session-b", result.proxies[1].name)
+        assertEquals("user-session-a", result.proxies[0].name)
+        assertEquals("user-session-b", result.proxies[1].name)
         // A proxy alone on its address keeps the address as its name.
         assertTrue(result.proxies[2].name.isNullOrBlank())
     }

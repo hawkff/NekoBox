@@ -962,7 +962,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
                     val list = open ?: createProxyList(name)
                     ProfileManager.createProfiles(list.id, found)
                     onMainDispatcher {
-                        snackbar(resources.getQuantityString(R.plurals.added_to, found.size, found.size, list.displayName())).show()
+                        snackbar(resources.getQuantityString(R.plurals.proxies_added, found.size, found.size, list.displayName())).show()
                     }
                 }
             }

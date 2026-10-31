@@ -25,7 +25,8 @@ object ProxyLines {
             val bean = runCatching { parseLine(line, plain) }.getOrNull()
             if (bean == null) skipped++ else proxies += bean
         }
-        // Rotating and sticky residential sessions share one gateway and differ by login: the login tells them apart.
+        // Rotating and sticky residential sessions share one gateway and differ by login: the login names them, and
+        // the gateway shows on the row's address line.
         val shared = proxies.groupingBy { it.serverAddress to it.serverPort }.eachCount().filterValues { it > 1 }.keys
         for (bean in proxies) {
             val user = when (bean) {
@@ -34,7 +35,7 @@ object ProxyLines {
                 else -> null
             }
             if (bean.name.isNullOrBlank() && !user.isNullOrBlank() && (bean.serverAddress to bean.serverPort) in shared) {
-                bean.name = "${bean.serverAddress}:${bean.serverPort} · $user"
+                bean.name = user
             }
         }
         return Result(proxies, skipped)

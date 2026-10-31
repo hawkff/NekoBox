@@ -19,6 +19,10 @@
         <item quantity="one">%d proxy</item>
         <item quantity="other">%d proxies</item>
     </plurals>
+    <plurals name="proxies_added">
+        <item quantity="one">Added %1$d proxy to %2$s</item>
+        <item quantity="other">Added %1$d proxies to %2$s</item>
+    </plurals>
     <plurals name="proxies_skipped">
         <item quantity="one">%d line skipped</item>
         <item quantity="other">%d lines skipped</item>
