@@ -113,10 +113,6 @@
     <string name="error_title">Feil</string>
     <string name="cleartext_http_warning">Klartekst HTTP -trafikk er usikker</string>
     <string name="vpn_connected">Tilkoblet, trykk for å kontrollere tilkoblingen</string>
-    <plurals name="added">
-        <item quantity="one">La til</item>
-        <item quantity="other">%d fullmakter lagt til</item>
-    </plurals>
     <string name="add_profile_methods_manual_settings">Manuelle innstillinger</string>
     <string name="delete_confirm_prompt">Er du sikker på at du vil fjerne denne profilen\?</string>
     <string name="profile_config">Profilkonfigurasjon</string>

@@ -107,9 +107,6 @@
     <plurals name="removed">
         <item quantity="other">已移除 %d 個項目</item>
     </plurals>
-    <plurals name="added">
-        <item quantity="other">已新增 %d 個代理</item>
-    </plurals>
     <string name="undo">復原</string>
     <!-- status -->
     <string name="connecting">正在連線…</string>

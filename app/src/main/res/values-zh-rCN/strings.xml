@@ -112,9 +112,6 @@
     <plurals name="removed">
         <item quantity="other">已删除 %d 个配置</item>
     </plurals>
-    <plurals name="added">
-        <item quantity="other">已添加 %d 个配置</item>
-    </plurals>
     <string name="undo">还原</string>
     <!-- status -->
     <string name="connecting">正在连接…</string>

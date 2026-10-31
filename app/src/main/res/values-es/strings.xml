@@ -171,11 +171,7 @@
     <plurals name="removed"> 
         <item quantity="one">Eliminado</item> 
         <item quantity="other">%d elementos eliminados</item> 
-    </plurals> 
-    <plurals name="added"> 
-        <item quantity="one">Añadido</item> 
-        <item quantity="other">%d proxys añadidos</item> 
-    </plurals> 
+    </plurals>  
     <string name="undo">Deshacer</string>
     <!-- status --> 
     <string name="connecting">Conectando…</string> 

@@ -9,6 +9,7 @@ import xyz.nekobyte.nekobox.bg.runRequiredCompletion
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
 class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = null) : BoxInstance(profile) {
 
@@ -43,6 +44,9 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
         // TrafficLooper.start() launches its own loop on this scope.
         looper = service?.let { TrafficLooper(it.data, GlobalScope) }
         looper?.start()
+        // The address the core dials for the selected server, for its row's country on Home; it
+        // looks up only the server the connection uses, which the core resolves anyway.
+        runOnDefaultDispatcher { lookUpServer() }
     }
 
     suspend fun closeAndPersist() = runRequiredCompletion(

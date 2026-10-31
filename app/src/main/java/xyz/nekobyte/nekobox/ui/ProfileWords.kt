@@ -1,12 +1,15 @@
 package xyz.nekobyte.nekobox.ui
 
 import libcore.Libcore
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
+import xyz.nekobyte.nekobox.ktx.isIpAddress
+import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -46,12 +49,18 @@ object ProfileWords {
     }
 
     /**
-     * "🇩🇪 Germany" for the country the server's address is in, the address the connection goes
-     * to, even where the name's flag says otherwise; null while the address is unknown or a name.
+     * "🇩🇪 Germany" for the country of the address the connection goes to, even where the name's
+     * flag says otherwise; null while that address or its country is unknown.
      */
     fun country(profile: ProxyEntity): String? {
-        val code = ServerCountries.cached(profile.requireBean().serverAddress ?: return null)?.takeIf { it.length == 2 } ?: return null
+        val code = ServerCountries.cached(serverIp(profile) ?: return null)?.takeIf { it.length == 2 } ?: return null
         return flag(code) + " " + Locale.Builder().setRegion(code).build().displayCountry
+    }
+
+    /** The server's IP: its own, or the one its name last resolved to through the core. */
+    fun serverIp(profile: ProxyEntity): String? {
+        val server = profile.requireBean().serverAddress?.takeIf { it.isNotBlank() } ?: return null
+        return if (server.isIpAddress()) server else DataStore.serverAddresses[server]
     }
 
     /** The flag emoji of a two-letter country code. */
@@ -87,7 +96,20 @@ object ServerCountries {
     internal var lookup: (String) -> String = { Libcore.serverCountries(it) }
     internal var database: () -> Long = { File(app.externalAssets, "geoip.db").lastModified() }
 
-    fun cached(address: String): String? = codes[address]
+    private val asked = ConcurrentHashMap.newKeySet<String>()
+
+    /** The country code of [address], or null while unknown; a miss looks it up in the background for the next bind. */
+    fun cached(address: String): String? = codes[address] ?: null.also {
+        if (asked.add(address)) {
+            runOnDefaultDispatcher {
+                try {
+                    lookUp(listOf(address))
+                } finally {
+                    asked.remove(address)
+                }
+            }
+        }
+    }
 
     /** Looks up the addresses not seen yet; true when any answer was added or changed. */
     fun lookUp(addresses: Collection<String?>): Boolean {

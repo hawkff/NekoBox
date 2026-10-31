@@ -41,6 +41,7 @@ import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.NetworkAutomationService
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
+import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.RoutingProfiles
@@ -370,11 +371,15 @@ class MainActivity :
         val targetId = DataStore.selectedGroupForImport()
 
         ProfileManager.createProfile(targetId, profile)
+        val group = ProfileDatabase.groupDao.getById(targetId)?.displayName().orEmpty()
 
         onMainDispatcher {
+            // Home opens on the group that took the profile, which the message names.
+            DataStore.selectedGroup = targetId
+            DataStore.editingGroup = targetId
             displayFragmentWithId(R.id.nav_configuration)
 
-            snackbar(resources.getQuantityString(R.plurals.added, 1, 1)).show()
+            snackbar(resources.getQuantityString(R.plurals.added_to, 1, 1, group)).show()
         }
     }
 

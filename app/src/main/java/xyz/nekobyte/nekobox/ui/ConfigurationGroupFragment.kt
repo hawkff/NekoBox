@@ -964,7 +964,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         override suspend fun onAdd(profile: ProxyEntity) {
             if (profile.groupId != proxyGroup.id) return
-            onDefaultDispatcher { ServerCountries.lookUp(listOf(profile.requireBean().serverAddress)) }
+            onDefaultDispatcher { ServerCountries.lookUp(listOf(ProfileWords.serverIp(profile))) }
             onMainDispatcher {
                 if (disposed) return@onMainDispatcher
                 reloadGeneration.incrementAndGet()
@@ -976,7 +976,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) {
             if (profile.groupId != proxyGroup.id && !isFavorites) return
-            onDefaultDispatcher { ServerCountries.lookUp(listOf(profile.requireBean().serverAddress)) }
+            onDefaultDispatcher { ServerCountries.lookUp(listOf(ProfileWords.serverIp(profile))) }
             onMainDispatcher {
                 if (disposed || profile.id in pendingRemovalIds) return@onMainDispatcher
                 if (isFavorites && profile.id !in masterProfiles) return@onMainDispatcher
@@ -1116,7 +1116,7 @@ class ConfigurationGroupFragment : Fragment() {
                 } else {
                     ProfileDatabase.proxyDao.getByGroup(groupId)
                 }
-                ServerCountries.lookUp(profiles.map { it.requireBean().serverAddress })
+                ServerCountries.lookUp(profiles.map(ProfileWords::serverIp))
                 profiles = when (order) {
                     GroupOrder.BY_NAME -> profiles.sortedBy { it.displayName() }
 

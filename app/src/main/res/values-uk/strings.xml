@@ -190,12 +190,6 @@
         <item quantity="many">Видалено %d елементів</item>
         <item quantity="other">Видалено %d елемента</item>
     </plurals>
-    <plurals name="added">
-        <item quantity="one">Додано</item>
-        <item quantity="few">Додано %d проксі</item>
-        <item quantity="many">Додано %d проксі</item>
-        <item quantity="other">Додано %d проксі</item>
-    </plurals>
     <string name="undo">Скасувати</string>
     <!-- status -->
     <string name="connecting">Підключення…</string>

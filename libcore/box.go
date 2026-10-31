@@ -82,6 +82,9 @@ type BoxInstance struct {
 	connections  *connectionTracker
 	selector     *group.Selector
 	pauseManager pause.Manager
+	// The outbounds and endpoints as configured, for ResolveServer to find a connection's resolver.
+	outbounds []option.Outbound
+	endpoints []option.Endpoint
 }
 
 func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *BoxInstance, err error) {
@@ -121,6 +124,8 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 		cancel:       cancel,
 		pauseManager: service.FromContext[pause.Manager](ctx),
 		connections:  newConnectionTracker(),
+		outbounds:    options.Outbounds,
+		endpoints:    options.Endpoints,
 	}
 	b.Box.Router().AppendTracker(b.connections)
 

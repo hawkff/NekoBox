@@ -178,10 +178,6 @@
     <string name="vpn_connected">Bağlandı, bağlantıyı test etmek için dokunun</string>
     <string name="connecting">Bağlanıyor…</string>
     <string name="undo">Geri Al</string>
-    <plurals name="added">
-        <item quantity="one">Eklendi</item>
-        <item quantity="other">%d vekil sunucu eklendi</item>
-    </plurals>
     <plurals name="removed">
         <item quantity="one">Kaldırıldı</item>
         <item quantity="other">%d öğe kaldırıldı</item>

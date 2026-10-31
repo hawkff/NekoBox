@@ -3,12 +3,15 @@ package xyz.nekobyte.nekobox.ui
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.AbstractBean
+import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
@@ -18,6 +21,9 @@ import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 class ProfileWordsTest {
     private val originalLookup = ServerCountries.lookup
     private val originalDatabase = ServerCountries.database
+
+    @Before
+    fun setUp() = ConfigBuilderTestEnv.reset()
 
     @After
     fun tearDown() {
@@ -74,6 +80,9 @@ class ProfileWordsTest {
         // A name's flag may name the exit while the connection goes through a relay elsewhere.
         assertEquals("🇩🇪 Germany", ProfileWords.country(named("🇺🇸 New York", "192.0.2.77")))
         assertNull(ProfileWords.country(named("Auto proxy-6", "node.example")))
+        // A server given by name takes the country of the address a test or a connection resolved it to.
+        DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.77"))
+        assertEquals("🇩🇪 Germany", ProfileWords.country(named("Auto proxy-6", "node.example")))
         // A replaced database answers again for every known address, not only the one asked about.
         ServerCountries.database = { 2L }
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { "fr" } }
