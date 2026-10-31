@@ -1000,6 +1000,11 @@
     <string name="route_fallback_summary">Goes through the selected profile</string>
     <string name="route_global_notice">Global mode is on, so these rules are skipped and everything goes through the selected profile.</string>
     <string name="route_global_off">Turn off</string>
+    <string name="route_rules_mine">My rules</string>
+    <string name="route_rules_mine_unused">Your own rules. Not in use.</string>
+    <string name="route_rules_from_unused">Rules from %1$s. Not in use.</string>
+    <string name="route_rules_from_used">In use. These rules come from %1$s and change when it updates, so they can\'t be edited here.</string>
+    <string name="route_rules_use">Use these rules</string>
     <string name="route_reset_message">Replace all rules with the default ones?</string>
     <!-- Rule editor -->
     <string name="route_editor_new">New rule</string>

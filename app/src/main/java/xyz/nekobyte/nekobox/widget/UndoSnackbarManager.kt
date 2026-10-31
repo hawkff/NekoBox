@@ -52,4 +52,13 @@ class UndoSnackbarManager<in T>(
     fun remove(vararg items: Pair<Int, T>) = remove(items.toList())
 
     fun flush() = last?.dismiss()
+
+    /** Commits the removals waiting for undo now, instead of when the snackbar has gone. */
+    fun commitNow() {
+        val snackbar = last ?: return
+        last = null
+        callback.commit(recycleBin.toList())
+        recycleBin.clear()
+        snackbar.dismiss()
+    }
 }

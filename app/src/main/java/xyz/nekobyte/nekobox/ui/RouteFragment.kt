@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +37,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.RoutingProfiles
 import xyz.nekobyte.nekobox.database.RuleEntity
 import xyz.nekobyte.nekobox.databinding.LayoutRouteBinding
 import xyz.nekobyte.nekobox.databinding.LayoutRouteEndBinding
@@ -59,6 +61,8 @@ import xyz.nekobyte.nekobox.widget.glass.GlassLayout
 /**
  * The route rules in the order the core tries them, and a tester above them that says where a site,
  * an address or an app goes: the rules it passes fade, and the one that catches it stands out.
+ * Once a subscription brings rules, tabs show them next to the user's own, read-only, and switch
+ * which set is in use; the tester checks the set in use.
  */
 class RouteFragment :
     ToolbarFragment(R.layout.layout_route),
@@ -73,6 +77,21 @@ class RouteFragment :
     private lateinit var binding: LayoutRouteBinding
     private lateinit var ruleAdapter: RuleAdapter
     private lateinit var undoManager: UndoSnackbarManager<RuleRow>
+
+    /** A tab: My rules (id 0) or the rules a subscription brought, under its routing profile's id. */
+    private class RuleSet(val id: Long, val name: String)
+
+    /** What a load found: the sets, the one in use, the one to show and its rules. */
+    private class Loaded(val sets: List<RuleSet>, val used: Long, val shown: Long, val rows: List<RuleRow>)
+
+    private var sets = emptyList<RuleSet>()
+
+    // The tab picked, null until the first load picks the set in use; the rows listed follow it once read.
+    private var shownSet: Long? = null
+    private var listedSet: Long? = null
+    private var usedSet = 0L
+    private val live get() = listedSet == usedSet
+    private val editable get() = live && usedSet == 0L
     private var tested: Tested? = null
     private var testing: Job? = null
     private var showMatchWhenAnswered = false
@@ -93,9 +112,9 @@ class RouteFragment :
         FastScrollerBuilder(list).useMd2Style().build()
         undoManager = UndoSnackbarManager(requireActivity() as MainActivity, ruleAdapter)
         list.attachItemTouch(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START) {
-            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleHolder) super.getDragDirs(recyclerView, viewHolder) else 0
+            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleHolder && editable) super.getDragDirs(recyclerView, viewHolder) else 0
 
-            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleHolder) super.getSwipeDirs(recyclerView, viewHolder) else 0
+            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) = if (viewHolder is RuleHolder && editable) super.getSwipeDirs(recyclerView, viewHolder) else 0
 
             override fun canDropOver(recyclerView: RecyclerView, current: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = target is RuleHolder
 
@@ -115,7 +134,38 @@ class RouteFragment :
             }
         })
 
+        val tabs = binding.routeTabs
+        if (Glass.enabled) {
+            tabs.background = null
+            Glass.styleTabs(tabs, tabs)
+        }
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                val id = tab.tag as? Long ?: return
+                if (id == shownSet) return
+                // A removal waiting for undo belongs to the rules on screen: it is committed before they change.
+                undoManager.commitNow()
+                shownSet = id
+                ruleAdapter.reload()
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+
+            override fun onTabReselected(tab: TabLayout.Tab) = Unit
+        })
+
         val header = binding.header
+        // The table is replaced before the switch records which set is in use, so the list reads both again after it.
+        header.useRules.setOnClickListener {
+            val id = listedSet ?: return@setOnClickListener
+            // A removal committed on the way to this tab is written before the switch saves the rules.
+            val removing = ruleAdapter.removing
+            runOnDefaultDispatcher {
+                removing?.join()
+                if (id == 0L) RoutingProfiles.switchToOwn() else RoutingProfiles.switchTo(id)
+                onMainDispatcher { ruleAdapter.reload() }
+            }
+        }
         header.globalOff.setOnClickListener {
             DataStore.globalMode = false
             showGlobalNotice()
@@ -138,13 +188,16 @@ class RouteFragment :
         }
     }
 
-    override fun GlassLayout.glassPanes(bars: ViewGroup) = paneOver(bars, binding.header.probeLayout, 0f, 0f)
+    override fun GlassLayout.glassPanes(bars: ViewGroup) {
+        paneOver(bars, binding.routeTabs, 0f, 0f)
+        paneOver(bars, binding.header.probeLayout, 0f, 0f)
+    }
 
     override fun onResume() {
         super.onResume()
-        // Global mode and the VPN settings may have changed elsewhere.
+        // Global mode, the VPN settings and the routing profiles may have changed elsewhere.
         showGlobalNotice()
-        test()
+        ruleAdapter.reload()
     }
 
     // The adapter and its listener belong to the view, made with it in onViewCreated.
@@ -167,7 +220,7 @@ class RouteFragment :
                         runOnDefaultDispatcher {
                             ProfileDatabase.rulesDao.reset()
                             DataStore.rulesFirstCreate = false
-                            ruleAdapter.reload()
+                            onMainDispatcher { ruleAdapter.reload() }
                         }
                     }
                     .setNegativeButton(R.string.no, null)
@@ -186,7 +239,7 @@ class RouteFragment :
         if (!::ruleAdapter.isInitialized || view == null) return
         testing?.cancel()
         val text = binding.header.probe.text?.toString().orEmpty().trim()
-        if (text.isEmpty()) return show(null)
+        if (text.isEmpty() || !live) return show(null)
         val context = requireContext()
         val rows = ruleAdapter.rows.toList()
         testing = viewLifecycleOwner.lifecycleScope.launch {
@@ -284,6 +337,28 @@ class RouteFragment :
         }
     }
 
+    /** The tabs, and what the shown set allows: a set not in use offers to switch, and only My rules in use can change. */
+    private fun showSets() {
+        val tabs = binding.routeTabs
+        tabs.isVisible = sets.size > 1
+        if ((0 until tabs.tabCount).map { tabs.getTabAt(it)?.run { tag to text?.toString() } } != sets.map { it.id to it.name }) {
+            tabs.removeAllTabs()
+            for (set in sets) tabs.addTab(tabs.newTab().setText(set.name).setTag(set.id), false)
+        }
+        tabs.getTabAt(sets.indexOfFirst { it.id == listedSet })?.takeIf { !it.isSelected }?.select()
+        val header = binding.header
+        val name = sets.firstOrNull { it.id == listedSet }?.name
+        header.rulesNotice.isVisible = !editable
+        header.useRules.isVisible = !live
+        header.rulesNoticeText.text = when {
+            listedSet == 0L -> getString(R.string.route_rules_mine_unused)
+            live -> getString(R.string.route_rules_from_used, name)
+            else -> getString(R.string.route_rules_from_unused, name)
+        }
+        header.probeLayout.isVisible = live
+        toolbar.menu.findItem(R.id.action_reset_route)?.isVisible = editable
+    }
+
     private fun TextView.paintDestination(text: String, @ColorInt color: Int) {
         this.text = text
         setTextColor(color)
@@ -305,17 +380,39 @@ class RouteFragment :
         /** The first row on screen when an answer came, which the fade starts from. */
         var firstVisible = 0
 
-        init {
-            runOnDefaultDispatcher { reload() }
-        }
+        private var loading: Job? = null
 
-        suspend fun reload() {
-            val context = context ?: return
-            val fresh = ProfileManager.getRules().map { it.row(context) }
-            onMainDispatcher {
-                if (!isAdded) return@onMainDispatcher
+        /** Reads the sets and the shown one's rules again; a newer read replaces one still running. */
+        fun reload() {
+            if (view == null) return
+            val context = requireContext()
+            val wanted = shownSet
+            loading?.cancel()
+            loading = viewLifecycleOwner.lifecycleScope.launch {
+                val fresh = withContext(Dispatchers.Default) {
+                    val profiles = RoutingProfiles.list()
+                    val used = profiles.firstOrNull { it.id == RoutingProfiles.activeId && it.source.isNotEmpty() }?.id ?: 0L
+                    val found = listOf(RuleSet(0L, context.getString(R.string.route_rules_mine))) +
+                        profiles.filter { it.source.isNotEmpty() }.map { profile ->
+                            val group = profile.source.substringAfter(':').toLongOrNull()?.let { ProfileDatabase.groupDao.getById(it) }
+                            RuleSet(profile.id, group?.displayName() ?: profile.name)
+                        }
+                    val shown = wanted?.takeIf { id -> found.any { it.id == id } } ?: used
+                    val rules = if (shown == used) {
+                        ProfileManager.getRules()
+                    } else {
+                        val content = if (shown == 0L) RoutingProfiles.ownProfile()?.content else profiles.first { it.id == shown }.content
+                        content?.optJSONArray("rules")?.let { runCatching { BackupFormatV2.decodeRules(it) }.getOrNull() }.orEmpty()
+                    }
+                    Loaded(found, used, shown, rules.map { it.row(context) })
+                }
+                sets = fresh.sets
+                usedSet = fresh.used
+                shownSet = fresh.shown
+                listedSet = fresh.shown
+                showSets()
                 rows.clear()
-                rows.addAll(fresh)
+                rows.addAll(fresh.rows)
                 loaded = true
                 notifyDataSetChanged()
                 test()
@@ -390,18 +487,24 @@ class RouteFragment :
             test()
         }
 
+        /** The last removal's write. */
+        var removing: Job? = null
+
         override fun commit(actions: List<Pair<Int, RuleRow>>) {
             val rules = actions.map { it.second.rule }
-            runOnDefaultDispatcher { ProfileManager.deleteRules(rules) }
+            removing = runOnDefaultDispatcher { ProfileManager.deleteRules(rules) }
         }
 
+        // A change to the rules table shows only while the tab shows the set in use; the service needs it either way.
         override suspend fun onAdd(rule: RuleEntity) {
             val row = rule.row(context ?: return)
             onMainDispatcher {
                 if (!isAdded) return@onMainDispatcher
-                rows.add(row)
-                notifyItemInserted(rows.size - 1)
-                test()
+                if (live) {
+                    rows.add(row)
+                    notifyItemInserted(rows.size - 1)
+                    test()
+                }
                 needReload()
             }
         }
@@ -410,10 +513,12 @@ class RouteFragment :
             val row = rule.row(context ?: return)
             onMainDispatcher {
                 val index = rows.indexOfFirst { it.rule.id == rule.id }
-                if (!isAdded || index < 0) return@onMainDispatcher
-                rows[index] = row
-                notifyItemChanged(index)
-                test()
+                if (!isAdded || (live && index < 0)) return@onMainDispatcher
+                if (live) {
+                    rows[index] = row
+                    notifyItemChanged(index)
+                    test()
+                }
                 needReload()
             }
         }
@@ -421,7 +526,7 @@ class RouteFragment :
         override suspend fun onRemoved(ruleId: Long) = onMainDispatcher {
             if (!isAdded) return@onMainDispatcher
             val index = rows.indexOfFirst { it.rule.id == ruleId }
-            if (index >= 0) {
+            if (live && index >= 0) {
                 rows.removeAt(index)
                 notifyItemRemoved(index)
                 test()
@@ -430,9 +535,9 @@ class RouteFragment :
         }
 
         // The whole table was replaced, by a routing profile or a reset: read it again.
-        override suspend fun onCleared() {
+        override suspend fun onCleared() = onMainDispatcher {
             reload()
-            onMainDispatcher { if (isAdded) needReload() }
+            if (isAdded) needReload()
         }
     }
 
@@ -464,6 +569,8 @@ class RouteFragment :
             binding.summary.text = row.summary
             binding.enable.isChecked = row.rule.enabled
             binding.enable.contentDescription = row.title
+            binding.enable.isEnabled = editable
+            card.isClickable = editable
             show(animate)
         }
 
@@ -529,6 +636,7 @@ class RouteFragment :
         fun bind(animate: Boolean) {
             val context = binding.root.context
             binding.empty.isVisible = ruleAdapter.loaded && ruleAdapter.rows.isEmpty()
+            binding.add.isVisible = editable
             binding.fallbackDestination.paintDestination(RuleWords.outbound(context, 0L), RuleWords.outboundColor(context, 0L))
             val decision = tested?.answer?.decision
             val matched = decision == RouteDecision.Proxy || decision == RouteDecision.GlobalMode

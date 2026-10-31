@@ -90,6 +90,7 @@ object Key {
     const val RULES_GEOIP_URL = "rulesGeoipUrl"
     const val ROUTING_PROFILES = "routingProfiles"
     const val ROUTING_PROFILE_ACTIVE = "routingProfileActive"
+    const val ROUTING_PROFILE_OWN = "routingProfileOwn"
     const val NETWORK_AUTOMATION = "networkAutomation"
     const val NETWORK_AUTOMATION_RULES = "networkAutomationRules"
     const val NETWORK_AUTOMATION_PAUSED = "networkAutomationPaused"

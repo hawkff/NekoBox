@@ -957,6 +957,11 @@
 <string name="route_fallback_summary">Идёт через выбранный профиль</string>
 <string name="route_global_notice">Глобальный режим включён: эти правила пропускаются, и весь трафик идёт через выбранный профиль.</string>
 <string name="route_global_off">Выключить</string>
+<string name="route_rules_mine">Мои правила</string>
+<string name="route_rules_mine_unused">Ваши собственные правила. Сейчас не используются.</string>
+<string name="route_rules_from_unused">Правила подписки «%1$s». Сейчас не используются.</string>
+<string name="route_rules_from_used">Используются. Эти правила пришли с подпиской «%1$s» и меняются при её обновлении, поэтому здесь их не изменить.</string>
+<string name="route_rules_use">Использовать эти правила</string>
 <string name="route_reset_message">Заменить все правила стандартными?</string>
 <!-- Rule editor -->
 <string name="route_editor_new">Новое правило</string>

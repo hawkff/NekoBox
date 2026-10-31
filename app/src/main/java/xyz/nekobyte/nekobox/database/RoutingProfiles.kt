@@ -5,7 +5,9 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
+import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ui.BackupFormatV2
 import xyz.nekobyte.nekobox.utils.Util
 
@@ -87,6 +89,13 @@ object RoutingProfiles {
     var activeId: Long
         get() = DataStore.configurationStore.getLong(Key.ROUTING_PROFILE_ACTIVE) ?: 0L
         private set(value) = DataStore.configurationStore.putLong(Key.ROUTING_PROFILE_ACTIVE, value)
+
+    /** The user's own profile in use when a subscription's rules took over, which My rules goes back to. */
+    private var ownId: Long
+        get() = DataStore.configurationStore.getLong(Key.ROUTING_PROFILE_OWN) ?: 0L
+        set(value) = DataStore.configurationStore.putLong(Key.ROUTING_PROFILE_OWN, value)
+
+    fun ownProfile(): Profile? = list().firstOrNull { it.id == ownId && it.source.isEmpty() }
 
     fun list(): List<Profile> {
         val raw = DataStore.configurationStore.getString(Key.ROUTING_PROFILES) ?: return emptyList()
@@ -200,9 +209,39 @@ object RoutingProfiles {
         applyLock.withLock {
             val target = list().firstOrNull { it.id == id } ?: return
             if (target.id == activeId) return
+            keepOwnLocked()
             syncActiveLocked()
             applyLive(target.content, includeSettings = target.source.isEmpty())
             activeId = target.id
+        }
+    }
+
+    /** Back to the user's own rules from a subscription's; with no own profile left, to no rules. */
+    suspend fun switchToOwn() {
+        ownProfile()?.let { return switchTo(it.id) }
+        applyLock.withLock {
+            syncActiveLocked()
+            // No rules stays no rules: the defaults are only for a table never filled.
+            DataStore.rulesFirstCreate = true
+            applyLive(JSONObject().put("rules", JSONArray()), includeSettings = false)
+            activeId = 0L
+        }
+    }
+
+    // Rules in use that no profile holds would be lost on a switch, so they become a rules-only
+    // profile of the user's own first. Settings stay where they are, as they do for a subscription's rules.
+    private suspend fun keepOwnLocked() {
+        val active = list().firstOrNull { it.id == activeId }
+        if (active != null) {
+            if (active.source.isEmpty()) ownId = active.id
+            return
+        }
+        val content = captureLive().apply { remove("settings") }
+        val base = app.getString(R.string.route_rules_mine)
+        ownId = mutate { profiles ->
+            val names = profiles.map { it.name }.toSet()
+            val name = generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base $it" }.first { it !in names }
+            Profile((profiles.maxOfOrNull { it.id } ?: 0L) + 1, name, content).also { profiles += it }.id
         }
     }
 
@@ -213,6 +252,8 @@ object RoutingProfiles {
     fun delete(id: Long) {
         mutate { profiles -> profiles.removeAll { it.id == id } }
         if (activeId == id) activeId = 0L
+        // Ids are given again after a delete, and My rules must not become another profile.
+        if (ownId == id) ownId = 0L
     }
 
     fun subscriptionSource(groupId: Long) = "subscription:$groupId"

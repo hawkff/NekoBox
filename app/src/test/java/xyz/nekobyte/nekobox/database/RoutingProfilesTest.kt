@@ -30,6 +30,43 @@ class RoutingProfilesTest {
         ConfigBuilderTestEnv.reset()
         DataStore.configurationStore.remove(Key.ROUTING_PROFILES)
         DataStore.configurationStore.remove(Key.ROUTING_PROFILE_ACTIVE)
+        DataStore.configurationStore.remove(Key.ROUTING_PROFILE_OWN)
+    }
+
+    @Test
+    fun switchingAwayFromRulesNoProfileHoldsKeepsThemAsMyRules() = offMain {
+        DataStore.remoteDns = "https://mine.example/dns-query"
+        ProfileDatabase.rulesDao.insert(listOf(RuleEntity(name = "mine", domains = "mine.example", outbound = -1)))
+        val theirs = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = "theirs", domains = "theirs.example", outbound = -2)))
+        val provider = RoutingProfiles.store(RoutingProfiles.Profile(0L, "Provider", JSONObject().put("rules", theirs), RoutingProfiles.subscriptionSource(7L)))
+
+        RoutingProfiles.switchTo(provider.id)
+        assertEquals(listOf("theirs"), ProfileDatabase.rulesDao.allRules().map { it.name })
+        val own = checkNotNull(RoutingProfiles.ownProfile())
+        assertEquals("My rules", own.name)
+        // Rules only: switching back leaves the settings as they are by then.
+        assertFalse(own.content.has("settings"))
+
+        DataStore.remoteDns = "https://changed.example/dns-query"
+        RoutingProfiles.switchToOwn()
+        assertEquals(own.id, RoutingProfiles.activeId)
+        assertEquals(listOf("mine"), ProfileDatabase.rulesDao.allRules().map { it.name })
+        assertEquals("https://changed.example/dns-query", DataStore.remoteDns)
+
+        // Leaving My rules again keeps the same profile instead of adding a copy.
+        RoutingProfiles.switchTo(provider.id)
+        assertEquals(own.id, RoutingProfiles.ownProfile()?.id)
+        assertEquals(2, RoutingProfiles.list().size)
+
+        // With My rules deleted there is nothing to go back to but no rules, even once its id is given again.
+        RoutingProfiles.delete(own.id)
+        assertEquals(own.id, RoutingProfiles.store(RoutingProfiles.Profile(0L, "Imported", JSONObject().put("rules", JSONArray()))).id)
+        assertNull(RoutingProfiles.ownProfile())
+        DataStore.rulesFirstCreate = false
+        RoutingProfiles.switchToOwn()
+        assertEquals(0L, RoutingProfiles.activeId)
+        assertTrue(ProfileManager.getRules().isEmpty())
+        assertEquals(listOf("theirs"), BackupFormatV2.decodeRules(RoutingProfiles.list().single { it.id == provider.id }.content.getJSONArray("rules")).map { it.name })
     }
 
     @Test
