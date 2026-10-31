@@ -29,6 +29,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.Logs
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -334,6 +335,13 @@ private class LiveGlass private constructor(private val host: View, private val 
     private val node = RenderNode("glass")
     private val blur = res.getDimension(R.dimen.glass_blur)
 
+    // Everything the glass shows is frosted, so the copy of the content is drawn and blurred at a
+    // [FROST] of the size, a sixteenth of the pixels, and the shader reads it at full size: the rims
+    // stay sharp and the frost looks the same.
+    private val frost = RenderNode("glass frost").apply {
+        setRenderEffect(RenderEffect.createBlurEffect(blur * FROST, blur * FROST, Shader.TileMode.CLAMP))
+    }
+
     // The frost and the bend reach past the panes, so the copy covers that much more.
     private val margin = blur + res.getDimension(R.dimen.glass_refraction)
     private val hostInWindow = IntArray(2)
@@ -369,13 +377,21 @@ private class LiveGlass private constructor(private val host: View, private val 
         val width = (min(area.right + margin, (root.width - hostInWindow[0]).toFloat()) - left).roundToInt()
         val height = (min(area.bottom + margin, (root.height - hostInWindow[1]).toFloat()) - top).roundToInt()
         if (width <= 0 || height <= 0) return false
+        val frostWidth = ceil(width * FROST).toInt()
+        val frostHeight = ceil(height * FROST).toInt()
+        frost.setPosition(0, 0, frostWidth, frostHeight)
+        val copy = frost.beginRecording(frostWidth, frostHeight)
+        copy.scale(FROST, FROST)
+        copy.translate(-hostInWindow[0] - left, -hostInWindow[1] - top)
+        // The window's canvas goes under the content, so the glass hides what it covers instead of showing it sharp.
+        root.background?.draw(copy)
+        copy.translate(backdropInWindow[0].toFloat(), backdropInWindow[1].toFloat())
+        copy.drawRenderNode(content)
+        frost.endRecording()
         node.setPosition(0, 0, width, height)
         val recording = node.beginRecording(width, height)
-        recording.translate(-hostInWindow[0] - left, -hostInWindow[1] - top)
-        // The window's canvas goes under the content, so the glass hides what it covers instead of showing it sharp.
-        root.background?.draw(recording)
-        recording.translate(backdropInWindow[0].toFloat(), backdropInWindow[1].toFloat())
-        recording.drawRenderNode(content)
+        recording.scale(1 / FROST, 1 / FROST)
+        recording.drawRenderNode(frost)
         node.endRecording()
 
         panes.fill(0f)
@@ -405,12 +421,7 @@ private class LiveGlass private constructor(private val host: View, private val 
             shader.setFloatUniform("paneCount", count.toFloat())
             shader.setFloatUniform("band", band)
             shader.setColorUniform("canvasColor", canvasColor)
-            node.setRenderEffect(
-                RenderEffect.createChainEffect(
-                    RenderEffect.createRuntimeShaderEffect(shader, "content"),
-                    RenderEffect.createBlurEffect(blur, blur, Shader.TileMode.CLAMP),
-                ),
-            )
+            node.setRenderEffect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
             effectSet = true
         }
         canvas.withTranslation(left, top) { drawRenderNode(node) }
@@ -426,6 +437,9 @@ private class LiveGlass private constructor(private val host: View, private val 
 
     companion object {
         const val MAX_PANES = 4
+
+        /** The scale of the frosted copy: a 12 dp blur stays about 8 px wide there on a 440 dpi screen. */
+        const val FROST = 0.25f
 
         fun create(host: View, backdrop: GlassBackdrop, res: Resources): LiveGlass? = try {
             LiveGlass(
