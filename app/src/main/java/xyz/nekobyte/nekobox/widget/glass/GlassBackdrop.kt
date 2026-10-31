@@ -34,13 +34,19 @@ class GlassBackdrop(val view: ViewGroup) {
     var changes = 0L
         private set
 
+    /**
+     * Draws the content into a layer: the screen and every pane's frost then use the drawn texture instead of
+     * drawing the content again. For the innermost backdrop only; one around it reuses its texture.
+     */
+    var layered = false
+
     fun dispatchDraw(canvas: Canvas, drawChildren: (Canvas) -> Unit) {
         val recorder = recorder
         if (Build.VERSION.SDK_INT < 31 || recorder == null || !Glass.enabled || !canvas.isHardwareAccelerated || view.width == 0 || view.height == 0) {
             drawChildren(canvas)
         } else {
             changes++
-            recorder.draw(canvas, view, drawChildren)
+            recorder.draw(canvas, view, layered, drawChildren)
         }
     }
 
@@ -65,7 +71,8 @@ class GlassBackdrop(val view: ViewGroup) {
     private class Recorder {
         val node = RenderNode("glass backdrop")
 
-        fun draw(canvas: Canvas, view: View, drawChildren: (Canvas) -> Unit) {
+        fun draw(canvas: Canvas, view: View, layered: Boolean, drawChildren: (Canvas) -> Unit) {
+            node.setUseCompositingLayer(layered, null)
             node.setPosition(0, 0, view.width, view.height)
             drawChildren(node.beginRecording(view.width, view.height))
             node.endRecording()
