@@ -117,15 +117,17 @@ class BackupRestoreCoordinatorTest {
     }
 
     @Test
-    fun oneIdentityListedTwiceFailsBeforeAnyWrite() = runTest {
-        // Two rules with one id decode fine but fail on insert, after the profiles were already replaced.
+    fun aRepeatedOrMissingIdFailsBeforeAnyWrite() = runTest {
+        // Both decode fine but can fail on insert, after the profiles were already replaced.
         for (section in listOf("profiles", "groups", "rules")) {
-            val operations = FakeOperations()
-            val content = backup(BackupFormatV2.VERSION).apply {
-                getJSONArray(section).let { it.put(it.getJSONObject(0)) }
+            for (missing in listOf(false, true)) {
+                val operations = FakeOperations()
+                val content = backup(BackupFormatV2.VERSION).apply {
+                    getJSONArray(section).let { if (missing) it.getJSONObject(0).put("id", 0) else it.put(it.getJSONObject(0)) }
+                }
+                assertNotNull(section, runCatching { restoreBackup(content, true, true, true, operations) }.exceptionOrNull())
+                assertEquals(section, emptyList<String>(), operations.calls)
             }
-            assertNotNull(section, runCatching { restoreBackup(content, true, true, true, operations) }.exceptionOrNull())
-            assertEquals(section, emptyList<String>(), operations.calls)
         }
     }
 
