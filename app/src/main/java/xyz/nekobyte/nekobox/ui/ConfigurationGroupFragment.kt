@@ -1409,7 +1409,8 @@ class ConfigurationGroupFragment : Fragment() {
             binding.chevron.setImageResource(if (row.folded) R.drawable.ic_expand_more else R.drawable.ic_expand_less)
             binding.root.contentDescription = listOfNotNull(
                 row.spoken,
-                context.resources.getQuantityString(R.plurals.group_profiles, row.count, row.count),
+                // Mullvad's list is proxies; sections elsewhere hold profiles of any kind.
+                context.resources.getQuantityString(if (row.tree) R.plurals.proxies_found else R.plurals.group_profiles, row.count, row.count),
                 context.getString(R.string.proxies_answered_spoken, row.answered, row.count).takeIf { row.tree && row.answered >= 0 },
                 context.getString(R.string.proxies_fastest_spoken, row.best).takeIf { row.tree && row.answered > 0 },
                 context.getString(R.string.proxies_holds_selected).takeIf { row.tree && row.holdsSelected },

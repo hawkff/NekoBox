@@ -176,16 +176,27 @@ class ProxiesScreenDeviceTest {
                 screen.groupPager.setCurrentItem(screen.adapter.groupList.indexOfFirst { it.id == list }, false)
             }
             settle()
-            fun texts() = allTexts(screen.getCurrentGroupFragment()!!.configurationListView)
+            fun list() = screen.getCurrentGroupFragment()!!.configurationListView
+            fun texts(): List<String> {
+                lateinit var texts: List<String>
+                instrumentation.runOnMainSync { texts = allTexts(list()) }
+                return texts
+            }
             fun tap(title: String) {
-                var took = 0L
+                var before = 0
+                val started = SystemClock.uptimeMillis()
                 instrumentation.runOnMainSync {
-                    val header = headerView(screen.getCurrentGroupFragment()!!.configurationListView, title) ?: error("no header $title in ${texts()}")
-                    val started = SystemClock.uptimeMillis()
-                    header.performClick()
-                    took = SystemClock.uptimeMillis() - started
+                    before = list().adapter!!.itemCount
+                    (headerView(list(), title) ?: error("no header $title in ${allTexts(list())}")).performClick()
                 }
-                assertTrue("folding $title took $took ms", took < 300)
+                // The whole fold: its click, the diff behind it, and the layout that shows its rows.
+                var done = false
+                while (!done && SystemClock.uptimeMillis() - started < 5_000) {
+                    SystemClock.sleep(5)
+                    instrumentation.runOnMainSync { done = list().adapter!!.itemCount != before && !list().hasPendingAdapterUpdates() && !list().isLayoutRequested }
+                }
+                val took = SystemClock.uptimeMillis() - started
+                assertTrue("folding $title took $took ms", done && took < 500)
                 settle()
             }
             // Countries start folded.
