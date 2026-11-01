@@ -358,11 +358,13 @@ class RouteFragment :
         tabs.getTabAt(sets.indexOfFirst { it.id == listedSet })?.takeIf { !it.isSelected }?.select()
         val header = binding.header
         val name = sets.firstOrNull { it.id == listedSet }?.name
+        val usedName = sets.firstOrNull { it.id == usedSet }?.name
         header.rulesNotice.isVisible = !editable
         header.useRules.isVisible = !live
         header.rulesNoticeText.text = when {
-            listedSet == 0L -> getString(R.string.route_rules_mine_unused, sets.firstOrNull { it.id == usedSet }?.name)
+            listedSet == 0L -> getString(R.string.route_rules_mine_unused, usedName)
             live -> getString(R.string.route_rules_from_used, name)
+            usedSet != 0L -> getString(R.string.route_rules_from_unused_other, name, usedName)
             else -> getString(R.string.route_rules_from_unused, name)
         }
         // A subscription's tab also says that its servers keep rules of their own, which no set here changes.

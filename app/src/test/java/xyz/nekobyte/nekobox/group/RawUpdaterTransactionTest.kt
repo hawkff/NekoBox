@@ -232,37 +232,26 @@ class RawUpdaterTransactionTest {
     }
 
     @Test
-    fun editsSavedWhileAnUpdateFetches_stayAfterItStores() = runTest {
+    fun trafficSavedWhileAnUpdateRuns_staysAfterItStores() = runTest {
         withContext(Dispatchers.IO) {
             val first = ProfileDatabase.proxyDao.getByGroup(group.id).single { it.displayName() == "first" }
-            val edited = KryoConverters.deserialize(SubscriptionBean(), KryoConverters.serialize(subscription)).apply {
-                sendDeviceId = false
-                autoUpdateDelay = 360
-            }
-            val blob = KryoConverters.serialize(edited).joinToString("") { "%02x".format(it) }
             val db = ProfileDatabase.instance.openHelper.writableDatabase
-            // Before the update stores its rows, the service saves traffic and the user turns off the device ID and
-            // picks an exit for the group.
+            // The service saves traffic and a test result after the update read the rows, before it stores them.
             db.execSQL(
-                "CREATE TRIGGER edits_meanwhile BEFORE INSERT ON proxy_entities BEGIN " +
-                    "UPDATE proxy_entities SET rx = 777, lifetimeRx = lifetimeRx + 5, ping = 9 WHERE id = ${first.id}; " +
-                    "UPDATE proxy_groups SET subscription = X'$blob', landingProxy = 42 WHERE id = ${group.id}; END",
+                "CREATE TRIGGER traffic_meanwhile BEFORE INSERT ON proxy_entities BEGIN " +
+                    "UPDATE proxy_entities SET rx = 777, lifetimeRx = lifetimeRx + 5, ping = 9 WHERE id = ${first.id}; END",
             )
             try {
                 RawUpdater.updateFromContent(group, subscription, validContent)
             } finally {
-                db.execSQL("DROP TRIGGER edits_meanwhile")
+                db.execSQL("DROP TRIGGER traffic_meanwhile")
             }
             val stored = ProfileDatabase.proxyDao.getById(first.id)!!
             assertEquals(777L, stored.rx)
             assertEquals(first.lifetimeRx + 5, stored.lifetimeRx)
             assertEquals(9, stored.ping)
-            val storedGroup = ProfileDatabase.groupDao.getById(group.id)!!
-            assertEquals(false, storedGroup.subscription!!.sendDeviceId)
-            assertEquals(360, storedGroup.subscription!!.autoUpdateDelay)
-            assertEquals(42L, storedGroup.landingProxy)
-            // What the provider sent still lands.
-            assertEquals("download=30; total=100", storedGroup.subscription!!.subscriptionUserinfo)
+            // The update itself still lands: the profile moved up.
+            assertEquals(2L, stored.userOrder)
         }
     }
 

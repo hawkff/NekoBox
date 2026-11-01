@@ -8,6 +8,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
@@ -95,6 +96,27 @@ class ChainProbeResultsTest {
                 assertEquals(3, ProfileDatabase.proxyDao.getById(root.id)!!.status)
             }
         }
+    }
+
+    @Test
+    fun aMembersListFirstHopChangeDiscardsResults() = ConfigBuilderTestEnv.io {
+        // The chain's second member comes from a list of proxies, so it goes through the list's first hop.
+        val list = ProfileDatabase.groupDao.createGroup(ProxyGroup(type = GroupType.PROXIES, frontProxy = proxy().id))
+        val member = ProxyEntity(groupId = list).putBean(
+            SOCKSBean().apply {
+                serverAddress = "relay.example"
+                serverPort = 1080
+                initializeDefaultValues()
+            },
+        ).also { it.id = ProfileDatabase.proxyDao.addProxy(it) }
+        val root = chain(proxy().id, member.id)
+        val result = prepared(root)
+        ProfileDatabase.groupDao.getById(list)!!.also {
+            it.frontProxy = proxy().id
+            ProfileDatabase.groupDao.updateGroup(it)
+        }
+        save(result)
+        assertEquals(3, ProfileDatabase.proxyDao.getById(root.id)!!.status)
     }
 
     @Test

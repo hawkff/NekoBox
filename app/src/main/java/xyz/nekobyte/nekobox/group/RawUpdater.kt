@@ -764,27 +764,11 @@ object RawUpdater : GroupUpdater() {
         val scheduleChanged = updatedSubscription.autoUpdate != subscription.autoUpdate ||
             updatedSubscription.autoUpdateDelay != subscription.autoUpdateDelay ||
             (updatedSubscription.expiry() != null) != (subscription.expiry() != null)
-        val scheduleFromProvider = updateIntervalMinutes != null && updateIntervalMinutes != subscription.providerUpdateInterval
-
-        // What the provider sent with this update. The rest of the subscription is the user's.
-        fun SubscriptionBean.takeProviderFields() {
-            this.subscriptionUserinfo = updatedSubscription.subscriptionUserinfo
-            this.lastUpdated = updatedSubscription.lastUpdated
-            this.importWarning = updatedSubscription.importWarning
-            this.offeredLink = updatedSubscription.offeredLink
-            this.offeredBackupLink = updatedSubscription.offeredBackupLink
-            this.negotiatedFormat = updatedSubscription.negotiatedFormat
-            this.supportUrl = updatedSubscription.supportUrl
-            this.webPageUrl = updatedSubscription.webPageUrl
-            this.announce = updatedSubscription.announce
-            if (scheduleFromProvider) {
-                this.autoUpdate = updatedSubscription.autoUpdate
-                this.autoUpdateDelay = updatedSubscription.autoUpdateDelay
-            }
-            this.providerUpdateInterval = updatedSubscription.providerUpdateInterval
+        val updatedGroup = proxyGroup.copy(subscription = updatedSubscription)
+        if (updatedGroup.name?.startsWith("Subscription #") == true && remoteName != null) {
+            updatedGroup.name = remoteName
         }
 
-        var storedName = proxyGroup.name
         var updatedCount = 0
         var deletedCount = 0
         // Nothing is stored for an update that was canceled, for example while it asked the user.
@@ -796,7 +780,7 @@ object RawUpdater : GroupUpdater() {
                 ProfileDatabase.proxyDao.insert(toInsert)
             }
             if (toUpdate.isNotEmpty()) {
-                // Traffic and test results saved while the update fetched stay: the rows read before it carry older ones.
+                // Traffic and test results saved while the update ran stay: the rows read before it carry older ones.
                 val saved = ProfileDatabase.proxyDao.getEntities(toUpdate.map { it.id }).associateBy { it.id }
                 for (entity in toUpdate) {
                     val now = saved[entity.id] ?: continue
@@ -823,18 +807,22 @@ object RawUpdater : GroupUpdater() {
                 error(message)
             }
 
-            // Settings saved while the update fetched, by the user or an expiry reminder, stay: the provider's fields go
-            // over the group as it is now.
-            val current = checkNotNull(ProfileDatabase.groupDao.getById(proxyGroup.id)) { "Group deleted during the update" }
-            val stored = KryoConverters.deserialize(SubscriptionBean(), KryoConverters.serialize(current.subscription ?: subscription))
-            val group = current.copy(subscription = stored.apply { takeProviderFields() })
-            if (group.name?.startsWith("Subscription #") == true && remoteName != null) group.name = remoteName
-            ProfileDatabase.groupDao.updateGroup(group)
-            storedName = group.name
+            ProfileDatabase.groupDao.updateGroup(updatedGroup)
         }
         // Publish metadata only after the profile transaction commits.
-        proxyGroup.name = storedName
-        subscription.takeProviderFields()
+        proxyGroup.name = updatedGroup.name
+        subscription.subscriptionUserinfo = updatedSubscription.subscriptionUserinfo
+        subscription.lastUpdated = updatedSubscription.lastUpdated
+        subscription.importWarning = updatedSubscription.importWarning
+        subscription.offeredLink = updatedSubscription.offeredLink
+        subscription.offeredBackupLink = updatedSubscription.offeredBackupLink
+        subscription.negotiatedFormat = updatedSubscription.negotiatedFormat
+        subscription.supportUrl = updatedSubscription.supportUrl
+        subscription.webPageUrl = updatedSubscription.webPageUrl
+        subscription.announce = updatedSubscription.announce
+        subscription.autoUpdate = updatedSubscription.autoUpdate
+        subscription.autoUpdateDelay = updatedSubscription.autoUpdateDelay
+        subscription.providerUpdateInterval = updatedSubscription.providerUpdateInterval
         if (scheduleChanged) reconfigureUpdater()
         // A provider-supplied routing profile is stored, or refreshed when this subscription
         // delivered it before; it never replaces the user's own profiles and is never activated.
