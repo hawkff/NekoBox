@@ -168,6 +168,9 @@ fun View.crossFadeFrom(other: View) {
     other.animate().alpha(0F).setDuration(90).setInterpolator(EaseIn).withEndAction { other.visibility = View.GONE }.start()
 }
 
+/** The style a theme attribute such as textAppearanceTitleMedium points at, 0 when the theme sets none. */
+fun Context.resolveStyle(@AttrRes resId: Int): Int = TypedValue().also { theme.resolveAttribute(resId, it, true) }.resourceId
+
 fun Context.getColorAttr(@AttrRes resId: Int): Int {
     val tv = TypedValue()
     // resolveRefs = true follows ?attr chains (e.g. statusConnectingColor -> colorOnPrimary).

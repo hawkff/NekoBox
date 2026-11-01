@@ -26,4 +26,8 @@
     <dimen name="glass_edge_fade">24dp</dimen>
     <dimen name="glass_window_blur">28dp</dimen>
     <dimen name="glass_capsule_inset">12dp</dimen>
+    <!-- Mullvad's list: a city sits in under its country's name, past the flag, and a server's row starts under its city. -->
+    <dimen name="relay_level_indent">24dp</dimen>
+    <dimen name="relay_header_edge">12dp</dimen>
+    <dimen name="relay_row_indent">36dp</dimen>
 </resources>

@@ -153,7 +153,14 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     val serverAddresses: Map<String, String>
         get() {
             val raw = configurationStore.getString(Key.SERVER_ADDRESSES).orEmpty()
-            parsedServerAddresses.let { (from, addresses) -> if (from == raw) return addresses }
+            parsedServerAddresses.let { (from, addresses) ->
+                if (from === raw) return addresses
+                // A refreshed store hands out a new copy of the same text: compare it once, then keep that copy.
+                if (from == raw) {
+                    parsedServerAddresses = raw to addresses
+                    return addresses
+                }
+            }
             val addresses = runCatching {
                 JSONObject(raw).let { json -> json.keys().asSequence().mapNotNull { name -> json.optJSONObject(name)?.optString("address")?.ifEmpty { null }?.let { name to it } }.toMap() }
             }.getOrDefault(emptyMap())
@@ -161,7 +168,8 @@ object DataStore : OnPreferenceDataStoreChangeListener {
             return addresses
         }
 
-    // Rows read the map on every bind; it is parsed again only when the stored text changes.
+    // Rows read the map on every bind; it is parsed again only when the stored text changes. The text runs to tens of
+    // kilobytes, so a read compares it by identity, and by content only once per new copy.
     @Volatile
     private var parsedServerAddresses: Pair<String, Map<String, String>> = "" to emptyMap()
 
@@ -187,7 +195,13 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     val proxyExits: Map<Long, String>
         get() {
             val raw = configurationStore.getString(Key.PROXY_EXITS).orEmpty()
-            parsedProxyExits.let { (from, exits) -> if (from == raw) return exits }
+            parsedProxyExits.let { (from, exits) ->
+                if (from === raw) return exits
+                if (from == raw) {
+                    parsedProxyExits = raw to exits
+                    return exits
+                }
+            }
             val exits = runCatching {
                 JSONObject(raw).let { json -> json.keys().asSequence().mapNotNull { id -> id.toLongOrNull()?.let { it to json.optString(id) }?.takeIf { it.second.isNotEmpty() } }.toMap() }
             }.getOrDefault(emptyMap())

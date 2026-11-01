@@ -61,6 +61,14 @@ object MullvadRelays {
      */
     class ServerList(val relays: List<Relay>, val listed: Set<String>)
 
+    /** Where a proxy's server stands, from its host name: "se-sto-wg-socks5-001.relays.mullvad.net" is in se, sto, 001. */
+    class Place(val country: String, val city: String, val number: String)
+
+    private val PLACE = Regex("([a-z]{2})-([a-z]{2,4})-[a-z0-9-]*?(\\d+)\\.relays\\.mullvad\\.net")
+
+    /** The place of a proxy at [host], or null for a host that is not one of Mullvad's servers. */
+    fun place(host: String?): Place? = host?.let(PLACE::matchEntire)?.let { Place(it.groupValues[1], it.groupValues[2], it.groupValues[3]) }
+
     /** What a sync did: proxies added and removed, and proxies [moved] to their server's new port. */
     class Result(val list: ProxyGroup, val created: Boolean, val added: Int, val removed: Int, val moved: Int, val through: ProxyEntity?)
 

@@ -19,6 +19,9 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.Accessibilit
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.size
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePaddingRelative
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
@@ -49,6 +52,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileListBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileSectionBinding
 import xyz.nekobyte.nekobox.fmt.toUniversalLink
+import xyz.nekobyte.nekobox.group.MullvadRelays
 import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.FixedGridLayoutManager
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
@@ -61,6 +65,7 @@ import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.readableMessage
+import xyz.nekobyte.nekobox.ktx.resolveStyle
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
 import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
@@ -70,6 +75,7 @@ import xyz.nekobyte.nekobox.widget.QRCodeDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
 import java.util.Objects
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.set
 
@@ -83,14 +89,34 @@ private data class ProfileListSubmission(
     val sectionKeys: Map<Long, String> = emptyMap(),
     // The master order the list was built from.
     val master: List<Long> = emptyList(),
+    // The servers of Mullvad's tree on show, each with its label: one-line rows across the list.
+    val labels: Map<Long, String> = emptyMap(),
 )
 
-/** A section header in the list. */
-private class SectionRow(val key: String, val title: String, val count: Int, val folded: Boolean)
+/**
+ * A header in the list: a section of profiles whose names differ by a number, or a country ([level] 0) or city (1) of
+ * Mullvad's list ([tree]), which also says how many of its proxies [answered] a check (-1 before one) and the [best]
+ * latency, and whether it [holdsSelected] the selected proxy.
+ */
+private class SectionRow(
+    val key: String,
+    val title: String,
+    val count: Int,
+    val folded: Boolean,
+    val tree: Boolean = false,
+    val level: Int = 0,
+    val spoken: String = title,
+    val answered: Int = -1,
+    val best: Int = 0,
+    val holdsSelected: Boolean = false,
+) {
+    fun stamp() = Objects.hash(title, count, folded, tree, level, answered, best, holdsSelected)
+}
 
 // Header IDs count down from here, below every profile ID and RecyclerView's NO_ID.
 private const val SECTION_ID_BASE = -100L
 private const val SECTION_VIEW = 100
+private const val LINE_VIEW = 101
 
 // A row scrolls to the top of the list; the first of a section takes its header along.
 private fun withHeader(ids: List<Long>, index: Int) = if (index > 0 && ids[index - 1] < 0) index - 1 else index
@@ -320,9 +346,9 @@ class ConfigurationGroupFragment : Fragment() {
     private fun setupLayoutManager() {
         layoutManager = if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
             FixedGridLayoutManager(configurationListView, 2).apply {
-                // A section header spans both columns.
+                // A section header spans both columns, and so does each row of Mullvad's tree.
                 spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                    override fun getSpanSize(position: Int) = if (adapter?.isHeader(position) == true) spanCount else 1
+                    override fun getSpanSize(position: Int) = if (adapter?.isFullSpan(position) == true) spanCount else 1
                 }
             }
         } else {
@@ -434,6 +460,14 @@ class ConfigurationGroupFragment : Fragment() {
         private val configurationStamps = HashMap<Long, ProfileRowStamp>()
         private val sectionRows = HashMap<Long, SectionRow>()
         private val sectionKeys = HashMap<Long, String>()
+        private val lineLabels = HashMap<Long, String>()
+
+        // A header keeps its ID for its key, so a fold that opens rows above it does not make it a new item.
+        private val headerIds = HashMap<String, Long>()
+        private var nextHeaderId = SECTION_ID_BASE
+
+        // Where each host's server stands in Mullvad's list, read once per host.
+        private val places = HashMap<String, MullvadRelays.Place?>()
         private var displayedMaster: List<Long> = emptyList()
         private val displayPositions = HashMap<Long, Int>()
         private val masterIds = ArrayList<Long>()
@@ -465,7 +499,14 @@ class ConfigurationGroupFragment : Fragment() {
 
         // Keep this aligned with ConfigurationHolder.bind. TrafficData updates both the entities
         // and these cached stamps directly, without scheduling a list diff for every traffic tick.
-        private fun contentStamp(profile: ProxyEntity) = Objects.hash(
+        // A server of Mullvad's tree shows its label and its check alone.
+        private fun contentStamp(profile: ProxyEntity) = if (showsTree() && MullvadRelays.place(profile.requireBean().serverAddress) != null) {
+            Objects.hash(profile.displayName(), profile.ping, profile.status, profile.error)
+        } else {
+            fullStamp(profile)
+        }
+
+        private fun fullStamp(profile: ProxyEntity) = Objects.hash(
             profile.displayName(),
             profile.displayType(),
             profile.displayAddress(),
@@ -518,6 +559,8 @@ class ConfigurationGroupFragment : Fragment() {
             sectionRows.putAll(submission.sections)
             sectionKeys.clear()
             sectionKeys.putAll(submission.sectionKeys)
+            lineLabels.clear()
+            lineLabels.putAll(submission.labels)
             displayedMaster = submission.master
             pendingRemovalIds.removeAll { id -> id !in configurationList && id !in masterProfiles }
             rebuildDisplayPositions()
@@ -593,23 +636,41 @@ class ConfigurationGroupFragment : Fragment() {
         // Sections follow the order on show; a search lists its matches without them.
         private fun showsSections() = DataStore.profileSections && !isFavorites && filterQuery.isEmpty()
 
-        fun isHeader(position: Int) = (configurationIdList.getOrNull(position) ?: 0L) < 0
+        // Mullvad's list shows its servers by country and city, the way its servers stand, whatever the sections setting.
+        private fun showsTree() = !isFavorites && filterQuery.isEmpty() && MullvadRelays.isRelayList(proxyGroup)
 
-        /** [reloaded]: the list a reload just read, whose stamps came off the main thread a moment ago. */
-        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L, reloaded: Boolean = false) {
+        /** Whether the row at [position] spans the grid's columns: a header, or a server of Mullvad's tree. */
+        fun isFullSpan(position: Int) = configurationIdList.getOrNull(position)?.let { it < 0 || it in lineLabels } == true
+
+        private fun headerId(key: String) = headerIds.getOrPut(key) { nextHeaderId-- }
+
+        private fun placeOf(profile: ProxyEntity): MullvadRelays.Place? {
+            val host = profile.requireBean().serverAddress.orEmpty()
+            return if (host in places) places[host] else MullvadRelays.place(host).also { places[host] = it }
+        }
+
+        /**
+         * [reloaded]: the list a reload just read, whose stamps came off the main thread a moment ago. Without [restamp]
+         * (a fold), rows already on show keep their stamps: only rows come and go.
+         */
+        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L, reloaded: Boolean = false, restamp: Boolean = true) {
             if (disposed || dragInProgress) return
             val visible = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
             val profiles = masterProfiles.toMap()
-            val sections = if (showsSections()) ProfileSections.of(visible.map { profiles.getValue(it).displayName() }) else emptyList()
+            val tree = showsTree()
+            val sections = if (!tree && showsSections()) ProfileSections.of(visible.map { profiles.getValue(it).displayName() }) else emptyList()
             val rows = HashMap<Long, SectionRow>()
             val keys = HashMap<Long, String>()
+            val labels = HashMap<Long, String>()
             val folded = if (sections.isEmpty()) emptySet() else DataStore.foldedSections
-            val ids = if (sections.isEmpty()) {
+            val ids = if (tree) {
+                treeIds(visible, profiles, rows, labels)
+            } else if (sections.isEmpty()) {
                 visible
             } else {
                 buildList {
-                    sections.forEachIndexed { index, section ->
-                        val headerId = SECTION_ID_BASE - index
+                    sections.forEach { section ->
+                        val headerId = headerId(section.key)
                         val members = section.members.map(visible::get)
                         var isFolded = foldKey(section.key) in folded
                         // A jump to a profile opens its section, also when the jump came before the list loaded.
@@ -625,8 +686,8 @@ class ConfigurationGroupFragment : Fragment() {
                     }
                 }
             }
-            val stamps = buildDisplayStamps(ids, profiles, reuseKept = reloaded) + rows.mapValues { (_, row) ->
-                ProfileRowStamp(Objects.hash(row.title, row.count, row.folded), reserveMiddleRow = false, doubleColumn = false)
+            val stamps = buildDisplayStamps(ids, profiles, reuseKept = reloaded, restamp = restamp, labels = labels) + rows.mapValues { (_, row) ->
+                ProfileRowStamp(row.stamp(), reserveMiddleRow = false, doubleColumn = false)
             }
             submit(
                 ProfileListSubmission(
@@ -637,14 +698,62 @@ class ConfigurationGroupFragment : Fragment() {
                     sections = rows,
                     sectionKeys = keys,
                     master = masterIds.toList(),
+                    labels = labels,
                 ),
             )
         }
 
+        /**
+         * Mullvad's list as countries and cities: the headers into [rows], each server's label into [labels]. A fold the
+         * user made is kept as "key" and an opening as "+key"; without either, a header takes its default.
+         */
+        private fun treeIds(visible: List<Long>, profiles: Map<Long, ProxyEntity>, rows: MutableMap<Long, SectionRow>, labels: MutableMap<Long, String>): List<Long> {
+            // A jump to a proxy opens its country and city for good, also when it came before the list loaded.
+            profiles[pendingScrollId]?.takeIf { pendingScrollId in visible }?.let(::placeOf)?.let { place ->
+                val opened = listOf(place.country, "${place.country}-${place.city}")
+                DataStore.updateFoldedSections { folds -> folds - opened.map(::foldKey).toSet() + opened.map { foldKey("+$it") } }
+            }
+            val folds = DataStore.foldedSections
+            val host = parentFragment as? ConfigurationFragment
+            val selected = visible.firstOrNull { host?.isSelectedProfile(it) == true } ?: 0L
+            val servers = visible.map { id -> profiles.getValue(id).let { RelayTree.Server(id, placeOf(it), it.displayName(), it.status, it.ping) } }
+            val entries = RelayTree.build(servers, selected, { MullvadRelays.countryName(it) }, getString(R.string.profile_section_other)) { key, byDefault ->
+                when {
+                    foldKey("+$key") in folds -> true
+                    foldKey(key) in folds -> false
+                    else -> byDefault
+                }
+            }
+            return entries.map { entry ->
+                when (entry) {
+                    is RelayTree.Header -> headerId(entry.key).also { id ->
+                        rows[id] = SectionRow(
+                            entry.key, entry.title, entry.count, !entry.open,
+                            tree = true, level = entry.level, spoken = entry.spoken,
+                            answered = entry.answered, best = entry.best, holdsSelected = entry.holdsSelected,
+                        )
+                    }
+
+                    is RelayTree.Row -> entry.id.also { id -> entry.label?.let { labels[id] = it } }
+                }
+            }
+        }
+
         fun toggleSection(headerId: Long) {
-            val key = foldKey(sectionRows[headerId]?.key ?: return)
-            DataStore.updateFoldedSections { if (key in it) it - key else it + key }
-            submitMasterList()
+            val row = sectionRows[headerId] ?: return
+            val key = foldKey(row.key)
+            DataStore.updateFoldedSections { folds ->
+                if (row.tree) {
+                    // A header of the tree keeps the user's choice either way, as its default differs.
+                    val opened = foldKey("+${row.key}")
+                    folds - key - opened + if (row.folded) opened else key
+                } else if (key in folds) {
+                    folds - key
+                } else {
+                    folds + key
+                }
+            }
+            submitMasterList(restamp = false)
         }
 
         /** Shows the pending jump target: building the list opens its folded section. */
@@ -690,6 +799,8 @@ class ConfigurationGroupFragment : Fragment() {
             !masterUpdatePending &&
             !displayPending &&
             displayedMaster == masterIds &&
+            // Mullvad's list keeps the server list's order: each update puts it back.
+            !showsTree() &&
             // Sections stand in the master order, so only that order can be dragged into shape.
             (sectionRows.isEmpty() || proxyGroup.order == GroupOrder.ORIGIN)
 
@@ -739,36 +850,51 @@ class ConfigurationGroupFragment : Fragment() {
             profiles: Map<Long, ProxyEntity>,
             positions: Iterable<Int> = ids.indices,
             reuseKept: Boolean = false,
+            restamp: Boolean = true,
+            labels: Map<Long, String> = lineLabels,
         ): Map<Long, ProfileRowStamp> {
             // Right after a reload, a profile's kept stamp was made off the main thread a moment ago: reuse it rather
             // than stamp the whole list again on the main thread. Later the country or address a row shows can change
-            // without its profile changing, so every other list is stamped afresh.
-            val baseStamps = positions.associate { position ->
-                val id = ids[position]
+            // without its profile changing, so every other list is stamped afresh, except by a fold: it only adds and
+            // removes rows, so rows on show keep theirs and rows it opens take their kept ones.
+            fun base(id: Long): Int {
                 val profile = profiles[id]
-                id to (
-                    masterStamps[id]?.takeIf { reuseKept && profile != null && masterProfiles[id] === profile }
-                        ?: profile?.let(::profileStateStamp)
-                        ?: configurationStamps[id]?.content
-                        ?: masterStamps[id]
-                        ?: 0
-                    )
+                return masterStamps[id]?.takeIf { reuseKept && profile != null && masterProfiles[id] === profile }
+                    ?: (configurationStamps[id]?.content ?: masterStamps[id])?.takeIf { !restamp }
+                    ?: profile?.let(::profileStateStamp)
+                    ?: configurationStamps[id]?.content
+                    ?: masterStamps[id]
+                    ?: 0
             }
+            // A server of Mullvad's tree is a line of its own, outside the grid's pairs.
+            val (lines, cells) = positions.partition { ids[it] in labels }
+            val lineStamps = lines.associate { position ->
+                val id = ids[position]
+                id to ProfileRowStamp(Objects.hash(base(id), labels[id]), reserveMiddleRow = false, doubleColumn = false)
+            }
+            if (cells.isEmpty()) return lineStamps
+            val baseStamps = cells.associate { position -> ids[position] to base(ids[position]) }
             // Two columns ask each profile about its neighbor too: one answer per profile.
             val countryRows = HashMap<Long, Boolean>()
             val middleRows = HashMap<Long, Boolean>()
-            return buildProfileRowStamps(
+            return lineStamps + buildProfileRowStamps(
                 ids,
                 baseStamps,
                 displaySpanCount(),
-                positions,
+                cells,
                 hasCountryRow = { id -> countryRows.getOrPut(id) { profiles[id]?.let(::hasCountryRow) == true } },
             ) { id ->
                 middleRows.getOrPut(id) { profiles[id]?.let(::hasMiddleRow) == true }
             }
         }
 
-        override fun getItemViewType(position: Int) = if (configurationIdList[position] < 0) SECTION_VIEW else layoutMode
+        override fun getItemViewType(position: Int) = configurationIdList[position].let { id ->
+            when {
+                id < 0 -> SECTION_VIEW
+                id in lineLabels -> LINE_VIEW
+                else -> layoutMode
+            }
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inflater = LayoutInflater.from(parent.context)
@@ -777,6 +903,12 @@ class ConfigurationGroupFragment : Fragment() {
             if (viewType == SECTION_VIEW) {
                 val view = warmup?.take(R.layout.layout_profile_section) ?: inflater.inflate(R.layout.layout_profile_section, parent, false)
                 return SectionHolder(LayoutProfileSectionBinding.bind(view))
+            }
+            // A server of Mullvad's tree: the compact row on one line, set in under its city.
+            if (viewType == LINE_VIEW) {
+                val view = inflater.inflate(R.layout.layout_profile_compact, parent, false)
+                view.updateLayoutParams<ViewGroup.MarginLayoutParams> { marginStart = resources.getDimensionPixelSize(R.dimen.relay_row_indent) }
+                return ConfigurationHolder(LayoutProfileBinding.bind(view), GroupLayout.COMPACT, line = true)
             }
             // The compact row holds the card's views, so the card's binding reads it too.
             val layout = if (viewType == GroupLayout.COMPACT) R.layout.layout_profile_compact else R.layout.layout_profile
@@ -796,7 +928,7 @@ class ConfigurationGroupFragment : Fragment() {
             try {
                 val id = configurationIdList[position]
                 val rowStamp = configurationStamps[id] ?: return
-                holder.bind(getItemAt(position), rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow)
+                holder.bind(getItemAt(position), rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow, lineLabels[id])
             } catch (ignored: NullPointerException) { // when group deleted
             }
         }
@@ -1040,7 +1172,7 @@ class ConfigurationGroupFragment : Fragment() {
                 ?.let { configurationListView.getChildViewHolder(it) } as? ConfigurationHolder
                 ?: return
             if (holder.bindingAdapterPosition != position || !holder.isBoundTo(expectedId)) return
-            holder.bind(profile, rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow)
+            holder.bind(profile, rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow, lineLabels[expectedId])
         }
 
         private fun applyTrafficUpdates(updates: List<TrafficData>) {
@@ -1134,6 +1266,10 @@ class ConfigurationGroupFragment : Fragment() {
 
         suspend fun reloadProfiles() {
             val generation = reloadGeneration.incrementAndGet()
+            // A page restored from saved state lacks what a list keeps besides its name, Mullvad's server list among it.
+            if (!isFavorites) {
+                onDefaultDispatcher { ProfileDatabase.groupDao.getById(proxyGroup.id) }?.let { stored -> onMainDispatcher { if (!disposed) proxyGroup = stored } }
+            }
             val groupId = proxyGroup.id
             val order = proxyGroup.order
             val (newProfiles, newProfileIds, baseStamps) = onDefaultDispatcher {
@@ -1144,7 +1280,9 @@ class ConfigurationGroupFragment : Fragment() {
                 } else {
                     ProfileDatabase.proxyDao.getByGroup(groupId)
                 }
-                ServerCountries.lookUp(profiles.map(ProfileWords::serverIp))
+                // The countries of where checked proxies leave from too, so their rows have them on the first bind.
+                val exits = DataStore.proxyExits.let { known -> profiles.mapNotNull { known[it.id] } }
+                ServerCountries.lookUp(profiles.map(ProfileWords::serverIp) + exits)
                 profiles = when (order) {
                     GroupOrder.BY_NAME -> profiles.sortedBy { it.displayName() }
 
@@ -1189,6 +1327,9 @@ class ConfigurationGroupFragment : Fragment() {
     // Where a checked proxy left from, on the Proxies screen.
     private fun exitOf(profile: ProxyEntity) = DataStore.proxyExits[profile.id]?.takeIf { (parentFragment as? ConfigurationFragment)?.proxies == true }
 
+    // "exit 203.0.113.7", made once per address: rows ask on every bind and stamp, from more than one thread.
+    private val exitLabels = ConcurrentHashMap<String, String>()
+
     // The country under the name: of the address a checked proxy leaves from, else of the server's address.
     private fun rowCountry(profile: ProxyEntity): String? {
         val exit = exitOf(profile) ?: return ProfileWords.country(profile)
@@ -1197,29 +1338,55 @@ class ConfigurationGroupFragment : Fragment() {
 
     // The address under the name, when settings ask for it; a nameless profile already shows it as its name. A
     // checked proxy shows the address it leaves from instead.
-    private fun rowAddress(profile: ProxyEntity) = exitOf(profile)?.let { app.getString(R.string.proxies_exit, it) } ?: profile.displayAddress().takeIf {
+    private fun rowAddress(profile: ProxyEntity) = exitOf(profile)?.let { exit -> exitLabels.getOrPut(exit) { app.getString(R.string.proxies_exit, exit) } } ?: profile.displayAddress().takeIf {
         (parentFragment as? ConfigurationFragment)?.alwaysShowAddress == true && !profile.requireBean().name.isNullOrBlank()
     }
 
     // Under the name: the country of the server's address, and the address.
     private fun rowDetails(profile: ProxyEntity) = listOfNotNull(rowCountry(profile), rowAddress(profile)).joinToString(" · ")
 
-    /** A section's header: its title and size; a tap folds or unfolds it. */
+    /**
+     * A section's header: its title and size; a tap folds or unfolds it. In Mullvad's list it is a country or a city to
+     * open, set in by its level, with what a check found: the best latency, and how many answered when some did not.
+     */
     private inner class SectionHolder(private val binding: LayoutProfileSectionBinding) : RecyclerView.ViewHolder(binding.root) {
         private var headerId = 0L
+        private val context = binding.root.context
+        private val countryType = context.resolveStyle(com.google.android.material.R.attr.textAppearanceTitleMedium)
+        private val cityType = context.resolveStyle(com.google.android.material.R.attr.textAppearanceBodyLarge)
+        private val indent = context.resources.getDimensionPixelSize(R.dimen.relay_level_indent)
+        private val edge = context.resources.getDimensionPixelSize(R.dimen.relay_header_edge)
 
         init {
             binding.root.setOnClickListener { adapter?.toggleSection(headerId) }
             ViewCompat.setAccessibilityHeading(binding.root, true)
         }
 
+        // A country or a city is a row of its own, not a heading over cards: list type, even padding, set in by level.
+        private fun styleTreeRow(row: SectionRow) {
+            TextViewCompat.setTextAppearance(binding.title, if (row.level == 0) countryType else cityType)
+            binding.title.setTextColor(context.getColorAttr(if (row.holdsSelected) R.attr.primaryOrTextPrimary else android.R.attr.textColorPrimary))
+            binding.root.updatePaddingRelative(start = binding.root.paddingEnd + row.level * indent, top = edge, bottom = edge)
+            val answered = row.answered in 0 until row.count
+            binding.count.text = if (answered) context.getString(R.string.proxies_answered, row.answered, row.count) else row.count.toString()
+            binding.count.setTextColor(context.getColorAttr(if (row.answered == 0) R.attr.testFailColor else android.R.attr.textColorSecondary))
+            binding.best.isVisible = row.answered > 0
+            if (row.answered > 0) binding.best.text = context.getString(R.string.available, row.best)
+        }
+
         fun bind(id: Long, row: SectionRow) {
             headerId = id
-            val context = binding.root.context
             binding.title.text = row.title
             binding.count.text = row.count.toString()
+            if (row.tree) styleTreeRow(row)
             binding.chevron.setImageResource(if (row.folded) R.drawable.ic_expand_more else R.drawable.ic_expand_less)
-            binding.root.contentDescription = "${row.title}, " + context.resources.getQuantityString(R.plurals.group_profiles, row.count, row.count)
+            binding.root.contentDescription = listOfNotNull(
+                row.spoken,
+                context.resources.getQuantityString(R.plurals.group_profiles, row.count, row.count),
+                context.getString(R.string.proxies_answered_spoken, row.answered, row.count).takeIf { row.tree && row.answered >= 0 },
+                context.getString(R.string.proxies_fastest_spoken, row.best).takeIf { row.tree && row.answered > 0 },
+                context.getString(R.string.proxies_holds_selected).takeIf { row.tree && row.holdsSelected },
+            ).joinToString(", ")
             ViewCompat.setStateDescription(binding.root, context.getString(if (row.folded) R.string.group_collapsed else R.string.group_expanded))
             ViewCompat.replaceAccessibilityAction(
                 binding.root,
@@ -1230,7 +1397,8 @@ class ConfigurationGroupFragment : Fragment() {
         }
     }
 
-    inner class ConfigurationHolder(val binding: LayoutProfileBinding, private val layout: Int) : RecyclerView.ViewHolder(binding.root) {
+    /** A profile's row in [layout]; a [line] is a server of Mullvad's tree, its label and latency on one line. */
+    inner class ConfigurationHolder(val binding: LayoutProfileBinding, private val layout: Int, private val line: Boolean = false) : RecyclerView.ViewHolder(binding.root) {
 
         val view: View get() = binding.root
 
@@ -1450,7 +1618,8 @@ class ConfigurationGroupFragment : Fragment() {
             return TouchDelegate(bounds, profileStatus)
         }
 
-        fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean, reserveCountryRow: Boolean) {
+        /** [label] names a [line]: its server's number, or its own name when renamed. */
+        fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean, reserveCountryRow: Boolean, label: String? = null) {
             val pf = parentFragment as? ConfigurationFragment ?: return
 
             // A card shown again for the same profile changes in place: its selection and test result fade.
@@ -1458,12 +1627,14 @@ class ConfigurationGroupFragment : Fragment() {
             val shownStatus = profileStatus.text.toString()
             entity = proxyEntity
 
-            profileName.text = proxyEntity.displayName()
-            profileType.text = ProfileWords.connection(proxyEntity)
+            profileName.text = label ?: proxyEntity.displayName()
+            // A server of Mullvad's tree has its place in the headers above it and SOCKS5 like every other: one line.
+            profileType.isGone = line
+            if (!line) profileType.text = ProfileWords.connection(proxyEntity)
 
             val rx = proxyEntity.rx
             val tx = proxyEntity.tx
-            val showTraffic = rx + tx != 0L
+            val showTraffic = !line && rx + tx != 0L
             trafficText.isVisible = showTraffic
             if (showTraffic) {
                 trafficText.text = view.context.getString(
@@ -1489,8 +1660,8 @@ class ConfigurationGroupFragment : Fragment() {
                 TooltipCompat.setTooltipText(trafficText, null)
             }
 
-            val country = rowCountry(proxyEntity)
-            val address = rowAddress(proxyEntity)
+            val country = if (line) null else rowCountry(proxyEntity)
+            val address = if (line) null else rowAddress(proxyEntity)
             val details = listOfNotNull(country, address).joinToString(" · ")
             // Two columns give the country a row of its own, so the address keeps the card's width.
             val stacked = layout == GroupLayout.TWO_COLUMNS
@@ -1535,6 +1706,8 @@ class ConfigurationGroupFragment : Fragment() {
                 val msg = Protocols.genFriendlyMsg(err)
                 profileStatus.text = if (msg != err) msg else getString(R.string.unavailable)
             }
+            // A screen reader hears a line's whole name, the country and city it leaves to the headers included.
+            card.contentDescription = if (line) listOfNotNull(proxyEntity.displayName(), profileStatus.text?.toString()?.ifEmpty { null }).joinToString(", ") else null
             // Only a failed test has more to show, its error; the short line then answers a 48 dp tap.
             val failed = proxyEntity.status == 3
             profileStatus.isClickable = failed
