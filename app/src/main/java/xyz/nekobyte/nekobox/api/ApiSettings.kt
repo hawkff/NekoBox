@@ -10,6 +10,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.xmlpull.v1.XmlPullParser
 import xyz.nekobyte.nekobox.BootReceiver
+import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
@@ -59,7 +60,8 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         result[Key.BYPASS_MODE] = Setting("boolean", true)
         result[Key.INDIVIDUAL] = Setting("string", "")
         result[Key.GLOBAL_MODE] = Setting("boolean", false)
-        result[Key.GROUP_LAYOUT_MODE] = Setting("string", "0", listOf("0", "1"))
+        // Cards, two columns or the compact list; compact is what a new install shows.
+        result[Key.GROUP_LAYOUT_MODE] = Setting("string", GroupLayout.COMPACT.toString(), listOf(GroupLayout.CARDS, GroupLayout.TWO_COLUMNS, GroupLayout.COMPACT).map(Int::toString))
         result[Key.CONNECTION_TEST_TIMEOUT] = Setting("integer", 3000)
         result["connectionTestConcurrent"] = Setting("integer", 5)
         result[Key.LOG_BUF_SIZE] = Setting("integer", 0)

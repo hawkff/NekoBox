@@ -55,8 +55,6 @@
     <!-- Selected nav-drawer item color (fill tint + icon/text). Default primary;
          Dracula uses its accent (pink) to match the toggle-on color. -->
     <attr name="navSelectedColor" format="color" />
-    <!-- The drawer's item fill: a tint of navSelectedColor, or the solid accent on Black. -->
-    <attr name="navItemFill" format="reference|color" />
     <!-- Tonal "elevated surface" color for cards (route / group); each theme
          variant tints toward its own primary. -->
     <attr name="cardElevatedSurfaceColor" format="color" />

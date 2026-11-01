@@ -104,7 +104,7 @@ class MainActivity :
 
         binding = LayoutMainBinding.inflate(layoutInflater)
         binding.fab.initProgress(binding.fabProgress)
-        // One drawer for every theme: Black's solid item fill comes from the theme's navItemFill.
+        // One drawer for every theme. Black used a second one whose solid item fill hid the checked item's name.
         navigation = binding.navView
         navigation.setNavigationItemSelectedListener(this)
         // The drawer's items are built after start-up (see buildAhead), or as the drawer starts to open if sooner.
