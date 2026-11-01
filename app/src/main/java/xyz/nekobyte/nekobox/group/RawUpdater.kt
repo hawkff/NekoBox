@@ -780,6 +780,18 @@ object RawUpdater : GroupUpdater() {
                 ProfileDatabase.proxyDao.insert(toInsert)
             }
             if (toUpdate.isNotEmpty()) {
+                // Traffic and test results saved while the update ran stay: the rows read before it carry older ones.
+                val saved = ProfileDatabase.proxyDao.getEntities(toUpdate.map { it.id }).associateBy { it.id }
+                for (entity in toUpdate) {
+                    val now = saved[entity.id] ?: continue
+                    entity.tx = now.tx
+                    entity.rx = now.rx
+                    entity.lifetimeTx = now.lifetimeTx
+                    entity.lifetimeRx = now.lifetimeRx
+                    entity.status = now.status
+                    entity.ping = now.ping
+                    entity.error = now.error
+                }
                 updatedCount = ProfileDatabase.proxyDao.updateProxy(toUpdate)
             }
             if (toDelete.isNotEmpty()) {

@@ -7,7 +7,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import xyz.nekobyte.nekobox.ktx.MAX_BACKUP_BYTES
 import java.util.zip.ZipInputStream
 
 class BackupArchiveEncodingTest {
@@ -19,6 +21,16 @@ class BackupArchiveEncodingTest {
         val encoded = encodeBackupArchive(json, BackupArchiveFormat.JSON)
 
         assertArrayEquals(json.toByteArray(Charsets.UTF_8), encoded)
+    }
+
+    @Test
+    fun aBackupOverTheRestoreLimitIsRefusedInEitherFormat() {
+        // Two bytes a character in UTF-8: the limit counts bytes. The zipped copy is tiny, and still refused.
+        val atLimit = "é".repeat((MAX_BACKUP_BYTES / 2).toInt())
+        for (format in BackupArchiveFormat.entries) {
+            encodeBackupArchive(atLimit, format)
+            assertThrows(BackupTooLargeException::class.java) { encodeBackupArchive(atLimit + "a", format) }
+        }
     }
 
     @Test

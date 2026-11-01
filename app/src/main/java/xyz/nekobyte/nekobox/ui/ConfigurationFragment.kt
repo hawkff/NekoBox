@@ -1018,7 +1018,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
             }
             val previous = list.frontProxy
             GroupManager.updateGroup(list.apply { frontProxy = through?.id ?: -1L })
-            reloadIfRunningIn(listId)
+            // The list's proxies can sit anywhere on the running path, as a chain's member or another group's exit.
+            if (DataStore.serviceState.canStop) NekoBox.reloadService()
             onMainDispatcher {
                 val message = if (through == null) {
                     getString(R.string.proxies_now_direct, list.displayName())
@@ -1732,7 +1733,11 @@ open class ConfigurationFragment @JvmOverloads constructor(
                                     val (latency, trace) = urlTest.check(profile, EXIT_TRACE, result.prepareUrlTest())
                                     ConnectionProbes.traceAddress(trace)?.let { exit ->
                                         ServerCountries.lookUp(listOf(exit))
-                                        DataStore.rememberProxyExits(mapOf(profile.id to exit))
+                                        // An edit during the check forgot the old exit; an answer measured with the old settings
+                                        // stays forgotten. shortcut: an edit saved between this read and the write still gets
+                                        // it, upgrade if edits ever run unattended during checks.
+                                        val current = ProfileDatabase.proxyDao.getById(profile.id)
+                                        if (current != null && result.matches(current)) DataStore.rememberProxyExits(mapOf(profile.id to exit))
                                     }
                                     latency
                                 } else {

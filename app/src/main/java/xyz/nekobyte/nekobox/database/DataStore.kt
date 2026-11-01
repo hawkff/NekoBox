@@ -501,6 +501,10 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         get() = configurationStore.getString(Key.WEBDAV_PATH) ?: "NekoBox" // set default value
         set(value) = configurationStore.putString(Key.WEBDAV_PATH, value)
 
+    /** The WebDAV folder of backups, as path segments. An emptied path keeps the folder backups have used for it. */
+    val webdavFolder: List<String>
+        get() = (webdavPath?.trim('/')?.takeIf { it.isNotEmpty() } ?: "Nekobox").split('/').filter { it.isNotEmpty() }
+
     var globalMode by configurationStore.boolean(Key.GLOBAL_MODE)
 
     override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {

@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.database
 
 import android.database.sqlite.SQLiteCantOpenDatabaseException
+import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.fmt.AbstractBean
@@ -36,12 +37,11 @@ internal class ProfileTestResult(val profile: ProxyEntity) {
             dependencies = null
             val pending = ArrayDeque<Long>()
             if (profile.type == ProxyEntity.TYPE_CHAIN) pending.addAll(profile.chainBean?.proxies.orEmpty())
-            groups = if (profile.type == ProxyEntity.TYPE_CONFIG && profile.configBean?.type == 0) {
-                emptyMap()
-            } else {
+            val watched = linkedMapOf<Long, Pair<Long, Long>?>()
+            if (profile.type != ProxyEntity.TYPE_CONFIG || profile.configBean?.type != 0) {
                 val group = ProfileDatabase.groupDao.getById(profile.groupId)
                 group?.let { pending.addAll(listOf(it.frontProxy, it.landingProxy).filter { id -> id > 0 }) }
-                mapOf(profile.groupId to group?.let { it.frontProxy to it.landingProxy })
+                watched[profile.groupId] = group?.let { it.frontProxy to it.landingProxy }
             }
             val captured = linkedMapOf<Long, Snapshot?>()
             val visited = hashSetOf(profile.id)
@@ -51,7 +51,14 @@ internal class ProfileTestResult(val profile: ProxyEntity) {
                 val hop = ProfileDatabase.proxyDao.getById(id)
                 captured[id] = hop?.let(::Snapshot)
                 if (hop?.type == ProxyEntity.TYPE_CHAIN) pending.addAll(hop.chainBean?.proxies.orEmpty())
+                // A hop from a list of proxies goes through the list's first hop, which can change under the probe too.
+                if (hop != null && hop.groupId !in watched) {
+                    val list = ProfileDatabase.groupDao.getById(hop.groupId)?.takeIf { it.type == GroupType.PROXIES } ?: continue
+                    watched[hop.groupId] = list.frontProxy to list.landingProxy
+                    if (list.frontProxy > 0) pending.add(list.frontProxy)
+                }
             }
+            groups = watched
             // Keep the snapshot if building fails, so an unchanged broken chain can retain its error.
             dependencies = captured
             buildConfig(profile, forTest = true)

@@ -160,6 +160,13 @@ internal suspend fun restoreBackup(
         null
     }
 
+    // A restore keeps the backup's ids. A repeated id, or a missing one the database would generate, could fail on
+    // insert after earlier sections were already replaced.
+    for ((section, ids) in listOf("profiles" to profiles?.map { it.id }, "groups" to groups?.map { it.id }, "rules" to rules?.map { it.id })) {
+        if (ids == null) continue
+        require(0L !in ids && ids.size == ids.toSet().size) { "The backup has $section without an id or with a repeated one" }
+    }
+
     if (profiles != null && groups != null) {
         operations.replaceProfiles(profiles, groups)
     }

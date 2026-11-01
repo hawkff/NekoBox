@@ -157,27 +157,14 @@ class WebDAVSettingsActivity : ThemedActivity() {
                     }
 
                     // if authentication succeeds, then test directory operations
-                    val path = (DataStore.webdavPath ?: "").trim('/')
-                    if (path.isNotBlank()) {
-                        val dirUrl = secureUrl.newBuilder().apply {
-                            path.split('/').filter { it.isNotEmpty() }.forEach { segment ->
-                                addPathSegment(segment)
-                            }
-                        }.build()
-
-                        val dirRequest = Request.Builder()
-                            .url(dirUrl)
-                            .method("MKCOL", null)
-                            .apply {
-                                val credentials = Credentials.basic(
-                                    DataStore.webdavUsername ?: "",
-                                    DataStore.webdavPassword ?: "",
-                                )
-                                header("Authorization", credentials)
-                            }
-                            .build()
-
-                        val dirResponse = client.newCall(dirRequest).execute()
+                    // The folder backups go to, as they use it.
+                    val dirUrl = secureUrl.newBuilder().apply { DataStore.webdavFolder.forEach { addPathSegment(it) } }.build()
+                    val dirRequest = Request.Builder()
+                        .url(dirUrl)
+                        .method("MKCOL", null)
+                        .header("Authorization", Credentials.basic(DataStore.webdavUsername ?: "", DataStore.webdavPassword ?: ""))
+                        .build()
+                    client.newCall(dirRequest).execute().use { dirResponse ->
                         if (!dirResponse.isSuccessful && dirResponse.code != 405) { // 405 means the directory already exists
                             throw Exception(getString(R.string.webdav_create_dir_failed))
                         }

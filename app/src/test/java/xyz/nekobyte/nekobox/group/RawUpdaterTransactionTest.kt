@@ -232,6 +232,30 @@ class RawUpdaterTransactionTest {
     }
 
     @Test
+    fun trafficSavedWhileAnUpdateRuns_staysAfterItStores() = runTest {
+        withContext(Dispatchers.IO) {
+            val first = ProfileDatabase.proxyDao.getByGroup(group.id).single { it.displayName() == "first" }
+            val db = ProfileDatabase.instance.openHelper.writableDatabase
+            // The service saves traffic and a test result after the update read the rows, before it stores them.
+            db.execSQL(
+                "CREATE TRIGGER traffic_meanwhile BEFORE INSERT ON proxy_entities BEGIN " +
+                    "UPDATE proxy_entities SET rx = 777, lifetimeRx = lifetimeRx + 5, ping = 9 WHERE id = ${first.id}; END",
+            )
+            try {
+                RawUpdater.updateFromContent(group, subscription, validContent)
+            } finally {
+                db.execSQL("DROP TRIGGER traffic_meanwhile")
+            }
+            val stored = ProfileDatabase.proxyDao.getById(first.id)!!
+            assertEquals(777L, stored.rx)
+            assertEquals(first.lifetimeRx + 5, stored.lifetimeRx)
+            assertEquals(9, stored.ping)
+            // The update itself still lands: the profile moved up.
+            assertEquals(2L, stored.userOrder)
+        }
+    }
+
+    @Test
     fun remarkChanges_preserveProfileIdsHistoryAndOverrides() = runTest {
         withContext(Dispatchers.IO) {
             val before = ProfileDatabase.proxyDao.getByGroup(group.id).associateBy { it.requireBean().serverAddress }

@@ -29,6 +29,7 @@ import xyz.nekobyte.nekobox.fmt.tailscale.profilesForBackup
 import xyz.nekobyte.nekobox.fmt.validateDnsRouting
 import xyz.nekobyte.nekobox.fmt.wireguard.checkWireGuardLimits
 import xyz.nekobyte.nekobox.group.GroupUpdater
+import xyz.nekobyte.nekobox.ktx.MAX_BACKUP_BYTES
 import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.ktx.readTextBounded
 import xyz.nekobyte.nekobox.ktx.readableMessage
@@ -232,7 +233,7 @@ internal class AppApi(
             requireApi(runCatching { UUID.fromString(id).toString() == id }.getOrDefault(false), "Invalid recovery id")
             val file = File(File(context.noBackupFilesDir, "api-recovery"), "$id.json")
             if (!file.isFile) reject("not_found", "Recovery backup does not exist")
-            JSONObject(file.inputStream().use { input -> input.readTextBounded(16L * 1024 * 1024) })
+            JSONObject(file.inputStream().use { input -> input.readTextBounded(MAX_BACKUP_BYTES) })
         }
         command("backup.restore", "Restore selected sections after saving a private recovery backup; requires a stopped service", "content profiles rules settings confirm") {
             it.confirm()
@@ -260,6 +261,8 @@ internal class AppApi(
             val recoveryId = UUID.randomUUID().toString()
             val recovery = File(directory, "$recoveryId.json")
             val bytes = backup().toString().toByteArray(Charsets.UTF_8)
+            // The safety copy has to be readable by backup.recovery before anything is replaced.
+            requireApi(bytes.size <= MAX_BACKUP_BYTES, "The current data is larger than a restore can read back; nothing was changed")
             recovery.outputStream().use { output ->
                 output.write(bytes)
                 output.fd.sync()

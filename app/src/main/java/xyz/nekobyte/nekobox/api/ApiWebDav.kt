@@ -9,6 +9,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.ktx.MAX_BACKUP_BYTES
 import xyz.nekobyte.nekobox.ktx.readBytesBounded
 import xyz.nekobyte.nekobox.ktx.readTextBounded
 import xyz.nekobyte.nekobox.ui.BackupArchiveFormat
@@ -27,7 +28,7 @@ internal class ApiWebDav {
         val url = WebDAVSecurity.requireSecureUrl(base)
         requireApi(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null, "Use a WebDAV URL without credentials, a query or a fragment")
         return url.newBuilder().apply {
-            DataStore.webdavPath.orEmpty().trim('/').split('/').filter { it.isNotEmpty() }.forEach { addPathSegment(it) }
+            DataStore.webdavFolder.forEach { addPathSegment(it) }
         }.build()
     }
 
@@ -66,11 +67,11 @@ internal class ApiWebDav {
         val url = directory().newBuilder().addPathSegment(name).build()
         return client.newCall(request(url).get().build()).execute().use { response ->
             if (!response.isSuccessful) reject("remote_error", "Could not download the WebDAV backup")
-            val bytes = response.body.byteStream().use { it.readBytesBounded() }
+            val bytes = response.body.byteStream().use { it.readBytesBounded(MAX_BACKUP_BYTES) }
             val content = if (name.endsWith(".zip")) {
                 ZipInputStream(bytes.inputStream()).use { zip ->
                     requireApi(zip.nextEntry?.name?.endsWith(".json") == true, "Invalid backup archive")
-                    zip.readTextBounded()
+                    zip.readTextBounded(MAX_BACKUP_BYTES)
                 }
             } else {
                 bytes.toString(Charsets.UTF_8)

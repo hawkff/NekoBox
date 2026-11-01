@@ -132,6 +132,7 @@ class RouteScreenDeviceTest {
 
                 // The subscription's rules read only, with the switch to them in place of the tester.
                 assertEquals(context.getString(R.string.route_rules_from_unused, group.displayName()), text(root, R.id.rules_notice_text))
+                assertEquals(context.getString(R.string.route_rules_server, group.displayName()), text(root, R.id.rules_server_note))
                 instrumentation.runOnMainSync {
                     assertEquals(View.VISIBLE, root.findViewById<View>(R.id.use_rules).visibility)
                     assertEquals(View.GONE, root.findViewById<View>(R.id.probe_layout).visibility)
@@ -155,7 +156,8 @@ class RouteScreenDeviceTest {
                     tabs.getTabAt((0 until tabs.tabCount).single { tabs.getTabAt(it)?.text.toString() == context.getString(R.string.route_rules_mine) })?.select()
                 }
                 settle()
-                assertEquals(context.getString(R.string.route_rules_mine_unused), text(root, R.id.rules_notice_text))
+                assertEquals(context.getString(R.string.route_rules_mine_unused, group.displayName()), text(root, R.id.rules_notice_text))
+                instrumentation.runOnMainSync { assertEquals(View.GONE, root.findViewById<View>(R.id.rules_server_note).visibility) }
                 instrumentation.runOnMainSync { root.findViewById<View>(R.id.use_rules).performClick() }
                 settle()
 
@@ -224,6 +226,7 @@ class RouteScreenDeviceTest {
                     assertEquals(rule.domains, sites.text.toString())
                     assertFalse(sites.onCheckIsTextEditor())
                     assertTrue(sites.isTextSelectable)
+                    assertFalse(sites.isSaveEnabled)
                     assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
                     assertFalse(root.findViewById<View>(R.id.apps).isClickable)
                     // Every app by name, as there is no list to open.
