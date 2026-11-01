@@ -14,6 +14,11 @@
     <string name="proxies_check">Проверить прокси</string>
     <string name="proxies_rename_list">Переименовать список</string>
     <string name="proxies_delete_list">Удалить список</string>
+    <string name="proxies_mullvad">Прокси Mullvad…</string>
+    <string name="proxies_mullvad_title">Прокси Mullvad</string>
+    <string name="proxies_mullvad_all">Все страны</string>
+    <string name="proxies_mullvad_loading">Загрузка списка серверов Mullvad…</string>
+    <string name="proxies_mullvad_tunnel">Они работают только внутри туннеля WireGuard от Mullvad</string>
     <plurals name="proxies_found">
         <item quantity="one">%d прокси</item>
         <item quantity="few">%d прокси</item>

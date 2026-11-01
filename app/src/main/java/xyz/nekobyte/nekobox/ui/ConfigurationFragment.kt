@@ -46,6 +46,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -86,6 +87,7 @@ import xyz.nekobyte.nekobox.fmt.internal.chainContains
 import xyz.nekobyte.nekobox.fmt.internal.chainHops
 import xyz.nekobyte.nekobox.group.GroupUpdater
 import xyz.nekobyte.nekobox.group.ImportPreview
+import xyz.nekobyte.nekobox.group.MullvadRelays
 import xyz.nekobyte.nekobox.group.RawUpdater
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.MAX_IMPORT_BYTES
@@ -381,7 +383,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
             } else {
                 menu.add(0, R.string.group_edit, 0, R.string.group_edit)
             }
-            if (group.type == GroupType.SUBSCRIPTION) menu.add(0, R.string.group_update, 1, R.string.group_update)
+            if (group.type == GroupType.SUBSCRIPTION || MullvadRelays.isRelayList(group)) menu.add(0, R.string.group_update, 1, R.string.group_update)
             // The default group keeps its name and stays, as on the Groups screen. An update under way
             // writes the group back when it ends, over a new name, so neither is offered meanwhile.
             if (!group.ungrouped && group.id !in GroupUpdater.updating) {
@@ -401,7 +403,11 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
                     R.string.proxies_connect_directly -> setThrough(group.id, -1L)
 
-                    R.string.group_update -> runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
+                    R.string.group_update -> if (MullvadRelays.isRelayList(group)) {
+                        syncMullvad(loadingMullvad()) { MullvadRelays.update(group.id) }
+                    } else {
+                        runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
+                    }
 
                     R.string.group_rename -> renameGroup(group)
 
@@ -872,9 +878,10 @@ open class ConfigurationFragment @JvmOverloads constructor(
             removeGroup(R.id.group_add_profile)
             removeGroup(R.id.group_add_group)
             add(R.id.group_add_profile, R.id.action_paste_proxies, 0, R.string.proxies_paste)
-            add(R.id.group_add_profile, R.id.action_new_socks, 1, R.string.proxies_new_socks)
-            add(R.id.group_add_profile, R.id.action_new_http, 2, R.string.proxies_new_http)
-            add(R.id.group_add_group, R.id.action_new_proxy_list, 3, R.string.proxies_new_list)
+            add(R.id.group_add_profile, R.id.action_mullvad_proxies, 1, R.string.proxies_mullvad)
+            add(R.id.group_add_profile, R.id.action_new_socks, 2, R.string.proxies_new_socks)
+            add(R.id.group_add_profile, R.id.action_new_http, 3, R.string.proxies_new_http)
+            add(R.id.group_add_group, R.id.action_new_proxy_list, 4, R.string.proxies_new_list)
         }
         menu.findItem(R.id.action_misc)?.subMenu?.apply {
             findItem(R.id.action_connection_url_test)?.setTitle(R.string.proxies_check)
@@ -991,6 +998,69 @@ open class ConfigurationFragment @JvmOverloads constructor(
         binding.listName.doAfterTextChanged { refresh() }
         binding.kind.setOnCheckedStateChangeListener { _, _ -> refresh() }
         dialog.show()
+    }
+
+    // Says that Mullvad's server list is loading until the answer replaces the message.
+    private fun loadingMullvad() = snackbar(R.string.proxies_mullvad_loading).setDuration(Snackbar.LENGTH_INDEFINITE).apply { show() }
+
+    /** The countries and cities of the list of Mullvad's proxies, picked from its server list; the first pick makes the list. */
+    private fun pickMullvadProxies() {
+        val loading = loadingMullvad()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val loaded = try {
+                withContext(Dispatchers.IO) {
+                    runCatching { MullvadRelays.parse(MullvadRelays.fetch()) to ProfileDatabase.groupDao.allGroups().firstOrNull(MullvadRelays::isRelayList) }
+                }
+            } finally {
+                loading.dismiss()
+            }
+            val (servers, list) = loaded.getOrElse {
+                Logs.w(it)
+                snackbar(it.readableMessage).show()
+                return@launch
+            }
+            if (servers.relays.isEmpty()) return@launch snackbar(R.string.no_proxies_found).show()
+            val saved = if (list == null) emptySet() else MullvadRelays.codes(list.subscription)
+            showMullvadPicker(requireContext(), servers.relays, saved, adding = list == null) { codes ->
+                syncMullvad(null) { MullvadRelays.sync(list?.id ?: 0L, servers, MullvadRelays.subscription(codes)) }
+            }
+        }
+    }
+
+    // Changes the list off the main thread and says what changed; [loading] gives way to the answer.
+    private fun syncMullvad(loading: Snackbar?, sync: suspend () -> MullvadRelays.Result) {
+        runOnDefaultDispatcher {
+            val result = runCatching { sync() }
+            onMainDispatcher {
+                loading?.dismiss()
+                if (!isAdded) return@onMainDispatcher
+                result.onFailure {
+                    Logs.w(it)
+                    snackbar(it.readableMessage).show()
+                }
+                result.onSuccess(::showMullvadResult)
+            }
+        }
+    }
+
+    // A new list also says what its proxies connect through, and offers to pick it when no Mullvad tunnel is stored.
+    private fun showMullvadResult(result: MullvadRelays.Result) {
+        val list = result.list.displayName()
+        if (!result.created) {
+            val changed = result.added + result.removed + result.moved
+            snackbar(if (changed == 0) getString(R.string.group_no_difference, list) else getString(R.string.group_updated, list, changed)).show()
+            return
+        }
+        val added = resources.getQuantityString(R.plurals.proxies_added, result.added, result.added, list)
+        val through = result.through
+        if (through != null) {
+            snackbar(added + "\n" + getString(R.string.proxies_now_through, list, through.displayName())).show()
+        } else {
+            snackbar(added + "\n" + getString(R.string.proxies_mullvad_tunnel)).setAction(R.string.proxies_connect_through) {
+                throughListId = result.list.id
+                selectThrough.launch(Intent(requireActivity(), ProfileSelectActivity::class.java))
+            }.show()
+        }
     }
 
     // The list whose first hop the picker is choosing, kept while it is open.
@@ -1220,6 +1290,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
             R.id.action_new_http -> newProfile(HttpSettingsActivity::class.java)
 
             R.id.action_paste_proxies -> pasteProxies()
+
+            R.id.action_mullvad_proxies -> pickMullvadProxies()
 
             R.id.action_new_proxy_list -> newProxyList()
 
