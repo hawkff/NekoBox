@@ -13,7 +13,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.bg.BaseService.State
 
-// What each state shows. The animations between them run on the device; the emulator records them.
+// What each state shows. The animations between them, and the sweep, run on the device; the emulator records them.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class OrbRingTest {
@@ -29,7 +29,7 @@ class OrbRingTest {
     }
 
     @Test
-    fun eachStateShowsAtOnceWithoutAnimation_connectingAsAStillArc() {
+    fun eachStateShowsAtOnceWhenTheChangeIsNotAnimated() {
         orb.show(State.Connecting, animate = false)
         shows(1f, 0f, 0f)
         orb.show(State.Connected, animate = false)

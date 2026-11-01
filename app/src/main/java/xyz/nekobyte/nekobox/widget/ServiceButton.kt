@@ -99,20 +99,25 @@ class ServiceButton @JvmOverloads constructor(
 
     override fun verifyDrawable(who: Drawable) = who == glass || super.verifyDrawable(who)
 
-    // The sweep runs only while the button shows: other screens and a scrolling list hide it.
+    // The sweep runs only while the button is on screen: other screens and a scrolling list hide it, and the app
+    // in the background hides its window.
+    private fun updateSweep() {
+        if (isAttachedToWindow && windowVisibility == VISIBLE && isOrWillBeShown) orb.resume() else orb.pause()
+    }
+
     override fun hide(listener: OnVisibilityChangedListener?) {
         super.hide(listener)
-        orb.pause()
+        updateSweep()
     }
 
     override fun show(listener: OnVisibilityChangedListener?) {
         super.show(listener)
-        orb.resume()
+        updateSweep()
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (isOrWillBeShown) orb.resume()
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        updateSweep()
     }
 
     override fun onDetachedFromWindow() {

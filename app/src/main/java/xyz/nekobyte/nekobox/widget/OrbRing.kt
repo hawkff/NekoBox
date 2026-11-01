@@ -33,7 +33,7 @@ import kotlin.math.sin
  */
 internal class OrbRing(private val view: View) {
     // Sizes are fractions of the orb's radius: the ring runs from INNER to OUTER, clear of the plane in the middle.
-    private class Mark(radius: Float, angle: Float, val kind: Int, val weight: Float, spin: Float) {
+    private class Mark(val radius: Float, angle: Float, val kind: Int, val weight: Float, spin: Float) {
         val angle = angle.mod(TAU)
         val x = cos(angle) * radius
         val y = sin(angle) * radius
@@ -184,7 +184,7 @@ internal class OrbRing(private val view: View) {
         val loop = loop ?: TimeAnimator().apply {
             setTimeListener { _, _, delta ->
                 sweep = (sweep + delta * TAU / SWEEP_TURN).mod(TAU)
-                orbit = (orbit + delta * TAU / ORBIT_TURN).mod(TAU)
+                orbit = (orbit + delta * TAU / ORBIT_TURN).mod(TAU / DIAMONDS)
                 view.invalidate()
             }
         }.also { loop = it }
@@ -236,7 +236,7 @@ internal class OrbRing(private val view: View) {
             }
         }
         for (k in 0 until DIAMONDS) {
-            val angle = k * TAU / DIAMONDS + 0.35f + orbit * 0.35f
+            val angle = k * TAU / DIAMONDS + 0.35f + orbit
             val amount = max(head, shown)
             fill.color = blend(offColor, litColor, amount, 0.43f + 0.57f * amount)
             val size = radius * DIAMOND
@@ -249,7 +249,9 @@ internal class OrbRing(private val view: View) {
 
     // One mark, [amount] of the way from grey to lit.
     private fun drawMark(canvas: Canvas, mark: Mark, radius: Float, drift: Float, amount: Float, scale: Float = 1f, alphaScale: Float = 1f, litOnly: Boolean = false) {
-        val alpha = if (litOnly) amount * (0.5f + 0.5f * mark.weight) else alphaScale * (0.42f * mark.weight + (0.08f + 0.5f * mark.weight) * amount)
+        // Drifting marks fade out as they reach the orb's edge, so none leaves it.
+        val edge = ((EDGE - mark.radius * drift) / (EDGE - OUTER)).coerceIn(0f, 1f)
+        val alpha = if (litOnly) amount * (0.5f + 0.5f * mark.weight) * edge else alphaScale * (0.42f * mark.weight + (0.08f + 0.5f * mark.weight) * amount)
         if (alpha <= 0.01f) return
         val color = blend(offColor, litColor, if (litOnly) 1f else min(1f, amount * 1.6f), alpha)
         val x = mark.x * radius * drift
@@ -293,6 +295,7 @@ internal class OrbRing(private val view: View) {
         const val DIAMONDS = 6
         const val INNER = 22f / 36
         const val OUTER = 33.5f / 36
+        const val EDGE = 34.6f / 36
         const val MIDDLE = 28f / 36
         const val ARM = 1.35f / 36
         const val STROKE = 0.75f / 36
@@ -308,7 +311,9 @@ internal class OrbRing(private val view: View) {
         const val STAR = 1
         const val DOT = 2
         const val SWEEP_TURN = 1100f
-        const val ORBIT_TURN = 3200f
+
+        // The diamonds go round about once in nine seconds; they repeat every sixth of a turn.
+        const val ORBIT_TURN = 9100f
         const val SWEEP_IN = 180L
         const val SWEEP_OUT = 220L
         const val FLOOD = 520L
