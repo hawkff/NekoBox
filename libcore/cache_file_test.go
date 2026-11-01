@@ -18,6 +18,8 @@ func TestCoresSideBySideOpenTheirOwnCacheFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		// Closed again below; Close is safe to repeat, and this covers a test that stops early.
+		t.Cleanup(func() { instance.Close() })
 		instances = append(instances, instance)
 		if err := instance.PreStart(); err != nil {
 			t.Fatal(err)
@@ -53,6 +55,7 @@ func TestACoreKeepsTheCacheFileItsConfigKeeps(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			t.Cleanup(func() { instance.Close() })
 			if err := instance.PreStart(); err != nil {
 				t.Fatal(err)
 			}
