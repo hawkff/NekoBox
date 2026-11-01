@@ -257,7 +257,7 @@ internal class OrbRing(private val view: View) {
         val rim = levels[RIM]
         if (rim > 0f) {
             stroke.strokeWidth = radius * RIM_WIDTH
-            stroke.color = ColorUtils.setAlphaComponent(ringColor, (0.8f * rim * 255).toInt())
+            stroke.color = ColorUtils.setAlphaComponent(ringColor, (RIM_ALPHA * rim * 255).toInt())
             canvas.drawCircle(cx, cy, radius - stroke.strokeWidth / 2, stroke)
         }
     }
@@ -314,6 +314,9 @@ internal class OrbRing(private val view: View) {
         private const val STROKE = 0.75f / 36
         private const val DOT_RADIUS = 0.6f / 36
         private const val RIM_WIDTH = 0.67f / 36
+
+        // How opaque a connected orb's rim is drawn.
+        const val RIM_ALPHA = 0.8f
         private const val PLUS = 0
         private const val STAR = 1
         private const val DOT = 2

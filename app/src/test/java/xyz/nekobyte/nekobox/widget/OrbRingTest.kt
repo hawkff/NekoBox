@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.view.View
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,8 +14,9 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.bg.BaseService.State
 
-// What each state shows. The animations between them, the turning disk and the twinkle run on the device; the
-// emulator records them.
+// What each state shows, and what a change under way does when the orb hides or its connection ends. The tests never
+// step frames: the animations themselves, the turning disk and the twinkle run on the device, and the emulator records
+// them.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class OrbRingTest {
@@ -36,6 +38,26 @@ class OrbRingTest {
         orb.show(State.Connected, animate = false)
         orb.show(State.Stopped, animate = false)
         shows(0f, 0f, 0f, 0f, 0f)
+    }
+
+    @Test
+    fun aHiddenOrbLandsAChangeUnderWay_andShowsLaterOnesAtOnce() {
+        orb.show(State.Connecting, animate = true)
+        orb.pause()
+        shows(1f, 0.35f, 0f, 0f, 1f)
+        orb.show(State.Connected, animate = true)
+        shows(1f, 1f, 1f, 1f, 0.15f)
+        // No burst plays where nobody sees it.
+        assertEquals(-1f, orb.burst, 0f)
+    }
+
+    @Test
+    fun aBurstEndsWithItsConnection() {
+        orb.show(State.Connecting, animate = true)
+        orb.show(State.Connected, animate = true)
+        assertTrue(orb.burst >= 0f)
+        orb.show(State.Stopping, animate = true)
+        assertEquals(-1f, orb.burst, 0f)
     }
 
     @Test

@@ -24,6 +24,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.widget.BlackHole
+import xyz.nekobyte.nekobox.widget.OrbRing
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
@@ -103,7 +104,10 @@ class ThemeSmokeTest {
                 check("protocolColor/surface", ctx.getColorAttr(R.attr.protocolColor), surface, 4.5)
                 // The ring lights in the blue of a dark theme, or the deeper blue of a light one, as ServiceButton picks.
                 val dark = ColorUtils.calculateLuminance(ctx.getColorAttr(android.R.attr.textColorPrimary)) > 0.5
-                check("orb ring/orb", if (dark) BlackHole.BLUE_MID else BlackHole.BLUE_EDGE, ctx.getColorAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh), 3.0)
+                val orb = ctx.getColorAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+                // The rim as drawn: that blue at its own alpha over the orb's fill.
+                val rim = ColorUtils.setAlphaComponent(if (dark) BlackHole.BLUE_MID else BlackHole.BLUE_EDGE, (OrbRing.RIM_ALPHA * 255).toInt())
+                check("orb rim/orb", ColorUtils.compositeColors(rim, orb), orb, 3.0)
                 // Checked filter chips: on-container text over the (possibly translucent) container.
                 val container = ColorUtils.compositeColors(
                     ctx.getColorAttr(com.google.android.material.R.attr.colorSecondaryContainer),
