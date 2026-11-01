@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!-- A profile in two short lines: the name, how it connects and its latency; then where the server is
      and the traffic through it, when there is any. The actions sit under ⋮. It holds every view of
-     layout_profile, the ones it leaves out gone, so LayoutProfileBinding reads both. -->
+     layout_profile, the ones it leaves out gone or never inflated, so LayoutProfileBinding reads both. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -121,29 +121,11 @@
             android:layout_height="wrap_content"
             android:visibility="gone" />
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/edit"
+        <ViewStub
+            android:id="@+id/actions"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:contentDescription="@string/edit"
-            android:visibility="gone"
-            app:srcCompat="@drawable/ic_edit" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/share"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/share"
-            android:visibility="gone"
-            app:srcCompat="@drawable/ic_share" />
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/remove"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/delete"
-            android:visibility="gone"
-            app:srcCompat="@drawable/ic_delete" />
+            android:layout="@layout/layout_profile_actions" />
 
     </LinearLayout>
 

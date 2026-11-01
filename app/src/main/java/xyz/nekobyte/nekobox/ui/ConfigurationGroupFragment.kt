@@ -44,6 +44,7 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.databinding.LayoutProfileActionsBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileListBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileSectionBinding
@@ -735,17 +736,30 @@ class ConfigurationGroupFragment : Fragment() {
             profiles: Map<Long, ProxyEntity>,
             positions: Iterable<Int> = ids.indices,
         ): Map<Long, ProfileRowStamp> {
+            // A profile's kept stamp came from its reload, off the main thread, and follows every change to it since;
+            // a copy it was not made for is stamped afresh.
             val baseStamps = positions.associate { position ->
                 val id = ids[position]
+                val profile = profiles[id]
                 id to (
-                    profiles[id]?.let(::profileStateStamp)
+                    masterStamps[id]?.takeIf { profile != null && masterProfiles[id] === profile }
+                        ?: profile?.let(::profileStateStamp)
                         ?: configurationStamps[id]?.content
                         ?: masterStamps[id]
                         ?: 0
                     )
             }
-            return buildProfileRowStamps(ids, baseStamps, displaySpanCount(), positions, hasCountryRow = { id -> profiles[id]?.let(::hasCountryRow) == true }) { id ->
-                profiles[id]?.let(::hasMiddleRow) == true
+            // Two columns ask each profile about its neighbor too: one answer per profile.
+            val countryRows = HashMap<Long, Boolean>()
+            val middleRows = HashMap<Long, Boolean>()
+            return buildProfileRowStamps(
+                ids,
+                baseStamps,
+                displaySpanCount(),
+                positions,
+                hasCountryRow = { id -> countryRows.getOrPut(id) { profiles[id]?.let(::hasCountryRow) == true } },
+            ) { id ->
+                middleRows.getOrPut(id) { profiles[id]?.let(::hasMiddleRow) == true }
             }
         }
 
@@ -1252,10 +1266,18 @@ class ConfigurationGroupFragment : Fragment() {
         val trafficText: TextView = binding.trafficText
         private val card = view as MaterialCardView
         private val highlight = CardHighlight(card)
-        val editButton: ImageView = binding.edit
+
+        // The one-column card shows its buttons; two columns, compact rows and the Proxies screen keep them under ⋮,
+        // so their cards never build them.
+        private val actions = if (layout == GroupLayout.CARDS && (parentFragment as? ConfigurationFragment)?.proxies != true) {
+            LayoutProfileActionsBinding.bind(binding.actions.inflate())
+        } else {
+            null
+        }
+        val editButton: ImageView? = actions?.edit
         val doubleColumnMenuButton: ImageView = binding.doubleColumnMenu
-        val shareLayout: ImageView = binding.share
-        val removeButton: ImageView = binding.remove
+        val shareLayout: ImageView? = actions?.share
+        val removeButton: ImageView? = actions?.remove
 
         init {
             view.setOnClickListener {
@@ -1271,10 +1293,10 @@ class ConfigurationGroupFragment : Fragment() {
                 if (profile.status == 3) alert(profile.error ?: "<?>").tryToShow()
             }
             profileStatus.isFocusable = false
-            editButton.setOnClickListener { openSettings(it, entity.id) }
-            removeButton.setOnClickListener { requestRemove(entity.id) }
+            editButton?.setOnClickListener { openSettings(it, entity.id) }
+            removeButton?.setOnClickListener { requestRemove(entity.id) }
             doubleColumnMenuButton.setOnClickListener { showDoubleColumnMenu(it, entity.id) }
-            shareLayout.setOnClickListener { showShareMenu(it, entity.id) }
+            shareLayout?.setOnClickListener { showShareMenu(it, entity.id) }
         }
 
         fun isBoundTo(profileId: Long) = ::entity.isInitialized && entity.id == profileId
@@ -1517,23 +1539,20 @@ class ConfigurationGroupFragment : Fragment() {
             }
 
             // Two columns and compact rows keep the actions under ⋮.
-            if (layout != GroupLayout.CARDS || pf.proxies) {
-                editButton.isGone = true
-                shareLayout.isGone = true
-                removeButton.isGone = true
+            if (actions == null) {
                 doubleColumnMenuButton.isVisible = true
             } else {
                 // A button a profile lacks keeps its slot, so the buttons line up down the list.
-                shareLayout.visibility = slot(select, proxyEntity.type != ProxyEntity.TYPE_CHAIN)
-                editButton.visibility = slot(select, proxyEntity.haveSettings())
-                removeButton.isGone = select
+                actions.share.visibility = slot(select, proxyEntity.type != ProxyEntity.TYPE_CHAIN)
+                actions.edit.visibility = slot(select, proxyEntity.haveSettings())
+                actions.remove.isGone = select
                 doubleColumnMenuButton.isGone = true
             }
 
             val selected = pf.isSelectedProfile(proxyEntity.id)
             val running = pf.isRunningProfile(proxyEntity.id)
-            editButton.isEnabled = !running
-            removeButton.isEnabled = !running
+            editButton?.isEnabled = !running
+            removeButton?.isEnabled = !running
             // Screen readers say "selected", and "Connecting…" while the service connects to this profile;
             // the outline is for the eye, and breathes until the connection is up.
             val connecting = pf.isConnectingProfile(proxyEntity.id)

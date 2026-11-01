@@ -25,6 +25,7 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.databinding.LayoutAddEntityBinding
+import xyz.nekobyte.nekobox.databinding.LayoutProfileActionsBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.internal.chainContains
@@ -293,8 +294,9 @@ class ChainSettingsActivity : ProfileSettingsActivity<ChainBean>(R.layout.layout
         val profileName = binding.profileName
         val profileType = binding.profileType
         val trafficText: TextView = binding.trafficText
-        val editButton = binding.edit
-        val shareLayout = binding.share
+        private val actions = LayoutProfileActionsBinding.bind(binding.actions.inflate())
+        val editButton = actions.edit
+        val shareLayout = actions.share
 
         fun bind(proxyEntity: ProxyEntity) {
             profileName.text = proxyEntity.displayName()

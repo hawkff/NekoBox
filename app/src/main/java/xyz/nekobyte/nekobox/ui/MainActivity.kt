@@ -96,6 +96,9 @@ class MainActivity :
         super.onCreate(savedInstanceState)
         // The render thread loads the first frame's GPU programs while the screen is being built.
         WarmUp.start(this)
+        // The first plural the process shows loads the locale's plural rules (~80 ms on a slow phone); Home's section
+        // headers would pay it in the frame that fills the list.
+        runOnDefaultDispatcher { resources.getQuantityString(R.plurals.group_profiles, 2, 2) }
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 

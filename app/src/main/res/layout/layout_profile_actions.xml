@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?><!-- The one-column card's buttons, inflated from its stub; two columns and compact rows keep them under ⋮. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/edit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/edit"
+        android:focusable="true"
+        android:padding="12dp"
+        app:srcCompat="@drawable/ic_edit" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/share"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/share"
+        android:focusable="true"
+        android:nextFocusLeft="@+id/container"
+        android:padding="12dp"
+        app:srcCompat="@drawable/ic_share" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/remove"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/delete"
+        android:focusable="true"
+        android:padding="12dp"
+        android:visibility="gone"
+        app:srcCompat="@drawable/ic_delete" />
+
+</LinearLayout>
