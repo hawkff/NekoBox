@@ -967,6 +967,7 @@
 <!-- Rule editor -->
 <string name="route_editor_new">Новое правило</string>
 <string name="route_editor_edit">Изменить правило</string>
+<string name="route_editor_view">Правило</string>
 <string name="route_editor_sentence">%1$s → %2$s</string>
 <string name="route_editor_order">Правила проверяются сверху вниз, и куда пойдёт трафик, решает первое сработавшее.</string>
 <string name="route_editor_name">Название</string>

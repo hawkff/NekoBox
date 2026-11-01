@@ -1010,6 +1010,7 @@
     <!-- Rule editor -->
     <string name="route_editor_new">New rule</string>
     <string name="route_editor_edit">Edit rule</string>
+    <string name="route_editor_view">Rule</string>
     <string name="route_editor_sentence">%1$s → %2$s</string>
     <string name="route_editor_order">Rules are checked from the top, and the first one that catches traffic decides where it goes.</string>
     <string name="route_editor_name">Name</string>

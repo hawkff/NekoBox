@@ -137,7 +137,8 @@ class RouteScreenDeviceTest {
                     assertEquals(View.GONE, root.findViewById<View>(R.id.probe_layout).visibility)
                     assertEquals(View.GONE, root.findViewById<View>(R.id.add).visibility)
                     val list = root.findViewById<RecyclerView>(R.id.route_list)
-                    assertFalse(list.children.single { names[5] in it.contentDescription?.toString().orEmpty() }.isClickable)
+                    // A rule that can't be edited still opens, to read.
+                    assertTrue(list.children.single { names[5] in it.contentDescription?.toString().orEmpty() }.isClickable)
                     root.findViewById<View>(R.id.use_rules).performClick()
                 }
                 settle()
@@ -200,6 +201,44 @@ class RouteScreenDeviceTest {
         assertEquals("example.net", made.domains)
         assertEquals(-2L, made.outbound)
         assertTrue(made.enabled)
+    }
+
+    @Test
+    fun aRuleShownToReadHasNoWayToChangeOrSaveIt() {
+        val before = RoutingProfiles.list().map { it.id }.toSet()
+        val label = context.packageManager.getApplicationLabel(context.applicationInfo).toString()
+        val rule = RuleEntity(name = names[5], enabled = true, domains = "domain:example.net\ndomain:example.org", packages = setOf(context.packageName), outbound = -2)
+        val rules = JSONArray().put(BackupFormatV2.encodeRule(RuleEntity(name = "first", domains = "first.example"))).put(BackupFormatV2.encodeRule(rule))
+        val provider = runBlocking { RoutingProfiles.store(RoutingProfiles.Profile(0L, "Provider", JSONObject().put("rules", rules), RoutingProfiles.subscriptionSource(Long.MAX_VALUE))) }
+        // A set not in use gives the rule by its place in the set and its hash; a stale place still finds it.
+        val intent = Intent(context, RouteSettingsActivity::class.java).putExtra(RouteSettingsActivity.EXTRA_READ_ONLY, true)
+            .putExtra(RouteSettingsActivity.EXTRA_RULE_SET, provider.id).putExtra(RouteSettingsActivity.EXTRA_RULE_INDEX, 0)
+            .putExtra(RouteSettingsActivity.EXTRA_RULE_HASH, RoutingProfiles.storedRules(provider.id)[1].hashCode())
+        try {
+            ActivityScenario.launch<RouteSettingsActivity>(intent).use { scenario ->
+                settle()
+                lateinit var root: View
+                scenario.onActivity { root = it.window.decorView }
+                instrumentation.runOnMainSync {
+                    val sites = root.findViewById<EditText>(R.id.sites)
+                    assertEquals(rule.domains, sites.text.toString())
+                    assertFalse(sites.onCheckIsTextEditor())
+                    assertTrue(sites.isTextSelectable)
+                    assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
+                    assertFalse(root.findViewById<View>(R.id.apps).isClickable)
+                    // Every app by name, as there is no list to open.
+                    assertEquals(label, root.findViewById<TextView>(R.id.apps_summary).text.toString())
+                    assertEquals(null, root.findViewById<View>(R.id.action_apply))
+                    root.findViewById<EditText>(R.id.try_probe).setText("www.example.net")
+                }
+                settle()
+                // Try it checks the rule shown: it catches the site for its app only.
+                assertEquals(context.getString(R.string.route_editor_try_maybe, label), text(root, R.id.try_result))
+            }
+        } finally {
+            RoutingProfiles.list().filter { it.id !in before }.forEach { RoutingProfiles.delete(it.id) }
+        }
+        assertFalse(ProfileDatabase.rulesDao.allRules().any { it.name == names[5] })
     }
 
     @Test
