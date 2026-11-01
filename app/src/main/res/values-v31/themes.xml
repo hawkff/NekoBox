@@ -23,8 +23,6 @@
         <item name="statusDetailColor">?attr/colorOnSurfaceVariant</item>
         <item name="speedTextColor">?attr/colorOnSurfaceVariant</item>
         <item name="testFailColor">?attr/colorError</item>
-        <item name="fabStoppedColor">?attr/colorOnPrimary</item>
-        <item name="fabConnectedColor">?attr/colorOnPrimary</item>
         <item name="navSelectedColor">?attr/colorPrimary</item>
     </style>
 

@@ -107,8 +107,6 @@
         <item name="speedTextColor">?attr/colorOnPrimary</item>
         <item name="testAvailableColor">@color/test_available</item>
         <item name="testFailColor">@color/test_fail</item>
-        <item name="fabStoppedColor">?attr/colorOnPrimary</item>
-        <item name="fabConnectedColor">?attr/statusConnectedColor</item>
         <item name="fabColorBackground">?colorPrimary</item>
         <item name="routeProxyColor">@color/color_route_proxy</item>
         <item name="routeDirectColor">?attr/testAvailableColor</item>
@@ -367,8 +365,6 @@
         <item name="testAvailableColor">@color/dhc_green</item>
         <item name="testFailColor">@color/dhc_red</item>
         <item name="speedTextColor">@color/dhc_on_surface_variant</item>
-        <item name="fabStoppedColor">@color/dhc_on_primary</item>
-        <item name="fabConnectedColor">@color/dhc_on_primary</item>
         <item name="statusDetailColor">@color/dhc_on_surface_variant</item>
         <item name="statusTestingColor">@color/dhc_yellow</item>
         <item name="routeProxyColor">@color/dhc_blue</item>
@@ -422,8 +418,6 @@
         <item name="testAvailableColor">@color/draculam3_green</item>
         <item name="testFailColor">@color/draculam3_red</item>
         <item name="speedTextColor">@color/draculam3_accent</item>
-        <item name="fabStoppedColor">@color/draculam3_on_primary</item>
-        <item name="fabConnectedColor">@color/draculam3_on_primary</item>
         <item name="statusDetailColor">@color/draculam3_accent</item>
         <item name="statusTestingColor">@color/draculam3_yellow</item>
         <item name="routeProxyColor">@color/draculam3_blue</item>
@@ -476,8 +470,6 @@
         <item name="testAvailableColor">@color/nord_green</item>
         <item name="testFailColor">@color/nord_red</item>
         <item name="speedTextColor">@color/nord_accent</item>
-        <item name="fabStoppedColor">@color/nord_on_primary</item>
-        <item name="fabConnectedColor">@color/nord_on_primary</item>
         <item name="statusDetailColor">@color/nord_accent</item>
         <item name="statusTestingColor">@color/nord_yellow</item>
         <item name="routeProxyColor">@color/nord_blue</item>
@@ -528,8 +520,6 @@
         <item name="testAvailableColor">@color/monokai_green</item>
         <item name="testFailColor">@color/monokai_red</item>
         <item name="speedTextColor">@color/monokai_accent</item>
-        <item name="fabStoppedColor">@color/monokai_on_primary</item>
-        <item name="fabConnectedColor">@color/monokai_on_primary</item>
         <item name="statusDetailColor">@color/monokai_accent</item>
         <item name="statusTestingColor">@color/monokai_yellow</item>
         <item name="routeProxyColor">@color/monokai_blue</item>
@@ -580,8 +570,6 @@
         <item name="testAvailableColor">@color/ayu_green</item>
         <item name="testFailColor">@color/ayu_red</item>
         <item name="speedTextColor">@color/ayu_accent</item>
-        <item name="fabStoppedColor">@color/ayu_on_primary</item>
-        <item name="fabConnectedColor">@color/ayu_on_primary</item>
         <item name="statusDetailColor">@color/ayu_accent</item>
         <item name="statusTestingColor">@color/ayu_yellow</item>
         <item name="routeProxyColor">@color/ayu_blue</item>
@@ -633,8 +621,6 @@
         <item name="testAvailableColor">@color/catppuccin_green</item>
         <item name="testFailColor">@color/catppuccin_red</item>
         <item name="speedTextColor">@color/catppuccin_accent</item>
-        <item name="fabStoppedColor">@color/catppuccin_on_primary</item>
-        <item name="fabConnectedColor">@color/catppuccin_on_primary</item>
         <item name="statusDetailColor">@color/catppuccin_accent</item>
         <item name="statusTestingColor">@color/catppuccin_yellow</item>
         <item name="routeProxyColor">@color/catppuccin_blue</item>
@@ -912,7 +898,6 @@
         <item name="statusDetailColor">?android:attr/textColorSecondary</item>
         <item name="speedTextColor">?android:attr/textColorSecondary</item>
         <!-- Connected, the orb fills with the primary color; its icon stays on-primary. -->
-        <item name="fabConnectedColor">?attr/colorOnPrimary</item>
     </style>
 
     <!-- Glass dialogs need the system to blur the screen behind them (values-v31). -->
