@@ -51,7 +51,7 @@ class SettingsDefaultsTest {
         assertEquals(emptyMap<String, Pair<Any?, Any?>>(), changed)
     }
 
-    /** DataStore properties stored under a key of global_preferences.xml, read the way the app reads them. */
+    /** DataStore properties stored under a key of the Settings files, read the way the app reads them. */
     private fun settingReaders(): Map<String, () -> Any?> {
         val keys = xmlKeys()
         return DataStore::class.java.declaredFields
