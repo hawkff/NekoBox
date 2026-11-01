@@ -1047,7 +1047,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
     private fun showMullvadResult(result: MullvadRelays.Result) {
         val list = result.list.displayName()
         if (!result.created) {
-            val changed = result.added + result.removed
+            val changed = result.added + result.removed + result.moved
             snackbar(if (changed == 0) getString(R.string.group_no_difference, list) else getString(R.string.group_updated, list, changed)).show()
             return
         }

@@ -61,7 +61,8 @@ object MullvadRelays {
      */
     class ServerList(val relays: List<Relay>, val listed: Set<String>)
 
-    class Result(val list: ProxyGroup, val created: Boolean, val added: Int, val removed: Int, val through: ProxyEntity?)
+    /** What a sync did: proxies added and removed, and proxies [moved] to their server's new port. */
+    class Result(val list: ProxyGroup, val created: Boolean, val added: Int, val removed: Int, val moved: Int, val through: ProxyEntity?)
 
     fun isRelayList(group: ProxyGroup) = group.type == GroupType.PROXIES && group.subscription?.link == URL
 
@@ -222,7 +223,7 @@ object MullvadRelays {
                 }
             }
             if (ported.isNotEmpty()) DataStore.forgetProxyExits(ported.keys.toList())
-            return Result(list, created, toInsert.size, removedIds.size, through)
+            return Result(list, created, toInsert.size, removedIds.size, ported.size, through)
         } catch (e: Exception) {
             // A list made for this import goes again when the import fails.
             if (created) GroupManager.deleteGroup(id)

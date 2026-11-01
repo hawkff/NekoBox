@@ -257,7 +257,9 @@ class MullvadRelaysTest {
             val before = ProfileDatabase.proxyDao.getByGroup(listId).single()
             ProfileDatabase.proxyDao.updateTestResult(before.id, 1, 42, null)
 
-            MullvadRelays.sync(listId, servers(server("nl-ams-wg-001", port = 1081)))
+            val result = MullvadRelays.sync(listId, servers(server("nl-ams-wg-001", port = 1081)))
+
+            assertEquals(1, result.moved)
 
             val after = ProfileDatabase.proxyDao.getByGroup(listId).single()
             assertEquals(before.id, after.id)
