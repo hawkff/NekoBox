@@ -80,6 +80,8 @@ class MullvadRelaysTest {
             server("nl-ams-wg-004", socks = "nl-ams-wg-socks5-004.relays.example.com"),
             server("nl-ams-wg-005", socks = "se-sto-wg-socks5-005.relays.mullvad.net"),
             server("nl-ams-wg-006", port = 0),
+            // Without a number the Proxies screen could not place it.
+            server("nl-ams-wg-007", socks = "nl-ams-wg-socks5.relays.mullvad.net"),
         )
         assertEquals(
             listOf("de-ber-wg-socks5-001", "de-fra-wg-socks5-001", "nl-ams-wg-socks5-001", "nl-ams-wg-socks5-002", "se-sto-wg-socks5-002"),

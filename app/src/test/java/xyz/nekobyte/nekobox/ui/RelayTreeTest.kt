@@ -38,6 +38,8 @@ class RelayTreeTest {
         assertEquals(listOf("us", "nyc", "501"), listOf(place.country, place.city, place.number))
         assertNull(MullvadRelays.place("192.0.2.7"))
         assertNull(MullvadRelays.place("us-nyc-wg-socks5-501.relays.example.com"))
+        // "socks5" is part of the name, not server 5.
+        assertNull(MullvadRelays.place("nl-ams-wg-socks5.relays.mullvad.net"))
     }
 
     @Test
@@ -88,6 +90,12 @@ class RelayTreeTest {
         assertEquals(
             listOf("🇸🇪 Sweden - 4", "  Stockholm - 3", "    Work 001", "    003", "    Fast one", "  MMA - 1", "    Mine"),
             shape(build(servers, folds = mapOf("se" to true, "se-sto" to true, "se-mma" to true))),
+        )
+        // Renamed in the import's own shape, and first: the city keeps the name its other servers carry.
+        val shaped = listOf(server(4, "se-sto-wg-socks5-001.relays.mullvad.net", "🇸🇪 Work 001"), relay(1, "se", "sto", "Stockholm", "002"), relay(2, "se", "sto", "Stockholm", "003"))
+        assertEquals(
+            listOf("🇸🇪 Sweden - 3", "  Stockholm - 3", "    🇸🇪 Work 001", "    002", "    003"),
+            shape(build(shaped, folds = mapOf("se" to true))),
         )
     }
 

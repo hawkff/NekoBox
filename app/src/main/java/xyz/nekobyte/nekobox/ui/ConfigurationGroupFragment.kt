@@ -477,6 +477,10 @@ class ConfigurationGroupFragment : Fragment() {
         // Mullvad's list sorted into its tree, and the IDs and kept stamps it was sorted from: a fold shows it again.
         private var tree: RelayTree.Tree? = null
         private var treeKey = LongArray(0)
+
+        // The country answers the kept stamps were made with: rows asked for a country in the background since then
+        // stamp again on the next list, so a fold shows the countries that arrived.
+        private var countriesSeen = 0L
         private var displayedMaster: List<Long> = emptyList()
         private val displayPositions = HashMap<Long, Int>()
         private val masterIds = ArrayList<Long>()
@@ -664,6 +668,11 @@ class ConfigurationGroupFragment : Fragment() {
          */
         private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L, reloaded: Boolean = false, restamp: Boolean = true) {
             if (disposed || dragInProgress) return
+            val answers = ServerCountries.answers.get()
+            if (answers != countriesSeen) {
+                countriesSeen = answers
+                for ((id, profile) in masterProfiles) masterStamps[id] = profileStateStamp(profile)
+            }
             val visible = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
             val tree = showsTree()
             val sections = if (!tree && showsSections()) ProfileSections.of(visible.map { masterProfiles.getValue(it).displayName() }) else emptyList()
@@ -1299,6 +1308,7 @@ class ConfigurationGroupFragment : Fragment() {
             }
             val groupId = proxyGroup.id
             val order = proxyGroup.order
+            var answers = 0L
             val (newProfiles, newProfileIds, baseStamps) = onDefaultDispatcher {
                 var profiles = if (isFavorites) {
                     val ids = DataStore.favoriteProfiles
@@ -1310,6 +1320,8 @@ class ConfigurationGroupFragment : Fragment() {
                 // The countries of where checked proxies leave from too, so their rows have them on the first bind.
                 val exits = DataStore.proxyExits.let { known -> profiles.mapNotNull { known[it.id] } }
                 ServerCountries.lookUp(profiles.map(ProfileWords::serverIp) + exits)
+                // The stamps below are made with at least these answers.
+                answers = ServerCountries.answers.get()
                 profiles = when (order) {
                     GroupOrder.BY_NAME -> profiles.sortedBy { it.displayName() }
 
@@ -1341,6 +1353,7 @@ class ConfigurationGroupFragment : Fragment() {
                         masterStamps[id] = profileStateStamp(stamp, id)
                     }
                 }
+                countriesSeen = answers
                 val selectedId = selectedItem?.id ?: DataStore.selectedProxy
                 // The open page shows its selected profile, unless its section is folded; others start at the top.
                 submitMasterList(if (masterIds.isNotEmpty()) 0 else -1, if (selected) selectedId else 0L, reloaded = true)

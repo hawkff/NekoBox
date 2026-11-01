@@ -58,7 +58,8 @@ internal object RelayTree {
             val name = countryName(country)
             val all = cities.values.flatten()
             val children = cities.map { (city, members) ->
-                val title = members.firstNotNullOfOrNull(::importedCity) ?: city.uppercase()
+                // The name most of its servers carry as the import wrote it, so one renamed server cannot rename its city.
+                val title = members.mapNotNull(::importedCity).groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: city.uppercase()
                 val holds = members.any { it.id == selected }
                 Node(
                     header(members, "$country-$city", 1, title, title, open = cities.size == 1 || holds, holds),
@@ -113,7 +114,8 @@ internal object RelayTree {
     }
 
     // The city a proxy's name gives as the import wrote it, flag first and number last: "🇸🇪 Stockholm 001" gives
-    // "Stockholm"; null once renamed, also to a name that ends in the number, such as "Work 001".
+    // "Stockholm"; null once renamed, also to a name that ends in the number, such as "Work 001". The name is the only
+    // record of the city's name, so a rename in the import's own shape, "🇸🇪 Work 001", reads as one.
     private fun importedCity(server: Server): String? {
         val place = server.place ?: return null
         val flag = "${ProfileWords.flag(place.country)} "
