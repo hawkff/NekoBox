@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -85,6 +86,8 @@ type BoxInstance struct {
 	// The outbounds and endpoints as configured, for ResolveServer to find a connection's resolver.
 	outbounds []option.Outbound
 	endpoints []option.Endpoint
+	// This core's own cache file directory, when its config names no cache file.
+	cacheDir string
 }
 
 func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *BoxInstance, err error) {
@@ -107,6 +110,17 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 		return nil, fmt.Errorf("decode config: %v", err)
 	}
 
+	// sing-box opens a cache file for every core with a platform log writer, at cache.db in the working
+	// directory unless the config names one. Cores running side by side, as URL tests do, then queue for
+	// its lock and fail with "initialize cache-file: timeout". A core whose config keeps no cache file of
+	// its own gets one in its own directory, removed when it closes.
+	// shortcut: a process killed while a test runs leaves its directory behind; sweep them at start if they pile up.
+	cacheDir, err := ownCacheFile(&options)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("cache file: %v", err)
+	}
+
 	// create box
 	instance, err := box.New(box.Options{
 		Options:           options,
@@ -115,6 +129,9 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 	})
 	if err != nil {
 		cancel()
+		if cacheDir != "" {
+			_ = os.RemoveAll(cacheDir)
+		}
 		return nil, fmt.Errorf("create service: %v", err)
 	}
 
@@ -126,6 +143,7 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 		connections:  newConnectionTracker(),
 		outbounds:    options.Outbounds,
 		endpoints:    options.Endpoints,
+		cacheDir:     cacheDir,
 	}
 	b.Box.Router().AppendTracker(b.connections)
 
@@ -196,12 +214,38 @@ func (b *BoxInstance) Close() (err error) {
 	// close box. A box whose Start failed has already closed itself, and closing it again
 	// reports os.ErrClosed; that must not replace the start error or fail the teardown.
 	if b.Box != nil {
-		if err := b.Box.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
+		err := b.Box.Close()
+		if b.cacheDir != "" {
+			_ = os.RemoveAll(b.cacheDir)
+		}
+		if err != nil && !errors.Is(err, os.ErrClosed) {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// ownCacheFile points a config that keeps no cache file of its own (none enabled, no path named) at one
+// in a new directory of the working directory, and returns that directory. A config that enables one or
+// names its path keeps it where sing-box puts it, with its rule sets and FakeIP data; it returns "".
+func ownCacheFile(options *option.Options) (string, error) {
+	if options.Experimental != nil && options.Experimental.CacheFile != nil &&
+		(options.Experimental.CacheFile.Enabled || options.Experimental.CacheFile.Path != "") {
+		return "", nil
+	}
+	dir, err := os.MkdirTemp(".", "core-cache-")
+	if err != nil {
+		return "", err
+	}
+	if options.Experimental == nil {
+		options.Experimental = &option.ExperimentalOptions{}
+	}
+	if options.Experimental.CacheFile == nil {
+		options.Experimental.CacheFile = &option.CacheFileOptions{}
+	}
+	options.Experimental.CacheFile.Path = filepath.Join(dir, "cache.db")
+	return dir, nil
 }
 
 func (b *BoxInstance) Sleep() {
