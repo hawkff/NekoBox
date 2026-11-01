@@ -17,6 +17,11 @@
     <string name="proxies_check">Check proxies</string>
     <string name="proxies_rename_list">Rename list</string>
     <string name="proxies_delete_list">Delete list</string>
+    <string name="proxies_mullvad">Mullvad proxies…</string>
+    <string name="proxies_mullvad_title">Mullvad proxies</string>
+    <string name="proxies_mullvad_all">All countries</string>
+    <string name="proxies_mullvad_loading">Getting Mullvad\'s server list…</string>
+    <string name="proxies_mullvad_tunnel">They work only inside Mullvad\'s WireGuard tunnel</string>
     <plurals name="proxies_found">
         <item quantity="one">%d proxy</item>
         <item quantity="other">%d proxies</item>

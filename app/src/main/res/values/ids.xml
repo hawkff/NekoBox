@@ -8,5 +8,6 @@
     <item name="glass_own_padding" type="id" />
     <!-- The Proxies screen's own entries in Home's + menu. -->
     <item name="action_paste_proxies" type="id" />
+    <item name="action_mullvad_proxies" type="id" />
     <item name="action_new_proxy_list" type="id" />
 </resources>
