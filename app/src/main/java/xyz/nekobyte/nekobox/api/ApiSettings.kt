@@ -20,6 +20,7 @@ import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.bg.parseMockCoordinates
 import xyz.nekobyte.nekobox.database.DEFAULT_HTTP_PROXY_BYPASS
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.ui.SettingsPages
 import xyz.nekobyte.nekobox.ui.applyHideFromRecentApps
 
 internal class ApiSettings(private val context: Context, private val serviceState: () -> BaseService.State) {
@@ -27,30 +28,32 @@ internal class ApiSettings(private val context: Context, private val serviceStat
 
     private val settings by lazy {
         val result = linkedMapOf<String, Setting>()
-        context.resources.getXml(R.xml.global_preferences).use { xml ->
-            while (xml.next() != XmlPullParser.END_DOCUMENT) {
-                if (xml.eventType != XmlPullParser.START_TAG) continue
-                val namespace = "http://schemas.android.com/apk/res-auto"
-                val key = xml.getAttributeValue(namespace, "key") ?: continue
-                val tag = xml.name.substringAfterLast('.')
-                if (tag in setOf("Preference", "PreferenceScreen", "PreferenceCategory")) continue
-                val default = xml.getAttributeValue(namespace, "defaultValue")
-                val type = when (tag) {
-                    "SwitchPreference" -> "boolean"
-                    "ThemePickerPreference" -> "integer"
-                    else -> "string"
+        for (file in SettingsPages.files) {
+            context.resources.getXml(file).use { xml ->
+                while (xml.next() != XmlPullParser.END_DOCUMENT) {
+                    if (xml.eventType != XmlPullParser.START_TAG) continue
+                    val namespace = "http://schemas.android.com/apk/res-auto"
+                    val key = xml.getAttributeValue(namespace, "key") ?: continue
+                    val tag = xml.name.substringAfterLast('.')
+                    if (tag in setOf("Preference", "PreferenceScreen", "PreferenceCategory")) continue
+                    val default = xml.getAttributeValue(namespace, "defaultValue")
+                    val type = when (tag) {
+                        "SwitchPreference" -> "boolean"
+                        "ThemePickerPreference" -> "integer"
+                        else -> "string"
+                    }
+                    val valuesId = xml.getAttributeResourceValue(namespace, "entryValues", 0)
+                    val values = if (valuesId != 0 && tag != "MTUPreference") context.resources.getStringArray(valuesId).toList() else emptyList()
+                    result[key] = Setting(
+                        type,
+                        when (type) {
+                            "boolean" -> default == "true"
+                            "integer" -> 0
+                            else -> default.orEmpty()
+                        },
+                        values,
+                    )
                 }
-                val valuesId = xml.getAttributeResourceValue(namespace, "entryValues", 0)
-                val values = if (valuesId != 0 && tag != "MTUPreference") context.resources.getStringArray(valuesId).toList() else emptyList()
-                result[key] = Setting(
-                    type,
-                    when (type) {
-                        "boolean" -> default == "true"
-                        "integer" -> 0
-                        else -> default.orEmpty()
-                    },
-                    values,
-                )
             }
         }
         // These controls live outside the global preference screen.

@@ -20,8 +20,8 @@ import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.ktx.PreferenceProxy
 
 /**
- * Every Settings page loads global_preferences.xml, and AndroidX then saves each XML default the
- * store lacks. Those writes must not change a value the app reads from an empty store.
+ * Each Settings page loads its file, and AndroidX then saves each XML default the store lacks.
+ * Those writes must not change a value the app reads from an empty store.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
@@ -39,9 +39,11 @@ class SettingsDefaultsTest {
         val before = settings.mapValues { (_, read) -> read() }
 
         val context = ContextThemeWrapper(RuntimeEnvironment.getApplication(), R.style.Theme_NekoBox)
-        PreferenceManager(context).apply {
-            preferenceDataStore = DataStore.configurationStore
-            inflateFromResource(context, R.xml.global_preferences, null)
+        for (file in SettingsPages.files) {
+            PreferenceManager(context).apply {
+                preferenceDataStore = DataStore.configurationStore
+                inflateFromResource(context, file, null)
+            }
         }
 
         val changed = settings.filter { (key, read) -> read() != before[key] }
@@ -66,17 +68,19 @@ class SettingsDefaultsTest {
     }
 
     private fun xmlKeys(): Set<String> {
-        val parser = RuntimeEnvironment.getApplication().resources.getXml(R.xml.global_preferences)
         val keys = mutableSetOf<String>()
-        try {
-            while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-                if (parser.eventType == XmlPullParser.START_TAG) {
-                    parser.getAttributeValue(APP_NAMESPACE, "key")?.let(keys::add)
+        for (file in SettingsPages.files) {
+            val parser = RuntimeEnvironment.getApplication().resources.getXml(file)
+            try {
+                while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+                    if (parser.eventType == XmlPullParser.START_TAG) {
+                        parser.getAttributeValue(APP_NAMESPACE, "key")?.let(keys::add)
+                    }
+                    parser.next()
                 }
-                parser.next()
+            } finally {
+                parser.close()
             }
-        } finally {
-            parser.close()
         }
         return keys
     }

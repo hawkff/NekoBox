@@ -5,18 +5,18 @@ import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.FragmentManager
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.PreferenceScreen
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.widget.ListListener
 
 /**
- * Hosts the settings hub and its pages in the child fragment manager. Tapping a nested
- * PreferenceScreen in global_preferences.xml pushes that screen as a page; back pops it.
+ * Hosts the settings hub and its pages in the child fragment manager. Tapping a row of the hub
+ * (global_preferences.xml) pushes its page; back pops it.
  */
 class SettingsFragment :
     ToolbarFragment(R.layout.layout_config_settings),
-    PreferenceFragmentCompat.OnPreferenceStartScreenCallback {
+    PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -39,7 +39,7 @@ class SettingsFragment :
         super.onDestroyView()
     }
 
-    override fun onPreferenceStartScreen(caller: PreferenceFragmentCompat, pref: PreferenceScreen): Boolean {
+    override fun onPreferenceStartFragment(caller: PreferenceFragmentCompat, pref: Preference): Boolean {
         val page = SettingsPreferenceFragment().apply {
             arguments = bundleOf(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT to pref.key)
         }
