@@ -31,6 +31,9 @@ object MullvadRelays {
     const val LIST_NAME = "Mullvad"
     private const val HOST_SUFFIX = ".relays.mullvad.net"
 
+    // Marks the proxies the import added, in a column only Tailscale profiles use otherwise; backups keep it.
+    private const val IMPORTED = "mullvad-server-list"
+
     // The list is about 300 KB.
     private const val MAX_BYTES = 4L * 1024 * 1024
     private val COUNTRY = Regex("[a-z]{2}")
@@ -118,48 +121,45 @@ object MullvadRelays {
 
     /** Fetches the server list again for [listId] and the countries and cities it keeps. */
     suspend fun update(listId: Long): Result {
-        val list = requireNotNull(ProfileDatabase.groupDao.getById(listId)?.takeIf(::isRelayList)) { "Not a list of Mullvad's proxies" }
-        return sync(listId, parse(fetch()), list.subscription!!)
+        requireNotNull(ProfileDatabase.groupDao.getById(listId)?.takeIf(::isRelayList)) { "Not a list of Mullvad's proxies" }
+        return sync(listId, parse(fetch()))
     }
 
     /**
-     * Fills [listId] with the proxies of the servers [subscription] holds, or a new list when it is 0. Proxies the user
-     * added stay, and so do proxies in use that the server list dropped; the rest follow the server list's order.
+     * Fills [listId] with the proxies of the servers [pick] holds, or of the pick it keeps when that is null; a new list
+     * when [listId] is 0. Proxies in use stay when their server leaves the pick or the server list, and so do proxies
+     * the user added; the rest follow the server list's order.
      */
-    suspend fun sync(listId: Long, relays: List<Relay>, subscription: SubscriptionBean): Result {
+    suspend fun sync(listId: Long, relays: List<Relay>, pick: SubscriptionBean? = null): Result {
         // A server list that failed to arrive whole must not empty the list.
         if (relays.isEmpty()) error(app.getString(R.string.no_proxies_found))
+        val created = listId <= 0L
         var through: ProxyEntity? = null
-        val list = if (listId > 0L) {
-            checkNotNull(ProfileDatabase.groupDao.getById(listId)) { "List deleted during the update" }
-        } else {
+        val id = if (created) {
             through = tunnel(relays)
-            GroupManager.createGroup(ProxyGroup(name = LIST_NAME, type = GroupType.PROXIES, subscription = subscription, frontProxy = through?.id ?: -1L))
+            GroupManager.createGroup(ProxyGroup(name = LIST_NAME, type = GroupType.PROXIES, subscription = requireNotNull(pick), frontProxy = through?.id ?: -1L)).id
+        } else {
+            listId
         }
-        // Renaming or deleting the list waits for this, as for a subscription's update.
-        if (!GroupUpdater.updating.add(list.id)) error(app.getString(R.string.group_wait_update))
+        // Renaming or deleting the list waits for this, as for a subscription's update, and so does another pick.
+        if (!GroupUpdater.updating.add(id)) error(app.getString(R.string.group_wait_update))
         try {
-            val kept = list.subscription
-            if (listId > 0L && (subscription.filterMode != kept?.filterMode || subscription.filterRegex != kept?.filterRegex)) {
-                // Onto the stored row, so a first hop picked since the list was read stays.
-                ProfileDatabase.instance.runInTransaction {
-                    ProfileDatabase.groupDao.getById(list.id)?.let { ProfileDatabase.groupDao.updateGroup(it.apply { this.subscription = subscription }) }
-                }
-                list.subscription = subscription
-            }
-            val wanted = relays.filter(holds(subscription))
+            // Read once the list is held, so an update finishing after a new pick keeps the new one.
+            val list = checkNotNull(ProfileDatabase.groupDao.getById(id)) { "List deleted during the update" }
+            val wanted = relays.filter(holds(pick ?: list.subscription))
             val wantedHosts = wanted.mapTo(HashSet()) { it.host }
-            val stored = ProfileDatabase.proxyDao.getByGroup(list.id)
+            val stored = ProfileDatabase.proxyDao.getByGroup(id)
             fun ProxyEntity.relayHost() = (requireBean() as? SOCKSBean)?.serverAddress?.takeIf { it.endsWith(HOST_SUFFIX) }
             val storedByHost = stored.filter { it.relayHost() != null }.groupBy { it.relayHost() }
-            val unwanted = stored.filter { it.relayHost()?.let { host -> host !in wantedHosts } == true }
+            // Only proxies the import added go with their server; one the user added for a server stays.
+            val unwanted = stored.filter { it.uuid == IMPORTED && it.relayHost()?.let { host -> host !in wantedHosts } == true }
             val inUse = if (unwanted.isEmpty()) emptySet() else RawUpdater.referencedProfileIds()
-            val removedIds = unwanted.mapNotNullTo(HashSet()) { it.id.takeIf { id -> id !in inUse } }
+            val removedIds = unwanted.filterNot { it.id in inUse }.mapTo(HashSet()) { it.id }
             // The servers in the server list's order, then what the user added and what stays in use, as they were.
             val rows = ArrayList<ProxyEntity>()
             val toInsert = ArrayList<ProxyEntity>()
             for (relay in wanted) {
-                rows += storedByHost[relay.host]?.first() ?: ProxyEntity(groupId = list.id).putBean(bean(relay)).also { toInsert += it }
+                rows += storedByHost[relay.host]?.first() ?: ProxyEntity(groupId = id, uuid = IMPORTED).putBean(bean(relay)).also { toInsert += it }
             }
             val placed = rows.mapTo(HashSet()) { it.id }
             stored.filterTo(rows) { it.id !in placed && it.id !in removedIds }
@@ -173,19 +173,23 @@ object MullvadRelays {
                 }
             }
             ProfileDatabase.instance.runInTransaction {
-                checkNotNull(ProfileDatabase.groupDao.getById(list.id)) { "List deleted during the update" }
+                // The pick goes onto the stored row with the proxies, so a first hop picked meanwhile stays and a failed
+                // change keeps the old pick.
+                val current = checkNotNull(ProfileDatabase.groupDao.getById(id)) { "List deleted during the update" }
+                if (pick != null && !created) ProfileDatabase.groupDao.updateGroup(current.apply { subscription = pick })
                 if (toInsert.isNotEmpty()) ProfileDatabase.proxyDao.insert(toInsert)
-                for ((id, order) in moved) ProfileDatabase.proxyDao.updateOrder(id, order)
+                for ((row, order) in moved) ProfileDatabase.proxyDao.updateOrder(row, order)
                 removedIds.toList().chunked(500).forEach { ProfileDatabase.proxyDao.deleteByIds(it) }
             }
-            return Result(list, listId <= 0L, toInsert.size, removedIds.size, through)
+            return Result(list, created, toInsert.size, removedIds.size, through)
         } catch (e: Exception) {
             // A list made for this import goes again when the import fails.
-            if (listId <= 0L) GroupManager.deleteGroup(listOf(list))
+            if (created) GroupManager.deleteGroup(id)
             throw e
         } finally {
-            GroupUpdater.updating.remove(list.id)
-            GroupManager.postReload(list.id)
+            GroupUpdater.updating.remove(id)
+            // The stored list, with its pick, to the tabs and the page, which reloads its proxies on it.
+            GroupManager.postUpdate(id)
         }
     }
 

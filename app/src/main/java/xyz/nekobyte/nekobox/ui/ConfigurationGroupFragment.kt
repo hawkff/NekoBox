@@ -266,7 +266,9 @@ class ConfigurationGroupFragment : Fragment() {
             if (proxyGroup.order == order) return
             runOnDefaultDispatcher {
                 proxyGroup.order = order
-                GroupManager.updateGroup(proxyGroup)
+                // Onto the stored row: a page restored from saved state lacks a list's first hop, exit and server list.
+                // Favorites has no row.
+                GroupManager.updateGroup(ProfileDatabase.groupDao.getById(proxyGroup.id)?.apply { this.order = order } ?: proxyGroup)
             }
         }
 

@@ -16,6 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyGroup
@@ -132,25 +133,44 @@ class MullvadRelaysTest {
         withContext(Dispatchers.IO) {
             val listId = MullvadRelays.sync(0L, relays(server("nl-ams-wg-001"), server("nl-ams-wg-002"), server("nl-ams-wg-003")), MullvadRelays.subscription(null)).list.id
             val first = ProfileDatabase.proxyDao.getByGroup(listId)
-            ProfileManager.createProfile(
-                listId,
-                SOCKSBean().applyDefaultValues().apply {
-                    name = "Mine"
-                    serverAddress = "192.0.2.7"
-                    serverPort = 1080
-                },
-            )
+            // The user's own proxies: another provider's, and one of Mullvad's servers outside the server list.
+            for ((name, address) in listOf("Mine" to "192.0.2.7", "By hand" to "nl-ams-wg-socks5-009.relays.mullvad.net")) {
+                ProfileManager.createProfile(
+                    listId,
+                    SOCKSBean().applyDefaultValues().apply {
+                        this.name = name
+                        serverAddress = address
+                        serverPort = 1080
+                    },
+                )
+            }
             // Server 002 leaves the server list while it is selected.
             DataStore.selectedProxy = first[1].id
 
-            val result = MullvadRelays.sync(listId, relays(server("nl-ams-wg-004"), server("nl-ams-wg-001")), ProfileDatabase.groupDao.getById(listId)!!.subscription!!)
+            val result = MullvadRelays.sync(listId, relays(server("nl-ams-wg-004"), server("nl-ams-wg-001")))
 
             assertFalse(result.created)
             assertEquals(1, result.added)
             assertEquals(1, result.removed)
             val flag = "\uD83C\uDDF3\uD83C\uDDF1"
-            assertEquals(listOf("$flag Amsterdam 001", "$flag Amsterdam 004", "$flag Amsterdam 002", "Mine"), names(listId))
+            assertEquals(listOf("$flag Amsterdam 001", "$flag Amsterdam 004", "$flag Amsterdam 002", "Mine", "By hand"), names(listId))
             assertEquals(first[0].id, ProfileDatabase.proxyDao.getByGroup(listId)[0].id)
+        }
+    }
+
+    @Test
+    fun anUpdate_keepsAPickSavedWhileItFetched() = runTest {
+        withContext(Dispatchers.IO) {
+            val parsed = relays(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
+            val listId = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl"))).list.id
+            MullvadRelays.sync(listId, parsed, MullvadRelays.subscription(setOf("se")))
+
+            // What an update started before the new pick does once its server list arrives.
+            MullvadRelays.sync(listId, parsed)
+
+            assertEquals(listOf("\uD83C\uDDF8\uD83C\uDDEA Stockholm 001"), names(listId))
+            val kept = ProfileDatabase.groupDao.getById(listId)!!.subscription
+            assertEquals(setOf("se-sto"), parsed.filter(MullvadRelays.holds(kept)).mapTo(HashSet()) { it.place })
         }
     }
 
@@ -160,8 +180,25 @@ class MullvadRelaysTest {
             val parsed = relays(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
             val listId = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl"))).list.id
             ProfileDatabase.groupDao.getById(listId)!!.let { ProfileDatabase.groupDao.updateGroup(it.apply { frontProxy = 42L }) }
+            val published = ArrayList<ProxyGroup>()
+            val listener = object : GroupManager.Listener {
+                override suspend fun groupAdd(group: ProxyGroup) = Unit
 
-            val result = MullvadRelays.sync(listId, parsed, MullvadRelays.subscription(setOf("se")))
+                override suspend fun groupUpdated(group: ProxyGroup) {
+                    published += group
+                }
+
+                override suspend fun groupRemoved(groupId: Long) = Unit
+
+                override suspend fun groupUpdated(groupId: Long) = Unit
+            }
+            GroupManager.addListener(listener)
+
+            val result = try {
+                MullvadRelays.sync(listId, parsed, MullvadRelays.subscription(setOf("se")))
+            } finally {
+                GroupManager.removeListener(listener)
+            }
 
             assertEquals(1, result.added)
             assertEquals(1, result.removed)
@@ -169,6 +206,9 @@ class MullvadRelaysTest {
             assertEquals(42L, list.frontProxy)
             assertEquals(listOf("\uD83C\uDDF8\uD83C\uDDEA Stockholm 001"), names(listId))
             assertEquals(setOf("se-sto"), parsed.filter(MullvadRelays.holds(list.subscription)).mapTo(HashSet()) { it.place })
+            // The tabs and the page get the stored list with its new pick.
+            assertEquals(list.subscription?.filterRegex, published.single().subscription?.filterRegex)
+            assertEquals(42L, published.single().frontProxy)
         }
     }
 
