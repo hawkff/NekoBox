@@ -23,6 +23,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
 import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -379,6 +380,10 @@ class ConfigurationGroupFragment : Fragment() {
             it.dispose()
         }
         adapter = ConfigurationAdapter()
+        // Mullvad's list opens on country headers and its cities on one-line rows, made in the background while it loads.
+        if (MullvadRelays.isRelayList(proxyGroup)) {
+            (activity as? MainActivity)?.let { it.rowWarmup.fill(it.lifecycleScope, R.layout.layout_profile_section to 16, R.layout.layout_profile_compact to 8) }
+        }
         ProfileManager.addListener(adapter!!)
         GroupManager.addListener(adapter!!)
         configurationListView.adapter = adapter
@@ -468,6 +473,10 @@ class ConfigurationGroupFragment : Fragment() {
 
         // Where each host's server stands in Mullvad's list, read once per host.
         private val places = HashMap<String, MullvadRelays.Place?>()
+
+        // Mullvad's list sorted into its tree, and the IDs and kept stamps it was sorted from: a fold shows it again.
+        private var tree: RelayTree.Tree? = null
+        private var treeKey = LongArray(0)
         private var displayedMaster: List<Long> = emptyList()
         private val displayPositions = HashMap<Long, Int>()
         private val masterIds = ArrayList<Long>()
@@ -501,7 +510,7 @@ class ConfigurationGroupFragment : Fragment() {
         // and these cached stamps directly, without scheduling a list diff for every traffic tick.
         // A server of Mullvad's tree shows its label and its check alone.
         private fun contentStamp(profile: ProxyEntity) = if (showsTree() && MullvadRelays.place(profile.requireBean().serverAddress) != null) {
-            Objects.hash(profile.displayName(), profile.ping, profile.status, profile.error)
+            Objects.hash(profile.displayName(), profile.requireBean().serverAddress, profile.ping, profile.status, profile.error)
         } else {
             fullStamp(profile)
         }
@@ -656,15 +665,14 @@ class ConfigurationGroupFragment : Fragment() {
         private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L, reloaded: Boolean = false, restamp: Boolean = true) {
             if (disposed || dragInProgress) return
             val visible = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
-            val profiles = masterProfiles.toMap()
             val tree = showsTree()
-            val sections = if (!tree && showsSections()) ProfileSections.of(visible.map { profiles.getValue(it).displayName() }) else emptyList()
+            val sections = if (!tree && showsSections()) ProfileSections.of(visible.map { masterProfiles.getValue(it).displayName() }) else emptyList()
             val rows = HashMap<Long, SectionRow>()
             val keys = HashMap<Long, String>()
             val labels = HashMap<Long, String>()
             val folded = if (sections.isEmpty()) emptySet() else DataStore.foldedSections
             val ids = if (tree) {
-                treeIds(visible, profiles, rows, labels)
+                treeIds(visible, rows, labels)
             } else if (sections.isEmpty()) {
                 visible
             } else {
@@ -686,6 +694,9 @@ class ConfigurationGroupFragment : Fragment() {
                     }
                 }
             }
+            // The profiles on show: a tree folded to its countries shows a few of hundreds.
+            val profiles = HashMap<Long, ProxyEntity>(ids.size)
+            for (id in ids) if (id > 0) masterProfiles[id]?.let { profiles[id] = it }
             val stamps = buildDisplayStamps(ids, profiles, reuseKept = reloaded, restamp = restamp, labels = labels) + rows.mapValues { (_, row) ->
                 ProfileRowStamp(row.stamp(), reserveMiddleRow = false, doubleColumn = false)
             }
@@ -707,18 +718,30 @@ class ConfigurationGroupFragment : Fragment() {
          * Mullvad's list as countries and cities: the headers into [rows], each server's label into [labels]. A fold the
          * user made is kept as "key" and an opening as "+key"; without either, a header takes its default.
          */
-        private fun treeIds(visible: List<Long>, profiles: Map<Long, ProxyEntity>, rows: MutableMap<Long, SectionRow>, labels: MutableMap<Long, String>): List<Long> {
+        private fun treeIds(visible: List<Long>, rows: MutableMap<Long, SectionRow>, labels: MutableMap<Long, String>): List<Long> {
             // A jump to a proxy opens its country and city for good, or Other for one added by hand, also when it came
             // before the list loaded.
-            profiles[pendingScrollId]?.takeIf { pendingScrollId in visible }?.let { target ->
+            masterProfiles[pendingScrollId]?.takeIf { pendingScrollId in visible }?.let { target ->
                 val opened = placeOf(target)?.let { listOf(it.country, "${it.country}-${it.city}") } ?: listOf(RelayTree.REST)
                 DataStore.updateFoldedSections { folds -> folds - opened.map(::foldKey).toSet() + opened.map { foldKey("+$it") } }
             }
             val folds = DataStore.foldedSections
-            val host = parentFragment as? ConfigurationFragment
-            val selected = visible.firstOrNull { host?.isSelectedProfile(it) == true } ?: 0L
-            val servers = visible.map { id -> profiles.getValue(id).let { RelayTree.Server(id, placeOf(it), it.displayName(), it.status, it.ping) } }
-            val entries = RelayTree.build(servers, selected, { MullvadRelays.countryName(it) }, getString(R.string.profile_section_other)) { key, byDefault ->
+            // The tree follows the list's order and each proxy's name, place, check and selection, all in its kept stamp.
+            val key = LongArray(visible.size * 2)
+            visible.forEachIndexed { index, id ->
+                key[2 * index] = id
+                key[2 * index + 1] = (masterStamps[id] ?: 0).toLong()
+            }
+            val sorted = tree?.takeIf { key.contentEquals(treeKey) } ?: run {
+                val host = parentFragment as? ConfigurationFragment
+                val selected = visible.firstOrNull { host?.isSelectedProfile(it) == true } ?: 0L
+                val servers = visible.map { id -> masterProfiles.getValue(id).let { RelayTree.Server(id, placeOf(it), it.displayName(), it.status, it.ping) } }
+                RelayTree.group(servers, selected, { MullvadRelays.countryName(it) }, getString(R.string.profile_section_other)).also {
+                    tree = it
+                    treeKey = key
+                }
+            }
+            val entries = RelayTree.show(sorted) { key, byDefault ->
                 when {
                     foldKey("+$key") in folds -> true
                     foldKey(key) in folds -> false
@@ -907,7 +930,7 @@ class ConfigurationGroupFragment : Fragment() {
             }
             // A server of Mullvad's tree: the compact row on one line, set in under its city.
             if (viewType == LINE_VIEW) {
-                val view = inflater.inflate(R.layout.layout_profile_compact, parent, false)
+                val view = warmup?.take(R.layout.layout_profile_compact) ?: inflater.inflate(R.layout.layout_profile_compact, parent, false)
                 view.updateLayoutParams<ViewGroup.MarginLayoutParams> { marginStart = resources.getDimensionPixelSize(R.dimen.relay_row_indent) }
                 return ConfigurationHolder(LayoutProfileBinding.bind(view), GroupLayout.COMPACT, line = true)
             }

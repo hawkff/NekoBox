@@ -18,9 +18,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
- * Home's first rows, inflated off the main thread while the activity starts, a second before the profiles come: the
- * list that shows first takes them, so the frame that fills it binds rows instead of inflating each one, and its first
- * scroll finds the next screenful made too. What no list takes goes with the activity.
+ * Rows inflated off the main thread before a list needs them: Home's first rows while the activity starts, a second
+ * before the profiles come, and the headers and lines of Mullvad's list while it loads. The list that shows next takes
+ * them, so the frame that fills it binds rows instead of inflating each one, and its first scroll finds the next
+ * screenful made too. What no list takes goes with the activity.
  */
 class RowWarmup(private val context: Context) {
     private val made = ConcurrentHashMap<Int, ConcurrentLinkedQueue<View>>()
@@ -32,7 +33,14 @@ class RowWarmup(private val context: Context) {
             GroupLayout.TWO_COLUMNS -> R.layout.layout_profile to 20
             else -> R.layout.layout_profile to 10
         }
-        val rows = listOfNotNull(R.layout.layout_profile_section.takeIf { DataStore.profileSections }?.let { it to 4 }, layout)
+        make(scope, listOfNotNull(R.layout.layout_profile_section.takeIf { DataStore.profileSections }?.let { it to 4 }, layout))
+    }
+
+    /** Tops up the rows made ahead to [rows]' counts, layout by layout, for a list about to show them. */
+    fun fill(scope: LifecycleCoroutineScope, vararg rows: Pair<Int, Int>) = make(scope, rows.map { (layout, count) -> layout to count - (made[layout]?.size ?: 0) })
+
+    private fun make(scope: LifecycleCoroutineScope, rows: List<Pair<Int, Int>>) {
+        if (rows.none { it.second > 0 }) return
         scope.launch(Dispatchers.Default) {
             val inflater = PlainInflater(context)
             // A parent for the rows' layout params, margins included; the list converts them to its own.
