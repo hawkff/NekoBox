@@ -26,7 +26,6 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.preference.Preference
-import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreference
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -580,7 +579,7 @@ class LocationSpoofingDeviceTest {
             val settings = activity.currentScreen() as SettingsFragment
             settings.childFragmentManager.executePendingTransactions()
             val hub = settings.childFragmentManager.findFragmentById(R.id.settings) as SettingsPreferenceFragment
-            settings.onPreferenceStartScreen(hub, checkNotNull(hub.findPreference<PreferenceScreen>("screen_protection")))
+            settings.onPreferenceStartFragment(hub, checkNotNull(hub.findPreference<Preference>("screen_protection")))
             settings.childFragmentManager.executePendingTransactions()
             page = settings.childFragmentManager.findFragmentById(R.id.settings) as SettingsPreferenceFragment
         }
