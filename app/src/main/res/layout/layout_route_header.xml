@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Above the rules: whose rules a tab shows and whether they are in use, the global mode notice,
+<!-- Above the rules: whose rules a tab shows, whether they are in use and, for a subscription's, that its servers keep
+     rules of their own; the global mode notice,
      and the tester that says where traffic goes. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -33,6 +34,17 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 tools:text="@string/route_rules_from_unused" />
+
+            <TextView
+                android:id="@+id/rules_server_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone"
+                tools:text="@string/route_rules_server"
+                tools:visibility="visible" />
 
             <Button
                 android:id="@+id/use_rules"

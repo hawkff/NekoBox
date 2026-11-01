@@ -1002,9 +1002,11 @@
     <string name="route_global_notice">Global mode is on, so these rules are skipped and everything goes through the selected profile.</string>
     <string name="route_global_off">Turn off</string>
     <string name="route_rules_mine">My rules</string>
-    <string name="route_rules_mine_unused">Your own rules. Not in use.</string>
-    <string name="route_rules_from_unused">Rules from %1$s. Not in use.</string>
-    <string name="route_rules_from_used">In use. These rules come from %1$s and change when it updates, so they can\'t be edited here.</string>
+    <string name="route_rules_mine_unused">Your own rules. They aren\'t in use while %1$s\'s rules are.</string>
+    <string name="route_rules_from_unused">%1$s sent these rules to run in this app. They aren\'t in use, so your own rules decide where traffic goes.</string>
+    <string name="route_rules_from_used">%1$s sent these rules to run in this app, and they decide where traffic goes. They change when the subscription updates, so you can\'t edit them here.</string>
+    <!-- Under a subscription's rules: its servers route what reaches them by rules of their own. -->
+    <string name="route_rules_server">Whichever rules the app uses, %1$s\'s servers apply their own rules to the traffic they receive. The app can\'t see or change those.</string>
     <string name="route_rules_use">Use these rules</string>
     <string name="route_reset_message">Replace all rules with the default ones?</string>
     <!-- Rule editor -->

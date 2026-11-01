@@ -361,10 +361,13 @@ class RouteFragment :
         header.rulesNotice.isVisible = !editable
         header.useRules.isVisible = !live
         header.rulesNoticeText.text = when {
-            listedSet == 0L -> getString(R.string.route_rules_mine_unused)
+            listedSet == 0L -> getString(R.string.route_rules_mine_unused, sets.firstOrNull { it.id == usedSet }?.name)
             live -> getString(R.string.route_rules_from_used, name)
             else -> getString(R.string.route_rules_from_unused, name)
         }
+        // A subscription's tab also says that its servers keep rules of their own, which no set here changes.
+        header.rulesServerNote.isVisible = listedSet != 0L
+        header.rulesServerNote.text = getString(R.string.route_rules_server, name)
         header.probeLayout.isVisible = live
         toolbar.menu.findItem(R.id.action_reset_route)?.isVisible = editable
     }
