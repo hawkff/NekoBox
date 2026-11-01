@@ -53,6 +53,12 @@ object MullvadRelays {
         val place get() = "$country-$city"
     }
 
+    /**
+     * The servers in service with a SOCKS5 proxy, and the proxy hosts of every server the list names: one out of service
+     * or written oddly is still Mullvad's, so only a server gone from the list retires its proxy.
+     */
+    class ServerList(val relays: List<Relay>, val listed: Set<String>)
+
     class Result(val list: ProxyGroup, val created: Boolean, val added: Int, val removed: Int, val through: ProxyEntity?)
 
     fun isRelayList(group: ProxyGroup) = group.type == GroupType.PROXIES && group.subscription?.link == URL
@@ -69,23 +75,22 @@ object MullvadRelays {
         }
     }
 
-    /**
-     * The servers in service with a SOCKS5 proxy, as rows show them: by country name, city and host. Empty when [text]
-     * is no server list.
-     */
-    fun parse(text: String, locale: Locale = Locale.getDefault()): List<Relay> {
+    /** The server list in [text], its servers as rows show them: by country name, city and host. Empty when it is none. */
+    fun parse(text: String, locale: Locale = Locale.getDefault()): ServerList {
         val servers = try {
             JSONArray(text)
         } catch (_: JSONException) {
-            return emptyList()
+            return ServerList(emptyList(), emptySet())
         }
         val relays = ArrayList<Relay>()
+        val listed = HashSet<String>()
         for (index in 0 until servers.length()) {
             val server = servers.optJSONObject(index) ?: continue
             val country = server.optString("country_code")
             val city = server.optString("city_code")
             val host = server.optString("socks_name")
             val port = server.optInt("socks_port")
+            if (host.isNotEmpty()) listed += host
             // Only a name under Mullvad's relay domain becomes a proxy, whatever else the list holds.
             if (!server.optBoolean("active") || !COUNTRY.matches(country) || !CITY.matches(city) || port !in 1..65535 ||
                 !host.startsWith("$country-$city-") || !HOST.matches(host)
@@ -96,9 +101,10 @@ object MullvadRelays {
         }
         val names = relays.map { it.country }.distinct().associateWith { countryName(it, locale) }
         val collator = Collator.getInstance(locale)
-        return relays.sortedWith(
+        val sorted = relays.sortedWith(
             compareBy<Relay, String>(collator) { names.getValue(it.country) }.thenBy(collator) { it.cityName }.thenBy { it.host },
         )
+        return ServerList(sorted, listed)
     }
 
     fun countryName(code: String, locale: Locale = Locale.getDefault()): String = Locale.Builder().setRegion(code).build().getDisplayCountry(locale)
@@ -112,11 +118,17 @@ object MullvadRelays {
         }
     }
 
-    /** Which servers a list keeping [subscription] holds. */
-    fun holds(subscription: SubscriptionBean?): (Relay) -> Boolean {
+    /** The [codes] a list keeping [subscription] was given, null for all. */
+    fun codes(subscription: SubscriptionBean?): Set<String>? {
+        if (subscription?.filterMode != SubscriptionFilterMode.INCLUDE) return null
+        return subscription.filterRegex.orEmpty().removePrefix("^(?:").removeSuffix(")-").split('|').filterTo(HashSet(), String::isNotEmpty)
+    }
+
+    /** Which proxy hosts a list keeping [subscription] holds. */
+    fun holds(subscription: SubscriptionBean?): (String) -> Boolean {
         if (subscription?.filterMode != SubscriptionFilterMode.INCLUDE) return { true }
         val filter = Regex(subscription.filterRegex.orEmpty())
-        return { filter.containsMatchIn(it.host) }
+        return { filter.containsMatchIn(it) }
     }
 
     /** Fetches the server list again for [listId] and the countries and cities it keeps. */
@@ -127,10 +139,11 @@ object MullvadRelays {
 
     /**
      * Fills [listId] with the proxies of the servers [pick] holds, or of the pick it keeps when that is null; a new list
-     * when [listId] is 0. Proxies in use stay when their server leaves the pick or the server list, and so do proxies
-     * the user added; the rest follow the server list's order.
+     * when [listId] is 0. A proxy goes when the pick leaves its server out or the server list drops it, unless it is in
+     * use or the user added it; the rest follow the server list's order.
      */
-    suspend fun sync(listId: Long, relays: List<Relay>, pick: SubscriptionBean? = null): Result {
+    suspend fun sync(listId: Long, servers: ServerList, pick: SubscriptionBean? = null): Result {
+        val relays = servers.relays
         // A server list that failed to arrive whole must not empty the list.
         if (relays.isEmpty()) error(app.getString(R.string.no_proxies_found))
         val created = listId <= 0L
@@ -146,20 +159,27 @@ object MullvadRelays {
         try {
             // Read once the list is held, so an update finishing after a new pick keeps the new one.
             val list = checkNotNull(ProfileDatabase.groupDao.getById(id)) { "List deleted during the update" }
-            val wanted = relays.filter(holds(pick ?: list.subscription))
+            val holds = holds(pick ?: list.subscription)
+            val wanted = relays.filter { holds(it.host) }
             val wantedHosts = wanted.mapTo(HashSet()) { it.host }
             val stored = ProfileDatabase.proxyDao.getByGroup(id)
             fun ProxyEntity.relayHost() = (requireBean() as? SOCKSBean)?.serverAddress?.takeIf { it.endsWith(HOST_SUFFIX) }
             val storedByHost = stored.filter { it.relayHost() != null }.groupBy { it.relayHost() }
-            // Only proxies the import added go with their server; one the user added for a server stays.
-            val unwanted = stored.filter { it.uuid == IMPORTED && it.relayHost()?.let { host -> host !in wantedHosts } == true }
+            // Only proxies the import added go, one the user added for a server stays; a server out of service keeps its proxy.
+            val unwanted = stored.filter { row ->
+                row.uuid == IMPORTED && row.relayHost()?.let { host -> host !in wantedHosts && (!holds(host) || host !in servers.listed) } == true
+            }
             val inUse = if (unwanted.isEmpty()) emptySet() else RawUpdater.referencedProfileIds()
             val removedIds = unwanted.filterNot { it.id in inUse }.mapTo(HashSet()) { it.id }
-            // The servers in the server list's order, then what the user added and what stays in use, as they were.
+            // The servers in the server list's order, then what the user added and what stays, as they were.
             val rows = ArrayList<ProxyEntity>()
             val toInsert = ArrayList<ProxyEntity>()
+            // Imported proxies whose server moved its proxy to another port.
+            val ported = HashMap<Long, Int>()
             for (relay in wanted) {
-                rows += storedByHost[relay.host]?.first() ?: ProxyEntity(groupId = id, uuid = IMPORTED).putBean(bean(relay)).also { toInsert += it }
+                val row = storedByHost[relay.host]?.first()
+                if (row != null && row.uuid == IMPORTED && row.requireBean().serverPort != relay.port) ported[row.id] = relay.port
+                rows += row ?: ProxyEntity(groupId = id, uuid = IMPORTED).putBean(bean(relay)).also { toInsert += it }
             }
             val placed = rows.mapTo(HashSet()) { it.id }
             stored.filterTo(rows) { it.id !in placed && it.id !in removedIds }
@@ -180,7 +200,17 @@ object MullvadRelays {
                 if (toInsert.isNotEmpty()) ProfileDatabase.proxyDao.insert(toInsert)
                 for ((row, order) in moved) ProfileDatabase.proxyDao.updateOrder(row, order)
                 removedIds.toList().chunked(500).forEach { ProfileDatabase.proxyDao.deleteByIds(it) }
+                // The stored rows, so traffic counted meanwhile stays; a check of the old port says nothing now.
+                for ((row, port) in ported) {
+                    val entity = ProfileDatabase.proxyDao.getById(row) ?: continue
+                    entity.putBean(entity.requireBean().apply { serverPort = port })
+                    entity.status = 0
+                    entity.ping = 0
+                    entity.error = null
+                    ProfileDatabase.proxyDao.updateProxy(entity)
+                }
             }
+            if (ported.isNotEmpty()) DataStore.forgetProxyExits(ported.keys.toList())
             return Result(list, created, toInsert.size, removedIds.size, through)
         } catch (e: Exception) {
             // A list made for this import goes again when the import fails.

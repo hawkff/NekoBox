@@ -9,13 +9,14 @@ import xyz.nekobyte.nekobox.group.MullvadRelays
 
 /**
  * Mullvad's countries under a row for every server, each followed by its cities when it has several, with how many
- * servers each holds. Checking a row checks the cities it covers. The cities in [held] open checked; [onPick] gets
- * the countries and cities checked as codes ("nl", "us-nyc"), or null when every server is.
+ * servers each holds. Checking a row checks the cities it covers. The countries and cities [saved] as codes ("nl",
+ * "us-nyc"; null for all) open checked; [onPick] gets the codes checked, or null when every server is. A saved code
+ * the server list has no server for now stays.
  */
 internal fun showMullvadPicker(
     context: Context,
     relays: List<MullvadRelays.Relay>,
-    held: Set<String>,
+    saved: Set<String>?,
     adding: Boolean,
     onPick: (Set<String>?) -> Unit,
 ): AlertDialog {
@@ -32,7 +33,8 @@ internal fun showMullvadPicker(
         rows += Row("${ProfileWords.flag(country)} ${MullvadRelays.countryName(country)} · ${servers.size}", cities.keys.mapTo(HashSet()) { "$country-$it" })
         if (cities.size > 1) cities.values.forEach { rows += Row("\u2003${it[0].cityName} · ${it.size}", setOf(it[0].place)) }
     }
-    val picked = held.filterTo(HashSet()) { it in all }
+    val picked = relays.filter { saved == null || it.country in saved || it.place in saved }.mapTo(HashSet()) { it.place }
+    val unseen = saved.orEmpty().filterNot { it in countries || it in all }
     val checked = BooleanArray(rows.size) { picked.containsAll(rows[it].places) }
     lateinit var dialog: AlertDialog
 
@@ -56,7 +58,7 @@ internal fun showMullvadPicker(
                 countries.flatMap { (country, servers) ->
                     val places = servers.mapTo(HashSet()) { it.place }
                     if (picked.containsAll(places)) listOf(country) else places.filter { it in picked }
-                }.toSet(),
+                }.toSet() + unseen,
             )
         }
         .setNegativeButton(android.R.string.cancel, null)

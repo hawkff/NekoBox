@@ -62,13 +62,13 @@ class MullvadRelaysTest {
         put("pubkey", "key-$host")
     }
 
-    private fun relays(vararg servers: JSONObject) = MullvadRelays.parse(JSONArray(servers.toList()).toString(), Locale.ENGLISH)
+    private fun servers(vararg servers: JSONObject) = MullvadRelays.parse(JSONArray(servers.toList()).toString(), Locale.ENGLISH)
 
     private fun names(listId: Long) = ProfileDatabase.proxyDao.getByGroup(listId).map { it.displayName() }
 
     @Test
     fun parse_keepsServersInServiceUnderMullvadsRelayDomain_byCountryNameCityAndHost() {
-        val parsed = relays(
+        val parsed = servers(
             server("se-sto-wg-002", "Stockholm"),
             server("nl-ams-wg-002"),
             server("de-fra-wg-001", "Frankfurt"),
@@ -81,18 +81,24 @@ class MullvadRelaysTest {
         )
         assertEquals(
             listOf("de-ber-wg-socks5-001", "de-fra-wg-socks5-001", "nl-ams-wg-socks5-001", "nl-ams-wg-socks5-002", "se-sto-wg-socks5-002"),
-            parsed.map { it.host.substringBefore('.') },
+            parsed.relays.map { it.host.substringBefore('.') },
         )
-        assertTrue(MullvadRelays.parse("<html>Service unavailable</html>").isEmpty())
+        // Servers out of service or written oddly are still on the list.
+        assertTrue("nl-ams-wg-socks5-003.relays.mullvad.net" in parsed.listed)
+        assertTrue("nl-ams-wg-socks5-006.relays.mullvad.net" in parsed.listed)
+        assertTrue(MullvadRelays.parse("<html>Service unavailable</html>").relays.isEmpty())
     }
 
     @Test
     fun aPick_holdsWholeCountriesAndSingleCities_orEveryServer() {
-        val parsed = relays(server("us-nyc-wg-001", "New York, NY"), server("us-lax-wg-001", "Los Angeles, CA"), server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
-        fun held(codes: Set<String>?) = parsed.filter(MullvadRelays.holds(MullvadRelays.subscription(codes))).mapTo(HashSet()) { it.place }
-        assertEquals(parsed.mapTo(HashSet()) { it.place }, held(null))
+        val parsed = servers(server("us-nyc-wg-001", "New York, NY"), server("us-lax-wg-001", "Los Angeles, CA"), server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
+        fun held(codes: Set<String>?) = MullvadRelays.holds(MullvadRelays.subscription(codes)).let { holds -> parsed.relays.filter { holds(it.host) }.mapTo(HashSet()) { it.place } }
+        assertEquals(parsed.relays.mapTo(HashSet()) { it.place }, held(null))
         assertEquals(setOf("nl-ams", "us-nyc"), held(setOf("nl", "us-nyc")))
         assertEquals(setOf("us-nyc", "us-lax"), held(setOf("us")))
+        // The codes come back as they were given, for the picker to open with.
+        assertEquals(setOf("nl", "us-nyc"), MullvadRelays.codes(MullvadRelays.subscription(setOf("nl", "us-nyc"))))
+        assertEquals(null, MullvadRelays.codes(MullvadRelays.subscription(null)))
     }
 
     @Test
@@ -108,7 +114,7 @@ class MullvadRelaysTest {
                     peerPublicKey = "key-se-sto-wg-001"
                 },
             )
-            val parsed = relays(server("se-sto-wg-001", "Stockholm"), server("nl-ams-wg-002"), server("nl-ams-wg-001"))
+            val parsed = servers(server("se-sto-wg-001", "Stockholm"), server("nl-ams-wg-002"), server("nl-ams-wg-001"))
 
             val result = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl")))
 
@@ -131,7 +137,7 @@ class MullvadRelaysTest {
     @Test
     fun anUpdate_addsNewServers_dropsRetiredOnes_andKeepsTheUsersProxiesAndProxiesInUse() = runTest {
         withContext(Dispatchers.IO) {
-            val listId = MullvadRelays.sync(0L, relays(server("nl-ams-wg-001"), server("nl-ams-wg-002"), server("nl-ams-wg-003")), MullvadRelays.subscription(null)).list.id
+            val listId = MullvadRelays.sync(0L, servers(server("nl-ams-wg-001"), server("nl-ams-wg-002"), server("nl-ams-wg-003")), MullvadRelays.subscription(null)).list.id
             val first = ProfileDatabase.proxyDao.getByGroup(listId)
             // The user's own proxies: another provider's, and one of Mullvad's servers outside the server list.
             for ((name, address) in listOf("Mine" to "192.0.2.7", "By hand" to "nl-ams-wg-socks5-009.relays.mullvad.net")) {
@@ -147,7 +153,7 @@ class MullvadRelaysTest {
             // Server 002 leaves the server list while it is selected.
             DataStore.selectedProxy = first[1].id
 
-            val result = MullvadRelays.sync(listId, relays(server("nl-ams-wg-004"), server("nl-ams-wg-001")))
+            val result = MullvadRelays.sync(listId, servers(server("nl-ams-wg-004"), server("nl-ams-wg-001")))
 
             assertFalse(result.created)
             assertEquals(1, result.added)
@@ -161,7 +167,7 @@ class MullvadRelaysTest {
     @Test
     fun anUpdate_keepsAPickSavedWhileItFetched() = runTest {
         withContext(Dispatchers.IO) {
-            val parsed = relays(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
+            val parsed = servers(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
             val listId = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl"))).list.id
             MullvadRelays.sync(listId, parsed, MullvadRelays.subscription(setOf("se")))
 
@@ -170,14 +176,14 @@ class MullvadRelaysTest {
 
             assertEquals(listOf("\uD83C\uDDF8\uD83C\uDDEA Stockholm 001"), names(listId))
             val kept = ProfileDatabase.groupDao.getById(listId)!!.subscription
-            assertEquals(setOf("se-sto"), parsed.filter(MullvadRelays.holds(kept)).mapTo(HashSet()) { it.place })
+            assertEquals(setOf("se-sto"), MullvadRelays.holds(kept).let { holds -> parsed.relays.filter { holds(it.host) }.mapTo(HashSet()) { it.place } })
         }
     }
 
     @Test
     fun anotherPick_changesWhatTheListHolds_andKeepsItsFirstHop() = runTest {
         withContext(Dispatchers.IO) {
-            val parsed = relays(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
+            val parsed = servers(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
             val listId = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl"))).list.id
             ProfileDatabase.groupDao.getById(listId)!!.let { ProfileDatabase.groupDao.updateGroup(it.apply { frontProxy = 42L }) }
             val published = ArrayList<ProxyGroup>()
@@ -205,7 +211,7 @@ class MullvadRelaysTest {
             val list = ProfileDatabase.groupDao.getById(listId)!!
             assertEquals(42L, list.frontProxy)
             assertEquals(listOf("\uD83C\uDDF8\uD83C\uDDEA Stockholm 001"), names(listId))
-            assertEquals(setOf("se-sto"), parsed.filter(MullvadRelays.holds(list.subscription)).mapTo(HashSet()) { it.place })
+            assertEquals(setOf("se-sto"), MullvadRelays.holds(list.subscription).let { holds -> parsed.relays.filter { holds(it.host) }.mapTo(HashSet()) { it.place } })
             // The tabs and the page get the stored list with its new pick.
             assertEquals(list.subscription?.filterRegex, published.single().subscription?.filterRegex)
             assertEquals(42L, published.single().frontProxy)
@@ -213,9 +219,40 @@ class MullvadRelaysTest {
     }
 
     @Test
+    fun anUpdate_keepsTheProxiesOfServersOutOfServiceOrWrittenOddly_andDropsOnesGoneFromTheList() = runTest {
+        withContext(Dispatchers.IO) {
+            val listId = MullvadRelays.sync(0L, servers(server("nl-ams-wg-001"), server("nl-ams-wg-002"), server("nl-ams-wg-003"), server("nl-ams-wg-004")), MullvadRelays.subscription(null)).list.id
+
+            val result = MullvadRelays.sync(listId, servers(server("nl-ams-wg-001"), server("nl-ams-wg-002", active = false), server("nl-ams-wg-003", port = 0)))
+
+            assertEquals(0, result.added)
+            assertEquals(1, result.removed)
+            val flag = "\uD83C\uDDF3\uD83C\uDDF1"
+            assertEquals(listOf("$flag Amsterdam 001", "$flag Amsterdam 002", "$flag Amsterdam 003"), names(listId))
+        }
+    }
+
+    @Test
+    fun anUpdate_givesAProxyItsServersNewPort_andForgetsItsOldCheck() = runTest {
+        withContext(Dispatchers.IO) {
+            val listId = MullvadRelays.sync(0L, servers(server("nl-ams-wg-001")), MullvadRelays.subscription(null)).list.id
+            val before = ProfileDatabase.proxyDao.getByGroup(listId).single()
+            ProfileDatabase.proxyDao.updateTestResult(before.id, 1, 42, null)
+
+            MullvadRelays.sync(listId, servers(server("nl-ams-wg-001", port = 1081)))
+
+            val after = ProfileDatabase.proxyDao.getByGroup(listId).single()
+            assertEquals(before.id, after.id)
+            assertEquals(1081, after.requireBean().serverPort)
+            assertEquals(0, after.status)
+            assertEquals(0, after.ping)
+        }
+    }
+
+    @Test
     fun aServerListThatDidNotArrive_changesNothing() = runTest {
         withContext(Dispatchers.IO) {
-            val listId = MullvadRelays.sync(0L, relays(server("nl-ams-wg-001")), MullvadRelays.subscription(null)).list.id
+            val listId = MullvadRelays.sync(0L, servers(server("nl-ams-wg-001")), MullvadRelays.subscription(null)).list.id
 
             val failure = runCatching { MullvadRelays.sync(listId, MullvadRelays.parse("<html>"), MullvadRelays.subscription(null)) }.exceptionOrNull()
 

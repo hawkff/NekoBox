@@ -1014,15 +1014,15 @@ open class ConfigurationFragment @JvmOverloads constructor(
             } finally {
                 loading.dismiss()
             }
-            val (relays, list) = loaded.getOrElse {
+            val (servers, list) = loaded.getOrElse {
                 Logs.w(it)
                 snackbar(it.readableMessage).show()
                 return@launch
             }
-            if (relays.isEmpty()) return@launch snackbar(R.string.no_proxies_found).show()
-            val held = if (list == null) emptySet() else relays.filter(MullvadRelays.holds(list.subscription)).mapTo(HashSet()) { it.place }
-            showMullvadPicker(requireContext(), relays, held, adding = list == null) { codes ->
-                syncMullvad(null) { MullvadRelays.sync(list?.id ?: 0L, relays, MullvadRelays.subscription(codes)) }
+            if (servers.relays.isEmpty()) return@launch snackbar(R.string.no_proxies_found).show()
+            val saved = if (list == null) emptySet() else MullvadRelays.codes(list.subscription)
+            showMullvadPicker(requireContext(), servers.relays, saved, adding = list == null) { codes ->
+                syncMullvad(null) { MullvadRelays.sync(list?.id ?: 0L, servers, MullvadRelays.subscription(codes)) }
             }
         }
     }

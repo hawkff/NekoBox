@@ -63,12 +63,19 @@ class MullvadPickerTest {
     }
 
     @Test
-    fun aListHoldingEveryServerOpensChecked_andKeepsEveryServer() = withPicker(relays.mapTo(HashSet()) { it.place }) { dialog, picks ->
+    fun aListHoldingEveryServerOpensChecked_andKeepsEveryServer() = withPicker(null) { dialog, picks ->
         assertEquals(listOf(true, true, true, true, true), checks(dialog))
         assertEquals(dialog.context.getString(android.R.string.ok), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
         pick(dialog)
         assertEquals(1, picks.size)
         assertNull(picks[0])
+    }
+
+    @Test
+    fun aSavedCountryWithoutServersNowStaysPicked() = withPicker(setOf("nl", "se")) { dialog, picks ->
+        assertEquals(listOf(false, true, false, false, false), checks(dialog))
+        pick(dialog)
+        assertEquals(listOf(setOf("nl", "se")), picks)
     }
 
     private fun checks(dialog: AlertDialog) = (0 until dialog.listView.adapter.count).map { dialog.listView.isItemChecked(it) }
@@ -78,12 +85,12 @@ class MullvadPickerTest {
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    private fun withPicker(held: Set<String>, action: (AlertDialog, MutableList<Set<String>?>) -> Unit) {
+    private fun withPicker(saved: Set<String>?, action: (AlertDialog, MutableList<Set<String>?>) -> Unit) {
         val controller = Robolectric.buildActivity(Activity::class.java).setup()
         try {
             val context: Context = ContextThemeWrapper(controller.get(), R.style.Theme_NekoBox)
             val picks = ArrayList<Set<String>?>()
-            val dialog = showMullvadPicker(context, relays, held, adding = held.isEmpty()) { picks += it }
+            val dialog = showMullvadPicker(context, relays, saved, adding = saved?.isEmpty() == true) { picks += it }
             try {
                 action(dialog, picks)
             } finally {
