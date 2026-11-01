@@ -44,6 +44,7 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.databinding.LayoutProfileActionsBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileListBinding
 import xyz.nekobyte.nekobox.databinding.LayoutProfileSectionBinding
@@ -592,7 +593,8 @@ class ConfigurationGroupFragment : Fragment() {
 
         fun isHeader(position: Int) = (configurationIdList.getOrNull(position) ?: 0L) < 0
 
-        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L) {
+        /** [reloaded]: the list a reload just read, whose stamps came off the main thread a moment ago. */
+        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L, reloaded: Boolean = false) {
             if (disposed || dragInProgress) return
             val visible = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
             val profiles = masterProfiles.toMap()
@@ -621,7 +623,7 @@ class ConfigurationGroupFragment : Fragment() {
                     }
                 }
             }
-            val stamps = buildDisplayStamps(ids, profiles) + rows.mapValues { (_, row) ->
+            val stamps = buildDisplayStamps(ids, profiles, reuseKept = reloaded) + rows.mapValues { (_, row) ->
                 ProfileRowStamp(Objects.hash(row.title, row.count, row.folded), reserveMiddleRow = false, doubleColumn = false)
             }
             submit(
@@ -734,18 +736,33 @@ class ConfigurationGroupFragment : Fragment() {
             ids: List<Long>,
             profiles: Map<Long, ProxyEntity>,
             positions: Iterable<Int> = ids.indices,
+            reuseKept: Boolean = false,
         ): Map<Long, ProfileRowStamp> {
+            // Right after a reload, a profile's kept stamp was made off the main thread a moment ago: reuse it rather
+            // than stamp the whole list again on the main thread. Later the country or address a row shows can change
+            // without its profile changing, so every other list is stamped afresh.
             val baseStamps = positions.associate { position ->
                 val id = ids[position]
+                val profile = profiles[id]
                 id to (
-                    profiles[id]?.let(::profileStateStamp)
+                    masterStamps[id]?.takeIf { reuseKept && profile != null && masterProfiles[id] === profile }
+                        ?: profile?.let(::profileStateStamp)
                         ?: configurationStamps[id]?.content
                         ?: masterStamps[id]
                         ?: 0
                     )
             }
-            return buildProfileRowStamps(ids, baseStamps, displaySpanCount(), positions, hasCountryRow = { id -> profiles[id]?.let(::hasCountryRow) == true }) { id ->
-                profiles[id]?.let(::hasMiddleRow) == true
+            // Two columns ask each profile about its neighbor too: one answer per profile.
+            val countryRows = HashMap<Long, Boolean>()
+            val middleRows = HashMap<Long, Boolean>()
+            return buildProfileRowStamps(
+                ids,
+                baseStamps,
+                displaySpanCount(),
+                positions,
+                hasCountryRow = { id -> countryRows.getOrPut(id) { profiles[id]?.let(::hasCountryRow) == true } },
+            ) { id ->
+                middleRows.getOrPut(id) { profiles[id]?.let(::hasMiddleRow) == true }
             }
         }
 
@@ -753,10 +770,16 @@ class ConfigurationGroupFragment : Fragment() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inflater = LayoutInflater.from(parent.context)
-            if (viewType == SECTION_VIEW) return SectionHolder(LayoutProfileSectionBinding.inflate(inflater, parent, false))
+            // The first list takes the rows MainActivity made while it started.
+            val warmup = (activity as? MainActivity)?.rowWarmup
+            if (viewType == SECTION_VIEW) {
+                val view = warmup?.take(R.layout.layout_profile_section) ?: inflater.inflate(R.layout.layout_profile_section, parent, false)
+                return SectionHolder(LayoutProfileSectionBinding.bind(view))
+            }
             // The compact row holds the card's views, so the card's binding reads it too.
             val layout = if (viewType == GroupLayout.COMPACT) R.layout.layout_profile_compact else R.layout.layout_profile
-            return ConfigurationHolder(LayoutProfileBinding.bind(inflater.inflate(layout, parent, false)), viewType)
+            val view = warmup?.take(layout) ?: inflater.inflate(layout, parent, false)
+            return ConfigurationHolder(LayoutProfileBinding.bind(view), viewType)
         }
 
         override fun getItemId(position: Int): Long = configurationIdList[position]
@@ -1153,7 +1176,7 @@ class ConfigurationGroupFragment : Fragment() {
                 }
                 val selectedId = selectedItem?.id ?: DataStore.selectedProxy
                 // The open page shows its selected profile, unless its section is folded; others start at the top.
-                submitMasterList(if (masterIds.isNotEmpty()) 0 else -1, if (selected) selectedId else 0L)
+                submitMasterList(if (masterIds.isNotEmpty()) 0 else -1, if (selected) selectedId else 0L, reloaded = true)
             }
         }
     }
@@ -1252,10 +1275,18 @@ class ConfigurationGroupFragment : Fragment() {
         val trafficText: TextView = binding.trafficText
         private val card = view as MaterialCardView
         private val highlight = CardHighlight(card)
-        val editButton: ImageView = binding.edit
+
+        // The one-column card shows its buttons; two columns, compact rows and the Proxies screen keep them under ⋮,
+        // so their cards never build them.
+        private val actions = if (layout == GroupLayout.CARDS && (parentFragment as? ConfigurationFragment)?.proxies != true) {
+            LayoutProfileActionsBinding.bind(binding.actions.inflate())
+        } else {
+            null
+        }
+        val editButton: ImageView? = actions?.edit
         val doubleColumnMenuButton: ImageView = binding.doubleColumnMenu
-        val shareLayout: ImageView = binding.share
-        val removeButton: ImageView = binding.remove
+        val shareLayout: ImageView? = actions?.share
+        val removeButton: ImageView? = actions?.remove
 
         init {
             view.setOnClickListener {
@@ -1271,10 +1302,10 @@ class ConfigurationGroupFragment : Fragment() {
                 if (profile.status == 3) alert(profile.error ?: "<?>").tryToShow()
             }
             profileStatus.isFocusable = false
-            editButton.setOnClickListener { openSettings(it, entity.id) }
-            removeButton.setOnClickListener { requestRemove(entity.id) }
+            editButton?.setOnClickListener { openSettings(it, entity.id) }
+            removeButton?.setOnClickListener { requestRemove(entity.id) }
             doubleColumnMenuButton.setOnClickListener { showDoubleColumnMenu(it, entity.id) }
-            shareLayout.setOnClickListener { showShareMenu(it, entity.id) }
+            shareLayout?.setOnClickListener { showShareMenu(it, entity.id) }
         }
 
         fun isBoundTo(profileId: Long) = ::entity.isInitialized && entity.id == profileId
@@ -1517,23 +1548,20 @@ class ConfigurationGroupFragment : Fragment() {
             }
 
             // Two columns and compact rows keep the actions under ⋮.
-            if (layout != GroupLayout.CARDS || pf.proxies) {
-                editButton.isGone = true
-                shareLayout.isGone = true
-                removeButton.isGone = true
+            if (actions == null) {
                 doubleColumnMenuButton.isVisible = true
             } else {
                 // A button a profile lacks keeps its slot, so the buttons line up down the list.
-                shareLayout.visibility = slot(select, proxyEntity.type != ProxyEntity.TYPE_CHAIN)
-                editButton.visibility = slot(select, proxyEntity.haveSettings())
-                removeButton.isGone = select
+                actions.share.visibility = slot(select, proxyEntity.type != ProxyEntity.TYPE_CHAIN)
+                actions.edit.visibility = slot(select, proxyEntity.haveSettings())
+                actions.remove.isGone = select
                 doubleColumnMenuButton.isGone = true
             }
 
             val selected = pf.isSelectedProfile(proxyEntity.id)
             val running = pf.isRunningProfile(proxyEntity.id)
-            editButton.isEnabled = !running
-            removeButton.isEnabled = !running
+            editButton?.isEnabled = !running
+            removeButton?.isEnabled = !running
             // Screen readers say "selected", and "Connecting…" while the service connects to this profile;
             // the outline is for the eye, and breathes until the connection is up.
             val connecting = pf.isConnectingProfile(proxyEntity.id)

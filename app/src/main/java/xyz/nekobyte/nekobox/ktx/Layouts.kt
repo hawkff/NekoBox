@@ -1,9 +1,12 @@
 package xyz.nekobyte.nekobox.ktx
 
+import android.content.Context
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.AttributeSet
+import android.view.LayoutInflater
 import android.view.View
 import androidx.core.view.isEmpty
 import androidx.recyclerview.widget.GridLayoutManager
@@ -175,4 +178,23 @@ fun RecyclerView.prefill(viewType: Int, count: Int) {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = onChanged()
         },
     )
+}
+
+/**
+ * An inflater without AppCompat's view factory, which serves the main thread only: it lets rows be inflated off it.
+ * A layout it inflates names classes the factory would swap in full, MaterialTextView for TextView, so both make the
+ * same views.
+ */
+class PlainInflater(context: Context) : LayoutInflater(context) {
+    override fun cloneInContext(newContext: Context): LayoutInflater = PlainInflater(newContext)
+
+    override fun onCreateView(name: String, attrs: AttributeSet): View {
+        for (prefix in arrayOf("android.widget.", "android.webkit.", "android.app.")) {
+            try {
+                return createView(name, prefix, attrs) ?: continue
+            } catch (_: ClassNotFoundException) {
+            }
+        }
+        return super.onCreateView(name, attrs)
+    }
 }

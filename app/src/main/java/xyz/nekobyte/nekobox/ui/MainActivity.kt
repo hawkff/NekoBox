@@ -20,9 +20,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isNotEmpty
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
@@ -67,7 +69,6 @@ import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.ktx.whenStill
 import xyz.nekobyte.nekobox.plugin.PluginTrust
 import xyz.nekobyte.nekobox.plugin.Plugins
-import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassBackdrop
@@ -88,6 +89,9 @@ class MainActivity :
     lateinit var binding: LayoutMainBinding
     lateinit var navigation: NavigationView
 
+    /** Home's first rows, inflated while the activity starts. */
+    val rowWarmup = RowWarmup(this)
+
     // FabContainer: lets ktx layout managers drive the FAB without importing ui (cycle break).
     override val fabView get() = binding.fab
     override fun showFab() = binding.fab.show()
@@ -97,18 +101,19 @@ class MainActivity :
         super.onCreate(savedInstanceState)
         // The render thread loads the first frame's GPU programs while the screen is being built.
         WarmUp.start(this)
+        // The first plural the process shows loads the locale's plural rules (~80 ms on a slow phone); Home's section
+        // headers would pay it in the frame that fills the list.
+        runOnDefaultDispatcher { resources.getQuantityString(R.plurals.group_profiles, 2, 2) }
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 
         binding = LayoutMainBinding.inflate(layoutInflater)
+        // Home's rows are made off the main thread from the first frame on, before the profiles come; started sooner,
+        // they would hold up that frame, which inflates on the main thread from the same resources.
+        binding.root.doOnPreDraw { binding.root.post { rowWarmup.start(lifecycleScope) } }
         binding.fab.initProgress(binding.fabProgress)
-        if (DataStore.appTheme != Theme.BLACK) {
-            navigation = binding.navView
-            binding.drawerLayout.removeView(binding.navViewBlack)
-        } else {
-            navigation = binding.navViewBlack
-            binding.drawerLayout.removeView(binding.navView)
-        }
+        // One drawer for every theme. Black used a second one whose solid item fill hid the checked item's name.
+        navigation = binding.navView
         navigation.setNavigationItemSelectedListener(this)
         // The drawer's items are built after start-up (see buildAhead), or as the drawer starts to open if sooner.
         // A recreated activity builds them now, so the drawer restores its checked item, and opens with items.

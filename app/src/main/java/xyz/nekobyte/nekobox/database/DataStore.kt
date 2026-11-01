@@ -253,7 +253,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var allowAccess by configurationStore.boolean(Key.ALLOW_ACCESS)
 
-    // Default must match global_preferences.xml (1000ms). Without a non-zero code
+    // Default must match settings_notification.xml (1000ms). Without a non-zero code
     // default, a fresh install that never opens Settings reads 0, which disables the
     // TrafficLooper stats loop entirely (TrafficLooper.loop() returns on delayMs == 0),
     // so the bottom bar's up/down speeds stay blank. "0" remains a valid user choice (Off).

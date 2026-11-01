@@ -76,7 +76,7 @@ class TelemetryTest {
             val store = RoomPreferenceDataStore(db.keyValuePairDao())
             fun preference(): SwitchPreference {
                 val manager = PreferenceManager(context).apply { preferenceDataStore = store }
-                val screen = manager.inflateFromResource(context, R.xml.global_preferences, null)
+                val screen = manager.inflateFromResource(context, R.xml.settings_advanced, null)
                 return requireNotNull(screen.findPreference(Key.HELP_TO_IMPROVE))
             }
             assertFalse(preference().isChecked)

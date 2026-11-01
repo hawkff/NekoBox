@@ -34,9 +34,9 @@ import xyz.nekobyte.nekobox.utils.Theme
 import java.io.File
 
 /**
- * One page of global_preferences.xml. Without arguments it shows the hub (the nested screens as
- * rows); with [PreferenceFragmentCompat.ARG_PREFERENCE_ROOT] it shows that nested screen only.
- * Every lookup below is null-safe because a page holds just its own preferences.
+ * The Settings hub, or with [PreferenceFragmentCompat.ARG_PREFERENCE_ROOT] the page of that row, inflated from its own
+ * file ([SettingsPages]) so that no page builds the preferences of every page. Every lookup below is null-safe
+ * because a page holds just its own preferences.
  */
 class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
@@ -87,7 +87,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceManager.preferenceDataStore = DataStore.configurationStore
         DataStore.initGlobal()
-        setPreferencesFromResource(R.xml.global_preferences, rootKey)
+        setPreferencesFromResource(rootKey?.let(SettingsPages.byKey::get) ?: R.xml.global_preferences, null)
 
         setupAppearance()
         setupConnection()

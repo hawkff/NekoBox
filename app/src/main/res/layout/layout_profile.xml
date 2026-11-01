@@ -10,175 +10,135 @@
     android:focusable="true"
     app:cardCornerRadius="@dimen/profile_card_corner_radius">
 
+    <!-- One column of rows. A wrapper that stretched it to its own height made Android measure every card twice. -->
     <LinearLayout
         android:id="@+id/content_lin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:focusable="true"
-        android:orientation="horizontal">
+        android:nextFocusRight="@+id/edit"
+        android:orientation="vertical">
 
         <LinearLayout
-
+            android:id="@+id/container"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:nextFocusRight="@+id/edit"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:id="@+id/container"
-                android:layout_width="match_parent"
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/profile_name"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/profile_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:maxLines="2"
-                    android:ellipsize="end"
-                    android:breakStrategy="simple"
-                    android:hyphenationFrequency="none"
-                    android:lineBreakStyle="loose"
-                    android:lineBreakWordStyle="phrase"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/profileNameColor"
-                    android:textStyle="bold"
-                    tools:text="@string/profile_name" />
-                </LinearLayout>
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/edit"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/edit"
-                    android:focusable="true"
-                    android:padding="12dp"
-                    app:srcCompat="@drawable/ic_edit" />
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/double_column_menu"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/more_options"
-                    android:focusable="true"
-                    android:padding="12dp"
-                    android:visibility="gone"
-                    app:srcCompat="@drawable/ic_more_vert" />
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/share"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/share"
-                    android:focusable="true"
-                    android:nextFocusLeft="@+id/container"
-                    android:padding="12dp"
-                    app:srcCompat="@drawable/ic_share" />
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/remove"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/delete"
-                    android:focusable="true"
-                    android:padding="12dp"
-                    android:visibility="gone"
-                    app:srcCompat="@drawable/ic_delete" />
-
-            </LinearLayout>
-
-            <!-- Two columns give the country its own row, so the address keeps its width. -->
-            <TextView
-                android:id="@+id/profile_country"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
                 android:paddingStart="12dp"
-                android:paddingEnd="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:breakStrategy="simple"
+                android:hyphenationFrequency="none"
+                android:lineBreakStyle="loose"
+                android:lineBreakWordStyle="phrase"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="?attr/profileNameColor"
+                android:textStyle="bold"
+                tools:text="@string/profile_name" />
+
+            <!-- Edit, share and remove: only the one-column card inflates them; the others keep them under ⋮. -->
+            <ViewStub
+                android:id="@+id/actions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:layout="@layout/layout_profile_actions" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/double_column_menu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/more_options"
+                android:focusable="true"
+                android:padding="12dp"
+                android:visibility="gone"
+                app:srcCompat="@drawable/ic_more_vert" />
+
+        </LinearLayout>
+
+        <!-- Two columns give the country its own row, so the address keeps its width. -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/profile_country"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:singleLine="true"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="?android:attr/textColorSecondary"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/profile_address"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/server_address"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/traffic_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/traffic"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="?android:attr/textColorSecondary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="12dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/profile_type"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
                 android:singleLine="true"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textColor="?android:attr/textColorSecondary"
-                android:visibility="gone" />
+                android:textColor="?attr/protocolColor" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/profile_status"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="4dp"
-                android:visibility="gone"
-                tools:visibility="visible">
-
-                <TextView
-                    android:id="@+id/profile_address"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/server_address"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:id="@+id/traffic_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/traffic"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="12dp">
-
-                <TextView
-                    android:id="@+id/profile_type"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/protocolColor" />
-
-                <TextView
-                    android:id="@+id/profile_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:gravity="end"
-                    android:singleLine="true"
-                    android:ellipsize="end"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?android:textColorSecondary" />
-
-            </LinearLayout>
+                android:layout_marginStart="8dp"
+                android:gravity="end"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="?android:textColorSecondary" />
 
         </LinearLayout>
 
