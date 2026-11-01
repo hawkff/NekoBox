@@ -20,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isNotEmpty
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
@@ -103,11 +104,13 @@ class MainActivity :
         // The first plural the process shows loads the locale's plural rules (~80 ms on a slow phone); Home's section
         // headers would pay it in the frame that fills the list.
         runOnDefaultDispatcher { resources.getQuantityString(R.plurals.group_profiles, 2, 2) }
-        rowWarmup.start(lifecycleScope)
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 
         binding = LayoutMainBinding.inflate(layoutInflater)
+        // Home's rows are made off the main thread from the first frame on, before the profiles come; started sooner,
+        // they would hold up that frame, which inflates on the main thread from the same resources.
+        binding.root.doOnPreDraw { binding.root.post { rowWarmup.start(lifecycleScope) } }
         binding.fab.initProgress(binding.fabProgress)
         // One drawer for every theme. Black used a second one whose solid item fill hid the checked item's name.
         navigation = binding.navView
