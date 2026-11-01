@@ -36,7 +36,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/profile_name"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -48,7 +48,7 @@
                     android:textStyle="bold"
                     tools:text="@string/profile_name" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/profile_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -59,7 +59,7 @@
                     android:textAppearance="?attr/textAppearanceLabelMedium"
                     android:textColor="?attr/protocolColor" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/profile_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -79,7 +79,7 @@
                 android:visibility="gone"
                 tools:visibility="visible">
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/profile_address"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -90,7 +90,7 @@
                     android:textColor="?android:attr/textColorSecondary"
                     tools:text="🇩🇪 Germany · 192.0.2.10:443" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/traffic_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -115,7 +115,7 @@
             app:srcCompat="@drawable/ic_more_vert" />
 
         <!-- The card's own row for the country; this row keeps the country on its second line. -->
-        <TextView
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/profile_country"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
