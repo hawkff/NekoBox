@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import androidx.lifecycle.LifecycleCoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.R
@@ -40,7 +41,11 @@ class RowWarmup(private val context: Context) {
                 // Sections first: the list starts with one, and a row of cards follows.
                 for ((resource, count) in rows) {
                     val queue = made.getOrPut(resource) { ConcurrentLinkedQueue() }
-                    repeat(count) { queue.add(inflater.inflate(resource, parent, false)) }
+                    repeat(count) {
+                        // A destroyed activity stops here instead of inflating for a screen that is gone.
+                        ensureActive()
+                        queue.add(inflater.inflate(resource, parent, false))
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e

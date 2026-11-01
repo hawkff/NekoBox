@@ -593,7 +593,8 @@ class ConfigurationGroupFragment : Fragment() {
 
         fun isHeader(position: Int) = (configurationIdList.getOrNull(position) ?: 0L) < 0
 
-        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L) {
+        /** [reloaded]: the list a reload just read, whose stamps came off the main thread a moment ago. */
+        private fun submitMasterList(scrollIndex: Int = -1, scrollToId: Long = 0L, reloaded: Boolean = false) {
             if (disposed || dragInProgress) return
             val visible = masterIds.filter { id -> masterProfiles[id]?.let(::matchesFilter) == true }
             val profiles = masterProfiles.toMap()
@@ -622,7 +623,7 @@ class ConfigurationGroupFragment : Fragment() {
                     }
                 }
             }
-            val stamps = buildDisplayStamps(ids, profiles) + rows.mapValues { (_, row) ->
+            val stamps = buildDisplayStamps(ids, profiles, reuseKept = reloaded) + rows.mapValues { (_, row) ->
                 ProfileRowStamp(Objects.hash(row.title, row.count, row.folded), reserveMiddleRow = false, doubleColumn = false)
             }
             submit(
@@ -735,14 +736,16 @@ class ConfigurationGroupFragment : Fragment() {
             ids: List<Long>,
             profiles: Map<Long, ProxyEntity>,
             positions: Iterable<Int> = ids.indices,
+            reuseKept: Boolean = false,
         ): Map<Long, ProfileRowStamp> {
-            // A profile's kept stamp came from its reload, off the main thread, and follows every change to it since;
-            // a copy it was not made for is stamped afresh.
+            // Right after a reload, a profile's kept stamp was made off the main thread a moment ago: reuse it rather
+            // than stamp the whole list again on the main thread. Later the country or address a row shows can change
+            // without its profile changing, so every other list is stamped afresh.
             val baseStamps = positions.associate { position ->
                 val id = ids[position]
                 val profile = profiles[id]
                 id to (
-                    masterStamps[id]?.takeIf { profile != null && masterProfiles[id] === profile }
+                    masterStamps[id]?.takeIf { reuseKept && profile != null && masterProfiles[id] === profile }
                         ?: profile?.let(::profileStateStamp)
                         ?: configurationStamps[id]?.content
                         ?: masterStamps[id]
@@ -1173,7 +1176,7 @@ class ConfigurationGroupFragment : Fragment() {
                 }
                 val selectedId = selectedItem?.id ?: DataStore.selectedProxy
                 // The open page shows its selected profile, unless its section is folded; others start at the top.
-                submitMasterList(if (masterIds.isNotEmpty()) 0 else -1, if (selected) selectedId else 0L)
+                submitMasterList(if (masterIds.isNotEmpty()) 0 else -1, if (selected) selectedId else 0L, reloaded = true)
             }
         }
     }
