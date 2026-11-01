@@ -71,8 +71,13 @@ class ProfileWordsTest {
     fun aRowNamesTheCountryItsAddressIsIn() {
         ServerCountries.database = { 1L }
         ServerCountries.lookup = { addresses -> addresses.split('\n').joinToString("\n") { if (it == "192.0.2.77") "de" else "" } }
+        val before = ServerCountries.answers.get()
         // An address with a line break is never sent: it would shift the answers after it.
         ServerCountries.lookUp(listOf("bad\naddress", "192.0.2.77", "node.example"))
+        // A lookup that adds answers counts; one that finds nothing new does not.
+        assertEquals(before + 1, ServerCountries.answers.get())
+        ServerCountries.lookUp(listOf("192.0.2.77"))
+        assertEquals(before + 1, ServerCountries.answers.get())
         fun named(name: String, address: String) = vmess(true) {
             this.name = name
             serverAddress = address

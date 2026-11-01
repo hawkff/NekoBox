@@ -13,6 +13,7 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /** What a profile row says about its server, beside the name. */
 object ProfileWords {
@@ -104,6 +105,9 @@ object ServerCountries {
 
     private val asked = ConcurrentHashMap.newKeySet<String>()
 
+    /** Counts the lookups that added or changed answers: a list stamped at one count shows every country known then. */
+    val answers = AtomicLong()
+
     /** The country code of [address], or null while unknown; a miss looks it up in the background for the next bind. */
     fun cached(address: String): String? = codes[address] ?: null.also {
         if (asked.add(address)) {
@@ -139,6 +143,7 @@ object ServerCountries {
         }
         missing.forEachIndexed { index, address -> codes[address] = found.getOrElse(index) { "" } }
         answeredFrom = written
+        answers.incrementAndGet()
         return true
     }
 }

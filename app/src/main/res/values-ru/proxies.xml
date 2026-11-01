@@ -18,6 +18,10 @@
     <string name="proxies_mullvad_title">Прокси Mullvad</string>
     <string name="proxies_mullvad_all">Все страны</string>
     <string name="proxies_mullvad_loading">Загрузка списка серверов Mullvad…</string>
+    <string name="proxies_answered">%1$d из %2$d</string>
+    <string name="proxies_answered_spoken">ответили %1$d из %2$d</string>
+    <string name="proxies_fastest_spoken">лучший отклик %d мс</string>
+    <string name="proxies_holds_selected">здесь выбранный прокси</string>
     <string name="proxies_mullvad_tunnel">Они работают только внутри туннеля WireGuard от Mullvad</string>
     <plurals name="proxies_found">
         <item quantity="one">%d прокси</item>

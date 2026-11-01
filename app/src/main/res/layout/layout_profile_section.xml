@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!-- A fold over the profiles whose names differ only by a number: its title, how many, and a chevron.
-     The type is the section heading's, in the text accent every palette keeps readable; more room above than below sets it off from the row before. -->
+     The type is the section heading's, in the text accent every palette keeps readable; more room above than below sets it off from the row before.
+     In Mullvad's list the same row is a country or a city, styled and set in by its level where it binds, with the best latency of a check. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -26,6 +27,17 @@
         android:textAppearance="?attr/textAppearanceLabelLarge"
         android:textColor="?attr/primaryOrTextPrimary"
         tools:text="Countries" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/best"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:singleLine="true"
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="?attr/testAvailableColor"
+        android:visibility="gone"
+        tools:text="160ms" />
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/count"

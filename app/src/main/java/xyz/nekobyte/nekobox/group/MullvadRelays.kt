@@ -40,7 +40,6 @@ object MullvadRelays {
     private const val MAX_BYTES = 4L * 1024 * 1024
     private val COUNTRY = Regex("[a-z]{2}")
     private val CITY = Regex("[a-z]{2,4}")
-    private val HOST = Regex("[a-z0-9-]+\\.relays\\.mullvad\\.net")
 
     /** A server in service, its proxy at [host]:[port]. */
     class Relay(
@@ -60,6 +59,15 @@ object MullvadRelays {
      * or written oddly is still Mullvad's, so only a server gone from the list retires its proxy.
      */
     class ServerList(val relays: List<Relay>, val listed: Set<String>)
+
+    /** Where a proxy's server stands, from its host name: "se-sto-wg-socks5-001.relays.mullvad.net" is in se, sto, 001. */
+    class Place(val country: String, val city: String, val number: String)
+
+    // The number follows a hyphen: "socks5" is part of a name, not server 5.
+    private val PLACE = Regex("([a-z]{2})-([a-z]{2,4})-(?:[a-z0-9-]*-)?(\\d+)\\.relays\\.mullvad\\.net")
+
+    /** The place of a proxy at [host], or null for a host that is not one of Mullvad's servers. */
+    fun place(host: String?): Place? = host?.let(PLACE::matchEntire)?.let { Place(it.groupValues[1], it.groupValues[2], it.groupValues[3]) }
 
     /** What a sync did: proxies added and removed, and proxies [moved] to their server's new port. */
     class Result(val list: ProxyGroup, val created: Boolean, val added: Int, val removed: Int, val moved: Int, val through: ProxyEntity?)
@@ -95,9 +103,10 @@ object MullvadRelays {
             val port = server.optInt("socks_port")
             // A server named twice counts once.
             if (host.isNotEmpty() && !listed.add(host)) continue
-            // Only a name under Mullvad's relay domain becomes a proxy, whatever else the list holds.
+            // Only a numbered server under Mullvad's relay domain becomes a proxy, whatever else the list holds: the
+            // Proxies screen places each by its host name.
             if (!server.optBoolean("active") || !COUNTRY.matches(country) || !CITY.matches(city) || port !in 1..65535 ||
-                !host.startsWith("$country-$city-") || !HOST.matches(host)
+                !host.startsWith("$country-$city-") || !PLACE.matches(host)
             ) {
                 continue
             }
