@@ -261,6 +261,8 @@ internal class AppApi(
             val recoveryId = UUID.randomUUID().toString()
             val recovery = File(directory, "$recoveryId.json")
             val bytes = backup().toString().toByteArray(Charsets.UTF_8)
+            // The safety copy has to be readable by backup.recovery before anything is replaced.
+            requireApi(bytes.size <= MAX_BACKUP_BYTES, "The current data is larger than a restore can read back; nothing was changed")
             recovery.outputStream().use { output ->
                 output.write(bytes)
                 output.fd.sync()
