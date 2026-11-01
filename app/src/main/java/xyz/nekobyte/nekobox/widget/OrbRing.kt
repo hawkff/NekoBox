@@ -11,6 +11,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.ktx.EaseIn
 import xyz.nekobyte.nekobox.ktx.EaseOut
@@ -210,8 +211,16 @@ internal class OrbRing(private val view: View) {
         }
         stroke.strokeWidth = radius * HAIRLINE
         stroke.color = blend(offColor, litColor, shown, 0.14f + 0.1f * shown)
-        canvas.save()
-        canvas.translate(cx, cy)
+        canvas.withTranslation(cx, cy) { drawRing(this, radius, shown) }
+        if (shown > 0f) {
+            stroke.strokeWidth = radius * RIM
+            stroke.color = ColorUtils.setAlphaComponent(litColor, (0.78f * shown * 255).toInt())
+            canvas.drawCircle(cx, cy, radius - stroke.strokeWidth / 2, stroke)
+        }
+    }
+
+    // The orbits, marks and diamonds, around the origin.
+    private fun drawRing(canvas: Canvas, radius: Float, shown: Float) {
         canvas.drawPath(orbits, stroke)
         for (mark in marks) {
             val behind = (sweep - mark.angle).mod(TAU)
@@ -231,17 +240,10 @@ internal class OrbRing(private val view: View) {
             val amount = max(head, shown)
             fill.color = blend(offColor, litColor, amount, 0.43f + 0.57f * amount)
             val size = radius * DIAMOND
-            canvas.save()
-            canvas.translate(cos(angle) * radius * MIDDLE, sin(angle) * radius * MIDDLE)
-            canvas.rotate(45f)
-            canvas.drawRect(-size, -size, size, size, fill)
-            canvas.restore()
-        }
-        canvas.restore()
-        if (shown > 0f) {
-            stroke.strokeWidth = radius * RIM
-            stroke.color = ColorUtils.setAlphaComponent(litColor, (0.78f * shown * 255).toInt())
-            canvas.drawCircle(cx, cy, radius - stroke.strokeWidth / 2, stroke)
+            canvas.withTranslation(cos(angle) * radius * MIDDLE, sin(angle) * radius * MIDDLE) {
+                rotate(45f)
+                drawRect(-size, -size, size, size, fill)
+            }
         }
     }
 
