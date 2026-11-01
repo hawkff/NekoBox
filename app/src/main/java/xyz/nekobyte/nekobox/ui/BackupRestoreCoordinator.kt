@@ -160,6 +160,12 @@ internal suspend fun restoreBackup(
         null
     }
 
+    // Two entries with one identity would fail on insert, after earlier sections were already replaced.
+    for ((section, ids) in listOf("profiles" to profiles?.map { it.id }, "groups" to groups?.map { it.id }, "rules" to rules?.map { it.id })) {
+        val stored = ids.orEmpty().filter { it != 0L }
+        require(stored.size == stored.toSet().size) { "The backup lists one of its $section twice" }
+    }
+
     if (profiles != null && groups != null) {
         operations.replaceProfiles(profiles, groups)
     }

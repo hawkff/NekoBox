@@ -7,6 +7,9 @@ import java.io.InputStream
 /** Shared cap for untrusted imported/downloaded content. Mirrors the Clash YAML codePointLimit. */
 const val MAX_IMPORT_BYTES: Long = 10L * 1024 * 1024 // 10 MiB
 
+/** What a backup restore reads, from a file, WebDAV or the local API; backups larger than this fail when made. */
+const val MAX_BACKUP_BYTES: Long = 16L * 1024 * 1024 // 16 MiB
+
 class ImportTooLargeException(limit: Long) : IOException("Imported content exceeds the $limit-byte limit")
 
 /** Read at most [limit] bytes; throw [ImportTooLargeException] if the stream is larger. */

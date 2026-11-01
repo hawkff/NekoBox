@@ -363,7 +363,11 @@ data class ProxyEntity(
         fun getByGroup(groupId: Long): List<ProxyEntity>
 
         @Query("SELECT * FROM proxy_entities WHERE id in (:proxyIds)")
-        fun getEntities(proxyIds: List<Long>): List<ProxyEntity>
+        fun getEntityBatch(proxyIds: List<Long>): List<ProxyEntity>
+
+        // SQLite before Android 12 takes at most 999 values in one statement.
+        @Transaction
+        fun getEntities(proxyIds: List<Long>): List<ProxyEntity> = proxyIds.distinct().chunked(500).flatMap { getEntityBatch(it) }
 
         @Query("UPDATE proxy_entities SET userOrder = :order WHERE id = :id")
         fun updateOrder(id: Long, order: Long): Int

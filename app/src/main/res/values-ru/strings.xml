@@ -49,7 +49,8 @@
 <string name="backup_import">Импортировать</string>
 <string name="backup_import_summary">При импорте существующие данные будут перезаписаны.</string>
 <string name="backup_importing">Импортирование…</string>
-<string name="backup_not_file">Не файл резервной копии: ожидался .json, а не %s</string>
+<string name="backup_not_file">Не файл резервной копии: ожидался .json или .zip, а не %s</string>
+<string name="backup_too_large">Эта резервная копия занимает %1$s, а восстановление читает не больше %2$s.</string>
 <string name="backup_rules">Правила маршрутизации</string>
 <string name="backup_settings">Настройки</string>
 <string name="backup_summary">Если правила маршрутизации резервируются без конфигураций, то пользовательские исходящие соединения будут потеряны.</string>

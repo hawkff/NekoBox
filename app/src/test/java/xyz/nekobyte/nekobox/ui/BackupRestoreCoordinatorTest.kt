@@ -117,6 +117,19 @@ class BackupRestoreCoordinatorTest {
     }
 
     @Test
+    fun oneIdentityListedTwiceFailsBeforeAnyWrite() = runTest {
+        // Two rules with one id decode fine but fail on insert, after the profiles were already replaced.
+        for (section in listOf("profiles", "groups", "rules")) {
+            val operations = FakeOperations()
+            val content = backup(BackupFormatV2.VERSION).apply {
+                getJSONArray(section).let { it.put(it.getJSONObject(0)) }
+            }
+            assertNotNull(section, runCatching { restoreBackup(content, true, true, true, operations) }.exceptionOrNull())
+            assertEquals(section, emptyList<String>(), operations.calls)
+        }
+    }
+
+    @Test
     fun truncatedTypedSettingsInEitherFormatFailBeforeAnyWrite() = runTest {
         for (version in listOf(1, BackupFormatV2.VERSION)) {
             val malformed = KeyValuePair("truncated").apply {

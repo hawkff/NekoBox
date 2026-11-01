@@ -277,7 +277,6 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
 
                     // normalize URL
                     val baseUrl = DataStore.webdavServer!!.trimEnd('/')
-                    val path = DataStore.webdavPath?.trim('/')?.takeIf { it.isNotEmpty() } ?: "Nekobox"
 
                     // use an English-formatted timestamp as the file name, with a .zip suffix
                     val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -288,11 +287,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                     // (WebDAV backup contains all config keys, plaintext http:// is forbidden)
                     val baseHttpUrl = WebDAVSecurity.requireSecureUrl(baseUrl)
 
-                    val dirUrl = baseHttpUrl.newBuilder().apply {
-                        path.split('/').filter { it.isNotEmpty() }.forEach { segment ->
-                            addPathSegment(segment)
-                        }
-                    }.build()
+                    val dirUrl = baseHttpUrl.newBuilder().apply { DataStore.webdavFolder.forEach { addPathSegment(it) } }.build()
 
                     val fileUrl = dirUrl.newBuilder()
                         .addPathSegment(fileName)
@@ -420,16 +415,11 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
             try {
                 val client = OkHttpClient()
                 val baseUrl = DataStore.webdavServer!!.trimEnd('/')
-                val path = DataStore.webdavPath?.trim('/')?.takeIf { it.isNotEmpty() } ?: "Nekobox"
 
                 // WebDAV backup contains all config keys, plaintext http:// is forbidden
                 val baseHttpUrl = WebDAVSecurity.requireSecureUrl(baseUrl)
 
-                val dirUrl = baseHttpUrl.newBuilder().apply {
-                    path.split('/').filter { it.isNotEmpty() }.forEach { segment ->
-                        addPathSegment(segment)
-                    }
-                }.build()
+                val dirUrl = baseHttpUrl.newBuilder().apply { DataStore.webdavFolder.forEach { addPathSegment(it) } }.build()
 
                 Logs.d("WebDAV restore - Directory URL: ${redactedWebDavUrlForLog(dirUrl)}")
 
@@ -490,7 +480,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                         Logs.e("WebDAV restore - GET failed: ${response.code} ${response.message}")
                         throw Exception("Download failed (${response.code}): ${response.message}")
                     }
-                    response.body?.byteStream()?.use { it.readBytesBounded() }
+                    response.body?.byteStream()?.use { it.readBytesBounded(MAX_BACKUP_BYTES) }
                         ?: throw Exception("Empty backup file")
                 }
 
@@ -502,7 +492,7 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                     ZipInputStream(content.inputStream()).use { zis ->
                         zis.nextEntry?.let { entry ->
                             if (entry.name.endsWith(".json")) {
-                                zis.readBytesBounded().toString(Charsets.UTF_8)
+                                zis.readBytesBounded(MAX_BACKUP_BYTES).toString(Charsets.UTF_8)
                             } else {
                                 throw Exception("Invalid backup file format")
                             }
@@ -647,14 +637,14 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                     ZipInputStream(BufferedInputStream(input)).use { zis ->
                         zis.nextEntry?.let { entry ->
                             if (entry.name.endsWith(".json")) {
-                                zis.readBytesBounded().toString(Charsets.UTF_8)
+                                zis.readBytesBounded(MAX_BACKUP_BYTES).toString(Charsets.UTF_8)
                             } else {
                                 throw Exception("Invalid backup file format")
                             }
                         } ?: throw Exception("Invalid backup file format")
                     }
                 } else {
-                    input.readBytesBounded().toString(Charsets.UTF_8)
+                    input.readBytesBounded(MAX_BACKUP_BYTES).toString(Charsets.UTF_8)
                 }
             }
 
