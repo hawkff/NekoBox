@@ -7,34 +7,27 @@ import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
 import android.view.View
+import android.view.animation.LinearInterpolator
 import androidx.core.graphics.ColorUtils
-import androidx.core.graphics.withTranslation
 import xyz.nekobyte.nekobox.bg.BaseService
-import xyz.nekobyte.nekobox.ktx.EaseIn
 import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.animationsOn
 import java.util.Random
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.sin
 
 /**
- * The connect button's orb: small marks (+, ✳ and dots) and six diamonds in a ring around the plane. Off, it is grey
- * and still. Connecting, a lit arc sweeps around it and the diamonds orbit. Connected, the light spreads back from
- * where the sweep stood until the whole ring is lit, with a rim and a faint fill of the same color. Stopping, the lit
- * marks drift out and fade while the grey ones come back. Only the sweep loops, while the button shows and animations
- * are on; without animations each state shows at once, connecting as a still arc.
+ * The connect button's orb: a black hole ([BlackHole]) inside a ring of small marks (+, ✳ and dots). Off, the
+ * accretion disk is orange and still and the ring grey. Connecting, the disk spins up and turns blue. Connected, a
+ * quasar's burst (jets along the poles, an X-ray ring, a flash), then the disk turns slowly in blue while the ring,
+ * lit blue with a rim, twinkles. Off again, the disk slows back to orange and the ring goes grey. A connection that
+ * never comes up goes back the same way, without the burst. Everything moves only while the button shows and
+ * animations are on; without animations each state shows at once.
  */
 internal class OrbRing(private val view: View) {
-    // Sizes are fractions of the orb's radius: the ring runs from INNER to OUTER, clear of the plane in the middle.
-    private class Mark(val radius: Float, angle: Float, val kind: Int, val weight: Float, spin: Float) {
-        val angle = angle.mod(TAU)
+    private class Mark(val radius: Float, angle: Float, val kind: Int, val weight: Float, spin: Float, val pace: Float, val phase: Float) {
         val x = cos(angle) * radius
         val y = sin(angle) * radius
         val spinX = cos(spin)
@@ -42,35 +35,40 @@ internal class OrbRing(private val view: View) {
     }
 
     private val marks: List<Mark>
-    private val orbits = Path()
-    private val orbitBounds = RectF()
-    private var orbitRadius = 0f
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val hole = BlackHole()
 
     var offColor = 0
-    var litColor = 0
 
-    // What shows, each animated toward its target: the sweep's arc, how far the light has spread behind its head (a
-    // whole turn at 1) and how far the lit marks have drifted out on their way off.
-    internal var head = 0f
+    /** Whether the orb sits on a dark theme; light themes take the deeper blue for the ring and the rim. */
+    var dark
+        get() = hole.dark
+        set(value) {
+            hole.dark = value
+        }
+
+    // What shows, each eased towards its state's value: the disk's color from orange (0) to blue (1), how lit the
+    // ring is, its rim, how much the lit ring twinkles, and how fast the disk turns, in turns a second.
+    internal val levels = FloatArray(LEVELS)
+
+    /** The connection's burst, 0 to 1 while it plays and -1 otherwise. */
+    internal var burst = -1f
         private set
-    internal var lit = 0f
-        private set
-    internal var scatter = 0f
-        private set
-    private var sweep = -PI.toFloat() / 2
-    private var orbit = 0f
+    private var spin = 0f
+    private var seconds = 0f
+    private var sinceDraw = 0L
     private var state = BaseService.State.Idle
     private var change: ValueAnimator? = null
-    private var loop: TimeAnimator? = null
+    private var flare: ValueAnimator? = null
+    private var clock: TimeAnimator? = null
     private var running = true
 
-    /** Whether the sweep goes round now. */
-    internal val sweeping get() = loop?.let { it.isStarted && !it.isPaused } == true
+    /** Whether the clock turns the disk and twinkles the ring now. */
+    internal val ticking get() = clock?.let { it.isStarted && !it.isPaused } == true
 
     init {
         // The same ring every time: placed by the golden angle, denser along the middle of the band.
@@ -86,7 +84,8 @@ internal class OrbRing(private val view: View) {
                     DOT
                 }
             }
-            Mark(INNER + (OUTER - INNER) * t, index * GOLDEN + (random.nextFloat() - 0.5f) * 0.24f, kind, 0.55f + random.nextFloat() * 0.45f, random.nextFloat() * TAU)
+            val weight = 0.55f + random.nextFloat() * 0.45f
+            Mark(INNER + (OUTER - INNER) * t, index * GOLDEN + (random.nextFloat() - 0.5f) * 0.24f, kind, weight, random.nextFloat() * TAU, 2.2f + 2.5f * weight, random.nextFloat() * TAU)
         }
     }
 
@@ -95,175 +94,147 @@ internal class OrbRing(private val view: View) {
         val previous = this.state
         this.state = state
         val moving = animate && view.context.animationsOn()
-        when (state) {
-            BaseService.State.Connecting -> {
-                startLoop()
-                if (moving) tween(SWEEP_IN, EaseOut, head = 1f, lit = 0f, scatter = 0f) else set(1f, 0f, 0f)
-            }
-
-            BaseService.State.Connected -> if (moving && head > 0f) {
-                // The light spreads back from the sweep's head; once the whole ring is lit, the sweep has done its work.
-                tween(FLOOD, EaseOut, lit = 1f, scatter = 0f) {
-                    stopLoop()
-                    set(0f, 1f, 0f)
-                }
-            } else {
-                stopLoop()
-                set(0f, 1f, 0f)
-            }
-
-            else -> {
-                stopLoop()
-                when {
-                    !moving -> set(0f, 0f, 0f)
-
-                    // Stopped while the marks still drift off from Stopping: they finish.
-                    previous == BaseService.State.Stopping && change?.isRunning == true -> Unit
-
-                    lit > 0f -> tween(SCATTER, EaseIn, head = 0f, scatter = 1f) { set(0f, 0f, 0f) }
-
-                    // A connection that never came up: the arc fades.
-                    head > 0f -> tween(SWEEP_OUT, EaseIn, head = 0f)
-
-                    else -> set(0f, 0f, 0f)
-                }
-            }
+        val target = when (state) {
+            BaseService.State.Connecting -> CONNECTING
+            BaseService.State.Connected -> CONNECTED
+            else -> OFF
         }
+        when {
+            !moving -> {
+                flare?.cancel()
+                set(target)
+            }
+
+            state == BaseService.State.Connected && previous == BaseService.State.Connecting -> {
+                startBurst()
+                tween(target, SETTLE)
+            }
+
+            // Stopped while the disk still slows from Stopping: it finishes.
+            previous == BaseService.State.Stopping && change?.isRunning == true && target === OFF -> Unit
+
+            else -> tween(target, if (state == BaseService.State.Connecting) SPIN_UP else SLOW_DOWN)
+        }
+        updateClock()
     }
 
-    /** Stops the sweep while the button is gone: hidden, or out of the window. */
+    /** Stops the clock while the button is gone: hidden, out of the window or in the background. */
     fun pause() {
         running = false
-        loop?.pause()
+        updateClock()
     }
 
     fun resume() {
         running = true
-        if (state == BaseService.State.Connecting) startLoop()
+        updateClock()
     }
 
-    private fun set(head: Float, lit: Float, scatter: Float) {
+    private fun set(target: FloatArray) {
         change?.cancel()
         change = null
-        this.head = head
-        this.lit = lit
-        this.scatter = scatter
+        target.copyInto(levels)
         view.invalidate()
     }
 
-    private fun tween(duration: Long, interpolator: TimeInterpolator, head: Float = this.head, lit: Float = this.lit, scatter: Float = this.scatter, end: () -> Unit = {}) {
+    private fun tween(target: FloatArray, duration: Long, interpolator: TimeInterpolator = EaseOut) {
         change?.cancel()
-        val from = floatArrayOf(this.head, this.lit, this.scatter)
+        val from = levels.copyOf()
         change = ValueAnimator.ofFloat(0f, 1f).apply {
             this.duration = duration
             this.interpolator = interpolator
             addUpdateListener {
                 val f = it.animatedValue as Float
-                this@OrbRing.head = from[0] + (head - from[0]) * f
-                this@OrbRing.lit = from[1] + (lit - from[1]) * f
-                this@OrbRing.scatter = from[2] + (scatter - from[2]) * f
+                for (i in levels.indices) levels[i] = from[i] + (target[i] - from[i]) * f
+                view.invalidate()
+                updateClock()
+            }
+            start()
+        }
+    }
+
+    private fun startBurst() {
+        flare?.cancel()
+        flare = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = BURST
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                burst = it.animatedValue as Float
                 view.invalidate()
             }
             addListener(object : AnimatorListenerAdapter() {
-                private var canceled = false
-
-                override fun onAnimationCancel(animation: Animator) {
-                    canceled = true
-                }
-
                 override fun onAnimationEnd(animation: Animator) {
-                    if (!canceled) end()
+                    burst = -1f
+                    view.invalidate()
                 }
             })
             start()
         }
     }
 
-    private fun startLoop() {
-        if (!running || !view.context.animationsOn()) return
-        val loop = loop ?: TimeAnimator().apply {
-            setTimeListener { _, _, delta ->
-                sweep = (sweep + delta * TAU / SWEEP_TURN).mod(TAU)
-                orbit = (orbit + delta * TAU / ORBIT_TURN).mod(TAU / DIAMONDS)
-                view.invalidate()
+    // The clock runs while the disk turns or the ring twinkles, and the button shows with animations on.
+    private fun updateClock() {
+        val run = running && (levels[SPEED] > 0.001f || levels[TWINKLE] > 0.001f) && view.context.animationsOn()
+        val clock = clock
+        if (run) {
+            when {
+                clock == null -> this.clock = TimeAnimator().apply {
+                    setTimeListener { _, _, delta -> tick(delta) }
+                    start()
+                }
+
+                clock.isPaused -> clock.resume()
             }
-        }.also { loop = it }
-        if (loop.isPaused) {
-            loop.resume()
-        } else if (!loop.isStarted) {
-            loop.start()
+        } else if (clock != null && clock.isStarted && !clock.isPaused) {
+            clock.pause()
         }
     }
 
-    private fun stopLoop() {
-        loop?.cancel()
-        loop = null
+    private fun tick(delta: Long) {
+        spin = (spin + levels[SPEED] * 360f * delta / 1000f) % 360f
+        seconds += delta / 1000f
+        sinceDraw += delta
+        // Settled, the slow turn and the twinkle need no more than 30 frames a second.
+        val settled = change?.isRunning != true && flare?.isRunning != true
+        if (!settled || sinceDraw >= 33) {
+            sinceDraw = 0
+            view.invalidate()
+        }
+        if (levels[SPEED] <= 0.001f && levels[TWINKLE] <= 0.001f) updateClock()
     }
 
     fun draw(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
         if (radius <= 0f) return
-        if (orbitRadius != radius) buildOrbits(radius)
-        val shown = lit * (1 - scatter)
-        // The faint fill and rim of a lit orb.
-        if (shown > 0f) {
-            fill.color = ColorUtils.setAlphaComponent(litColor, (FILL_ALPHA * shown * 255).toInt())
-            canvas.drawCircle(cx, cy, radius, fill)
+        val lit = levels[LIT]
+        val twinkle = levels[TWINKLE]
+        val ringColor = if (dark) BlackHole.BLUE_MID else BlackHole.BLUE_EDGE
+        // The burst lights the ring up for a moment.
+        val flash = if (burst in 0f..0.45f) 1 - burst / 0.45f else 0f
+        for (mark in marks) {
+            val sparkle = 1 - twinkle * (0.45f - 0.45f * sin(seconds * mark.pace + mark.phase))
+            val alpha = ((0.42f * mark.weight * (1 - lit) + (0.5f + 0.5f * mark.weight) * lit) * sparkle + 0.5f * flash).coerceIn(0f, 1f)
+            if (alpha <= 0.01f) continue
+            drawMark(canvas, cx, cy, mark, radius, ColorUtils.setAlphaComponent(ColorUtils.blendARGB(offColor, ringColor, lit), (alpha * 255).toInt()))
         }
-        stroke.strokeWidth = radius * HAIRLINE
-        stroke.color = blend(offColor, litColor, shown, 0.14f + 0.1f * shown)
-        canvas.withTranslation(cx, cy) { drawRing(this, radius, shown) }
-        if (shown > 0f) {
-            stroke.strokeWidth = radius * RIM
-            stroke.color = ColorUtils.setAlphaComponent(litColor, (0.78f * shown * 255).toInt())
+        hole.draw(canvas, cx, cy, radius, levels[HUE], spin, burst)
+        val rim = levels[RIM]
+        if (rim > 0f) {
+            stroke.strokeWidth = radius * RIM_WIDTH
+            stroke.color = ColorUtils.setAlphaComponent(ringColor, (0.8f * rim * 255).toInt())
             canvas.drawCircle(cx, cy, radius - stroke.strokeWidth / 2, stroke)
         }
     }
 
-    // The orbits, marks and diamonds, around the origin.
-    private fun drawRing(canvas: Canvas, radius: Float, shown: Float) {
-        canvas.drawPath(orbits, stroke)
-        for (mark in marks) {
-            val behind = (sweep - mark.angle).mod(TAU)
-            val glow = head * max(0f, 1 - behind / TAIL).pow(1.4f)
-            // Marks the light has reached are lit whole; its front is soft.
-            val flood = if (lit >= 1f) 1f else ((lit * TAU - behind) / FRONT + 1).coerceIn(0f, 1f) * min(1f, lit * 8)
-            if (scatter > 0f) {
-                // Lit, drifting out and fading; grey, coming back in place.
-                drawMark(canvas, mark, radius, 1 + DRIFT * scatter, max(glow, flood) * (1 - scatter), litOnly = true)
-                drawMark(canvas, mark, radius, 1f, 0f, alphaScale = scatter)
-            } else {
-                drawMark(canvas, mark, radius, 1f, max(glow, flood), scale = 1 + 0.35f * glow)
-            }
-        }
-        for (k in 0 until DIAMONDS) {
-            val angle = k * TAU / DIAMONDS + 0.35f + orbit
-            val amount = max(head, shown)
-            fill.color = blend(offColor, litColor, amount, 0.43f + 0.57f * amount)
-            val size = radius * DIAMOND
-            canvas.withTranslation(cos(angle) * radius * MIDDLE, sin(angle) * radius * MIDDLE) {
-                rotate(45f)
-                drawRect(-size, -size, size, size, fill)
-            }
-        }
-    }
-
-    // One mark, [amount] of the way from grey to lit.
-    private fun drawMark(canvas: Canvas, mark: Mark, radius: Float, drift: Float, amount: Float, scale: Float = 1f, alphaScale: Float = 1f, litOnly: Boolean = false) {
-        // Drifting marks fade out as they reach the orb's edge, so none leaves it.
-        val edge = ((EDGE - mark.radius * drift) / (EDGE - OUTER)).coerceIn(0f, 1f)
-        val alpha = if (litOnly) amount * (0.5f + 0.5f * mark.weight) * edge else alphaScale * (0.42f * mark.weight + (0.08f + 0.5f * mark.weight) * amount)
-        if (alpha <= 0.01f) return
-        val color = blend(offColor, litColor, if (litOnly) 1f else min(1f, amount * 1.6f), alpha)
-        val x = mark.x * radius * drift
-        val y = mark.y * radius * drift
+    private fun drawMark(canvas: Canvas, cx: Float, cy: Float, mark: Mark, radius: Float, color: Int) {
+        val x = cx + mark.x * radius
+        val y = cy + mark.y * radius
         if (mark.kind == DOT) {
             fill.color = color
-            canvas.drawCircle(x, y, radius * DOT_RADIUS * scale, fill)
+            canvas.drawCircle(x, y, radius * DOT_RADIUS, fill)
             return
         }
         stroke.color = color
-        stroke.strokeWidth = radius * STROKE * scale
-        val arm = radius * ARM * scale
+        stroke.strokeWidth = radius * STROKE
+        val arm = radius * ARM
         // A plus is two strokes, a star three, turned by the mark's own angle.
         val strokes = if (mark.kind == PLUS) 2 else 3
         for (i in 0 until strokes) {
@@ -274,49 +245,37 @@ internal class OrbRing(private val view: View) {
         }
     }
 
-    // Two faint orbits crossing the ring, as tilted ellipses.
-    private fun buildOrbits(radius: Float) {
-        orbitRadius = radius
-        orbits.reset()
-        for (tilt in floatArrayOf(24f, -34f)) {
-            val ellipse = Path()
-            orbitBounds.set(-radius * 0.917f, -radius * 0.764f, radius * 0.917f, radius * 0.764f)
-            ellipse.addOval(orbitBounds, Path.Direction.CW)
-            orbits.addPath(ellipse, android.graphics.Matrix().apply { setRotate(tilt) })
-        }
-    }
+    internal companion object {
+        const val HUE = 0
+        const val LIT = 1
+        const val RIM = 2
+        const val TWINKLE = 3
+        const val SPEED = 4
+        private const val LEVELS = 5
 
-    private fun blend(from: Int, to: Int, amount: Float, alpha: Float): Int = ColorUtils.setAlphaComponent(ColorUtils.blendARGB(from, to, amount.coerceIn(0f, 1f)), (alpha.coerceIn(0f, 1f) * 255).toInt())
+        // Hue, ring, rim, twinkle, turns a second.
+        private val OFF = floatArrayOf(0f, 0f, 0f, 0f, 0f)
+        private val CONNECTING = floatArrayOf(1f, 0.35f, 0f, 0f, 1f)
+        private val CONNECTED = floatArrayOf(1f, 1f, 1f, 1f, 0.15f)
 
-    private companion object {
-        const val TAU = (2 * PI).toFloat()
-        const val GOLDEN = 2.399963f
-        const val MARKS = 88
-        const val DIAMONDS = 6
-        const val INNER = 22f / 36
-        const val OUTER = 33.5f / 36
-        const val EDGE = 34.6f / 36
-        const val MIDDLE = 28f / 36
-        const val ARM = 1.35f / 36
-        const val STROKE = 0.75f / 36
-        const val DOT_RADIUS = 0.6f / 36
-        const val DIAMOND = 1.2f / 36
-        const val HAIRLINE = 0.34f / 36
-        const val RIM = 0.67f / 36
-        const val FILL_ALPHA = 0.14f
-        const val DRIFT = 0.18f
-        const val FRONT = 0.35f
-        const val TAIL = 160f / 180 * PI.toFloat()
-        const val PLUS = 0
-        const val STAR = 1
-        const val DOT = 2
-        const val SWEEP_TURN = 1100f
+        private const val SPIN_UP = 1200L
+        private const val SETTLE = 1400L
+        private const val SLOW_DOWN = 700L
+        private const val BURST = 850L
 
-        // The diamonds go round about once in nine seconds; they repeat every sixth of a turn.
-        const val ORBIT_TURN = 9100f
-        const val SWEEP_IN = 180L
-        const val SWEEP_OUT = 220L
-        const val FLOOD = 520L
-        const val SCATTER = 380L
+        private const val TAU = (2 * PI).toFloat()
+        private const val GOLDEN = 2.399963f
+        private const val MARKS = 72
+
+        // The ring's band and its marks, as fractions of the orb's radius, clear of the disk inside.
+        private const val INNER = 25.5f / 36
+        private const val OUTER = 33.5f / 36
+        private const val ARM = 1.35f / 36
+        private const val STROKE = 0.75f / 36
+        private const val DOT_RADIUS = 0.6f / 36
+        private const val RIM_WIDTH = 0.67f / 36
+        private const val PLUS = 0
+        private const val STAR = 1
+        private const val DOT = 2
     }
 }

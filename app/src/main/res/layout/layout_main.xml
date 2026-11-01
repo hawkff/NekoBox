@@ -88,11 +88,8 @@
             android:nextFocusDown="@+id/stats"
             app:backgroundTint="?attr/colorSurfaceContainerHigh"
             app:fabCustomSize="72dp"
-            app:maxImageSize="30dp"
-            app:tint="?android:attr/textColorPrimary"
             app:layout_anchor="@id/stats"
-            app:pressedTranslationZ="6dp"
-            app:srcCompat="@drawable/ic_service_idle" />
+            app:pressedTranslationZ="6dp" />
 
     </xyz.nekobyte.nekobox.widget.glass.GlassBackdropCoordinatorLayout>
 

@@ -704,7 +704,7 @@ class MainActivity :
         DataStore.serviceState = state
         refreshConfigurationProfileState()
 
-        binding.fab.changeState(state, DataStore.serviceState, animate)
+        binding.fab.changeState(state, animate)
         binding.stats.changeState(state)
         if (msg != null) snackbar(getString(R.string.vpn_error, msg)).show()
         if (state == BaseService.State.Connected) askForBackgroundUse()

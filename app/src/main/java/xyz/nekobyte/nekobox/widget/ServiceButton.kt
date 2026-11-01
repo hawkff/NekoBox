@@ -11,63 +11,24 @@ import android.util.AttributeSet
 import android.view.PointerIcon
 import android.view.View
 import android.view.ViewOutlineProvider
-import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.TooltipCompat
-import androidx.vectordrawable.graphics.drawable.Animatable2Compat
-import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
+import androidx.core.graphics.ColorUtils
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
-import java.util.*
 
-/**
- * The connect button: an orb ([OrbRing]) around the plane. Off, a grey ring and the plane struck through; connecting,
- * the strike slides off and a lit arc sweeps the ring; connected, the plane fills and the ring lights up; stopping, it
- * all goes back.
- */
+/** The connect button: an orb with a black hole at its heart ([OrbRing]), which shows the connection's state. */
 class ServiceButton @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : FloatingActionButton(context, attrs, defStyleAttr) {
 
-    private val callback = object : Animatable2Compat.AnimationCallback() {
-        override fun onAnimationEnd(drawable: Drawable) {
-            super.onAnimationEnd(drawable)
-            var next = animationQueue.peek() ?: return
-            if (next.icon.current == drawable) {
-                animationQueue.pop()
-                next = animationQueue.peek() ?: return
-            }
-            next.start()
-        }
-    }
-
-    private inner class AnimatedState(@DrawableRes resId: Int) {
-        val icon: AnimatedVectorDrawableCompat =
-            AnimatedVectorDrawableCompat.create(context, resId)!!.apply {
-                registerAnimationCallback(this@ServiceButton.callback)
-            }
-
-        fun start() {
-            setImageDrawable(icon)
-            icon.start()
-        }
-
-        fun stop() = icon.stop()
-    }
-
-    private val iconStopped by lazy { AnimatedState(R.drawable.ic_service_stopped) }
-    private val iconConnecting by lazy { AnimatedState(R.drawable.ic_service_connecting) }
-    private val iconConnected by lazy { AnimatedState(R.drawable.ic_service_connected) }
-    private val iconStopping by lazy { AnimatedState(R.drawable.ic_service_stopping) }
-    private val animationQueue = ArrayDeque<AnimatedState>()
-
     private val orb = OrbRing(this).apply {
         offColor = context.getColorAttr(android.R.attr.textColorSecondary)
-        litColor = context.getColorAttr(R.attr.primaryOrTextPrimary)
+        dark = ColorUtils.calculateLuminance(context.getColorAttr(android.R.attr.textColorPrimary)) > 0.5
     }
     private var checked = false
     private var glass: GlassDrawable? = null
@@ -99,25 +60,25 @@ class ServiceButton @JvmOverloads constructor(
 
     override fun verifyDrawable(who: Drawable) = who == glass || super.verifyDrawable(who)
 
-    // The sweep runs only while the button is on screen: other screens and a scrolling list hide it, and the app
-    // in the background hides its window.
-    private fun updateSweep() {
+    // The orb moves only while the button is on screen: other screens and a scrolling list hide it, and the app in
+    // the background hides its window.
+    private fun updateMotion() {
         if (isAttachedToWindow && windowVisibility == VISIBLE && isOrWillBeShown) orb.resume() else orb.pause()
     }
 
     override fun hide(listener: OnVisibilityChangedListener?) {
         super.hide(listener)
-        updateSweep()
+        updateMotion()
     }
 
     override fun show(listener: OnVisibilityChangedListener?) {
         super.show(listener)
-        updateSweep()
+        updateMotion()
     }
 
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(visibility)
-        updateSweep()
+        updateMotion()
     }
 
     override fun onDetachedFromWindow() {
@@ -136,23 +97,10 @@ class ServiceButton @JvmOverloads constructor(
         return drawableState
     }
 
-    fun changeState(state: BaseService.State, previousState: BaseService.State, animate: Boolean) {
-        when (state) {
-            BaseService.State.Connecting -> changeState(iconConnecting, animate)
-
-            BaseService.State.Connected -> changeState(iconConnected, animate)
-
-            BaseService.State.Stopping -> {
-                changeState(iconStopping, animate && previousState == BaseService.State.Connected)
-            }
-
-            else -> changeState(iconStopped, animate)
-        }
+    fun changeState(state: BaseService.State, animate: Boolean) {
         orb.show(state, animate)
         checked = state == BaseService.State.Connected
         refreshDrawableState()
-        // Off, the struck-through plane reads in the text color; from connecting on it takes the ring's light.
-        imageTintList = ColorStateList.valueOf(if (state == BaseService.State.Stopped || state == BaseService.State.Idle) context.getColorAttr(android.R.attr.textColorPrimary) else orb.litColor)
         val description = context.getText(if (state.canStop) R.string.stop else R.string.connect)
         contentDescription = description
         TooltipCompat.setTooltipText(this, description)
@@ -162,25 +110,5 @@ class ServiceButton @JvmOverloads constructor(
             context,
             if (enabled) PointerIcon.TYPE_HAND else PointerIcon.TYPE_WAIT,
         )
-    }
-
-    private fun changeState(icon: AnimatedState, animate: Boolean) {
-        fun counters(a: AnimatedState, b: AnimatedState): Boolean = (a == iconStopped && b == iconConnecting) ||
-            (a == iconConnecting && b == iconStopped) ||
-            (a == iconConnected && b == iconStopping) ||
-            (a == iconStopping && b == iconConnected)
-        if (animate) {
-            if (animationQueue.size < 2 || !counters(animationQueue.last, icon)) {
-                animationQueue.add(icon)
-                if (animationQueue.size == 1) icon.start()
-            } else {
-                animationQueue.removeLast()
-            }
-        } else {
-            animationQueue.peekFirst()?.stop()
-            animationQueue.clear()
-            icon.start() // force ensureAnimatorSet to be called so that stop() will work
-            icon.stop()
-        }
     }
 }

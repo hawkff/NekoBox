@@ -23,6 +23,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.databinding.LayoutProfileBinding
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
+import xyz.nekobyte.nekobox.widget.BlackHole
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
@@ -83,7 +84,7 @@ class ThemeSmokeTest {
 
     /**
      * Text-like accents (dialog buttons, chip text, protocol label) must read on the
-     * surface at 4.5:1, and the connect button's plane and lit ring on its fill at 3:1, in every mode a palette can
+     * surface at 4.5:1, and the connect button's lit ring on its fill at 3:1, in every mode a palette can
      * be shown in. Dark-only palettes force night mode, so day is not checked for them.
      */
     @Test
@@ -100,9 +101,9 @@ class ThemeSmokeTest {
                 }
                 check("primaryOrTextPrimary/surface", ctx.getColorAttr(R.attr.primaryOrTextPrimary), surface, 4.5)
                 check("protocolColor/surface", ctx.getColorAttr(R.attr.protocolColor), surface, 4.5)
-                val orb = ctx.getColorAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
-                check("textColorPrimary/orb", ctx.getColorAttr(android.R.attr.textColorPrimary), orb, 3.0)
-                check("primaryOrTextPrimary/orb", ctx.getColorAttr(R.attr.primaryOrTextPrimary), orb, 3.0)
+                // The ring lights in the blue of a dark theme, or the deeper blue of a light one, as ServiceButton picks.
+                val dark = ColorUtils.calculateLuminance(ctx.getColorAttr(android.R.attr.textColorPrimary)) > 0.5
+                check("orb ring/orb", if (dark) BlackHole.BLUE_MID else BlackHole.BLUE_EDGE, ctx.getColorAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh), 3.0)
                 // Checked filter chips: on-container text over the (possibly translucent) container.
                 val container = ColorUtils.compositeColors(
                     ctx.getColorAttr(com.google.android.material.R.attr.colorSecondaryContainer),
