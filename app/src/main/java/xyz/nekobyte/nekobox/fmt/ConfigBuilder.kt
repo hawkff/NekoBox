@@ -257,9 +257,9 @@ private fun resolveChain(entity: ProxyEntity, lookupCache: BuildLookupCache): Mu
     requiredHop(thisGroup?.frontProxy)?.let { list.add(it) }
     requiredHop(thisGroup?.landingProxy)?.let { list.add(0, it) }
     // Exit-first, each hop is dialed through the one after it. A proxy from a list of proxies needs the list's first
-    // hop right after it wherever it sits, as the profile, a chain's member, or a group's first hop or exit: a Mullvad
-    // SOCKS5 relay answers only inside Mullvad's WireGuard. A first hop the path has elsewhere is a circle, which the
-    // check below refuses.
+    // hop right after it wherever it sits, as the profile, a chain's member, or a group's first hop or exit: a VPN's
+    // SOCKS5 relay can answer only inside that VPN's WireGuard tunnel. A first hop the path has elsewhere is a circle,
+    // which the check below refuses.
     var index = 0
     while (index < list.size) {
         val first = lookupCache.group(list[index].groupId)?.takeIf { it.type == GroupType.PROXIES }?.let { requiredHop(it.frontProxy) }
