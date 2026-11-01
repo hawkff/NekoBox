@@ -20,7 +20,6 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -58,11 +57,9 @@ import xyz.nekobyte.nekobox.ktx.alert
 import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.byteCount
 import xyz.nekobyte.nekobox.ktx.getColorAttr
-import xyz.nekobyte.nekobox.ktx.inflaterFor
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
-import xyz.nekobyte.nekobox.ktx.prefillOffMain
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
@@ -358,11 +355,6 @@ class ConfigurationGroupFragment : Fragment() {
         GroupManager.addListener(adapter!!)
         configurationListView.adapter = adapter
         configurationListView.setItemViewCacheSize(20)
-        // The rows that fill the screen are made off the main thread while Home starts: the frame that shows the list
-        // binds them instead of inflating each one.
-        val layout = DataStore.groupLayoutMode
-        configurationListView.prefillOffMain(viewLifecycleOwner.lifecycleScope, layout, if (layout == GroupLayout.COMPACT) 16 else 12)
-        if (DataStore.profileSections) configurationListView.prefillOffMain(viewLifecycleOwner.lifecycleScope, SECTION_VIEW, 3)
         FastScrollerBuilder(configurationListView).useMd2Style().build()
 
         // Hide the docked FAB while scrolling down (so it never overlaps the
@@ -773,13 +765,18 @@ class ConfigurationGroupFragment : Fragment() {
 
         override fun getItemViewType(position: Int) = if (configurationIdList[position] < 0) SECTION_VIEW else layoutMode
 
-        // Rows are also made off the main thread, ahead of the first layout (prefillOffMain).
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val inflater = inflaterFor(parent.context)
-            if (viewType == SECTION_VIEW) return SectionHolder(LayoutProfileSectionBinding.inflate(inflater, parent, false))
+            val inflater = LayoutInflater.from(parent.context)
+            // The first list takes the rows MainActivity made while it started.
+            val warmup = (activity as? MainActivity)?.rowWarmup
+            if (viewType == SECTION_VIEW) {
+                val view = warmup?.take(R.layout.layout_profile_section) ?: inflater.inflate(R.layout.layout_profile_section, parent, false)
+                return SectionHolder(LayoutProfileSectionBinding.bind(view))
+            }
             // The compact row holds the card's views, so the card's binding reads it too.
             val layout = if (viewType == GroupLayout.COMPACT) R.layout.layout_profile_compact else R.layout.layout_profile
-            return ConfigurationHolder(LayoutProfileBinding.bind(inflater.inflate(layout, parent, false)), viewType, inflater)
+            val view = warmup?.take(layout) ?: inflater.inflate(layout, parent, false)
+            return ConfigurationHolder(LayoutProfileBinding.bind(view), viewType)
         }
 
         override fun getItemId(position: Int): Long = configurationIdList[position]
@@ -1228,11 +1225,7 @@ class ConfigurationGroupFragment : Fragment() {
         }
     }
 
-    inner class ConfigurationHolder(
-        val binding: LayoutProfileBinding,
-        private val layout: Int,
-        inflater: LayoutInflater,
-    ) : RecyclerView.ViewHolder(binding.root) {
+    inner class ConfigurationHolder(val binding: LayoutProfileBinding, private val layout: Int) : RecyclerView.ViewHolder(binding.root) {
 
         val view: View get() = binding.root
 
@@ -1283,7 +1276,6 @@ class ConfigurationGroupFragment : Fragment() {
         // The one-column card shows its buttons; two columns, compact rows and the Proxies screen keep them under ⋮,
         // so their cards never build them.
         private val actions = if (layout == GroupLayout.CARDS && (parentFragment as? ConfigurationFragment)?.proxies != true) {
-            binding.actions.layoutInflater = inflater
             LayoutProfileActionsBinding.bind(binding.actions.inflate())
         } else {
             null

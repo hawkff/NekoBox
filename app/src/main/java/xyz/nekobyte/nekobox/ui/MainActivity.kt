@@ -23,6 +23,7 @@ import androidx.core.net.toUri
 import androidx.core.view.isNotEmpty
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
@@ -87,6 +88,9 @@ class MainActivity :
     lateinit var binding: LayoutMainBinding
     lateinit var navigation: NavigationView
 
+    /** Home's first rows, inflated while the activity starts. */
+    val rowWarmup = RowWarmup(this)
+
     // FabContainer: lets ktx layout managers drive the FAB without importing ui (cycle break).
     override val fabView get() = binding.fab
     override fun showFab() = binding.fab.show()
@@ -99,6 +103,7 @@ class MainActivity :
         // The first plural the process shows loads the locale's plural rules (~80 ms on a slow phone); Home's section
         // headers would pay it in the frame that fills the list.
         runOnDefaultDispatcher { resources.getQuantityString(R.plurals.group_profiles, 2, 2) }
+        rowWarmup.start(lifecycleScope)
         MessageStore.setCurrentActivity(this)
         backgroundUseAsked = savedInstanceState?.getBoolean(BACKGROUND_USE_ASKED) == true
 

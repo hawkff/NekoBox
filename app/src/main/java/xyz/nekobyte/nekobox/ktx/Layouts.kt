@@ -12,11 +12,6 @@ import androidx.core.view.isEmpty
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import xyz.nekobyte.nekobox.database.DataStore
 
 internal fun itemMoveIndices(from: Int, to: Int) = if (from < to) from until to else from downTo (to + 1)
@@ -201,33 +196,5 @@ class PlainInflater(context: Context) : LayoutInflater(context) {
             }
         }
         return super.onCreateView(name, attrs)
-    }
-}
-
-/** The inflater for [context] on the thread that asks: AppCompat's on the main thread, a [PlainInflater] off it. */
-fun inflaterFor(context: Context): LayoutInflater = if (Looper.myLooper() == Looper.getMainLooper()) LayoutInflater.from(context) else PlainInflater(context)
-
-/**
- * Makes [count] rows of [viewType] off the main thread, while the screen starts, and puts them in the list's pool: its
- * first layout then binds them instead of inflating each one in that frame. The adapter's onCreateViewHolder inflates
- * with [inflaterFor]. A row that fails to inflate ends this; the list makes the rest itself.
- */
-fun RecyclerView.prefillOffMain(scope: CoroutineScope, viewType: Int, count: Int) {
-    val adapter = adapter ?: return
-    recycledViewPool.setMaxRecycledViews(viewType, maxOf(count, 5))
-    scope.launch(Dispatchers.Default) {
-        repeat(count) {
-            val holder = try {
-                adapter.createViewHolder(this@prefillOffMain, viewType)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Logs.w(e)
-                return@launch
-            }
-            withContext(Dispatchers.Main) {
-                if (this@prefillOffMain.adapter === adapter) recycledViewPool.putRecycledView(holder)
-            }
-        }
     }
 }
