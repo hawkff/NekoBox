@@ -78,6 +78,13 @@ class MullvadPickerTest {
         assertEquals(listOf(setOf("nl", "se")), picks)
     }
 
+    @Test
+    fun aPickOfEveryCountryShown_staysThoseCountries() = withPicker(setOf("nl", "us")) { dialog, picks ->
+        assertEquals(listOf(true, true, true, true, true), checks(dialog))
+        pick(dialog)
+        assertEquals(listOf(setOf("nl", "us")), picks)
+    }
+
     private fun checks(dialog: AlertDialog) = (0 until dialog.listView.adapter.count).map { dialog.listView.isItemChecked(it) }
 
     private fun pick(dialog: AlertDialog) {

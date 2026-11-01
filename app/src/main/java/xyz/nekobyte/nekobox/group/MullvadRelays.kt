@@ -1,5 +1,7 @@
 package xyz.nekobyte.nekobox.group
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import libcore.Libcore
 import org.json.JSONArray
 import org.json.JSONException
@@ -90,7 +92,8 @@ object MullvadRelays {
             val city = server.optString("city_code")
             val host = server.optString("socks_name")
             val port = server.optInt("socks_port")
-            if (host.isNotEmpty()) listed += host
+            // A server named twice counts once.
+            if (host.isNotEmpty() && !listed.add(host)) continue
             // Only a name under Mullvad's relay domain becomes a proxy, whatever else the list holds.
             if (!server.optBoolean("active") || !COUNTRY.matches(country) || !CITY.matches(city) || port !in 1..65535 ||
                 !host.startsWith("$country-$city-") || !HOST.matches(host)
@@ -131,11 +134,14 @@ object MullvadRelays {
         return { filter.containsMatchIn(it) }
     }
 
-    /** Fetches the server list again for [listId] and the countries and cities it keeps. */
-    suspend fun update(listId: Long): Result {
+    /** Fetches the server list again from [source] for [listId] and the countries and cities it keeps. */
+    suspend fun update(listId: Long, source: () -> String = ::fetch): Result {
         requireNotNull(ProfileDatabase.groupDao.getById(listId)?.takeIf(::isRelayList)) { "Not a list of Mullvad's proxies" }
-        return sync(listId, parse(fetch()))
+        return sync(listId, parse(source()))
     }
+
+    // Held while a pick looks for the list or makes it, so two picks made before it existed fill one list.
+    private val making = Mutex()
 
     /**
      * Fills [listId] with the proxies of the servers [pick] holds, or of the pick it keeps when that is null; a new list
@@ -146,13 +152,18 @@ object MullvadRelays {
         val relays = servers.relays
         // A server list that failed to arrive whole must not empty the list.
         if (relays.isEmpty()) error(app.getString(R.string.no_proxies_found))
-        val created = listId <= 0L
+        var created = false
         var through: ProxyEntity? = null
-        val id = if (created) {
-            through = tunnel(relays)
-            GroupManager.createGroup(ProxyGroup(name = LIST_NAME, type = GroupType.PROXIES, subscription = requireNotNull(pick), frontProxy = through?.id ?: -1L)).id
-        } else {
+        val id = if (listId > 0L) {
             listId
+        } else {
+            making.withLock {
+                ProfileDatabase.groupDao.allGroups().firstOrNull(::isRelayList)?.id ?: run {
+                    created = true
+                    through = tunnel(relays)
+                    GroupManager.createGroup(ProxyGroup(name = LIST_NAME, type = GroupType.PROXIES, subscription = requireNotNull(pick), frontProxy = through?.id ?: -1L)).id
+                }
+            }
         }
         // Renaming or deleting the list waits for this, as for a subscription's update, and so does another pick.
         if (!GroupUpdater.updating.add(id)) error(app.getString(R.string.group_wait_update))

@@ -74,6 +74,8 @@ class MullvadRelaysTest {
             server("de-fra-wg-001", "Frankfurt"),
             server("de-ber-wg-001", "Berlin"),
             server("nl-ams-wg-001"),
+            // The same server again.
+            server("nl-ams-wg-001"),
             server("nl-ams-wg-003", active = false),
             server("nl-ams-wg-004", socks = "nl-ams-wg-socks5-004.relays.example.com"),
             server("nl-ams-wg-005", socks = "se-sto-wg-socks5-005.relays.mullvad.net"),
@@ -167,16 +169,32 @@ class MullvadRelaysTest {
     @Test
     fun anUpdate_keepsAPickSavedWhileItFetched() = runTest {
         withContext(Dispatchers.IO) {
-            val parsed = servers(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
-            val listId = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl"))).list.id
-            MullvadRelays.sync(listId, parsed, MullvadRelays.subscription(setOf("se")))
+            val text = JSONArray(listOf(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))).toString()
+            val listId = MullvadRelays.sync(0L, MullvadRelays.parse(text), MullvadRelays.subscription(setOf("nl"))).list.id
 
-            // What an update started before the new pick does once its server list arrives.
-            MullvadRelays.sync(listId, parsed)
+            MullvadRelays.update(listId) {
+                // Another pick is saved while the server list downloads.
+                ProfileDatabase.groupDao.getById(listId)!!.let { ProfileDatabase.groupDao.updateGroup(it.apply { subscription = MullvadRelays.subscription(setOf("se")) }) }
+                text
+            }
 
             assertEquals(listOf("\uD83C\uDDF8\uD83C\uDDEA Stockholm 001"), names(listId))
-            val kept = ProfileDatabase.groupDao.getById(listId)!!.subscription
-            assertEquals(setOf("se-sto"), MullvadRelays.holds(kept).let { holds -> parsed.relays.filter { holds(it.host) }.mapTo(HashSet()) { it.place } })
+            assertEquals(setOf("se"), MullvadRelays.codes(ProfileDatabase.groupDao.getById(listId)!!.subscription))
+        }
+    }
+
+    @Test
+    fun twoPicksMadeBeforeTheListExisted_fillOneList() = runTest {
+        withContext(Dispatchers.IO) {
+            val parsed = servers(server("nl-ams-wg-001"), server("se-sto-wg-001", "Stockholm"))
+            val first = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("nl")))
+
+            val second = MullvadRelays.sync(0L, parsed, MullvadRelays.subscription(setOf("se")))
+
+            assertFalse(second.created)
+            assertEquals(first.list.id, second.list.id)
+            assertEquals(1, ProfileDatabase.groupDao.allGroups().count(MullvadRelays::isRelayList))
+            assertEquals(listOf("\uD83C\uDDF8\uD83C\uDDEA Stockholm 001"), names(first.list.id))
         }
     }
 
@@ -254,10 +272,11 @@ class MullvadRelaysTest {
         withContext(Dispatchers.IO) {
             val listId = MullvadRelays.sync(0L, servers(server("nl-ams-wg-001")), MullvadRelays.subscription(null)).list.id
 
-            val failure = runCatching { MullvadRelays.sync(listId, MullvadRelays.parse("<html>"), MullvadRelays.subscription(null)) }.exceptionOrNull()
+            val failure = runCatching { MullvadRelays.sync(listId, MullvadRelays.parse("<html>"), MullvadRelays.subscription(setOf("se"))) }.exceptionOrNull()
 
             assertTrue(failure is IllegalStateException)
             assertEquals(1, ProfileDatabase.proxyDao.getByGroup(listId).size)
+            assertEquals(null, MullvadRelays.codes(ProfileDatabase.groupDao.getById(listId)!!.subscription))
             assertEquals(1, ProfileDatabase.groupDao.allGroups().size)
         }
     }
