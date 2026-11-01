@@ -73,9 +73,6 @@ internal class OrbRing(private val view: View) {
     private var clock: TimeAnimator? = null
     private var running = true
 
-    /** Whether the clock turns the disk and twinkles the ring now. */
-    internal val ticking get() = clock?.let { it.isStarted && !it.isPaused } == true
-
     init {
         // The same ring every time: placed by the golden angle, denser along the middle of the band.
         val random = Random(7)
@@ -99,7 +96,8 @@ internal class OrbRing(private val view: View) {
     fun show(state: BaseService.State, animate: Boolean) {
         val previous = this.state
         this.state = state
-        val moving = animate && view.context.animationsOn()
+        // Hidden, a change shows at once: nobody sees it move, and the orb wakes when it shows again.
+        val moving = animate && running && view.context.animationsOn()
         val target = when (state) {
             BaseService.State.Connecting -> CONNECTING
             BaseService.State.Connected -> CONNECTED
@@ -121,6 +119,8 @@ internal class OrbRing(private val view: View) {
 
             else -> tween(target, if (state == BaseService.State.Connecting) SPIN_UP else SLOW_DOWN)
         }
+        // A burst belongs to the connection that just came up.
+        if (state != BaseService.State.Connected) flare?.cancel()
         if (state == BaseService.State.Connected) sparkle() else wake()
         updateClock()
     }
@@ -129,7 +129,7 @@ internal class OrbRing(private val view: View) {
     private fun sparkle() {
         calm?.cancel()
         live = 1f
-        if (!view.context.animationsOn()) return
+        if (!running || !view.context.animationsOn()) return
         calm = ValueAnimator.ofFloat(1f, 0f).apply {
             startDelay = SPARKLE
             duration = REST
@@ -148,16 +148,25 @@ internal class OrbRing(private val view: View) {
         live = 1f
     }
 
-    /** Stops the clock while the button is gone: hidden, out of the window or in the background. */
+    /**
+     * Stops everything while the button is gone (hidden, out of the window or in the background): a change under way
+     * lands where it was going, and nothing is left scheduled that holds the view.
+     */
     fun pause() {
+        if (!running) return
         running = false
+        change?.end()
+        flare?.cancel()
+        calm?.cancel()
+        calm = null
         updateClock()
     }
 
     /** Moves again once the button is back on screen; a connected orb sparkles again for a while. */
     fun resume() {
+        if (running) return
         running = true
-        if (state == BaseService.State.Connected && calm?.isStarted != true) sparkle()
+        if (state == BaseService.State.Connected) sparkle()
         updateClock()
     }
 
@@ -203,21 +212,18 @@ internal class OrbRing(private val view: View) {
         }
     }
 
-    // The clock runs while the disk turns or the ring twinkles, and the button shows with animations on.
+    // The clock runs while the disk turns or the ring twinkles, and the button shows with animations on. A stopped
+    // clock is dropped, so the next one starts from where the disk and the sparkle were, not from the time away.
     private fun updateClock() {
         val run = running && live > 0.001f && (levels[SPEED] > 0.001f || levels[TWINKLE] > 0.001f) && view.context.animationsOn()
-        val clock = clock
-        if (run) {
-            when {
-                clock == null -> this.clock = TimeAnimator().apply {
-                    setTimeListener { _, _, delta -> tick(delta) }
-                    start()
-                }
-
-                clock.isPaused -> clock.resume()
+        if (run && clock == null) {
+            clock = TimeAnimator().apply {
+                setTimeListener { _, _, delta -> tick(delta) }
+                start()
             }
-        } else if (clock != null && clock.isStarted && !clock.isPaused) {
-            clock.pause()
+        } else if (!run && clock != null) {
+            clock?.cancel()
+            clock = null
         }
     }
 

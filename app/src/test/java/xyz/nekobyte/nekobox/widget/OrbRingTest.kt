@@ -42,7 +42,11 @@ class OrbRingTest {
     fun everyStateDraws_onDarkAndLightThemes() {
         val canvas = Canvas(Bitmap.createBitmap(216, 216, Bitmap.Config.ARGB_8888))
         for (dark in listOf(true, false)) {
-            orb.dark = dark
+            // A fresh orb a theme: the black hole makes its textures and shaders for the theme it first draws on.
+            val orb = OrbRing(View(RuntimeEnvironment.getApplication())).apply {
+                offColor = Color.GRAY
+                this.dark = dark
+            }
             for (state in listOf(State.Idle, State.Connecting, State.Connected, State.Stopping, State.Stopped)) {
                 orb.show(state, animate = false)
                 orb.draw(canvas, 108f, 108f, 108f)

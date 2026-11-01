@@ -192,7 +192,10 @@ internal class BlackHole {
     // Edge to middle to core with [intensity], and as opaque as it is bright.
     private fun shade(colors: IntArray, intensity: Float): Int {
         val t = intensity.coerceIn(0f, 1f)
-        val (from, to, k) = if (t < 0.5f) Triple(colors[0], colors[1], t * 2) else Triple(colors[1], colors[2], t * 2 - 1)
+        val low = t < 0.5f
+        val from = if (low) colors[0] else colors[1]
+        val to = if (low) colors[1] else colors[2]
+        val k = if (low) t * 2 else t * 2 - 1
         val alpha = (min(1f, intensity * 1.15f) * 255).toInt()
         return Color.argb(
             alpha,
