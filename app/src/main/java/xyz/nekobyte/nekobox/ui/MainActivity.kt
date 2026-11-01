@@ -111,7 +111,6 @@ class MainActivity :
         // Home's rows are made off the main thread from the first frame on, before the profiles come; started sooner,
         // they would hold up that frame, which inflates on the main thread from the same resources.
         binding.root.doOnPreDraw { binding.root.post { rowWarmup.start(lifecycleScope) } }
-        binding.fab.initProgress(binding.fabProgress)
         // One drawer for every theme. Black used a second one whose solid item fill hid the checked item's name.
         navigation = binding.navView
         navigation.setNavigationItemSelectedListener(this)

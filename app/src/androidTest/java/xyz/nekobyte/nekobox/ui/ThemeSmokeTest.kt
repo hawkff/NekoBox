@@ -67,7 +67,7 @@ class ThemeSmokeTest {
                 val inflater = LayoutInflater.from(ctx)
                 // Views start animators while they inflate, which needs a Looper thread on older Android.
                 instrumentation.runOnMainSync { for (layout in layouts) inflater.inflate(layout, null) }
-                for (attr in intArrayOf(R.attr.fabConnectedColor, R.attr.appBarBackgroundColor, R.attr.colorPrimaryText)) {
+                for (attr in intArrayOf(com.google.android.material.R.attr.colorSurfaceContainerHigh, R.attr.appBarBackgroundColor, R.attr.colorPrimaryText)) {
                     assertNotEquals("theme $id dialog=$dialog: attr unresolved", Color.TRANSPARENT, ctx.getColorAttr(attr))
                 }
             }
@@ -83,7 +83,7 @@ class ThemeSmokeTest {
 
     /**
      * Text-like accents (dialog buttons, chip text, protocol label) must read on the
-     * surface at 4.5:1 and the FAB icon on the FAB at 3:1, in every mode a palette can
+     * surface at 4.5:1, and the connect button's plane and lit ring on its fill at 3:1, in every mode a palette can
      * be shown in. Dark-only palettes force night mode, so day is not checked for them.
      */
     @Test
@@ -100,7 +100,9 @@ class ThemeSmokeTest {
                 }
                 check("primaryOrTextPrimary/surface", ctx.getColorAttr(R.attr.primaryOrTextPrimary), surface, 4.5)
                 check("protocolColor/surface", ctx.getColorAttr(R.attr.protocolColor), surface, 4.5)
-                check("fabStoppedColor/fab", ctx.getColorAttr(R.attr.fabStoppedColor), ctx.getColorAttr(R.attr.fabColorBackground), 3.0)
+                val orb = ctx.getColorAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+                check("textColorPrimary/orb", ctx.getColorAttr(android.R.attr.textColorPrimary), orb, 3.0)
+                check("primaryOrTextPrimary/orb", ctx.getColorAttr(R.attr.primaryOrTextPrimary), orb, 3.0)
                 // Checked filter chips: on-container text over the (possibly translucent) container.
                 val container = ColorUtils.compositeColors(
                     ctx.getColorAttr(com.google.android.material.R.attr.colorSecondaryContainer),

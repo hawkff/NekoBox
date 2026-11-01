@@ -2202,10 +2202,6 @@ HSPLxyz/nekobyte/nekobox/widget/CardHighlight$1;->onViewAttachedToWindow(Landroi
 HSPLxyz/nekobyte/nekobox/widget/CardHighlight;-><init>(Lcom/google/android/material/card/MaterialCardView;)V
 HSPLxyz/nekobyte/nekobox/widget/CardHighlight;->paint(F)V
 HSPLxyz/nekobyte/nekobox/widget/CardHighlight;->show(ZZJ)V
-HSPLxyz/nekobyte/nekobox/widget/FabProgressBehavior;->layoutDependsOn(Landroidx/coordinatorlayout/widget/CoordinatorLayout;Landroid/view/View;Landroid/view/View;)Z
-HSPLxyz/nekobyte/nekobox/widget/FabProgressBehavior;->layoutDependsOn(Landroidx/coordinatorlayout/widget/CoordinatorLayout;Lcom/google/android/material/progressindicator/CircularProgressIndicator;Landroid/view/View;)Z
-HSPLxyz/nekobyte/nekobox/widget/FabProgressBehavior;->onLayoutChild(Landroidx/coordinatorlayout/widget/CoordinatorLayout;Landroid/view/View;I)Z
-HSPLxyz/nekobyte/nekobox/widget/FabProgressBehavior;->onLayoutChild(Landroidx/coordinatorlayout/widget/CoordinatorLayout;Lcom/google/android/material/progressindicator/CircularProgressIndicator;I)Z
 HSPLxyz/nekobyte/nekobox/widget/ServiceButton$useGlass$1;->getOutline(Landroid/view/View;Landroid/graphics/Outline;)V
 HSPLxyz/nekobyte/nekobox/widget/ServiceButton;->hideProgress()V
 HSPLxyz/nekobyte/nekobox/widget/ServiceButton;->onDraw(Landroid/graphics/Canvas;)V
@@ -4595,7 +4591,6 @@ Lxyz/nekobyte/nekobox/widget/CardHighlight$$ExternalSyntheticLambda0;
 Lxyz/nekobyte/nekobox/widget/CardHighlight$1;
 Lxyz/nekobyte/nekobox/widget/CardHighlight$Companion;
 Lxyz/nekobyte/nekobox/widget/CardHighlight;
-Lxyz/nekobyte/nekobox/widget/FabProgressBehavior;
 Lxyz/nekobyte/nekobox/widget/RowActions$rows$1;
 Lxyz/nekobyte/nekobox/widget/RowActions;
 Lxyz/nekobyte/nekobox/widget/RowActionsKt;
@@ -11901,7 +11896,6 @@ SPLxyz/nekobyte/nekobox/widget/CardHighlight;->access$getFocus$p(Lxyz/nekobyte/n
 SPLxyz/nekobyte/nekobox/widget/CardHighlight;->breathe(Z)V
 SPLxyz/nekobyte/nekobox/widget/CardHighlight;->focus$lambda$0(Lxyz/nekobyte/nekobox/widget/CardHighlight;Z)V
 SPLxyz/nekobyte/nekobox/widget/CardHighlight;->show$default(Lxyz/nekobyte/nekobox/widget/CardHighlight;ZZJILjava/lang/Object;)V
-SPLxyz/nekobyte/nekobox/widget/FabProgressBehavior;-><init>(Landroid/content/Context;Landroid/util/AttributeSet;)V
 SPLxyz/nekobyte/nekobox/widget/RowActions$rows$1;-><init>(Lxyz/nekobyte/nekobox/widget/RowActions;)V
 SPLxyz/nekobyte/nekobox/widget/RowActions;-><init>(Landroidx/recyclerview/widget/RecyclerView;Landroidx/recyclerview/widget/ItemTouchHelper$Callback;)V
 SPLxyz/nekobyte/nekobox/widget/RowActions;->getItemDelegate()Landroidx/core/view/AccessibilityDelegateCompat;

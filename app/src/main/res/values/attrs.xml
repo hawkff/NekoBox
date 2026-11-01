@@ -31,16 +31,6 @@
     <attr name="testFailColor" format="color" />
     <!-- Bottom-bar speed text (arrows + rate). Default on-primary; Dracula = yellow. -->
     <attr name="speedTextColor" format="color" />
-    <!-- Connect-FAB icon tint when Stopped. Default on-primary; Dracula = yellow
-         (red was invisible on the pink/purple FAB). Separate from the red
-         statusStoppedColor used for the status text. -->
-    <attr name="fabStoppedColor" format="color" />
-    <!-- Connect-FAB icon tint when Connected. Default = statusConnectedColor so
-         existing themes are unchanged; themes whose FAB background equals the
-         connected status color (e.g. Dark High Contrast: green icon on a green
-         FAB) override this with a contrasting color so the airplane icon stays
-         visible. Separate from statusConnectedColor used for the status text. -->
-    <attr name="fabConnectedColor" format="color" />
     <!-- Secondary status text (the part after "Connected," / "Success:").
          Default on-primary; Dracula = cyan. -->
     <attr name="statusDetailColor" format="color" />

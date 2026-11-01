@@ -13,32 +13,25 @@ import android.view.View
 import android.view.ViewOutlineProvider
 import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.TooltipCompat
-import androidx.core.graphics.ColorUtils
-import androidx.dynamicanimation.animation.DynamicAnimation
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.withStarted
 import androidx.vectordrawable.graphics.drawable.Animatable2Compat
 import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.progressindicator.BaseProgressIndicator
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
-import xyz.nekobyte.nekobox.ktx.animationsOn
 import xyz.nekobyte.nekobox.ktx.getColorAttr
-import xyz.nekobyte.nekobox.ktx.unwrap
 import xyz.nekobyte.nekobox.widget.glass.GlassDrawable
 import java.util.*
 
+/**
+ * The connect button: an orb ([OrbRing]) around the plane. Off, a grey ring and the plane struck through; connecting,
+ * the strike slides off and a lit arc sweeps the ring; connected, the plane fills and the ring lights up; stopping, it
+ * all goes back.
+ */
 class ServiceButton @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
-) : FloatingActionButton(context, attrs, defStyleAttr),
-    DynamicAnimation.OnAnimationEndListener {
+) : FloatingActionButton(context, attrs, defStyleAttr) {
 
     private val callback = object : Animatable2Compat.AnimationCallback() {
         override fun onAnimationEnd(drawable: Drawable) {
@@ -52,10 +45,7 @@ class ServiceButton @JvmOverloads constructor(
         }
     }
 
-    private inner class AnimatedState(
-        @DrawableRes resId: Int,
-        private val onStart: BaseProgressIndicator<*>.() -> Unit = { hideProgress() },
-    ) {
+    private inner class AnimatedState(@DrawableRes resId: Int) {
         val icon: AnimatedVectorDrawableCompat =
             AnimatedVectorDrawableCompat.create(context, resId)!!.apply {
                 registerAnimationCallback(this@ServiceButton.callback)
@@ -64,105 +54,70 @@ class ServiceButton @JvmOverloads constructor(
         fun start() {
             setImageDrawable(icon)
             icon.start()
-            progress.onStart()
         }
 
         fun stop() = icon.stop()
     }
 
     private val iconStopped by lazy { AnimatedState(R.drawable.ic_service_stopped) }
-    private val iconConnecting by lazy {
-        AnimatedState(R.drawable.ic_service_connecting) {
-            hideProgress()
-            val owner = context.unwrap<LifecycleOwner>()
-            delayedAnimation = owner.lifecycleScope.launch {
-                delay(context.resources.getInteger(android.R.integer.config_mediumAnimTime) + 1000L)
-                // Gate the UI mutation on STARTED so a delayed progress reveal doesn't run
-                // while the activity is stopped (the old launchWhenStarted suspended here).
-                owner.withStarted {
-                    // A button hidden meanwhile (another screen, a scrolled list) shows its ring when it comes back.
-                    if (this@ServiceButton.isOrWillBeShown) {
-                        isIndeterminate = true
-                        show()
-                    }
-                }
-            }
-        }
-    }
-    private val iconConnected by lazy {
-        AnimatedState(R.drawable.ic_service_connected) {
-            delayedAnimation?.cancel()
-            // The ring fills, and the end of the fill hides it. With animations off nothing fills, so it goes now.
-            if (context.animationsOn()) setProgressCompat(1, true) else hide()
-        }
-    }
+    private val iconConnecting by lazy { AnimatedState(R.drawable.ic_service_connecting) }
+    private val iconConnected by lazy { AnimatedState(R.drawable.ic_service_connected) }
     private val iconStopping by lazy { AnimatedState(R.drawable.ic_service_stopping) }
     private val animationQueue = ArrayDeque<AnimatedState>()
 
+    private val orb = OrbRing(this).apply {
+        offColor = context.getColorAttr(android.R.attr.textColorSecondary)
+        litColor = context.getColorAttr(R.attr.primaryOrTextPrimary)
+    }
     private var checked = false
-    private var state = BaseService.State.Idle
     private var glass: GlassDrawable? = null
-    private var glassTint = 0
-    private val glassBounds = Rect()
+    private val bounds = Rect()
 
-    /** Liquid glass: the button becomes a glass orb, filled with its color once connected. */
+    /** Liquid glass: the orb is a pane of glass. */
     fun useGlass(drawable: GlassDrawable) {
         glass = drawable
-        glassTint = drawable.tintColor
         drawable.callback = this
         backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
-                getContentRect(glassBounds)
-                drawable.bounds = glassBounds
+                getContentRect(bounds)
+                drawable.bounds = bounds
                 drawable.getOutline(outline)
             }
         }
     }
 
     override fun onDraw(canvas: Canvas) {
+        getContentRect(bounds)
         glass?.let {
-            getContentRect(glassBounds)
-            it.bounds = glassBounds
+            it.bounds = bounds
             it.draw(canvas)
         }
+        orb.draw(canvas, bounds.exactCenterX(), bounds.exactCenterY(), bounds.width() / 2f)
         super.onDraw(canvas)
     }
 
     override fun verifyDrawable(who: Drawable) = who == glass || super.verifyDrawable(who)
 
-    // The ring is part of the button: it leaves with it, on the other screens and while a list scrolls.
-    override fun hide(listener: FloatingActionButton.OnVisibilityChangedListener?) {
+    // The sweep runs only while the button shows: other screens and a scrolling list hide it.
+    override fun hide(listener: OnVisibilityChangedListener?) {
         super.hide(listener)
-        if (::progress.isInitialized) hideProgress()
+        orb.pause()
     }
 
-    override fun show(listener: FloatingActionButton.OnVisibilityChangedListener?) {
+    override fun show(listener: OnVisibilityChangedListener?) {
         super.show(listener)
-        if (::progress.isInitialized && state == BaseService.State.Connecting) {
-            progress.isIndeterminate = true
-            progress.show()
-        }
-    }
-    private var delayedAnimation: Job? = null
-    private lateinit var progress: BaseProgressIndicator<*>
-    fun initProgress(progress: BaseProgressIndicator<*>) {
-        this.progress = progress
-        progress.progressDrawable?.addSpringAnimationEndListener(this)
+        orb.resume()
     }
 
-    override fun onAnimationEnd(
-        animation: DynamicAnimation<out DynamicAnimation<*>>?,
-        canceled: Boolean,
-        value: Float,
-        velocity: Float,
-    ) {
-        if (!canceled) progress.hide()
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (isOrWillBeShown) orb.resume()
     }
 
-    private fun hideProgress() {
-        delayedAnimation?.cancel()
-        progress.hide()
+    override fun onDetachedFromWindow() {
+        orb.pause()
+        super.onDetachedFromWindow()
     }
 
     override fun onCreateDrawableState(extraSpace: Int): IntArray {
@@ -177,7 +132,6 @@ class ServiceButton @JvmOverloads constructor(
     }
 
     fun changeState(state: BaseService.State, previousState: BaseService.State, animate: Boolean) {
-        this.state = state
         when (state) {
             BaseService.State.Connecting -> changeState(iconConnecting, animate)
 
@@ -189,9 +143,11 @@ class ServiceButton @JvmOverloads constructor(
 
             else -> changeState(iconStopped, animate)
         }
+        orb.show(state, animate)
         checked = state == BaseService.State.Connected
         refreshDrawableState()
-        applyStateTint(state)
+        // Off, the struck-through plane reads in the text color; from connecting on it takes the ring's light.
+        imageTintList = ColorStateList.valueOf(if (state == BaseService.State.Stopped || state == BaseService.State.Idle) context.getColorAttr(android.R.attr.textColorPrimary) else orb.litColor)
         val description = context.getText(if (state.canStop) R.string.stop else R.string.connect)
         contentDescription = description
         TooltipCompat.setTooltipText(this, description)
@@ -201,27 +157,6 @@ class ServiceButton @JvmOverloads constructor(
             context,
             if (enabled) PointerIcon.TYPE_HAND else PointerIcon.TYPE_WAIT,
         )
-    }
-
-    private fun applyStateTint(state: BaseService.State) {
-        glass?.let { glass ->
-            // Clear glass with the icon in the button's color; connected, the color fills the orb
-            // and the icon takes the connected color the theme sets against it.
-            val connected = state == BaseService.State.Connected
-            val color = context.getColorAttr(R.attr.fabColorBackground)
-            glass.tintColor = if (connected) ColorUtils.setAlphaComponent(color, 0xD9) else glassTint
-            imageTintList = ColorStateList.valueOf(if (connected) context.getColorAttr(R.attr.fabConnectedColor) else color)
-            return
-        }
-        // Tint the connect FAB icon by state: fabConnectedColor when connected, fabStoppedColor when stopped,
-        // colorOnPrimary in between. Both default to colorOnPrimary; the palettes with a green status color of their
-        // own set fabConnectedColor to their on-primary color, so the icon never turns green on the button.
-        val attr = when (state) {
-            BaseService.State.Connected -> R.attr.fabConnectedColor
-            BaseService.State.Stopped -> R.attr.fabStoppedColor
-            else -> com.google.android.material.R.attr.colorOnPrimary
-        }
-        imageTintList = ColorStateList.valueOf(context.getColorAttr(attr))
     }
 
     private fun changeState(icon: AnimatedState, animate: Boolean) {
