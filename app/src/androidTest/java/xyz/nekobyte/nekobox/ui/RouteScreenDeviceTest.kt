@@ -226,6 +226,7 @@ class RouteScreenDeviceTest {
                     assertEquals(rule.domains, sites.text.toString())
                     assertFalse(sites.onCheckIsTextEditor())
                     assertTrue(sites.isTextSelectable)
+                    assertFalse(sites.isSaveEnabled)
                     assertFalse(root.findViewById<View>(R.id.to_proxy).isClickable)
                     assertFalse(root.findViewById<View>(R.id.apps).isClickable)
                     // Every app by name, as there is no list to open.

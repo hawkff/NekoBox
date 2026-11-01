@@ -574,6 +574,46 @@ class ConfigBuilderGoldenTest {
     }
 
     @Test
+    fun aChainKeepsTheFirstHopOfItsMemberFromAList() {
+        // Add exit proxy makes a chain of a server and a relay: the relay still goes through its list's first hop.
+        val tunnel = addSocks(addGroup(), "192.0.2.64", 1064, "member-first-hop")
+        val list = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "relays", type = GroupType.PROXIES, frontProxy = tunnel.id)) }
+        val relay = addSocks(list, "10.64.0.3", 1080, "relay-three")
+        val server = addSocks(addGroup(), "192.0.2.65", 1065, "server-three")
+        val chain = addChain(addGroup(), "server to relay", server.id, relay.id)
+
+        val socks = objects(JSONObject(build(chain).config).getJSONArray("outbounds")).filter { it.optString("type") == "socks" }
+        fun at(address: String) = socks.single { it.getString("server") == address }
+        assertFalse(at("192.0.2.65").has("detour"))
+        assertEquals(at("192.0.2.65").getString("tag"), at("192.0.2.64").getString("detour"))
+        assertEquals(at("192.0.2.64").getString("tag"), at("10.64.0.3").getString("detour"))
+
+        // A member that already sits right after its list's first hop keeps the chain as it is.
+        val through = addChain(addGroup(), "tunnel to relay", tunnel.id, relay.id)
+        assertEquals(2, objects(JSONObject(build(through).config).getJSONArray("outbounds")).count { it.optString("type") == "socks" })
+    }
+
+    @Test
+    fun twoListsThroughEachOtherAreRefusedByName() {
+        val first = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "first", type = GroupType.PROXIES)) }
+        val second = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "second", type = GroupType.PROXIES)) }
+        val a = addSocks(first, "192.0.2.66", 1066, "list-a-proxy")
+        val b = addSocks(second, "192.0.2.67", 1067, "list-b-proxy")
+        ConfigBuilderTestEnv.io {
+            ProfileDatabase.groupDao.getById(first)!!.also {
+                it.frontProxy = b.id
+                ProfileDatabase.groupDao.updateGroup(it)
+            }
+            ProfileDatabase.groupDao.getById(second)!!.also {
+                it.frontProxy = a.id
+                ProfileDatabase.groupDao.updateGroup(it)
+            }
+        }
+        val failure = assertThrows(IllegalArgumentException::class.java) { build(a) }
+        assertTrue(failure.message.orEmpty(), failure.message.orEmpty().contains("list-a-proxy"))
+    }
+
+    @Test
     fun forExport_omitsDeviceSecretsAndLanBinding() {
         DataStore.allowAccess = true
         val profile = addSocks(addGroup(), "192.0.2.50", 1080, "export-socks")

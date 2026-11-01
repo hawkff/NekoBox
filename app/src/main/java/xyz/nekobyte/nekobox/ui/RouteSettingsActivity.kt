@@ -268,6 +268,9 @@ class RouteSettingsActivity : ThemedActivity() {
         for (field in listOf(binding.name, binding.sites, binding.addresses, binding.downloaded, binding.ports, binding.protocols, binding.source, binding.sourcePorts, binding.dnsServer)) {
             field.keyListener = null
             field.setTextIsSelectable(true)
+            // A rule shown to read loads again after the screen is recreated; a provider's sites can pass the size the
+            // saved state may have.
+            field.isSaveEnabled = false
         }
         filling = false
         val choices = listOf(binding.outbound, binding.network, binding.siteLists, binding.addressLists).flatMap { it.children.toList() }

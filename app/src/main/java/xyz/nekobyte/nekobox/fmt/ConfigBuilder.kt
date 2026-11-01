@@ -253,29 +253,22 @@ private fun resolveChain(entity: ProxyEntity, lookupCache: BuildLookupCache): Mu
             NekoBox.application.getString(R.string.chain_missing_hop, entity.displayName())
         }
     }
-    val frontProxy = requiredHop(thisGroup?.frontProxy)
-    val landingProxy = requiredHop(thisGroup?.landingProxy)
-
-    // A proxy from a list of proxies keeps the list's first hop wherever it is dialed: as a group's first hop or
-    // exit, a Mullvad SOCKS5 relay still goes through Mullvad's WireGuard. In this list's order, the last first.
-    fun withListPath(hop: ProxyEntity): List<ProxyEntity> {
-        val path = arrayListOf(hop)
-        val seen = hashSetOf(entity.id, hop.id)
-        var list = lookupCache.group(hop.groupId)?.takeIf { it.type == GroupType.PROXIES }
-        while (list != null) {
-            val first = requiredHop(list.frontProxy)?.takeIf { seen.add(it.id) } ?: break
-            path += first
-            list = lookupCache.group(first.groupId)?.takeIf { it.type == GroupType.PROXIES }
-        }
-        return path
-    }
-
     val list = resolveChainInternal(entity)
-    if (frontProxy != null) {
-        list.addAll(withListPath(frontProxy))
-    }
-    if (landingProxy != null) {
-        list.addAll(0, withListPath(landingProxy))
+    requiredHop(thisGroup?.frontProxy)?.let { list.add(it) }
+    requiredHop(thisGroup?.landingProxy)?.let { list.add(0, it) }
+    // Exit-first, each hop is dialed through the one after it. A proxy from a list of proxies needs the list's first
+    // hop right after it wherever it sits, as the profile, a chain's member, or a group's first hop or exit: a Mullvad
+    // SOCKS5 relay answers only inside Mullvad's WireGuard. A first hop the path has elsewhere is a circle, which the
+    // check below refuses.
+    var index = 0
+    while (index < list.size) {
+        val first = lookupCache.group(list[index].groupId)?.takeIf { it.type == GroupType.PROXIES }?.let { requiredHop(it.frontProxy) }
+        if (first != null && list.getOrNull(index + 1)?.id != first.id) {
+            val repeated = list.any { it.id == first.id }
+            list.add(index + 1, first)
+            if (repeated) break
+        }
+        index++
     }
     // A hop dialed twice would share one outbound tag and loop: the path is refused, naming the hop. A Tailscale
     // node twice gets the Tailscale message when the chain is built.
