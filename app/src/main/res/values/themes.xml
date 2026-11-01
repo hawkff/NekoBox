@@ -115,6 +115,7 @@
         <item name="routeBlockColor">?attr/testFailColor</item>
         <item name="navSelectedColor">?attr/colorPrimary</item>
         <item name="itemShapeFillColor">?colorPrimary</item>
+        <item name="navItemFill">@color/nav_item_fill</item>
     </style>
 
     <!-- Day variant is empty; values-night adds the night role remaps. -->
@@ -312,6 +313,7 @@
         <item name="fabColorBackground">@color/color_ng_black_primary</item>
         <item name="itemShapeFillColor">@color/color_ng_black_accent</item>
         <item name="navSelectedColor">@color/color_ng_black_accent</item>
+        <item name="navItemFill">@color/navigation_item</item>
         <item name="colorPrimaryContainer">@color/color_ng_black_container</item>
         <item name="colorSecondaryContainer">@color/color_ng_black_container</item>
         <item name="colorTertiaryContainer">@color/color_ng_black_container</item>

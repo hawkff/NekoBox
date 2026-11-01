@@ -67,7 +67,6 @@ import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.ktx.whenStill
 import xyz.nekobyte.nekobox.plugin.PluginTrust
 import xyz.nekobyte.nekobox.plugin.Plugins
-import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassBackdrop
@@ -102,13 +101,8 @@ class MainActivity :
 
         binding = LayoutMainBinding.inflate(layoutInflater)
         binding.fab.initProgress(binding.fabProgress)
-        if (DataStore.appTheme != Theme.BLACK) {
-            navigation = binding.navView
-            binding.drawerLayout.removeView(binding.navViewBlack)
-        } else {
-            navigation = binding.navViewBlack
-            binding.drawerLayout.removeView(binding.navView)
-        }
+        // One drawer for every theme: Black's solid item fill comes from the theme's navItemFill.
+        navigation = binding.navView
         navigation.setNavigationItemSelectedListener(this)
         // The drawer's items are built after start-up (see buildAhead), or as the drawer starts to open if sooner.
         // A recreated activity builds them now, so the drawer restores its checked item, and opens with items.
