@@ -309,7 +309,7 @@
         <item name="colorAccent">@color/color_ng_black_accent</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_black</item>
         <item name="fabColorBackground">@color/color_ng_black_primary</item>
-        <item name="navSelectedColor">@color/color_ng_black_accent</item>
+        <item name="navSelectedColor">@color/nav_selected_black</item>
         <item name="colorPrimaryContainer">@color/color_ng_black_container</item>
         <item name="colorSecondaryContainer">@color/color_ng_black_container</item>
         <item name="colorTertiaryContainer">@color/color_ng_black_container</item>

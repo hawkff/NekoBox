@@ -116,6 +116,8 @@
     <color name="color_dynamic_swatch">#5E6472</color>
     <color name="color_ng_black_accent">#9E9E9E</color>
     <color name="color_ng_black_primary">#2B2B2B</color>
+    <!-- Black's checked drawer item: the bars' dark gray on a light drawer, the accent's light gray on a dark one. -->
+    <color name="nav_selected_black">@color/color_ng_black_primary</color>
 
     <!-- Black: near-black M3 container/surface-variant roles. -->
     <color name="color_ng_black_container">#383838</color>
