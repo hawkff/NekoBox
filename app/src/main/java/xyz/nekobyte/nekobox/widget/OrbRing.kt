@@ -22,7 +22,8 @@ import kotlin.math.sin
  * The connect button's orb: a black hole ([BlackHole]) inside a ring of small marks (+, ✳ and dots). Off, the
  * accretion disk is orange and still and the ring grey. Connecting, the disk spins up and turns blue. Connected, a
  * quasar's burst (jets along the poles, an X-ray ring, a flash), then the disk turns slowly in blue while the ring,
- * lit blue with a rim, twinkles. Off again, the disk slows back to orange and the ring goes grey. A connection that
+ * lit blue with a rim, twinkles for a few seconds before both come to rest; they come alive again whenever the
+ * button comes back on screen. Off again, the disk slows back to orange and the ring goes grey. A connection that
  * never comes up goes back the same way, without the burst. Everything moves only while the button shows and
  * animations are on; without animations each state shows at once.
  */
@@ -60,6 +61,11 @@ internal class OrbRing(private val view: View) {
         private set
     private var spin = 0f
     private var seconds = 0f
+
+    // How fast time runs for the disk and the twinkle: 1 while they move, easing to 0 as a connected orb comes to rest
+    // with its sparkle held where it was.
+    private var live = 1f
+    private var calm: ValueAnimator? = null
     private var sinceDraw = 0L
     private var state = BaseService.State.Idle
     private var change: ValueAnimator? = null
@@ -115,7 +121,31 @@ internal class OrbRing(private val view: View) {
 
             else -> tween(target, if (state == BaseService.State.Connecting) SPIN_UP else SLOW_DOWN)
         }
+        if (state == BaseService.State.Connected) sparkle() else wake()
         updateClock()
+    }
+
+    // A connected orb sparkles for a while, then comes to rest.
+    private fun sparkle() {
+        calm?.cancel()
+        live = 1f
+        if (!view.context.animationsOn()) return
+        calm = ValueAnimator.ofFloat(1f, 0f).apply {
+            startDelay = SPARKLE
+            duration = REST
+            interpolator = EaseOut
+            addUpdateListener {
+                live = it.animatedValue as Float
+                updateClock()
+            }
+            start()
+        }
+    }
+
+    private fun wake() {
+        calm?.cancel()
+        calm = null
+        live = 1f
     }
 
     /** Stops the clock while the button is gone: hidden, out of the window or in the background. */
@@ -124,8 +154,10 @@ internal class OrbRing(private val view: View) {
         updateClock()
     }
 
+    /** Moves again once the button is back on screen; a connected orb sparkles again for a while. */
     fun resume() {
         running = true
+        if (state == BaseService.State.Connected && calm?.isStarted != true) sparkle()
         updateClock()
     }
 
@@ -173,7 +205,7 @@ internal class OrbRing(private val view: View) {
 
     // The clock runs while the disk turns or the ring twinkles, and the button shows with animations on.
     private fun updateClock() {
-        val run = running && (levels[SPEED] > 0.001f || levels[TWINKLE] > 0.001f) && view.context.animationsOn()
+        val run = running && live > 0.001f && (levels[SPEED] > 0.001f || levels[TWINKLE] > 0.001f) && view.context.animationsOn()
         val clock = clock
         if (run) {
             when {
@@ -190,8 +222,8 @@ internal class OrbRing(private val view: View) {
     }
 
     private fun tick(delta: Long) {
-        spin = (spin + levels[SPEED] * 360f * delta / 1000f) % 360f
-        seconds += delta / 1000f
+        spin = (spin + levels[SPEED] * live * 360f * delta / 1000f) % 360f
+        seconds += live * delta / 1000f
         sinceDraw += delta
         // Settled, the slow turn and the twinkle need no more than 30 frames a second.
         val settled = change?.isRunning != true && flare?.isRunning != true
@@ -199,7 +231,7 @@ internal class OrbRing(private val view: View) {
             sinceDraw = 0
             view.invalidate()
         }
-        if (levels[SPEED] <= 0.001f && levels[TWINKLE] <= 0.001f) updateClock()
+        if (live <= 0.001f || (levels[SPEED] <= 0.001f && levels[TWINKLE] <= 0.001f)) updateClock()
     }
 
     fun draw(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
@@ -262,6 +294,8 @@ internal class OrbRing(private val view: View) {
         private const val SETTLE = 1400L
         private const val SLOW_DOWN = 700L
         private const val BURST = 850L
+        private const val SPARKLE = 4000L
+        private const val REST = 900L
 
         private const val TAU = (2 * PI).toFloat()
         private const val GOLDEN = 2.399963f
