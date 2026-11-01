@@ -708,9 +708,10 @@ class ConfigurationGroupFragment : Fragment() {
          * user made is kept as "key" and an opening as "+key"; without either, a header takes its default.
          */
         private fun treeIds(visible: List<Long>, profiles: Map<Long, ProxyEntity>, rows: MutableMap<Long, SectionRow>, labels: MutableMap<Long, String>): List<Long> {
-            // A jump to a proxy opens its country and city for good, also when it came before the list loaded.
-            profiles[pendingScrollId]?.takeIf { pendingScrollId in visible }?.let(::placeOf)?.let { place ->
-                val opened = listOf(place.country, "${place.country}-${place.city}")
+            // A jump to a proxy opens its country and city for good, or Other for one added by hand, also when it came
+            // before the list loaded.
+            profiles[pendingScrollId]?.takeIf { pendingScrollId in visible }?.let { target ->
+                val opened = placeOf(target)?.let { listOf(it.country, "${it.country}-${it.city}") } ?: listOf(RelayTree.REST)
                 DataStore.updateFoldedSections { folds -> folds - opened.map(::foldKey).toSet() + opened.map { foldKey("+$it") } }
             }
             val folds = DataStore.foldedSections
@@ -856,11 +857,11 @@ class ConfigurationGroupFragment : Fragment() {
             // Right after a reload, a profile's kept stamp was made off the main thread a moment ago: reuse it rather
             // than stamp the whole list again on the main thread. Later the country or address a row shows can change
             // without its profile changing, so every other list is stamped afresh, except by a fold: it only adds and
-            // removes rows, so rows on show keep theirs and rows it opens take their kept ones.
+            // removes rows, so each row takes its kept stamp, which every change to the profile or its selection
+            // updates, also while a list with that change is still on its way.
             fun base(id: Long): Int {
                 val profile = profiles[id]
-                return masterStamps[id]?.takeIf { reuseKept && profile != null && masterProfiles[id] === profile }
-                    ?: (configurationStamps[id]?.content ?: masterStamps[id])?.takeIf { !restamp }
+                return masterStamps[id]?.takeIf { !restamp || (reuseKept && profile != null && masterProfiles[id] === profile) }
                     ?: profile?.let(::profileStateStamp)
                     ?: configurationStamps[id]?.content
                     ?: masterStamps[id]
@@ -1268,7 +1269,10 @@ class ConfigurationGroupFragment : Fragment() {
             val generation = reloadGeneration.incrementAndGet()
             // A page restored from saved state lacks what a list keeps besides its name, Mullvad's server list among it.
             if (!isFavorites) {
-                onDefaultDispatcher { ProfileDatabase.groupDao.getById(proxyGroup.id) }?.let { stored -> onMainDispatcher { if (!disposed) proxyGroup = stored } }
+                // A newer reload may have put a newer group in place meanwhile.
+                onDefaultDispatcher { ProfileDatabase.groupDao.getById(proxyGroup.id) }?.let { stored ->
+                    onMainDispatcher { if (!disposed && generation == reloadGeneration.get()) proxyGroup = stored }
+                }
             }
             val groupId = proxyGroup.id
             val order = proxyGroup.order

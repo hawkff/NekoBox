@@ -137,15 +137,16 @@ class ProxiesScreenDeviceTest {
     }
 
     /**
-     * Mullvad's list opens by country, then city, as Mullvad's app does; a lone city opens with its country. 300
+     * Mullvad's list opens by country, then city, as Mullvad's app does; a lone city opens with its country. 280
      * servers, each with an exit on record, and each fold still answers at once.
      */
     @Test
     fun mullvadsListOpensByCountryThenCity_andFoldsAtOnce() {
         val servers = JSONArray()
         for ((c, country) in listOf("se", "al", "de", "fr", "gb", "nl", "no", "pl", "ro", "us").withIndex()) {
-            // Albania has one city; the others three, of ten servers each.
-            val cities = if (country == "al") listOf("tia" to "Tirana") else listOf("c${c}a" to "Alpha$c", "c${c}b" to "Bravo$c", "c${c}c" to "Charlie$c")
+            // Albania has one city; the others three, of ten servers each. City codes are letters, as Mullvad's are.
+            val letter = 'a' + c
+            val cities = if (country == "al") listOf("tia" to "Tirana") else listOf("${letter}a" to "Alpha$c", "${letter}b" to "Bravo$c", "${letter}c" to "Charlie$c")
             for ((city, name) in cities) {
                 for (n in 1..10) {
                     val number = "%03d".format(n)
@@ -156,8 +157,14 @@ class ProxiesScreenDeviceTest {
                 }
             }
         }
-        val list = runBlocking { MullvadRelays.sync(0L, MullvadRelays.parse(servers.toString()), MullvadRelays.subscription(null)) }.list.id
+        val parsed = MullvadRelays.parse(servers.toString())
+        assertEquals(280, parsed.relays.size)
+        // A list of the test's own: sync without one would fill, and the teardown delete, a Mullvad list already there.
+        val list = ProfileDatabase.groupDao.createGroup(
+            ProxyGroup(name = "Proxies test Mullvad", type = GroupType.PROXIES, subscription = MullvadRelays.subscription(null), userOrder = 1_000_000L + groups.size),
+        )
         groups += list
+        runBlocking { MullvadRelays.sync(list, parsed) }
         DataStore.rememberProxyExits(ProfileDatabase.proxyDao.getByGroup(list).associate { it.id to "2001:db8::${it.id}" })
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             settle()

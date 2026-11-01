@@ -79,12 +79,14 @@ class RelayTreeTest {
     @Test
     fun aRenamedProxyKeepsItsName_andACityWithoutImportedNamesItsCode() {
         val servers = listOf(
-            relay(1, "se", "sto", "Stockholm", "001"),
+            // Renamed to a name that ends in its number, and first: it names neither its city nor itself "001".
+            server(4, "se-sto-wg-socks5-001.relays.mullvad.net", "Work 001"),
+            relay(1, "se", "sto", "Stockholm", "003"),
             server(2, "se-sto-wg-socks5-002.relays.mullvad.net", "Fast one"),
             server(3, "se-mma-wg-socks5-001.relays.mullvad.net", "Mine"),
         )
         assertEquals(
-            listOf("🇸🇪 Sweden - 3", "  Stockholm - 2", "    001", "    Fast one", "  MMA - 1", "    Mine"),
+            listOf("🇸🇪 Sweden - 4", "  Stockholm - 3", "    Work 001", "    003", "    Fast one", "  MMA - 1", "    Mine"),
             shape(build(servers, folds = mapOf("se" to true, "se-sto" to true, "se-mma" to true))),
         )
     }

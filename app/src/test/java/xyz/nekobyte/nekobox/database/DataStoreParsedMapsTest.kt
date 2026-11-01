@@ -30,6 +30,8 @@ class DataStoreParsedMapsTest {
         val parsed = DataStore.proxyExits
         refresh(Key.PROXY_EXITS)
         assertSame(parsed, DataStore.proxyExits)
+        // The newer copy is kept, so the next read is an identity check, not another comparison of the whole text.
+        assertSame(DataStore.configurationStore.getString(Key.PROXY_EXITS), DataStore.parsedProxyExits.first)
         assertSame(parsed, DataStore.proxyExits)
         DataStore.rememberProxyExits(mapOf(2L to "203.0.113.8"))
         assertEquals(mapOf(1L to "203.0.113.7", 2L to "203.0.113.8"), DataStore.proxyExits)
@@ -41,6 +43,7 @@ class DataStoreParsedMapsTest {
         val parsed = DataStore.serverAddresses
         refresh(Key.SERVER_ADDRESSES)
         assertSame(parsed, DataStore.serverAddresses)
+        assertSame(DataStore.configurationStore.getString(Key.SERVER_ADDRESSES), DataStore.parsedServerAddresses.first)
         DataStore.rememberServerAddresses(mapOf("other.example" to "192.0.2.2"))
         assertEquals(mapOf("node.example" to "192.0.2.1", "other.example" to "192.0.2.2"), DataStore.serverAddresses)
     }

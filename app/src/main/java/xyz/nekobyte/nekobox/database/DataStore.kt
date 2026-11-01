@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.database
 
 import android.os.Binder
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 import androidx.preference.PreferenceDataStore
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.CONNECTION_TEST_URL
@@ -171,7 +172,8 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // Rows read the map on every bind; it is parsed again only when the stored text changes. The text runs to tens of
     // kilobytes, so a read compares it by identity, and by content only once per new copy.
     @Volatile
-    private var parsedServerAddresses: Pair<String, Map<String, String>> = "" to emptyMap()
+    @VisibleForTesting
+    internal var parsedServerAddresses: Pair<String, Map<String, String>> = "" to emptyMap()
 
     private val addressLock = Any()
 
@@ -210,7 +212,8 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         }
 
     @Volatile
-    private var parsedProxyExits: Pair<String, Map<Long, String>> = "" to emptyMap()
+    @VisibleForTesting
+    internal var parsedProxyExits: Pair<String, Map<Long, String>> = "" to emptyMap()
 
     /** Keeps where [found] proxies left from, the newest last, at most 1000. */
     fun rememberProxyExits(found: Map<Long, String>) = synchronized(addressLock) {

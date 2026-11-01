@@ -93,11 +93,13 @@ internal object RelayTree {
         )
     }
 
-    // The city a proxy's name gives as the import wrote it: "🇸🇪 Stockholm 001" gives "Stockholm"; null once renamed.
+    // The city a proxy's name gives as the import wrote it, flag first and number last: "🇸🇪 Stockholm 001" gives
+    // "Stockholm"; null once renamed, also to a name that ends in the number, such as "Work 001".
     private fun importedCity(server: Server): String? {
         val place = server.place ?: return null
-        val name = server.name.trim().removePrefix(ProfileWords.flag(place.country)).trim()
-        if (!name.endsWith(" ${place.number}")) return null
-        return name.removeSuffix(place.number).trim().ifEmpty { null }
+        val flag = "${ProfileWords.flag(place.country)} "
+        val name = server.name.trim()
+        if (!name.startsWith(flag) || !name.endsWith(" ${place.number}")) return null
+        return name.removePrefix(flag).removeSuffix(place.number).trim().ifEmpty { null }
     }
 }
