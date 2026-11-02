@@ -353,9 +353,17 @@ class ConfigurationGroupFragment : Fragment() {
                 it.isChecked = true
                 val changed = listLayout() != layout
                 val host = parentFragment as? ConfigurationFragment
-                // A layout picked in Favorites is its own, even one it showed already; elsewhere it is every other tab's.
-                if (isFavorites) DataStore.favoritesLayoutMode = layout else DataStore.setTabsLayout(layout, host?.showsFavorites() == true)
-                if (changed) host?.followLayouts()
+                if (isFavorites) {
+                    // A layout picked in Favorites is its own, even one it showed already.
+                    DataStore.favoritesLayoutMode = layout
+                    if (changed) host?.followLayouts()
+                } else {
+                    // Every other tab's: Favorites keeps the layout it shows, which takes a look at the profiles.
+                    runOnDefaultDispatcher {
+                        DataStore.setTabsLayout(layout)
+                        if (changed) onMainDispatcher { if (host?.isAdded == true) host.followLayouts() }
+                    }
+                }
                 true
             }
         }

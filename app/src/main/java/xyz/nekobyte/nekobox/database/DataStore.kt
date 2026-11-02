@@ -132,11 +132,13 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var favoritesLayoutMode by configurationStore.stringToInt(Key.FAVORITES_LAYOUT_MODE) { groupLayoutMode }
 
     /**
-     * Sets the layout of every tab but Favorites, which keeps the layout it shows when [favoritesShown]. Pins of deleted
-     * profiles stay until the tabs reload, so the caller says whether a favorite is there to show.
+     * Sets the layout of every tab but Favorites, which keeps the layout it shows while it holds a favorite still there:
+     * pins of deleted profiles stay until the tabs reload. Reads the profiles, so it runs off the main thread.
      */
-    fun setTabsLayout(layout: Int, favoritesShown: Boolean) {
-        if (favoritesShown && configurationStore.getString(Key.FAVORITES_LAYOUT_MODE) == null) favoritesLayoutMode = groupLayoutMode
+    fun setTabsLayout(layout: Int) {
+        if (configurationStore.getString(Key.FAVORITES_LAYOUT_MODE) == null && ProfileDatabase.proxyDao.getEntities(favoriteProfiles).isNotEmpty()) {
+            favoritesLayoutMode = groupLayoutMode
+        }
         groupLayoutMode = layout
     }
 
