@@ -127,13 +127,13 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var nebulaConfig by configurationStore.string(Key.NEBULA_CONFIG)
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { GroupLayout.COMPACT }
 
-    // Favorites' own layout. Until one is picked there it shows the other tabs' layout, which no longer moves it once
-    // changed: see setTabsLayout.
+    // Favorites' own layout. Until one is picked there it shows the other tabs' layout, which no longer moves it once it
+    // holds a favorite: see setTabsLayout.
     var favoritesLayoutMode by configurationStore.stringToInt(Key.FAVORITES_LAYOUT_MODE) { groupLayoutMode }
 
-    /** Sets the layout of every tab but Favorites, which keeps the layout it shows. */
+    /** Sets the layout of every tab but Favorites, which keeps the layout it shows; without a favorite it shows none. */
     fun setTabsLayout(layout: Int) {
-        if (configurationStore.getString(Key.FAVORITES_LAYOUT_MODE) == null) favoritesLayoutMode = groupLayoutMode
+        if (favoriteProfiles.isNotEmpty() && configurationStore.getString(Key.FAVORITES_LAYOUT_MODE) == null) favoritesLayoutMode = groupLayoutMode
         groupLayoutMode = layout
     }
 

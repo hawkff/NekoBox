@@ -163,6 +163,14 @@ class ProxiesScreenDeviceTest {
             settle()
             assertEquals(GroupLayout.CARDS, rowType(home, groups[0]))
             assertEquals(GroupLayout.COMPACT, rowType(home, FAVORITES_GROUP_ID))
+            // Back on Favorites, its menu marks its own layout, not the last of the three.
+            scenario.onActivity { home.groupPager.setCurrentItem(home.adapter.groupList.indexOfFirst { it.id == FAVORITES_GROUP_ID }, false) }
+            settle()
+            instrumentation.runOnMainSync {
+                val menu = home.toolbar.menu
+                assertTrue(menu.findItem(R.id.action_layout_compact).isChecked)
+                assertFalse(menu.findItem(R.id.action_layout_double).isChecked)
+            }
             // Back on the kept Proxies screen, Favorites shows its own layout.
             scenario.onActivity { activity -> activity.displayFragmentWithId(R.id.nav_proxies) }
             settle()

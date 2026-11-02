@@ -347,7 +347,8 @@ class ConfigurationGroupFragment : Fragment() {
         val current = listLayout()
         for ((id, layout) in layouts) {
             val item = menu.findItem(id)
-            item.isChecked = layout == current
+            // In a single-choice group setChecked(false) checks the item as well: only the layout on show is set.
+            if (layout == current) item.isChecked = true
             item.setOnMenuItemClickListener {
                 it.isChecked = true
                 val changed = listLayout() != layout
