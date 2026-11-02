@@ -394,6 +394,7 @@
     <string name="layout_single_column">Карточки</string>
     <string name="layout_double_column">Карточки в два столбца</string>
     <string name="sort_and_layout">Сортировка и макет</string>
+    <string name="favorites_layout">Макет избранного</string>
     <string name="kcp_seed">mKCP Seed</string>
     <string name="kcp_header_type">Тип заголовка</string>
     <string name="kcp_mtu">mKCP MTU</string>

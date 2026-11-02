@@ -19,6 +19,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAppTask
+import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.*
@@ -291,6 +292,16 @@ class AppApiTest {
         objectResult("settings.set", params("values" to params("webdavPassword" to "fictional-password")))
         assertTrue(objectResult("settings.get").isNull("webdavPassword"))
         assertEquals("fictional-password", objectResult("settings.get", params("includeSecrets" to true)).getString("webdavPassword"))
+        // The tabs' layout from the API leaves Favorites, while it holds a favorite, as the menu does; the pin of a deleted
+        // profile shows nothing to keep.
+        DataStore.groupLayoutMode = GroupLayout.TWO_COLUMNS
+        DataStore.updateFavoriteProfiles { it + 999_999L }
+        objectResult("settings.set", params("values" to params(Key.GROUP_LAYOUT_MODE to GroupLayout.CARDS.toString())))
+        assertEquals(GroupLayout.CARDS, DataStore.favoritesLayoutMode)
+        DataStore.updateFavoriteProfiles { it + profile(group()).getLong("id") }
+        objectResult("settings.set", params("values" to params(Key.GROUP_LAYOUT_MODE to GroupLayout.COMPACT.toString())))
+        assertEquals(GroupLayout.COMPACT, DataStore.groupLayoutMode)
+        assertEquals(GroupLayout.CARDS, DataStore.favoritesLayoutMode)
     }
 
     @Test

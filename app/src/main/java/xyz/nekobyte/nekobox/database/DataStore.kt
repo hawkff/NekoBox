@@ -4,6 +4,11 @@ import android.os.Binder
 import android.os.Build
 import androidx.annotation.VisibleForTesting
 import androidx.preference.PreferenceDataStore
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.CONNECTION_TEST_URL
 import xyz.nekobyte.nekobox.GroupLayout
@@ -126,6 +131,32 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var nebulaEnabled by configurationStore.boolean(Key.NEBULA_ENABLED)
     var nebulaConfig by configurationStore.string(Key.NEBULA_CONFIG)
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { GroupLayout.COMPACT }
+
+    // Favorites' own layout. Until one is picked there it shows the other tabs' layout, which no longer moves it while
+    // Favorites shows: see setTabsLayout.
+    var favoritesLayoutMode by configurationStore.stringToInt(Key.FAVORITES_LAYOUT_MODE) { groupLayoutMode }
+
+    // Layout changes run off the main thread one at a time, in the order they are made: the tabs' layout looks the
+    // favorites up in the profiles before it decides whether Favorites keeps its layout, and a later change waits.
+    internal val layoutChanges = Dispatchers.Default.limitedParallelism(1)
+
+    /** Queues a change of Favorites' own layout ([favorites]) or of the other tabs', then runs [then] on the main thread. */
+    @OptIn(DelicateCoroutinesApi::class)
+    fun changeLayout(favorites: Boolean, layout: Int, then: () -> Unit) = GlobalScope.launch(layoutChanges) {
+        if (favorites) favoritesLayoutMode = layout else setTabsLayout(layout)
+        withContext(Dispatchers.Main.immediate) { then() }
+    }
+
+    /**
+     * Sets the layout of every tab but Favorites, which keeps the layout it shows while it holds a favorite still there:
+     * pins of deleted profiles stay until the tabs reload. Reads the profiles: it runs on [layoutChanges].
+     */
+    fun setTabsLayout(layout: Int) {
+        if (configurationStore.getString(Key.FAVORITES_LAYOUT_MODE) == null && ProfileDatabase.proxyDao.getEntities(favoriteProfiles).isNotEmpty()) {
+            favoritesLayoutMode = groupLayoutMode
+        }
+        groupLayoutMode = layout
+    }
 
     // Profiles whose names differ only by a number fold into sections on Home.
     var profileSections by configurationStore.boolean(Key.PROFILE_SECTIONS) { true }

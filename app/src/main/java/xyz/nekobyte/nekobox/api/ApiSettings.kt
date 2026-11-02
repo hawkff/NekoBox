@@ -112,6 +112,9 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         }
         val store = DataStore.configurationStore
         changes.keysSet().forEach { key ->
+            // The tabs' layout goes as the menu sets it, in turn with the menu's changes, so Favorites keeps the layout it
+            // shows while it holds a favorite.
+            if (key == Key.GROUP_LAYOUT_MODE) return@forEach withContext(DataStore.layoutChanges) { DataStore.setTabsLayout(changes.getString(key).toInt()) }
             when (settings.getValue(key).type) {
                 "boolean" -> store.putBoolean(key, changes.getBoolean(key))
                 "integer" -> store.putInt(key, changes.getInt(key))
