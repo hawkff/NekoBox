@@ -23,7 +23,9 @@ import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
@@ -42,6 +44,10 @@ class ProxiesScreenDeviceTest {
     private var savedList = 0L
     private var savedExits: String? = null
     private var savedFolds: String? = null
+    private var savedSelected = 0L
+    private var savedFavorites: String? = null
+    private var savedPicks: String? = null
+    private var savedRecentsOn = true
 
     @Before
     fun setUp() {
@@ -52,6 +58,10 @@ class ProxiesScreenDeviceTest {
         savedList = DataStore.selectedProxyList
         savedExits = DataStore.configurationStore.getString(Key.PROXY_EXITS)
         savedFolds = DataStore.configurationStore.getString(Key.FOLDED_SECTIONS)
+        savedSelected = DataStore.selectedProxy
+        savedFavorites = DataStore.configurationStore.getString(Key.FAVORITE_PROFILES)
+        savedPicks = DataStore.configurationStore.getString(Key.RECENT_PICKS)
+        savedRecentsOn = DataStore.recentsOn
         groups += group(serversName, GroupType.BASIC, "192.0.2.10")
         groups += group(listName, GroupType.PROXIES, "198.51.100.7", "198.51.100.8")
         // A checked proxy shows the address it leaves from.
@@ -86,6 +96,82 @@ class ProxiesScreenDeviceTest {
         DataStore.selectedProxyList = savedList
         DataStore.configurationStore.putString(Key.PROXY_EXITS, savedExits.orEmpty())
         DataStore.configurationStore.putString(Key.FOLDED_SECTIONS, savedFolds.orEmpty())
+        DataStore.selectedProxy = savedSelected
+        DataStore.recentsOn = savedRecentsOn
+        DataStore.configurationStore.putString(Key.FAVORITE_PROFILES, savedFavorites.orEmpty())
+        DataStore.configurationStore.putString(Key.RECENT_PICKS, savedPicks.orEmpty())
+    }
+
+    /**
+     * A pick leads its list under Recent, and stays in its place below too; a star brings Favorites to the Proxies
+     * screen; turning Recent off drops the fold and forgets the picks.
+     */
+    @Test
+    fun aPickLeadsTheListUnderRecent_andAStarBringsFavoritesHere() {
+        val name = "Proxies test recent"
+        val list = group(name, GroupType.PROXIES, "198.51.100.11", "198.51.100.12", "198.51.100.13", "198.51.100.14", "198.51.100.15")
+        groups += list
+        DataStore.turnRecents(true)
+        val picked = ProfileDatabase.proxyDao.getByGroup(list).first { it.requireBean().serverAddress == "198.51.100.13" }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            settle()
+            scenario.onActivity { activity -> activity.displayFragmentWithId(R.id.nav_proxies) }
+            settle()
+            lateinit var screen: ConfigurationFragment
+            scenario.onActivity { activity ->
+                screen = activity.currentScreen() as ConfigurationFragment
+                screen.groupPager.setCurrentItem(screen.adapter.groupList.indexOfFirst { it.id == list }, false)
+            }
+            settle()
+            fun list() = screen.getCurrentGroupFragment()!!.configurationListView
+            fun titles() = texts(list(), R.id.title)
+            fun names() = texts(list(), R.id.profile_name)
+            assertFalse("nothing picked yet: ${titles()}", context.getString(R.string.recent) in titles())
+            instrumentation.runOnMainSync {
+                (0 until list().childCount).map(list()::getChildAt).first { it.findViewById<TextView>(R.id.profile_name)?.text?.toString() == picked.displayName() }.performClick()
+            }
+            settle()
+            // Recent grows above the rows on screen, which stay put while picking.
+            instrumentation.runOnMainSync { list().scrollToPosition(0) }
+            settle()
+            assertEquals(context.getString(R.string.recent), titles().first())
+            assertEquals("the pick leads, and keeps its place: ${names()}", listOf(picked.displayName()), names().take(1))
+            assertEquals(2, names().count { it == picked.displayName() })
+            assertEquals(listOf(picked.id), DataStore.recentPicks[list])
+
+            DataStore.updateFavoriteProfiles { it + picked.id }
+            runBlocking {
+                GroupManager.postReload(FAVORITES_GROUP_ID)
+                ProfileManager.postUpdate(picked.id, noTraffic = true)
+            }
+            settle()
+            assertEquals("Favorites joins the Proxies screen", context.getString(R.string.favorites), tabs(screen).first())
+            val stars = ArrayList<Boolean>()
+            instrumentation.runOnMainSync {
+                (0 until list().childCount).map(list()::getChildAt).filter { it.findViewById<TextView>(R.id.profile_name)?.text?.toString() == picked.displayName() }
+                    .mapTo(stars) { it.findViewById<View>(R.id.favorite_mark).isShown }
+            }
+            assertEquals("a star wherever the favorite shows", listOf(true, true), stars)
+
+            instrumentation.runOnMainSync {
+                DataStore.turnRecents(false)
+                screen.switchAllGroupFragmentsLayout()
+            }
+            settle()
+            assertFalse(context.getString(R.string.recent) in titles())
+            assertTrue(DataStore.recentPicks.isEmpty())
+        }
+    }
+
+    // The text of each [id] view on screen in [list], in order.
+    private fun texts(list: RecyclerView, id: Int): List<String> {
+        val found = ArrayList<String>()
+        instrumentation.runOnMainSync {
+            (0 until list.childCount).map(list::getChildAt).sortedBy { it.top }.forEach { row ->
+                row.findViewById<TextView>(id)?.takeIf { it.isShown }?.let { found += it.text.toString() }
+            }
+        }
+        return found
     }
 
     private fun settle() {
@@ -213,6 +299,15 @@ class ProxiesScreenDeviceTest {
             assertTrue(texts().containsAll(listOf("001", "002")))
             // The server rows leave the country, city and protocol to the headers: no SOCKS5, no exit line.
             assertFalse(texts().any { it == "SOCKS5" || it.startsWith("exit ") })
+            // A pick leads the list under Recent, named whole: no country or city stands above it there.
+            instrumentation.runOnMainSync {
+                (0 until list().childCount).map(list()::getChildAt).first { it.findViewById<TextView>(R.id.profile_name)?.text?.toString() == "001" }.performClick()
+            }
+            settle()
+            instrumentation.runOnMainSync { list().scrollToPosition(0) }
+            settle()
+            assertEquals(context.getString(R.string.recent), texts(list(), R.id.title).first())
+            assertEquals("\uD83C\uDDF8\uD83C\uDDEA Bravo0 001", texts(list(), R.id.profile_name).first())
         }
     }
 

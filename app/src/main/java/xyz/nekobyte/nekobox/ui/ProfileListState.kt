@@ -53,6 +53,16 @@ internal fun buildProfileRowStamps(
     }
 }
 
+/**
+ * What a list's Recent shows: the [selected] profile first while it is in the list, then the latest [picks], at most
+ * [count], only profiles still in the [list]. None in a list of [count] profiles or fewer, which shows them all anyway.
+ */
+internal fun recentRows(picks: List<Long>, selected: Long, list: Collection<Long>, count: Int): List<Long> {
+    if (list.size <= count) return emptyList()
+    val members = list as? Set<Long> ?: list.toHashSet()
+    return (listOf(selected) + picks).filter(members::contains).distinct().take(count)
+}
+
 internal fun <T> findItemById(ids: List<Long>, items: Map<Long, T>, id: Long): Pair<Int, T>? {
     val index = ids.indexOf(id)
     if (index < 0) return null

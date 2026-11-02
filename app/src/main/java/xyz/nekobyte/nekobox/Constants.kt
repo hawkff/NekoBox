@@ -11,6 +11,10 @@ object Key {
 
     const val HELP_TO_IMPROVE = "helpToImprove"
     const val FAVORITE_PROFILES = "favoriteProfiles"
+
+    // Whether lists show their Recent, and what was picked from each lately: a record of this device, kept out of backups.
+    const val RECENTS = "recents"
+    const val RECENT_PICKS = "recentPicks"
     const val CLEAR_CACHE = "clearCache"
     const val PROTECTION_ALWAYS_ON = "protectionAlwaysOn"
     const val PROTECTION_LOCKDOWN = "protectionLockdown"

@@ -10,6 +10,18 @@ import org.junit.Test
 class ProfileListStateTest {
 
     @Test
+    fun recent_putsTheSelectedFirst_keepsThreeOfTheList_andNoneInAShortList() {
+        val list = (1L..10L).toList()
+        assertEquals(listOf(7L, 3L, 9L), recentRows(listOf(3L, 9L, 4L), 7L, list, 3))
+        // The selected one among the picks moves first, once.
+        assertEquals(listOf(9L, 3L, 4L), recentRows(listOf(3L, 9L, 4L), 9L, list, 3))
+        // A profile gone from the list, and a selection in another list, drop out.
+        assertEquals(listOf(3L, 4L), recentRows(listOf(42L, 3L, 4L), 99L, list, 3))
+        // A list of three or fewer already shows them all.
+        assertTrue(recentRows(listOf(1L), 1L, listOf(1L, 2L, 3L), 3).isEmpty())
+    }
+
+    @Test
     fun doubleColumn_middleRowReservesEmptyPeer() {
         val stamps = stamps(
             ids = listOf(1L, 2L),
