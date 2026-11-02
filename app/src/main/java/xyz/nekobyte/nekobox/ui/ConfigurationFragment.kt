@@ -436,8 +436,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
         }.show()
     }
 
-    // The stored link: an update may have moved the subscription since the tabs loaded. A screen left meanwhile shows
-    // the card when it comes back.
+    // The stored link: the tab's copy can lag an edit of the group. A screen left meanwhile shows the card when it
+    // comes back.
     private fun shareSubscription(groupId: Long) {
         viewLifecycleOwner.lifecycleScope.launch {
             val stored = onDefaultDispatcher { ProfileDatabase.groupDao.getById(groupId) } ?: return@launch
