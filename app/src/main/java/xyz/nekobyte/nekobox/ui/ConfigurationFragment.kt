@@ -169,8 +169,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
         const val EXIT_TRACE = "https://www.cloudflare.com/cdn-cgi/trace"
         const val MAX_SEARCH_RESULTS = 500
 
-        // Actions on the open group; Favorites is no group, so they hide there. Update subscription
-        // is decided as the menu opens; Sort and layout becomes Favorites' own layout there (checkOrderMenu).
+        // Actions on the open group; Favorites is no group, so they hide there. Update and Share subscription
+        // are decided as the menu opens; Sort and layout becomes Favorites' own layout there (checkOrderMenu).
         val GROUP_ACTIONS = listOf(
             R.id.action_clear_traffic_statistics,
             R.id.action_remove_duplicate,
@@ -425,13 +425,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
                         runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
                     }
 
-                    // The stored link: an update may have moved the subscription since the tabs loaded. A screen left
-                    // meanwhile shows the card when it comes back.
-                    R.string.subscription_share -> viewLifecycleOwner.lifecycleScope.launch {
-                        val stored = onDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id) } ?: return@launch
-                        val link = stored.subscriptionLink() ?: return@launch
-                        withResumed { SubscriptionQrDialog(link, stored.displayName()).show(parentFragmentManager, null) }
-                    }
+                    R.string.subscription_share -> shareSubscription(group.id)
 
                     R.string.group_rename -> renameGroup(group)
 
@@ -440,6 +434,16 @@ open class ConfigurationFragment @JvmOverloads constructor(
                 true
             }
         }.show()
+    }
+
+    // The stored link: the tab's copy can lag an edit of the group. A screen left meanwhile shows the card when it
+    // comes back.
+    private fun shareSubscription(groupId: Long) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val stored = onDefaultDispatcher { ProfileDatabase.groupDao.getById(groupId) } ?: return@launch
+            val link = stored.subscriptionLink() ?: return@launch
+            withResumed { SubscriptionQrDialog(link, stored.displayName()).show(parentFragmentManager, null) }
+        }
     }
 
     // A provider's title replaces only a placeholder name, so a name set here stays.
@@ -913,6 +917,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
         menu.findItem(R.id.action_misc)?.subMenu?.apply {
             findItem(R.id.action_connection_url_test)?.setTitle(R.string.proxies_check)
             removeItem(R.id.action_update_subscription)
+            removeItem(R.id.action_share_subscription)
             removeGroup(R.id.group_connection)
         }
     }
@@ -1433,6 +1438,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
                 }
             }
 
+            R.id.action_share_subscription -> shareSubscription(tabGroupId())
+
             R.id.action_clear_traffic_statistics -> {
                 val groupId = tabGroupId()
                 runOnDefaultDispatcher {
@@ -1508,10 +1515,11 @@ open class ConfigurationFragment @JvmOverloads constructor(
             }
 
             R.id.action_misc -> {
-                // The menu is opening: only an open subscription group can update.
+                // The menu is opening: only an open subscription group can update, and only one with a link can be shared.
                 val open = adapter.groupList.getOrNull(groupPager.currentItem)
                 val update = item.subMenu?.findItem(R.id.action_update_subscription)
                 update?.isVisible = open?.type == GroupType.SUBSCRIPTION
+                item.subMenu?.findItem(R.id.action_share_subscription)?.isVisible = open?.subscriptionLink() != null
                 item.subMenu?.findItem(R.id.action_recents)?.setTitle(if (DataStore.recentsOn) R.string.recents_turn_off else R.string.recents_turn_on)
             }
 
