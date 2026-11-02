@@ -119,6 +119,19 @@ private const val SECTION_ID_BASE = -100L
 private const val SECTION_VIEW = 100
 private const val LINE_VIEW = 101
 
+// A Recent row's ID: its profile's, moved past every profile ID, as the same profile shows lower in its list too.
+private const val RECENT_ROW = 1L shl 48
+
+// The key of a list's Recent fold: section keys come from trimmed names and tree keys from places, so none starts with
+// a space.
+private const val RECENT_KEY = " recent"
+
+// The key of the header over the rest of a list without sections, below its Recent.
+private const val ALL_KEY = " all"
+
+/** The profile a row shows: a Recent row's, or the row's own. */
+private fun profileOf(rowId: Long) = if (rowId >= RECENT_ROW) rowId - RECENT_ROW else rowId
+
 // A row scrolls to the top of the list; the first of a section takes its header along.
 private fun withHeader(ids: List<Long>, index: Int) = if (index > 0 && ids[index - 1] < 0) index - 1 else index
 
@@ -140,6 +153,10 @@ class ConfigurationGroupFragment : Fragment() {
     // Favorites mixes groups, so each profile opens for editing as its own group allows.
     @Volatile
     private var subscriptionGroupIds = emptySet<Long>()
+
+    // Favorites mixes groups, so each of its rows names the list it comes from.
+    @Volatile
+    private var groupNames = emptyMap<Long, String>()
 
     // A profile to show once the list has loaded, such as a search result in a group opened for it.
     private var pendingScrollId = 0L
@@ -190,7 +207,8 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         itemTouchHelper = configurationListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, 0) {
-            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (viewHolder is ConfigurationHolder && isEnabled && adapter?.canDrag() == true) {
+            // Recent repeats rows its list holds lower down, where they move.
+            override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (viewHolder is ConfigurationHolder && isEnabled && adapter?.canDrag() == true && viewHolder.itemId < RECENT_ROW) {
                 if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
                 } else {
@@ -514,7 +532,7 @@ class ConfigurationGroupFragment : Fragment() {
         // and these cached stamps directly, without scheduling a list diff for every traffic tick.
         // A server of Mullvad's tree shows its label and its check alone.
         private fun contentStamp(profile: ProxyEntity) = if (showsTree() && MullvadRelays.place(profile.requireBean().serverAddress) != null) {
-            Objects.hash(profile.displayName(), profile.requireBean().serverAddress, profile.ping, profile.status, profile.error)
+            Objects.hash(profile.displayName(), profile.requireBean().serverAddress, profile.ping, profile.status, profile.error, profile.id in DataStore.favoriteSet)
         } else {
             fullStamp(profile)
         }
@@ -534,6 +552,8 @@ class ConfigurationGroupFragment : Fragment() {
             ProfileWords.connection(profile),
             rowCountry(profile),
             rowAddress(profile),
+            rowList(profile),
+            profile.id in DataStore.favoriteSet,
         )
 
         private fun profileStateStamp(contentStamp: Int, profileId: Long): Int {
@@ -703,24 +723,77 @@ class ConfigurationGroupFragment : Fragment() {
                     }
                 }
             }
+            val listed = withRecent(ids, tree, rows, keys, labels)
             // The profiles on show: a tree folded to its countries shows a few of hundreds.
-            val profiles = HashMap<Long, ProxyEntity>(ids.size)
-            for (id in ids) if (id > 0) masterProfiles[id]?.let { profiles[id] = it }
-            val stamps = buildDisplayStamps(ids, profiles, reuseKept = reloaded, restamp = restamp, labels = labels) + rows.mapValues { (_, row) ->
+            val profiles = HashMap<Long, ProxyEntity>(listed.size)
+            for (id in listed) if (id > 0) masterProfiles[profileOf(id)]?.let { profiles[id] = it }
+            val stamps = buildDisplayStamps(listed, profiles, reuseKept = reloaded, restamp = restamp, labels = labels) + rows.mapValues { (_, row) ->
                 ProfileRowStamp(row.stamp(), reserveMiddleRow = false, doubleColumn = false)
             }
+            // A profile in Recent shows there, which keeps the list at its top.
+            val target = if (scrollToId == 0L) -1 else listed.indexOf(scrollToId + RECENT_ROW).takeIf { it >= 0 } ?: listed.indexOf(scrollToId)
             submit(
                 ProfileListSubmission(
-                    ids = ids,
+                    ids = listed,
                     profiles = profiles,
                     stamps = stamps,
-                    scrollIndex = ids.indexOf(scrollToId).takeIf { scrollToId != 0L && it >= 0 }?.let { withHeader(ids, it) } ?: scrollIndex.coerceAtMost(ids.lastIndex),
+                    scrollIndex = target.takeIf { it >= 0 }?.let { withHeader(listed, it) } ?: scrollIndex.coerceAtMost(listed.lastIndex),
                     sections = rows,
                     sectionKeys = keys,
                     master = masterIds.toList(),
                     labels = labels,
                 ),
             )
+        }
+
+        // Favorites gathers favorites only, and a search lists its matches.
+        private fun showsRecent() = DataStore.recentsOn && !isFavorites && filterQuery.isEmpty()
+
+        /** [ids] after the list's Recent fold, when it has one: its header, then its rows unless folded. */
+        private fun withRecent(
+            ids: List<Long>,
+            tree: Boolean,
+            rows: MutableMap<Long, SectionRow>,
+            keys: MutableMap<Long, String>,
+            labels: MutableMap<Long, String>,
+        ): List<Long> {
+            if (!showsRecent()) return ids
+            val selected = (parentFragment as? ConfigurationFragment)?.selectedProfile() ?: 0L
+            // Without a search every profile of the list is on show.
+            val recent = recentRows(DataStore.recentPicks[proxyGroup.id].orEmpty(), selected, masterProfiles.keys, DataStore.RECENTS_PER_LIST)
+            if (recent.isEmpty()) return ids
+            val folds = DataStore.foldedSections
+            val headerId = headerId(RECENT_KEY)
+            val folded = foldKey(RECENT_KEY) in folds
+            rows[headerId] = SectionRow(RECENT_KEY, getString(R.string.recent), recent.size, folded, tree = tree)
+            return buildList(ids.size + recent.size + 2) {
+                add(headerId)
+                if (!folded) {
+                    for (id in recent) {
+                        val row = id + RECENT_ROW
+                        keys[row] = RECENT_KEY
+                        // In Mullvad's tree a line names its server whole: no country or city stands above it here.
+                        if (tree) labels[row] = masterProfiles.getValue(id).displayName()
+                        add(row)
+                    }
+                }
+                // Sections and countries head the rest of their lists; a list without them gets All, so its rows do not
+                // read as Recent's and two columns start a new row.
+                if (ids.firstOrNull()?.let { it > 0 } == true) {
+                    val allId = headerId(ALL_KEY)
+                    var allFolded = foldKey(ALL_KEY) in folds
+                    // A jump to a profile opens All, as it opens a section or a country.
+                    if (allFolded && pendingScrollId in ids) {
+                        DataStore.updateFoldedSections { it - foldKey(ALL_KEY) }
+                        allFolded = false
+                    }
+                    rows[allId] = SectionRow(ALL_KEY, getString(R.string.recent_all), ids.size, allFolded)
+                    add(allId)
+                    if (!allFolded) addAll(ids)
+                } else {
+                    addAll(ids)
+                }
+            }
         }
 
         /**
@@ -870,7 +943,7 @@ class ConfigurationGroupFragment : Fragment() {
         // Two columns give the country a row of its own, so the middle row holds the address alone.
         private fun hasMiddleRow(profile: ProxyEntity): Boolean {
             val showTraffic = profile.rx + profile.tx != 0L
-            val middle = if (layoutMode == GroupLayout.TWO_COLUMNS) rowAddress(profile).orEmpty() else rowDetails(profile)
+            val middle = if (layoutMode == GroupLayout.TWO_COLUMNS) listOfNotNull(rowList(profile), rowAddress(profile)).joinToString(" · ") else rowDetails(profile)
             return !((!showTraffic || profile.status <= 0) && middle.isBlank())
         }
 
@@ -893,7 +966,8 @@ class ConfigurationGroupFragment : Fragment() {
             // updates, also while a list with that change is still on its way.
             fun base(id: Long): Int {
                 val profile = profiles[id]
-                return masterStamps[id]?.takeIf { !restamp || (reuseKept && profile != null && masterProfiles[id] === profile) }
+                val kept = profileOf(id)
+                return masterStamps[kept]?.takeIf { !restamp || (reuseKept && profile != null && masterProfiles[kept] === profile) }
                     ?: profile?.let(::profileStateStamp)
                     ?: configurationStamps[id]?.content
                     ?: masterStamps[id]
@@ -937,10 +1011,9 @@ class ConfigurationGroupFragment : Fragment() {
                 val view = warmup?.take(R.layout.layout_profile_section) ?: inflater.inflate(R.layout.layout_profile_section, parent, false)
                 return SectionHolder(LayoutProfileSectionBinding.bind(view))
             }
-            // A server of Mullvad's tree: the compact row on one line, set in under its city.
+            // A server of Mullvad's tree: the compact row on one line, set in under its city or Recent as it binds.
             if (viewType == LINE_VIEW) {
                 val view = warmup?.take(R.layout.layout_profile_compact) ?: inflater.inflate(R.layout.layout_profile_compact, parent, false)
-                view.updateLayoutParams<ViewGroup.MarginLayoutParams> { marginStart = resources.getDimensionPixelSize(R.dimen.relay_row_indent) }
                 return ConfigurationHolder(LayoutProfileBinding.bind(view), GroupLayout.COMPACT, line = true)
             }
             // The compact row holds the card's views, so the card's binding reads it too.
@@ -961,7 +1034,7 @@ class ConfigurationGroupFragment : Fragment() {
             try {
                 val id = configurationIdList[position]
                 val rowStamp = configurationStamps[id] ?: return
-                holder.bind(getItemAt(position), rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow, lineLabels[id])
+                holder.bind(getItemAt(position), rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow, lineLabels[id], recent = id >= RECENT_ROW)
             } catch (ignored: NullPointerException) { // when group deleted
             }
         }
@@ -1097,7 +1170,10 @@ class ConfigurationGroupFragment : Fragment() {
 
         fun removeById(profileId: Long): Pair<Int, ProxyEntity>? {
             if (disposed || profileId in pendingRemovalIds) return null
-            val removed = findItemById(configurationIdList, configurationList, profileId) ?: return null
+            // Removed from Recent while its own row is folded away.
+            val removed = findItemById(configurationIdList, configurationList, profileId)
+                ?: findItemById(configurationIdList, configurationList, profileId + RECENT_ROW)
+                ?: return null
             reloadGeneration.incrementAndGet()
             pendingRemovalIds.add(profileId)
             masterIds.remove(profileId)
@@ -1135,10 +1211,11 @@ class ConfigurationGroupFragment : Fragment() {
             val profiles = actions.map { it.second }
             val profileIds = profiles.map { it.id }
             if (isFavorites) {
-                // Removing from Favorites unpins the profile; it stays in its group.
+                // Removing from Favorites unpins the profile; it stays in its group, which drops its star.
                 runOnDefaultDispatcher {
                     DataStore.updateFavoriteProfiles { it - profileIds.toSet() }
                     GroupManager.postReload(FAVORITES_GROUP_ID)
+                    for (id in profileIds) ProfileManager.postUpdate(id, noTraffic = true)
                 }
                 return
             }
@@ -1204,8 +1281,8 @@ class ConfigurationGroupFragment : Fragment() {
             val holder = layoutManager.findViewByPosition(position)
                 ?.let { configurationListView.getChildViewHolder(it) } as? ConfigurationHolder
                 ?: return
-            if (holder.bindingAdapterPosition != position || !holder.isBoundTo(expectedId)) return
-            holder.bind(profile, rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow, lineLabels[expectedId])
+            if (holder.bindingAdapterPosition != position || !holder.isBoundTo(profileOf(expectedId))) return
+            holder.bind(profile, rowStamp.reserveMiddleRow, rowStamp.reserveCountryRow, lineLabels[expectedId], recent = expectedId >= RECENT_ROW)
         }
 
         private fun applyTrafficUpdates(updates: List<TrafficData>) {
@@ -1233,13 +1310,16 @@ class ConfigurationGroupFragment : Fragment() {
 
             val positions = HashSet<Int>()
             for (id in changedIds) {
-                val position = displayPositions[id] ?: continue
-                positions.addAll(profileRowRange(configurationIdList, position, displaySpanCount()))
+                // The row in Recent too.
+                for (row in arrayOf(id, id + RECENT_ROW)) {
+                    val position = displayPositions[row] ?: continue
+                    positions.addAll(profileRowRange(configurationIdList, position, displaySpanCount()))
+                }
             }
             val newStamps = buildDisplayStamps(configurationIdList, configurationList, positions)
             for ((id, stamp) in newStamps) {
                 val oldStamp = configurationStamps.put(id, stamp)
-                if (id in changedIds || oldStamp != stamp) {
+                if (profileOf(id) in changedIds || oldStamp != stamp) {
                     rebindVisible(displayPositions.getValue(id))
                 }
             }
@@ -1313,6 +1393,7 @@ class ConfigurationGroupFragment : Fragment() {
                 var profiles = if (isFavorites) {
                     val ids = DataStore.favoriteProfiles
                     subscriptionGroupIds = ProfileDatabase.groupDao.subscriptions().mapTo(HashSet()) { it.id }
+                    groupNames = ProfileDatabase.groupDao.allGroups().associate { it.id to it.displayName() }
                     ProfileDatabase.proxyDao.getEntities(ids).sortedBy { ids.indexOf(it.id) }
                 } else {
                     ProfileDatabase.proxyDao.getByGroup(groupId)
@@ -1383,7 +1464,10 @@ class ConfigurationGroupFragment : Fragment() {
     }
 
     // Under the name: the country of the server's address, and the address.
-    private fun rowDetails(profile: ProxyEntity) = listOfNotNull(rowCountry(profile), rowAddress(profile)).joinToString(" · ")
+    private fun rowDetails(profile: ProxyEntity) = listOfNotNull(rowList(profile), rowCountry(profile), rowAddress(profile)).joinToString(" · ")
+
+    // In Favorites, the list a row comes from.
+    private fun rowList(profile: ProxyEntity) = if (isFavorites) groupNames[profile.groupId] else null
 
     /**
      * A section's header: its title and size; a tap folds or unfolds it. In Mullvad's list it is a country or a city to
@@ -1422,8 +1506,8 @@ class ConfigurationGroupFragment : Fragment() {
             binding.chevron.setImageResource(if (row.folded) R.drawable.ic_expand_more else R.drawable.ic_expand_less)
             binding.root.contentDescription = listOfNotNull(
                 row.spoken,
-                // Mullvad's list is proxies; sections elsewhere hold profiles of any kind.
-                context.resources.getQuantityString(if (row.tree) R.plurals.proxies_found else R.plurals.group_profiles, row.count, row.count),
+                // The Proxies screen's lists hold proxies; sections elsewhere hold profiles of any kind.
+                context.resources.getQuantityString(if (row.tree || (parentFragment as? ConfigurationFragment)?.proxies == true) R.plurals.proxies_found else R.plurals.group_profiles, row.count, row.count),
                 context.getString(R.string.proxies_answered_spoken, row.answered, row.count).takeIf { row.tree && row.answered >= 0 },
                 context.getString(R.string.proxies_fastest_spoken, row.best).takeIf { row.tree && row.answered > 0 },
                 context.getString(R.string.proxies_holds_selected).takeIf { row.tree && row.holdsSelected },
@@ -1449,11 +1533,9 @@ class ConfigurationGroupFragment : Fragment() {
             val profile = adapter?.profileById(profileId) ?: return
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
-            // Favorites is a tab on Home, which keeps to servers.
-            if ((parentFragment as? ConfigurationFragment)?.proxies == true) popup.menu.removeItem(R.id.action_favorite)
-            popup.menu.findItem(R.id.action_favorite)?.setTitle(
-                if (profileId in DataStore.favoriteProfiles) R.string.favorite_remove else R.string.favorite_add,
-            )
+            // Rows with ⋮ keep it there; a one-column card shows buttons instead, so its Share menu holds it.
+            if (actions == null || select) popup.menu.removeItem(R.id.action_favorite)
+            popup.menu.findItem(R.id.action_favorite)?.setTitle(favoriteTitle(profileId))
 
             when {
                 !profile.haveStandardLink() -> {
@@ -1486,6 +1568,11 @@ class ConfigurationGroupFragment : Fragment() {
         val trafficText: TextView = binding.trafficText
         private val card = view as MaterialCardView
         private val highlight = CardHighlight(card)
+        private val favoriteMark: ImageView = binding.favoriteMark
+
+        // A line sits under its city, or one level less deep under Recent.
+        private val lineIndent = view.resources.getDimensionPixelSize(R.dimen.relay_row_indent)
+        private val recentIndent = view.resources.getDimensionPixelSize(R.dimen.relay_level_indent)
 
         // The one-column card shows its buttons; two columns, compact rows and the Proxies screen keep them under ⋮,
         // so their cards never build them.
@@ -1556,17 +1643,25 @@ class ConfigurationGroupFragment : Fragment() {
             val host = parentFragment as? ConfigurationFragment ?: return
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.double_column_item_menu, popup.menu)
-            if (select) popup.menu.removeItem(R.id.action_delete)
+            // A picker picks: favorites are made on Home and the Proxies screen.
+            if (select) {
+                popup.menu.removeItem(R.id.action_delete)
+                popup.menu.removeItem(R.id.action_favorite)
+            }
             // A proxy connects at once or becomes a group's exit; Remove comes last, apart.
             if (host.proxies && !select) {
                 popup.menu.clear()
                 popup.menu.add(0, R.string.proxies_connect, 0, R.string.proxies_connect)
-                popup.menu.add(0, R.id.action_edit, 1, R.string.edit)
-                popup.menu.add(0, R.string.proxies_use_as_exit, 2, R.string.proxies_use_as_exit)
-                popup.menu.add(0, R.id.action_share, 3, R.string.share)
-                popup.menu.add(1, R.id.action_delete, 4, R.string.delete)
+                popup.menu.add(0, R.id.action_favorite, 1, R.string.favorite_add)
+                popup.menu.add(0, R.id.action_edit, 2, R.string.edit)
+                popup.menu.add(0, R.string.proxies_use_as_exit, 3, R.string.proxies_use_as_exit)
+                popup.menu.add(0, R.id.action_share, 4, R.string.share)
+                popup.menu.add(1, R.id.action_delete, 5, R.string.delete)
                 MenuCompat.setGroupDividerEnabled(popup.menu, true)
             }
+            // In Favorites, Remove unpins, with Undo.
+            if (isFavorites) popup.menu.removeItem(R.id.action_favorite)
+            popup.menu.findItem(R.id.action_favorite)?.setTitle(favoriteTitle(profileId))
             val running = host.isRunningProfile(profileId)
             popup.menu.findItem(R.id.action_edit)?.isVisible = adapter?.profileById(profileId)?.haveSettings() == true
             popup.menu.findItem(R.id.action_edit)?.isEnabled = !running
@@ -1593,6 +1688,11 @@ class ConfigurationGroupFragment : Fragment() {
                         true
                     }
 
+                    R.id.action_favorite -> {
+                        toggleFavorite(profileId)
+                        true
+                    }
+
                     R.string.proxies_use_as_exit -> {
                         host.useAsExit(profileId)
                         true
@@ -1602,6 +1702,27 @@ class ConfigurationGroupFragment : Fragment() {
                 }
             }
             popup.show()
+        }
+
+        private fun favoriteTitle(profileId: Long) = if (profileId in DataStore.favoriteSet) R.string.favorite_remove else R.string.favorite_add
+
+        private fun indent(start: Int) {
+            val params = view.layoutParams as? ViewGroup.MarginLayoutParams ?: return
+            if (params.marginStart == start) return
+            params.marginStart = start
+            view.layoutParams = params
+        }
+
+        // Pins or unpins: the Favorites tab follows, the profile's rows show or drop their star, and a snackbar says so,
+        // which TalkBack reads out.
+        private fun toggleFavorite(profileId: Long) {
+            val added = profileId !in DataStore.favoriteSet
+            (activity as? MainActivity)?.snackbar(if (added) R.string.favorite_added else R.string.favorite_removed)?.show()
+            runOnDefaultDispatcher {
+                DataStore.updateFavoriteProfiles { if (added) it + profileId else it - profileId }
+                GroupManager.postReload(FAVORITES_GROUP_ID)
+                ProfileManager.postUpdate(profileId, noTraffic = true)
+            }
         }
 
         private fun selectProfile(profileId: Long, connect: Boolean = false) {
@@ -1619,6 +1740,8 @@ class ConfigurationGroupFragment : Fragment() {
                     lastSelected = DataStore.selectedProxy
                     DataStore.selectedProxy = profileId
                 }
+                // Before the lists show the new selection, so their Recent has it first.
+                DataStore.rememberPick(profile.groupId, profileId)
                 host.refreshProfileState()
 
                 if (connect && !DataStore.serviceState.started) {
@@ -1659,8 +1782,8 @@ class ConfigurationGroupFragment : Fragment() {
             return TouchDelegate(bounds, profileStatus)
         }
 
-        /** [label] names a [line]: its server's number, or its own name when renamed. */
-        fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean, reserveCountryRow: Boolean, label: String? = null) {
+        /** [label] names a [line]: its server's number, or its own name when renamed or in [recent]. */
+        fun bind(proxyEntity: ProxyEntity, reserveMiddleRow: Boolean, reserveCountryRow: Boolean, label: String? = null, recent: Boolean = false) {
             val pf = parentFragment as? ConfigurationFragment ?: return
 
             // A card shown again for the same profile changes in place: its selection and test result fade.
@@ -1668,7 +1791,16 @@ class ConfigurationGroupFragment : Fragment() {
             val shownStatus = profileStatus.text.toString()
             entity = proxyEntity
 
+            if (line) indent(if (recent) recentIndent else lineIndent)
             profileName.text = label ?: proxyEntity.displayName()
+            // Favorites' rows are all favorites; elsewhere a star marks one, fading in as it is pinned.
+            val favorite = !isFavorites && proxyEntity.id in DataStore.favoriteSet
+            if (favoriteMark.isVisible != favorite) {
+                favoriteMark.isVisible = favorite
+                favoriteMark.animate().cancel()
+                favoriteMark.alpha = if (favorite && same) 0f else 1f
+                if (favorite && same) favoriteMark.animate().alpha(1f).setDuration(STATUS_FADE).setInterpolator(EaseOut).start()
+            }
             // A server of Mullvad's tree has its place in the headers above it and SOCKS5 like every other: one line.
             profileType.isGone = line
             if (!line) profileType.text = ProfileWords.connection(proxyEntity)
@@ -1701,15 +1833,18 @@ class ConfigurationGroupFragment : Fragment() {
                 TooltipCompat.setTooltipText(trafficText, null)
             }
 
+            val list = if (line) null else rowList(proxyEntity)
             val country = if (line) null else rowCountry(proxyEntity)
             val address = if (line) null else rowAddress(proxyEntity)
-            val details = listOfNotNull(country, address).joinToString(" · ")
+            // In Favorites the list a row comes from leads its second line.
+            val details = listOfNotNull(list, country, address).joinToString(" · ")
             // Two columns give the country a row of its own, so the address keeps the card's width.
             val stacked = layout == GroupLayout.TWO_COLUMNS
-            profileAddress.text = if (stacked) address.orEmpty() else details
+            val beside = listOfNotNull(list, address).joinToString(" · ")
+            profileAddress.text = if (stacked) beside else details
             // A compact row keeps the traffic on its second line; a card without a test result shows it in the result's place.
             val compact = layout == GroupLayout.COMPACT
-            val middle = if (stacked) address.orEmpty() else details
+            val middle = if (stacked) beside else details
             val trafficRowEmpty = middle.isBlank() && (!showTraffic || (!compact && proxyEntity.status <= 0))
             (trafficText.parent as View).visibility = when {
                 !trafficRowEmpty -> View.VISIBLE
@@ -1748,7 +1883,11 @@ class ConfigurationGroupFragment : Fragment() {
                 profileStatus.text = if (msg != err) msg else getString(R.string.unavailable)
             }
             // A screen reader hears a line's whole name, the country and city it leaves to the headers included.
-            card.contentDescription = if (line) listOfNotNull(proxyEntity.displayName(), profileStatus.text?.toString()?.ifEmpty { null }).joinToString(", ") else null
+            card.contentDescription = if (line) {
+                listOfNotNull(proxyEntity.displayName(), getString(R.string.favorite_mark).takeIf { favorite }, profileStatus.text?.toString()?.ifEmpty { null }).joinToString(", ")
+            } else {
+                null
+            }
             // Only a failed test has more to show, its error; the short line then answers a 48 dp tap.
             val failed = proxyEntity.status == 3
             profileStatus.isClickable = failed
@@ -1803,10 +1942,7 @@ class ConfigurationGroupFragment : Fragment() {
             try {
                 val name = profile.displayName().orEmpty()
                 when (item.itemId) {
-                    R.id.action_favorite -> runOnDefaultDispatcher {
-                        DataStore.updateFavoriteProfiles { if (profileId in it) it - profileId else it + profileId }
-                        GroupManager.postReload(FAVORITES_GROUP_ID)
-                    }
+                    R.id.action_favorite -> toggleFavorite(profileId)
 
                     R.id.action_standard_qr -> showCode(profile.toStdLink(), name)
 

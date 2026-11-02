@@ -13,8 +13,9 @@ import java.util.Base64
 internal object BackupFormatV2 {
     const val VERSION = 2
 
-    // What this device approved or measured: plugin signers, the addresses server names resolved to, where proxies left from.
-    private val DEVICE_ONLY = setOf(Key.PLUGIN_SIGNER_APPROVALS, Key.SERVER_ADDRESSES, Key.PROXY_EXITS)
+    // What this device approved, measured or did: plugin signers, the addresses server names resolved to, where proxies left
+    // from, what was picked lately.
+    private val DEVICE_ONLY = setOf(Key.PLUGIN_SIGNER_APPROVALS, Key.SERVER_ADDRESSES, Key.PROXY_EXITS, Key.RECENT_PICKS)
 
     fun encodeProfiles(profiles: List<ProxyEntity>): JSONArray = JSONArray().apply {
         profiles.forEach { put(encodeProfile(it)) }

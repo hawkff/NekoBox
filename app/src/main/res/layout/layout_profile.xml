@@ -45,6 +45,18 @@
                 android:textStyle="bold"
                 tools:text="@string/profile_name" />
 
+            <!-- A favorite's star, at the end of the name's room so stars line up down the list. -->
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/favorite_mark"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="4dp"
+                android:contentDescription="@string/favorite_mark"
+                android:visibility="gone"
+                app:srcCompat="@drawable/ic_star_filled"
+                app:tint="?android:attr/textColorSecondary" />
+
             <!-- Edit, share and remove: only the one-column card inflates them; the others keep them under ⋮. -->
             <ViewStub
                 android:id="@+id/actions"

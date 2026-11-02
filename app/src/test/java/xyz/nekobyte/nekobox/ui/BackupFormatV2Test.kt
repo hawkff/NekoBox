@@ -271,6 +271,8 @@ class BackupFormatV2Test {
         val settings = listOf(
             KeyValuePair("ordinary").put("value"),
             KeyValuePair(Key.PLUGIN_SIGNER_APPROVALS).put(setOf("untrusted-import")),
+            // What was picked lately stays on this device too.
+            KeyValuePair(Key.RECENT_PICKS).put("12:5,6"),
         )
 
         val encoded = BackupFormatV2.encodeSettings(settings)

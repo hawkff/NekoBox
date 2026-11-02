@@ -4,8 +4,9 @@ import android.os.Bundle
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
-import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
+import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
 class SwitchActivity :
     ThemedActivity(R.layout.layout_empty),
@@ -27,7 +28,9 @@ class SwitchActivity :
     override fun returnProfile(profileId: Long) {
         val old = DataStore.selectedProxy
         DataStore.selectedProxy = profileId
-        runOnMainDispatcher {
+        runOnDefaultDispatcher {
+            // A pick here counts for its list's Recent, which the updates below show.
+            ProfileDatabase.proxyDao.getById(profileId)?.let { DataStore.rememberPick(it.groupId, it.id) }
             ProfileManager.postUpdate(old, true)
             ProfileManager.postUpdate(profileId, true)
         }

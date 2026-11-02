@@ -156,6 +156,10 @@
                         </group>
                     </menu>
                 </item>
+                <!-- Its title says what a tap does: off forgets the picks too (ConfigurationFragment sets it as the menu opens). -->
+                <item
+                    android:id="@+id/action_recents"
+                    android:title="@string/recents_turn_off" />
             </group>
             <group android:id="@+id/group_clean_up">
                 <item

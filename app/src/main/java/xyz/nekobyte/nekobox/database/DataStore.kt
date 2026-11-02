@@ -146,6 +146,49 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     private val favoriteLock = Any()
 
+    /** The pins as a set, for rows that ask on every bind: parsed again only when the stored text changes. */
+    val favoriteSet: Set<Long>
+        get() {
+            val raw = configurationStore.getString(Key.FAVORITE_PROFILES).orEmpty()
+            parsedFavorites.let { (from, pins) -> if (from == raw) return pins }
+            return raw.split(',').mapNotNullTo(HashSet()) { it.toLongOrNull() }.also { parsedFavorites = raw to it }
+        }
+
+    // A few dozen IDs at most, so a read compares the text by content.
+    @Volatile
+    private var parsedFavorites: Pair<String, Set<Long>> = "" to emptySet()
+
+    /** Picks a list's Recent keeps. */
+    const val RECENTS_PER_LIST = 3
+
+    /** Whether lists keep and show what was picked from them lately. */
+    var recentsOn by configurationStore.boolean(Key.RECENTS) { true }
+
+    /** What was picked from each list lately, newest first, as "groupId:id,id,id" lines. */
+    val recentPicks: Map<Long, List<Long>>
+        get() = configurationStore.getString(Key.RECENT_PICKS).orEmpty().lineSequence().mapNotNull { line ->
+            line.substringBefore(':').toLongOrNull()?.let { group -> group to line.substringAfter(':').split(',').mapNotNull(String::toLongOrNull) }
+        }.toMap()
+
+    private val recentLock = Any()
+
+    /** Puts [profileId] first among the picks from [groupId], while Recent is on. */
+    fun rememberPick(groupId: Long, profileId: Long) = synchronized(recentLock) {
+        if (!recentsOn || profileId <= 0L) return@synchronized
+        val picks = recentPicks.toMutableMap()
+        picks[groupId] = (listOf(profileId) + picks[groupId].orEmpty().minus(profileId)).take(RECENTS_PER_LIST)
+        configurationStore.putString(Key.RECENT_PICKS, picks.entries.joinToString("\n") { (group, ids) -> "$group:${ids.joinToString(",")}" })
+    }
+
+    /** Turns Recent on or off; off forgets every pick at once. */
+    fun turnRecents(on: Boolean) = synchronized(recentLock) {
+        recentsOn = on
+        if (!on) forgetPicks()
+    }
+
+    /** Forgets what was picked from every list. */
+    fun forgetPicks() = synchronized(recentLock) { configurationStore.putString(Key.RECENT_PICKS, "") }
+
     /**
      * What server names last resolved to, through the core's resolver for each connection: the row
      * of a server given by name shows the country of that address. Tests and connections fill it,

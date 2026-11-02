@@ -32,6 +32,15 @@
     <string name="favorites">Favorites</string>
     <string name="favorite_add">Add to favorites</string>
     <string name="favorite_remove">Remove from favorites</string>
+    <string name="favorite_mark">Favorite</string>
+    <string name="favorite_added">Added to favorites</string>
+    <string name="favorite_removed">Removed from favorites</string>
+    <!-- What was picked from a list lately, at its top. -->
+    <string name="recent">Recent</string>
+    <!-- Over the rest of a list without sections, below Recent. -->
+    <string name="recent_all">All</string>
+    <string name="recents_turn_off">Turn off recents</string>
+    <string name="recents_turn_on">Turn on recents</string>
     <string name="all_groups">All groups</string>
     <string name="search_no_results">No profiles match</string>
     <plurals name="group_profiles">

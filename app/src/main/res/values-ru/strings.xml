@@ -150,6 +150,13 @@
 <string name="favorites">Избранное</string>
 <string name="favorite_add">Добавить в избранное</string>
 <string name="favorite_remove">Убрать из избранного</string>
+<string name="favorite_mark">В избранном</string>
+<string name="favorite_added">Добавлено в избранное</string>
+<string name="favorite_removed">Убрано из избранного</string>
+<string name="recent">Недавние</string>
+<string name="recent_all">Все</string>
+<string name="recents_turn_off">Выключить недавние</string>
+<string name="recents_turn_on">Включить недавние</string>
 <string name="all_groups">Все группы</string>
 <string name="search_no_results">Профили не найдены</string>
     <plurals name="group_profiles">

@@ -177,6 +177,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
             R.id.action_connection_test_clear_results,
             R.id.action_connection_test_delete_unavailable,
             R.id.action_order_layout,
+            R.id.action_recents,
         )
     }
 
@@ -199,9 +200,12 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
     val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
 
+    // Recent as this screen's lists show it: another screen can turn it off or on meanwhile.
+    private var recentsShown = true
+
     override val keepsAlive get() = true
 
-    override fun current() = alwaysShowAddress == DataStore.alwaysShowAddress
+    override fun current() = alwaysShowAddress == DataStore.alwaysShowAddress && recentsShown == DataStore.recentsOn
 
     /** Whether this screen has a tab for [group]: Home the servers, the Proxies screen the proxy lists, a picker both. */
     internal fun shows(group: ProxyGroup) = select || (group.type == GroupType.PROXIES) == proxies
@@ -258,6 +262,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
     }
 
     internal fun isSelectedProfile(profileId: Long) = selectedProfileSnapshot == profileId
+
+    internal fun selectedProfile() = selectedProfileSnapshot
 
     internal fun isRunningProfile(profileId: Long) = serviceStartedSnapshot && currentProfileSnapshot == profileId
 
@@ -528,6 +534,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         releaseViewListeners()
+        recentsShown = DataStore.recentsOn
 
         if (!select) {
             toolbar.inflateMenu(R.menu.add_profile_menu)
@@ -1106,7 +1113,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
         val context = requireContext()
         runOnDefaultDispatcher {
             val proxy = ProfileManager.getProfile(profileId) ?: return@runOnDefaultDispatcher
-            val groups = ProfileDatabase.groupDao.allGroups().filter { it.type != GroupType.PROXIES }
+            // A profile cannot leave through itself: a server starred into Favorites here is not offered its own group.
+            val groups = ProfileDatabase.groupDao.allGroups().filter { it.type != GroupType.PROXIES && it.id != proxy.groupId }
             onMainDispatcher {
                 if (!isAdded) return@onMainDispatcher
                 // A group that leaves through it already says so; picking it again stops that.
@@ -1484,6 +1492,14 @@ open class ConfigurationFragment @JvmOverloads constructor(
                 val open = adapter.groupList.getOrNull(groupPager.currentItem)
                 val update = item.subMenu?.findItem(R.id.action_update_subscription)
                 update?.isVisible = open?.type == GroupType.SUBSCRIPTION
+                item.subMenu?.findItem(R.id.action_recents)?.setTitle(if (DataStore.recentsOn) R.string.recents_turn_off else R.string.recents_turn_on)
+            }
+
+            // Off forgets every pick at once; lists drop their Recent, or show it again.
+            R.id.action_recents -> {
+                DataStore.turnRecents(!DataStore.recentsOn)
+                recentsShown = DataStore.recentsOn
+                switchAllGroupFragmentsLayout()
             }
 
             R.id.action_global_mode -> {
@@ -1904,13 +1920,14 @@ open class ConfigurationFragment @JvmOverloads constructor(
                         newGroupList.remove(it)
                     }
                 }
-                // Favorites leads the tabs while it holds a profile; deleted profiles drop out of it.
+                // Favorites leads the tabs while it holds a profile, on the Proxies screen once there is a list to sit
+                // beside; deleted profiles drop out of it.
                 val favorites = DataStore.favoriteProfiles
                 val liveFavorites = ProfileDatabase.proxyDao.getEntities(favorites).mapTo(HashSet()) { it.id }
                 // Only pins known to be gone are dropped; one added meanwhile stays.
                 val gone = favorites.toSet() - liveFavorites
                 if (gone.isNotEmpty()) DataStore.updateFavoriteProfiles { it - gone }
-                if (liveFavorites.isNotEmpty() && !proxies) newGroupList.add(0, ProxyGroup(id = FAVORITES_GROUP_ID, name = app.getString(R.string.favorites)))
+                if (liveFavorites.isNotEmpty() && (!proxies || newGroupList.isNotEmpty())) newGroupList.add(0, ProxyGroup(id = FAVORITES_GROUP_ID, name = app.getString(R.string.favorites)))
 
                 var selectedGroup = selectedItem?.groupId ?: if (proxies) DataStore.selectedProxyList else DataStore.currentGroupId()
                 var set = false
