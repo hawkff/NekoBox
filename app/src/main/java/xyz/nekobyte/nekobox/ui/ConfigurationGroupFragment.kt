@@ -292,7 +292,9 @@ class ConfigurationGroupFragment : Fragment() {
         val menu = pf.toolbar.menu
         // Favorites keeps a layout of its own and has neither an order to sort nor sections: its menu holds that layout.
         menu.findItem(R.id.action_order_layout)?.apply {
-            setTitle(if (isFavorites) R.string.favorites_layout else R.string.sort_and_layout)
+            // A title set again refreshes the menu all the same: only a change is set.
+            val title = getString(if (isFavorites) R.string.favorites_layout else R.string.sort_and_layout)
+            if (this.title?.toString() != title) this.title = title
             subMenu?.setGroupVisible(R.id.order_group, !isFavorites)
             subMenu?.setGroupVisible(R.id.sections_group, !isFavorites)
         }
