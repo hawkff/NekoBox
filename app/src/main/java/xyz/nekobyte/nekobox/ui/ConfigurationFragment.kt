@@ -105,6 +105,7 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnLifecycleDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
+import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
 import xyz.nekobyte.nekobox.net.ConnectionProbes
 import xyz.nekobyte.nekobox.plugin.PluginManager
 import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSSettingsActivity
@@ -128,8 +129,10 @@ import xyz.nekobyte.nekobox.ui.profile.TrojanSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.TuicSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.VMessSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
+import xyz.nekobyte.nekobox.widget.SubscriptionQrDialog
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassLayout
+import xyz.nekobyte.nekobox.widget.subscriptionLink
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -396,6 +399,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
                 menu.add(0, R.string.group_edit, 0, R.string.group_edit)
             }
             if (group.type == GroupType.SUBSCRIPTION || MullvadRelays.isRelayList(group)) menu.add(0, R.string.group_update, 1, R.string.group_update)
+            if (group.subscriptionLink() != null) menu.add(0, R.string.subscription_share, 1, R.string.subscription_share)
             // The default group keeps its name and stays, as on the Groups screen. An update under way
             // writes the group back when it ends, over a new name, so neither is offered meanwhile.
             if (!group.ungrouped && group.id !in GroupUpdater.updating) {
@@ -419,6 +423,13 @@ open class ConfigurationFragment @JvmOverloads constructor(
                         syncMullvad(loadingMullvad()) { MullvadRelays.update(group.id) }
                     } else {
                         runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
+                    }
+
+                    // The stored link: an update may have moved the subscription since the tabs loaded.
+                    R.string.subscription_share -> runOnDefaultDispatcher {
+                        val stored = ProfileDatabase.groupDao.getById(group.id) ?: return@runOnDefaultDispatcher
+                        val link = stored.subscriptionLink() ?: return@runOnDefaultDispatcher
+                        onMainDispatcher { if (isAdded) SubscriptionQrDialog(link, stored.displayName()).showAllowingStateLoss(parentFragmentManager) }
                     }
 
                     R.string.group_rename -> renameGroup(group)

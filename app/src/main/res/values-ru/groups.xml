@@ -26,6 +26,9 @@
     <string name="group_collapsed">Свёрнуто</string>
     <string name="group_share_link">Скопировать подписку ссылкой</string>
     <string name="group_share_qr">Показать QR-кодом</string>
+    <string name="subscription_share">Поделиться подпиской</string>
+    <string name="subscription_qr_warning">Кто отсканирует этот код, сможет пользоваться вашей подпиской.</string>
+    <string name="subscription_qr_description">QR-код ссылки на подписку %s</string>
     <string name="group_copy_profiles">Скопировать профили</string>
     <string name="group_save_profiles">Сохранить профили в файл</string>
     <string name="group_clear">Удалить все профили</string>
