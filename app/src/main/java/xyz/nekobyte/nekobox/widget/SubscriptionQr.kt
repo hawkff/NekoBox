@@ -17,6 +17,7 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.drawable.toDrawable
@@ -258,26 +259,35 @@ class SubscriptionQrDialog() : DialogFragment() {
         shown = true
     }
 
-    // The card switches on as an old screen does, a bright line opening to its height, while the title's colors settle.
+    // The card switches on as an old screen does: a bright line widens, then opens to the card's height, and the
+    // title's colors settle. The opening keeps Material's standard curve: an exponential one would be done before the
+    // first frames show it.
     private fun powerOn() {
         val binding = binding ?: return
         if (!requireContext().animationsOn()) return
         val card = binding.root
         val settled = binding.name.split
-        card.scaleY = 0.02f
+        val line = 0.02f
+        card.scaleX = 0.4f
+        card.scaleY = line
         card.alpha = 0f
         binding.name.split = settled * 5
         AnimatorSet().apply {
             playTogether(
-                ObjectAnimator.ofFloat(card, View.SCALE_Y, 0.02f, 1f).setDuration(260),
-                ObjectAnimator.ofFloat(card, View.ALPHA, 0f, 1f).setDuration(120),
+                ObjectAnimator.ofFloat(card, View.ALPHA, 0f, 1f).setDuration(60),
+                ObjectAnimator.ofFloat(card, View.SCALE_X, 0.4f, 1f).setDuration(110).apply { interpolator = EaseOut },
+                ObjectAnimator.ofFloat(card, View.SCALE_Y, line, 1f).apply {
+                    startDelay = 90
+                    duration = 240
+                    interpolator = PathInterpolator(0.4f, 0f, 0.2f, 1f)
+                },
                 ValueAnimator.ofFloat(settled * 5, settled).apply {
-                    startDelay = 120
+                    startDelay = 200
                     duration = 420
+                    interpolator = EaseOut
                     addUpdateListener { binding.name.split = it.animatedValue as Float }
                 },
             )
-            interpolator = EaseOut
             start()
         }
     }
