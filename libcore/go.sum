@@ -132,8 +132,8 @@ github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8
 github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
 github.com/hawkff/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604 h1:40Om8MqeA+t59bViJAREqLbvqbafCXqK4z9GjyJCNDE=
 github.com/hawkff/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604/go.mod h1:YoPc6qcOZqD7TXZ1xpedD8Sx3aSKsxN05ZqEFmXDNHk=
-github.com/hawkff/sing-vmess v0.2.8-mod.3 h1:VTTD+bfT5BvtvfMTb0g08mdLI9mljm4W6kkMmU4Lckc=
-github.com/hawkff/sing-vmess v0.2.8-mod.3/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
+github.com/hawkff/sing-vmess v0.2.8-mod.4 h1:htQcetA0eq4Ahab2QErFRFAoyYZc3Ajvsy+enRlMkSY=
+github.com/hawkff/sing-vmess v0.2.8-mod.4/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
 github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b h1:qTET+4UyXV0hH8PHjZ1LeWZghaoj/8vrRjt2+Oafzq0=
 github.com/hawkff/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b/go.mod h1:WLUSOPmTcf7VN9gLCe01qUSIvD+/cKC177neENyZPkI=
 github.com/hawkff/wireguard-go v0.0.8-0.20261028195059-3c5a73645a5b h1:V0t8T8oFQ/tkc614C2Jfp/fHwKgb+eJPF7hzsFgySjA=
