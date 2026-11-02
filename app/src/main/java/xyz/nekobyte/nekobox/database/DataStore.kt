@@ -183,8 +183,11 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     /** Turns Recent on or off; off forgets every pick at once. */
     fun turnRecents(on: Boolean) = synchronized(recentLock) {
         recentsOn = on
-        if (!on) configurationStore.putString(Key.RECENT_PICKS, "")
+        if (!on) forgetPicks()
     }
+
+    /** Forgets what was picked from every list. */
+    fun forgetPicks() = synchronized(recentLock) { configurationStore.putString(Key.RECENT_PICKS, "") }
 
     /**
      * What server names last resolved to, through the core's resolver for each connection: the row

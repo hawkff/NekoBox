@@ -1113,7 +1113,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
         val context = requireContext()
         runOnDefaultDispatcher {
             val proxy = ProfileManager.getProfile(profileId) ?: return@runOnDefaultDispatcher
-            val groups = ProfileDatabase.groupDao.allGroups().filter { it.type != GroupType.PROXIES }
+            // A profile cannot leave through itself: a server starred into Favorites here is not offered its own group.
+            val groups = ProfileDatabase.groupDao.allGroups().filter { it.type != GroupType.PROXIES && it.id != proxy.groupId }
             onMainDispatcher {
                 if (!isAdded) return@onMainDispatcher
                 // A group that leaves through it already says so; picking it again stops that.

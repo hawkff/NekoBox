@@ -32,8 +32,9 @@ internal interface BackupRestoreOperations {
 
 internal object DatabaseBackupRestoreOperations : BackupRestoreOperations {
     override suspend fun replaceProfiles(profiles: List<ProxyEntity>, groups: List<ProxyGroup>) {
-        // Restored proxies take the backup's ids, which exits learned here may name for other proxies.
+        // Restored proxies take the backup's ids, which exits learned and picks made here may name for other proxies.
         DataStore.forgetProxyExits()
+        DataStore.forgetPicks()
         // Stopping is still busy. A timeout must fail before *any* selected section mutates.
         check(
             withTimeoutOrNull(10_000) {

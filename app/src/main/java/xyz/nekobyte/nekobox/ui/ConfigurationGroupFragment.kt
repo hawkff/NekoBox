@@ -781,7 +781,12 @@ class ConfigurationGroupFragment : Fragment() {
                 // read as Recent's and two columns start a new row.
                 if (ids.firstOrNull()?.let { it > 0 } == true) {
                     val allId = headerId(ALL_KEY)
-                    val allFolded = foldKey(ALL_KEY) in folds
+                    var allFolded = foldKey(ALL_KEY) in folds
+                    // A jump to a profile opens All, as it opens a section or a country.
+                    if (allFolded && pendingScrollId in ids) {
+                        DataStore.updateFoldedSections { it - foldKey(ALL_KEY) }
+                        allFolded = false
+                    }
                     rows[allId] = SectionRow(ALL_KEY, getString(R.string.recent_all), ids.size, allFolded)
                     add(allId)
                     if (!allFolded) addAll(ids)
@@ -1206,10 +1211,11 @@ class ConfigurationGroupFragment : Fragment() {
             val profiles = actions.map { it.second }
             val profileIds = profiles.map { it.id }
             if (isFavorites) {
-                // Removing from Favorites unpins the profile; it stays in its group.
+                // Removing from Favorites unpins the profile; it stays in its group, which drops its star.
                 runOnDefaultDispatcher {
                     DataStore.updateFavoriteProfiles { it - profileIds.toSet() }
                     GroupManager.postReload(FAVORITES_GROUP_ID)
+                    for (id in profileIds) ProfileManager.postUpdate(id, noTraffic = true)
                 }
                 return
             }

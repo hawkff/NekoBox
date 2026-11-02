@@ -154,6 +154,17 @@ class ProxiesScreenDeviceTest {
             }
             assertEquals("a star wherever the favorite shows", listOf(true, true), stars)
 
+            // All folds like a section, and a jump to a profile under it opens it again.
+            val other = ProfileDatabase.proxyDao.getByGroup(list).first { it.requireBean().serverAddress == "198.51.100.15" }
+            instrumentation.runOnMainSync {
+                (0 until list().childCount).map(list()::getChildAt).first { it.findViewById<TextView>(R.id.title)?.text?.toString() == context.getString(R.string.recent_all) }.performClick()
+            }
+            settle()
+            assertFalse("All folds: ${names()}", other.displayName() in names())
+            instrumentation.runOnMainSync { screen.getCurrentGroupFragment()!!.scrollToProfile(other.id) }
+            settle()
+            assertTrue("a jump opens All: ${names()}", other.displayName() in names())
+
             instrumentation.runOnMainSync {
                 DataStore.turnRecents(false)
                 screen.switchAllGroupFragmentsLayout()
