@@ -196,9 +196,10 @@ class NeonQrView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val gap = (10 * density).toInt()
         val side = width - 2 * gap
         canvas.drawRect(gap.toFloat(), gap.toFloat(), (gap + side).toFloat(), (gap + side).toFloat(), ground)
-        // Whole pixels a module, so every module keeps one size; what is left stays yellow around it.
+        // Whole pixels a module, so every module keeps one size; what is left stays yellow around it. A code with more
+        // modules than the square has pixels fills the square instead of vanishing.
         val module = side / code.width
-        val drawn = module * code.width
+        val drawn = if (module > 0) module * code.width else side
         val start = gap + (side - drawn) / 2
         target.set(start, start, start + drawn, start + drawn)
         canvas.drawBitmap(code, null, target, sharp)
