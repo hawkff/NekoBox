@@ -12,7 +12,6 @@ import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Rect
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -20,6 +19,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
@@ -109,15 +110,17 @@ class CyberCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     override fun onDraw(canvas: Canvas) {
         canvas.drawPath(outline, panel)
-        canvas.save()
-        canvas.clipPath(outline)
+        // Measured here: inside withClip, density and width would be the canvas's own.
         val step = 4 * density
-        var y = step
-        while (y < height) {
-            canvas.drawLine(0f, y, width.toFloat(), y, lines)
-            y += step
+        val right = width.toFloat()
+        val bottom = height.toFloat()
+        canvas.withClip(outline) {
+            var y = step
+            while (y < bottom) {
+                drawLine(0f, y, right, y, lines)
+                y += step
+            }
         }
-        canvas.restore()
         // The magenta copy sits off the cyan line, as a glitch splits a picture's colors.
         stroke.color = NeonQr.MAGENTA
         stroke.alpha = 200
@@ -246,7 +249,7 @@ class SubscriptionQrDialog() : DialogFragment() {
         val dialog = dialog ?: return
         dialog.setTitle(requireArguments().getString(KEY_NAME))
         dialog.window?.apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
             val margin = (24 * resources.displayMetrics.density).toInt()
             val width = min(resources.displayMetrics.widthPixels - 2 * margin, (360 * resources.displayMetrics.density).toInt())
             setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
