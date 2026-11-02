@@ -134,7 +134,8 @@ class ProxiesScreenDeviceTest {
             // Recent grows above the rows on screen, which stay put while picking.
             instrumentation.runOnMainSync { list().scrollToPosition(0) }
             settle()
-            assertEquals(context.getString(R.string.recent), titles().first())
+            // The rest of a list without sections goes under All, so it does not read as Recent's.
+            assertEquals(listOf(context.getString(R.string.recent), context.getString(R.string.recent_all)), titles())
             assertEquals("the pick leads, and keeps its place: ${names()}", listOf(picked.displayName()), names().take(1))
             assertEquals(2, names().count { it == picked.displayName() })
             assertEquals(listOf(picked.id), DataStore.recentPicks[list])

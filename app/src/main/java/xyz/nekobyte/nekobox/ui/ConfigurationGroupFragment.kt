@@ -126,6 +126,9 @@ private const val RECENT_ROW = 1L shl 48
 // a space.
 private const val RECENT_KEY = " recent"
 
+// The key of the header over the rest of a list without sections, below its Recent.
+private const val ALL_KEY = " all"
+
 /** The profile a row shows: a Recent row's, or the row's own. */
 private fun profileOf(rowId: Long) = if (rowId >= RECENT_ROW) rowId - RECENT_ROW else rowId
 
@@ -759,10 +762,11 @@ class ConfigurationGroupFragment : Fragment() {
             // Without a search every profile of the list is on show.
             val recent = recentRows(DataStore.recentPicks[proxyGroup.id].orEmpty(), selected, masterProfiles.keys, DataStore.RECENTS_PER_LIST)
             if (recent.isEmpty()) return ids
+            val folds = DataStore.foldedSections
             val headerId = headerId(RECENT_KEY)
-            val folded = foldKey(RECENT_KEY) in DataStore.foldedSections
+            val folded = foldKey(RECENT_KEY) in folds
             rows[headerId] = SectionRow(RECENT_KEY, getString(R.string.recent), recent.size, folded, tree = tree)
-            return buildList(ids.size + recent.size + 1) {
+            return buildList(ids.size + recent.size + 2) {
                 add(headerId)
                 if (!folded) {
                     for (id in recent) {
@@ -773,7 +777,17 @@ class ConfigurationGroupFragment : Fragment() {
                         add(row)
                     }
                 }
-                addAll(ids)
+                // Sections and countries head the rest of their lists; a list without them gets All, so its rows do not
+                // read as Recent's and two columns start a new row.
+                if (ids.firstOrNull()?.let { it > 0 } == true) {
+                    val allId = headerId(ALL_KEY)
+                    val allFolded = foldKey(ALL_KEY) in folds
+                    rows[allId] = SectionRow(ALL_KEY, getString(R.string.recent_all), ids.size, allFolded)
+                    add(allId)
+                    if (!allFolded) addAll(ids)
+                } else {
+                    addAll(ids)
+                }
             }
         }
 
