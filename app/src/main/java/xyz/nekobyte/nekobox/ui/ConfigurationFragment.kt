@@ -38,6 +38,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.preference.PreferenceDataStore
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -105,7 +106,6 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnLifecycleDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.ktx.scrollTo
-import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
 import xyz.nekobyte.nekobox.net.ConnectionProbes
 import xyz.nekobyte.nekobox.plugin.PluginManager
 import xyz.nekobyte.nekobox.proxy.anytls.AnyTLSSettingsActivity
@@ -425,11 +425,12 @@ open class ConfigurationFragment @JvmOverloads constructor(
                         runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
                     }
 
-                    // The stored link: an update may have moved the subscription since the tabs loaded.
-                    R.string.subscription_share -> runOnDefaultDispatcher {
-                        val stored = ProfileDatabase.groupDao.getById(group.id) ?: return@runOnDefaultDispatcher
-                        val link = stored.subscriptionLink() ?: return@runOnDefaultDispatcher
-                        onMainDispatcher { if (isAdded) SubscriptionQrDialog(link, stored.displayName()).showAllowingStateLoss(parentFragmentManager) }
+                    // The stored link: an update may have moved the subscription since the tabs loaded. A screen left
+                    // meanwhile shows the card when it comes back.
+                    R.string.subscription_share -> viewLifecycleOwner.lifecycleScope.launch {
+                        val stored = onDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id) } ?: return@launch
+                        val link = stored.subscriptionLink() ?: return@launch
+                        withResumed { SubscriptionQrDialog(link, stored.displayName()).show(parentFragmentManager, null) }
                     }
 
                     R.string.group_rename -> renameGroup(group)

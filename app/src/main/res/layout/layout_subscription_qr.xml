@@ -8,41 +8,50 @@
     android:paddingEnd="28dp"
     android:paddingBottom="24dp">
 
-    <LinearLayout
+    <!-- A window too short for the card, in landscape or split screen, scrolls it. -->
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical">
+        android:overScrollMode="never"
+        android:scrollbars="none">
 
-        <xyz.nekobyte.nekobox.widget.GlitchText
-            android:id="@+id/name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:letterSpacing="0.08"
-            android:singleLine="true"
-            android:textAllCaps="true"
-            android:textAppearance="?attr/textAppearanceTitleLarge"
-            android:textColor="@color/neon_text"
-            android:textStyle="bold"
-            tools:text="Night city" />
-
-        <xyz.nekobyte.nekobox.widget.NeonQrView
-            android:id="@+id/code"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp" />
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/warning"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="center"
-            android:text="@string/subscription_qr_warning"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="@color/neon_magenta" />
+            <xyz.nekobyte.nekobox.widget.GlitchText
+                android:id="@+id/name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:letterSpacing="0.08"
+                android:singleLine="true"
+                android:textAllCaps="true"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textColor="@color/neon_text"
+                android:textStyle="bold"
+                tools:text="Night city" />
 
-    </LinearLayout>
+            <xyz.nekobyte.nekobox.widget.NeonQrView
+                android:id="@+id/code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp" />
+
+            <TextView
+                android:id="@+id/warning"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="@string/subscription_qr_warning"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="@color/neon_magenta" />
+
+        </LinearLayout>
+
+    </ScrollView>
 
 </xyz.nekobyte.nekobox.widget.CyberCard>

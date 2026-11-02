@@ -25,12 +25,14 @@ import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.lifecycleScope
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import kotlinx.coroutines.launch
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyGroup
@@ -38,6 +40,7 @@ import xyz.nekobyte.nekobox.databinding.LayoutSubscriptionQrBinding
 import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.animationsOn
+import xyz.nekobyte.nekobox.ktx.onDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ui.ThemedActivity
 import java.nio.charset.StandardCharsets
@@ -70,6 +73,12 @@ internal object NeonQr {
     fun pixels(code: BitMatrix, scale: Int = 1): IntArray {
         val side = code.width * scale
         return IntArray(side * side) { index -> if (code[index % side / scale, index / side / scale]) INK else YELLOW }
+    }
+
+    /** The code of [text] as a bitmap, a pixel a module; throws [WriterException] when it does not fit in a QR code. */
+    fun render(text: String): Bitmap {
+        val code = encode(text)
+        return Bitmap.createBitmap(pixels(code), code.width, code.height, Bitmap.Config.ARGB_8888)
     }
 }
 
@@ -166,9 +175,13 @@ class GlitchText @JvmOverloads constructor(context: Context, attrs: AttributeSet
 class NeonQrView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     private val density = resources.displayMetrics.density
     private val maxSide = (280 * density).toInt()
+
+    // The corner marks keep 10 dp around the yellow square.
+    private val gap = (10 * density).toInt()
     private var code: Bitmap? = null
     private val ground = Paint().apply { color = NeonQr.YELLOW }
     private val sharp = Paint().apply { isFilterBitmap = false }
+    private val smooth = Paint().apply { isFilterBitmap = true }
     private val marks = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = NeonQr.CYAN
         style = Paint.Style.STROKE
@@ -177,32 +190,36 @@ class NeonQrView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
     private val target = Rect()
 
-    /** Shows the code of [text]; throws [WriterException] when it does not fit in a QR code. */
-    fun show(text: String) {
-        val matrix = NeonQr.encode(text)
-        code = Bitmap.createBitmap(NeonQr.pixels(matrix), matrix.width, matrix.height, Bitmap.Config.ARGB_8888)
+    /** Shows [code], a QR code a pixel a module ([NeonQr.render]). */
+    fun show(code: Bitmap) {
+        this.code = code
+        requestLayout()
         invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val available = MeasureSpec.getSize(widthMeasureSpec)
-        val side = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED) maxSide else min(available, maxSide)
+        val byWidth = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED) maxSide else min(MeasureSpec.getSize(widthMeasureSpec), maxSide)
+        // Half the window's height, so the name and the warning fit beside it in landscape and split screen too; the card
+        // scrolls when they still do not.
+        val byHeight = (resources.configuration.screenHeightDp * density / 2).toInt()
+        // Never under two pixels a module, which a camera struggles with, while the width allows it.
+        val least = min(byWidth, (code?.width ?: 0) * 2 + 2 * gap)
+        val side = maxOf(min(byWidth, byHeight), least)
         setMeasuredDimension(side, side)
     }
 
     override fun onDraw(canvas: Canvas) {
         val code = code ?: return
-        // The corner marks keep 10 dp around the yellow square.
-        val gap = (10 * density).toInt()
         val side = width - 2 * gap
         canvas.drawRect(gap.toFloat(), gap.toFloat(), (gap + side).toFloat(), (gap + side).toFloat(), ground)
-        // Whole pixels a module, so every module keeps one size; what is left stays yellow around it. A code with more
-        // modules than the square has pixels fills the square instead of vanishing.
+        // Whole pixels a module, so every module keeps one size; what is left stays yellow around it.
+        // shortcut: a code wider than the whole screen in pixels (a link of over a kilobyte on a 120 dpi phone) is
+        // shrunk smoothly and may not scan; show the link to copy instead if a provider ever sends such links.
         val module = side / code.width
         val drawn = if (module > 0) module * code.width else side
         val start = gap + (side - drawn) / 2
         target.set(start, start, start + drawn, start + drawn)
-        canvas.drawBitmap(code, null, target, sharp)
+        canvas.drawBitmap(code, null, target, if (module > 0) sharp else smooth)
         val inset = 4 * density
         val arm = 20 * density
         val near = gap - inset
@@ -233,17 +250,25 @@ class SubscriptionQrDialog() : DialogFragment() {
         val binding = LayoutSubscriptionQrBinding.inflate(inflater, container, false)
         binding.name.text = name
         binding.code.contentDescription = getString(R.string.subscription_qr_description, name)
-        try {
-            binding.code.show(requireArguments().getString(KEY_LINK).orEmpty())
-        } catch (e: WriterException) {
-            Logs.w(e)
-            (activity as? ThemedActivity)?.snackbar(e.readableMessage)?.show()
-            dismissAllowingStateLoss()
-            return null
-        }
         this.binding = binding
         shown = savedInstanceState != null
         return binding.root
+    }
+
+    // The code is made off the main thread, as a long link takes a moment, while the card switches on.
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val link = requireArguments().getString(KEY_LINK).orEmpty()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val code = try {
+                onDefaultDispatcher { NeonQr.render(link) }
+            } catch (e: WriterException) {
+                Logs.w(e)
+                (activity as? ThemedActivity)?.snackbar(e.readableMessage)?.show()
+                dismissAllowingStateLoss()
+                return@launch
+            }
+            binding?.code?.show(code)
+        }
     }
 
     override fun onStart() {
