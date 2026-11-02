@@ -1534,7 +1534,7 @@ class SingBoxOptions {
 
         @JvmField var timeout: String? = null
 
-        // Dial the sniffed domain instead of the address the client dialed (hawkff/sing-box fork).
+        // Dial the sniffed domain instead of the address the client dialed (nyaakuza/sing-box fork).
         @JvmField var override_destination: Boolean? = null
 
         // action = "resolve"
