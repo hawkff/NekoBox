@@ -119,6 +119,7 @@ object Key {
     const val NEBULA_ENABLED = "nebulaEnabled"
     const val NEBULA_CONFIG = "nebulaConfig"
     const val GROUP_LAYOUT_MODE = "groupLayoutMode"
+    const val FAVORITES_LAYOUT_MODE = "favoritesLayoutMode"
     const val PROFILE_SECTIONS = "profileSections"
     const val FOLDED_SECTIONS = "foldedSections"
 

@@ -209,7 +209,7 @@ class ConfigurationGroupFragment : Fragment() {
         itemTouchHelper = configurationListView.attachItemTouch(object : ItemTouchHelper.SimpleCallback(0, 0) {
             // Recent repeats rows its list holds lower down, where they move.
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int = if (viewHolder is ConfigurationHolder && isEnabled && adapter?.canDrag() == true && viewHolder.itemId < RECENT_ROW) {
-                if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
+                if (shownLayout == GroupLayout.TWO_COLUMNS) {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
                 } else {
                     ItemTouchHelper.UP or ItemTouchHelper.DOWN
@@ -290,6 +290,12 @@ class ConfigurationGroupFragment : Fragment() {
 
         val pf = requireParentFragment() as? ToolbarFragment ?: return
         val menu = pf.toolbar.menu
+        // Favorites keeps a layout of its own and has neither an order to sort nor sections: its menu holds that layout.
+        menu.findItem(R.id.action_order_layout)?.apply {
+            setTitle(if (isFavorites) R.string.favorites_layout else R.string.sort_and_layout)
+            subMenu?.setGroupVisible(R.id.order_group, !isFavorites)
+            subMenu?.setGroupVisible(R.id.sections_group, !isFavorites)
+        }
         val origin = menu.findItem(R.id.action_order_origin)
         val byName = menu.findItem(R.id.action_order_by_name)
         val byDelay = menu.findItem(R.id.action_order_by_delay)
@@ -338,16 +344,16 @@ class ConfigurationGroupFragment : Fragment() {
             R.id.action_layout_single to GroupLayout.CARDS,
             R.id.action_layout_double to GroupLayout.TWO_COLUMNS,
         )
-        val current = DataStore.groupLayoutMode
+        val current = listLayout()
         for ((id, layout) in layouts) {
             val item = menu.findItem(id)
             item.isChecked = layout == current
             item.setOnMenuItemClickListener {
                 it.isChecked = true
-                if (DataStore.groupLayoutMode != layout) {
-                    DataStore.groupLayoutMode = layout
-                    (parentFragment as? ConfigurationFragment)?.switchAllGroupFragmentsLayout()
-                }
+                val changed = listLayout() != layout
+                // A layout picked in Favorites is its own, even one it showed already; elsewhere it is every other tab's.
+                if (isFavorites) DataStore.favoritesLayoutMode = layout else DataStore.setTabsLayout(layout)
+                if (changed) (parentFragment as? ConfigurationFragment)?.followLayouts()
                 true
             }
         }
@@ -362,8 +368,20 @@ class ConfigurationGroupFragment : Fragment() {
         }
     }
 
+    // Favorites keeps a layout of its own; every other tab shares one.
+    private fun listLayout() = if (isFavorites) DataStore.favoritesLayoutMode else DataStore.groupLayoutMode
+
+    // The layout this page shows.
+    private var shownLayout = -1
+
+    /** Shows the page in its layout again when that changed meanwhile, on this screen or on another one. */
+    fun followLayout() {
+        if (::layoutManager.isInitialized && shownLayout != listLayout()) switchLayoutMode()
+    }
+
     private fun setupLayoutManager() {
-        layoutManager = if (DataStore.groupLayoutMode == GroupLayout.TWO_COLUMNS) {
+        shownLayout = listLayout()
+        layoutManager = if (shownLayout == GroupLayout.TWO_COLUMNS) {
             FixedGridLayoutManager(configurationListView, 2).apply {
                 // A section header spans both columns, and so does each row of Mullvad's tree.
                 spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
@@ -476,7 +494,7 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         // Rows of the previous layout are not reused in another.
-        private var layoutMode = DataStore.groupLayoutMode
+        private var layoutMode = listLayout()
 
         var configurationIdList: MutableList<Long> = mutableListOf()
         val configurationList = HashMap<Long, ProxyEntity>()
@@ -1055,7 +1073,7 @@ class ConfigurationGroupFragment : Fragment() {
 
         fun onLayoutModeChanged() {
             if (disposed) return
-            layoutMode = DataStore.groupLayoutMode
+            layoutMode = listLayout()
             ++displayGeneration
             diffJob?.cancel()
             displayPending = false

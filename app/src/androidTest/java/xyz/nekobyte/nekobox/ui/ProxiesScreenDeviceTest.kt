@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
@@ -48,6 +49,7 @@ class ProxiesScreenDeviceTest {
     private var savedFavorites: String? = null
     private var savedPicks: String? = null
     private var savedRecentsOn = true
+    private val savedLayouts = HashMap<String, String?>()
 
     @Before
     fun setUp() {
@@ -58,6 +60,7 @@ class ProxiesScreenDeviceTest {
         savedList = DataStore.selectedProxyList
         savedExits = DataStore.configurationStore.getString(Key.PROXY_EXITS)
         savedFolds = DataStore.configurationStore.getString(Key.FOLDED_SECTIONS)
+        for (key in listOf(Key.GROUP_LAYOUT_MODE, Key.FAVORITES_LAYOUT_MODE)) savedLayouts[key] = DataStore.configurationStore.getString(key)
         savedSelected = DataStore.selectedProxy
         savedFavorites = DataStore.configurationStore.getString(Key.FAVORITE_PROFILES)
         savedPicks = DataStore.configurationStore.getString(Key.RECENT_PICKS)
@@ -100,6 +103,78 @@ class ProxiesScreenDeviceTest {
         DataStore.recentsOn = savedRecentsOn
         DataStore.configurationStore.putString(Key.FAVORITE_PROFILES, savedFavorites.orEmpty())
         DataStore.configurationStore.putString(Key.RECENT_PICKS, savedPicks.orEmpty())
+        for ((key, value) in savedLayouts) if (value == null) DataStore.configurationStore.remove(key) else DataStore.configurationStore.putString(key, value)
+    }
+
+    /**
+     * Favorites' ⋮ holds a layout of its own, on Home and on the Proxies screen alike: picked there it leaves the other
+     * tabs as they are, and their layout leaves Favorites as it is. A screen kept in the background follows on return.
+     */
+    @Test
+    fun favoritesKeepsALayoutOfItsOwn_onHomeAndTheProxiesScreen() {
+        val server = ProfileDatabase.proxyDao.getByGroup(groups[0]).first()
+        DataStore.updateFavoriteProfiles { it + server.id }
+        DataStore.groupLayoutMode = GroupLayout.TWO_COLUMNS
+        DataStore.configurationStore.remove(Key.FAVORITES_LAYOUT_MODE)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            settle()
+            lateinit var home: ConfigurationFragment
+            lateinit var proxies: ConfigurationFragment
+            // The Proxies screen is built first, on Favorites, and stays in the background as a visit leaves it.
+            scenario.onActivity { activity ->
+                home = activity.currentScreen() as ConfigurationFragment
+                activity.displayFragmentWithId(R.id.nav_proxies)
+            }
+            settle()
+            scenario.onActivity { activity ->
+                proxies = activity.currentScreen() as ConfigurationFragment
+                proxies.groupPager.setCurrentItem(proxies.adapter.groupList.indexOfFirst { it.id == FAVORITES_GROUP_ID }, false)
+            }
+            settle()
+            assertEquals("Favorites shows the tabs' layout until it has its own", GroupLayout.TWO_COLUMNS, rowType(proxies, FAVORITES_GROUP_ID))
+            scenario.onActivity { activity -> activity.displayFragmentWithId(R.id.nav_configuration) }
+            settle()
+            scenario.onActivity { home.groupPager.setCurrentItem(home.adapter.groupList.indexOfFirst { it.id == FAVORITES_GROUP_ID }, false) }
+            settle()
+            instrumentation.runOnMainSync {
+                val menu = home.toolbar.menu
+                val layout = menu.findItem(R.id.action_order_layout)
+                assertTrue(layout.isVisible)
+                assertEquals(context.getString(R.string.favorites_layout), layout.title.toString())
+                assertFalse("Favorites has no order to sort", menu.findItem(R.id.action_order_origin).isVisible)
+                assertFalse("nor sections", menu.findItem(R.id.action_sections).isVisible)
+                assertTrue(menu.findItem(R.id.action_layout_double).isChecked)
+                assertTrue(menu.performIdentifierAction(R.id.action_layout_compact, 0))
+            }
+            settle()
+            assertEquals(GroupLayout.COMPACT, rowType(home, FAVORITES_GROUP_ID))
+            assertEquals(GroupLayout.TWO_COLUMNS, DataStore.groupLayoutMode)
+            // The servers' tab keeps its layout and its own menu; changing it leaves Favorites alone.
+            scenario.onActivity { home.groupPager.setCurrentItem(home.adapter.groupList.indexOfFirst { it.id == groups[0] }, false) }
+            settle()
+            assertEquals(GroupLayout.TWO_COLUMNS, rowType(home, groups[0]))
+            instrumentation.runOnMainSync {
+                val menu = home.toolbar.menu
+                assertEquals(context.getString(R.string.sort_and_layout), menu.findItem(R.id.action_order_layout).title.toString())
+                assertTrue(menu.findItem(R.id.action_order_origin).isVisible)
+                assertTrue(menu.findItem(R.id.action_layout_double).isChecked)
+                assertTrue(menu.performIdentifierAction(R.id.action_layout_single, 0))
+            }
+            settle()
+            assertEquals(GroupLayout.CARDS, rowType(home, groups[0]))
+            assertEquals(GroupLayout.COMPACT, rowType(home, FAVORITES_GROUP_ID))
+            // Back on the kept Proxies screen, Favorites shows its own layout.
+            scenario.onActivity { activity -> activity.displayFragmentWithId(R.id.nav_proxies) }
+            settle()
+            assertEquals(GroupLayout.COMPACT, rowType(proxies, FAVORITES_GROUP_ID))
+        }
+    }
+
+    // The view type of the first row of [screen]'s page for [groupId]: its layout, as neither page here has headers.
+    private fun rowType(screen: ConfigurationFragment, groupId: Long): Int {
+        var type = -1
+        instrumentation.runOnMainSync { type = screen.adapter.groupFragments.getValue(groupId).configurationListView.adapter!!.getItemViewType(0) }
+        return type
     }
 
     /**

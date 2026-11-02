@@ -167,7 +167,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
         const val MAX_SEARCH_RESULTS = 500
 
         // Actions on the open group; Favorites is no group, so they hide there. Update subscription
-        // is decided as the menu opens.
+        // is decided as the menu opens; Sort and layout becomes Favorites' own layout there (checkOrderMenu).
         val GROUP_ACTIONS = listOf(
             R.id.action_clear_traffic_statistics,
             R.id.action_remove_duplicate,
@@ -176,7 +176,6 @@ open class ConfigurationFragment @JvmOverloads constructor(
             R.id.action_connection_url_test,
             R.id.action_connection_test_clear_results,
             R.id.action_connection_test_delete_unavailable,
-            R.id.action_order_layout,
             R.id.action_recents,
         )
     }
@@ -285,6 +284,13 @@ open class ConfigurationFragment @JvmOverloads constructor(
             if (fragment.isAdded && fragment.view != null) {
                 fragment.switchLayoutMode()
             }
+        }
+    }
+
+    /** Rebuilds only the pages whose layout changed, so the others keep their place: Favorites keeps a layout of its own. */
+    fun followLayouts() {
+        adapter.groupFragments.values.forEach { fragment ->
+            if (fragment.isAdded && fragment.view != null) fragment.followLayout()
         }
     }
 
@@ -652,6 +658,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
     // Showing again: global mode, profiles and groups can change on other screens while this one stays hidden.
     override fun onResume() {
         super.onResume()
+        // The other screen may have changed a layout, Favorites' among them.
+        if (::adapter.isInitialized && view != null) followLayouts()
         if (!select && view != null) toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
         searchView?.query?.toString()?.takeIf { searchOpen && it.isNotBlank() }?.let(::searchAllGroups)
     }
