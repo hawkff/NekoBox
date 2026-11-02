@@ -352,9 +352,10 @@ class ConfigurationGroupFragment : Fragment() {
             item.setOnMenuItemClickListener {
                 it.isChecked = true
                 val changed = listLayout() != layout
+                val host = parentFragment as? ConfigurationFragment
                 // A layout picked in Favorites is its own, even one it showed already; elsewhere it is every other tab's.
-                if (isFavorites) DataStore.favoritesLayoutMode = layout else DataStore.setTabsLayout(layout)
-                if (changed) (parentFragment as? ConfigurationFragment)?.followLayouts()
+                if (isFavorites) DataStore.favoritesLayoutMode = layout else DataStore.setTabsLayout(layout, host?.showsFavorites() == true)
+                if (changed) host?.followLayouts()
                 true
             }
         }

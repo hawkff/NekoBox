@@ -287,6 +287,9 @@ open class ConfigurationFragment @JvmOverloads constructor(
         }
     }
 
+    /** Whether the tabs lead with Favorites: it holds a favorite still there. */
+    internal fun showsFavorites() = ::adapter.isInitialized && adapter.groupList.any { it.id == FAVORITES_GROUP_ID }
+
     /** Rebuilds only the pages whose layout changed, so the others keep their place: Favorites keeps a layout of its own. */
     fun followLayouts() {
         adapter.groupFragments.values.forEach { fragment ->

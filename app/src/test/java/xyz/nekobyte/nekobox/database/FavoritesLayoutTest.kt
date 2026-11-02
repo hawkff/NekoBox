@@ -19,17 +19,16 @@ class FavoritesLayoutTest {
     @Test
     fun favoritesShowsTheTabsLayout_untilTheyChange_andKeepsItsOwnOnceSet() {
         // Without a favorite, Favorites shows nothing to keep: it comes with the layout the tabs have then.
-        DataStore.setTabsLayout(GroupLayout.TWO_COLUMNS)
+        DataStore.setTabsLayout(GroupLayout.TWO_COLUMNS, favoritesShown = false)
         assertEquals(GroupLayout.TWO_COLUMNS, DataStore.favoritesLayoutMode)
-        DataStore.updateFavoriteProfiles { it + 1L }
-        // The tabs change: Favorites keeps the layout it showed.
-        DataStore.setTabsLayout(GroupLayout.CARDS)
+        // The tabs change while Favorites shows: it keeps the layout it showed.
+        DataStore.setTabsLayout(GroupLayout.CARDS, favoritesShown = true)
         assertEquals(GroupLayout.CARDS, DataStore.groupLayoutMode)
         assertEquals(GroupLayout.TWO_COLUMNS, DataStore.favoritesLayoutMode)
         // Favorites' own layout leaves the tabs alone, and they leave it alone.
         DataStore.favoritesLayoutMode = GroupLayout.COMPACT
         assertEquals(GroupLayout.CARDS, DataStore.groupLayoutMode)
-        DataStore.setTabsLayout(GroupLayout.TWO_COLUMNS)
+        DataStore.setTabsLayout(GroupLayout.TWO_COLUMNS, favoritesShown = true)
         assertEquals(GroupLayout.COMPACT, DataStore.favoritesLayoutMode)
         assertEquals(GroupLayout.TWO_COLUMNS, DataStore.groupLayoutMode)
     }

@@ -20,6 +20,7 @@ import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.bg.parseMockCoordinates
 import xyz.nekobyte.nekobox.database.DEFAULT_HTTP_PROXY_BYPASS
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ui.SettingsPages
 import xyz.nekobyte.nekobox.ui.applyHideFromRecentApps
 
@@ -112,8 +113,11 @@ internal class ApiSettings(private val context: Context, private val serviceStat
         }
         val store = DataStore.configurationStore
         changes.keysSet().forEach { key ->
-            // The tabs' layout goes as the menu sets it, so Favorites keeps the layout it shows.
-            if (key == Key.GROUP_LAYOUT_MODE) return@forEach DataStore.setTabsLayout(changes.getString(key).toInt())
+            // The tabs' layout goes as the menu sets it, so Favorites keeps the layout it shows while it holds a favorite.
+            if (key == Key.GROUP_LAYOUT_MODE) {
+                val favorites = ProfileDatabase.proxyDao.getEntities(DataStore.favoriteProfiles).isNotEmpty()
+                return@forEach DataStore.setTabsLayout(changes.getString(key).toInt(), favorites)
+            }
             when (settings.getValue(key).type) {
                 "boolean" -> store.putBoolean(key, changes.getBoolean(key))
                 "integer" -> store.putInt(key, changes.getInt(key))
