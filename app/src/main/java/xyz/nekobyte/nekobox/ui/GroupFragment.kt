@@ -43,9 +43,10 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.showAllowingStateLoss
 import xyz.nekobyte.nekobox.widget.CardHighlight
 import xyz.nekobyte.nekobox.widget.ListListener
-import xyz.nekobyte.nekobox.widget.QRCodeDialog
+import xyz.nekobyte.nekobox.widget.SubscriptionQrDialog
 import xyz.nekobyte.nekobox.widget.UndoSnackbarManager
 import xyz.nekobyte.nekobox.widget.attachItemTouch
+import xyz.nekobyte.nekobox.widget.subscriptionLink
 import kotlin.math.abs
 
 /**
@@ -533,10 +534,9 @@ class GroupFragment :
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(menu, popup.menu)
             val subscription = proxyGroup.subscription.takeIf { proxyGroup.type == GroupType.SUBSCRIPTION }
-            if (subscription == null) {
-                popup.menu.removeItem(R.id.action_universal_clipboard)
-                popup.menu.removeItem(R.id.action_universal_qr)
-            }
+            if (subscription == null) popup.menu.removeItem(R.id.action_universal_clipboard)
+            // The QR code holds the provider's link, which any client imports.
+            if (proxyGroup.subscriptionLink() == null) popup.menu.removeItem(R.id.action_universal_qr)
             if (subscription?.supportUrl.isNullOrBlank()) popup.menu.removeItem(R.id.action_support_url)
             if (subscription?.webPageUrl.isNullOrBlank()) popup.menu.removeItem(R.id.action_web_page_url)
             if (!proxyGroup.removable()) popup.menu.removeItem(R.id.action_delete_group)
@@ -551,7 +551,7 @@ class GroupFragment :
             }
 
             when (item.itemId) {
-                R.id.action_universal_qr -> QRCodeDialog(proxyGroup.toUniversalLink(), proxyGroup.displayName()).showAllowingStateLoss(parentFragmentManager)
+                R.id.action_universal_qr -> proxyGroup.subscriptionLink()?.let { SubscriptionQrDialog(it, proxyGroup.displayName()).showAllowingStateLoss(parentFragmentManager) }
 
                 R.id.action_universal_clipboard -> export(proxyGroup.toUniversalLink())
 

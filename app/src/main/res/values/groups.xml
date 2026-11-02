@@ -24,6 +24,10 @@
     <string name="group_collapsed">Collapsed</string>
     <string name="group_share_link">Copy the subscription as a link</string>
     <string name="group_share_qr">Show it as a QR code</string>
+    <!-- A subscription tab's long press: its link as a QR code on a card, for another device or person. -->
+    <string name="subscription_share">Share subscription</string>
+    <string name="subscription_qr_warning">Anyone who scans this can use your subscription.</string>
+    <string name="subscription_qr_description">QR code of the %s subscription link</string>
     <string name="group_copy_profiles">Copy the profiles</string>
     <string name="group_save_profiles">Save the profiles to a file</string>
     <string name="group_clear">Remove all profiles</string>

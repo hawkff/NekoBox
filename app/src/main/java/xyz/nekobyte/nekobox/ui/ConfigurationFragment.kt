@@ -38,6 +38,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.preference.PreferenceDataStore
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -128,8 +129,10 @@ import xyz.nekobyte.nekobox.ui.profile.TrojanSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.TuicSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.VMessSettingsActivity
 import xyz.nekobyte.nekobox.ui.profile.WireGuardSettingsActivity
+import xyz.nekobyte.nekobox.widget.SubscriptionQrDialog
 import xyz.nekobyte.nekobox.widget.glass.Glass
 import xyz.nekobyte.nekobox.widget.glass.GlassLayout
+import xyz.nekobyte.nekobox.widget.subscriptionLink
 import java.io.Closeable
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -396,6 +399,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
                 menu.add(0, R.string.group_edit, 0, R.string.group_edit)
             }
             if (group.type == GroupType.SUBSCRIPTION || MullvadRelays.isRelayList(group)) menu.add(0, R.string.group_update, 1, R.string.group_update)
+            if (group.subscriptionLink() != null) menu.add(0, R.string.subscription_share, 1, R.string.subscription_share)
             // The default group keeps its name and stays, as on the Groups screen. An update under way
             // writes the group back when it ends, over a new name, so neither is offered meanwhile.
             if (!group.ungrouped && group.id !in GroupUpdater.updating) {
@@ -419,6 +423,14 @@ open class ConfigurationFragment @JvmOverloads constructor(
                         syncMullvad(loadingMullvad()) { MullvadRelays.update(group.id) }
                     } else {
                         runOnDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id)?.let { GroupUpdater.startUpdate(it, true) } }
+                    }
+
+                    // The stored link: an update may have moved the subscription since the tabs loaded. A screen left
+                    // meanwhile shows the card when it comes back.
+                    R.string.subscription_share -> viewLifecycleOwner.lifecycleScope.launch {
+                        val stored = onDefaultDispatcher { ProfileDatabase.groupDao.getById(group.id) } ?: return@launch
+                        val link = stored.subscriptionLink() ?: return@launch
+                        withResumed { SubscriptionQrDialog(link, stored.displayName()).show(parentFragmentManager, null) }
                     }
 
                     R.string.group_rename -> renameGroup(group)

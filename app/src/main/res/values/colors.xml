@@ -304,5 +304,9 @@
     <color name="catppuccin_yellow">#F9E2AF</color>
     <color name="card_elevated_catppuccin">#181825</color>
 
+    <!-- The subscription QR card keeps its own colors on every palette: the rest live in widget/SubscriptionQr.kt. -->
+    <color name="neon_text">#F2F2F7</color>
+    <color name="neon_magenta">#FF2A6D</color>
+
 
 </resources>
