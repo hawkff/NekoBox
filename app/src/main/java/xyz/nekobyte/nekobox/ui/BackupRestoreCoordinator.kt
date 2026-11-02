@@ -32,9 +32,6 @@ internal interface BackupRestoreOperations {
 
 internal object DatabaseBackupRestoreOperations : BackupRestoreOperations {
     override suspend fun replaceProfiles(profiles: List<ProxyEntity>, groups: List<ProxyGroup>) {
-        // Restored proxies take the backup's ids, which exits learned and picks made here may name for other proxies.
-        DataStore.forgetProxyExits()
-        DataStore.forgetPicks()
         // Stopping is still busy. A timeout must fail before *any* selected section mutates.
         check(
             withTimeoutOrNull(10_000) {
@@ -83,6 +80,10 @@ internal object DatabaseBackupRestoreOperations : BackupRestoreOperations {
                 }
                 throw failure
             }
+            // Restored proxies took the backup's ids, which exits learned and picks made here may name for other proxies;
+            // a restore that fails before this keeps them.
+            DataStore.forgetProxyExits()
+            DataStore.forgetPicks()
             // Only committed markers authorize retirement; a crash here is recovered on acquisition.
             staged.forEach { recoverTailscaleRestore(it) }
             // No original or replacement Tailscale row exists for these IDs. Keep orphan files

@@ -1648,8 +1648,6 @@ class ConfigurationGroupFragment : Fragment() {
                 popup.menu.removeItem(R.id.action_delete)
                 popup.menu.removeItem(R.id.action_favorite)
             }
-            // In Favorites, Remove unpins, with Undo.
-            if (isFavorites) popup.menu.removeItem(R.id.action_favorite)
             // A proxy connects at once or becomes a group's exit; Remove comes last, apart.
             if (host.proxies && !select) {
                 popup.menu.clear()
@@ -1661,6 +1659,8 @@ class ConfigurationGroupFragment : Fragment() {
                 popup.menu.add(1, R.id.action_delete, 5, R.string.delete)
                 MenuCompat.setGroupDividerEnabled(popup.menu, true)
             }
+            // In Favorites, Remove unpins, with Undo.
+            if (isFavorites) popup.menu.removeItem(R.id.action_favorite)
             popup.menu.findItem(R.id.action_favorite)?.setTitle(favoriteTitle(profileId))
             val running = host.isRunningProfile(profileId)
             popup.menu.findItem(R.id.action_edit)?.isVisible = adapter?.profileById(profileId)?.haveSettings() == true
