@@ -213,8 +213,8 @@ class NeonQrView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val side = width - 2 * gap
         canvas.drawRect(gap.toFloat(), gap.toFloat(), (gap + side).toFloat(), (gap + side).toFloat(), ground)
         // Whole pixels a module, so every module keeps one size; what is left stays yellow around it.
-        // shortcut: a code wider than the whole screen in pixels (a link of over a kilobyte on a 120 dpi phone) is
-        // shrunk smoothly and may not scan; show the link to copy instead if a provider ever sends such links.
+        // shortcut: a code with more modules than the card is wide in pixels (a link of over a kilobyte on a 120 dpi
+        // phone) is shrunk smoothly and may not scan; show the link to copy instead if a provider ever sends such links.
         val module = side / code.width
         val drawn = if (module > 0) module * code.width else side
         val start = gap + (side - drawn) / 2
