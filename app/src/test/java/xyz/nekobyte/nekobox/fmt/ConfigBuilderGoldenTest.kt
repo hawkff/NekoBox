@@ -5,6 +5,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -382,7 +383,8 @@ class ConfigBuilderGoldenTest {
         DataStore.regenerateShareSecret()
         val rotated = shareUsers()
         assertNotEquals(users.getValue(Key.SHARE_USERNAME), rotated.getValue(Key.SHARE_USERNAME))
-        assertEquals(users.getValue(Key.MIXED_USERNAME), rotated.getValue(Key.MIXED_USERNAME))
+        // The app's own user has a secret of each config alone, never the one handed to other devices.
+        assertNotEquals(rotated.getValue(Key.MIXED_USERNAME), rotated.getValue(Key.SHARE_USERNAME))
     }
 
     @Test
@@ -810,6 +812,94 @@ class ConfigBuilderGoldenTest {
         val directRuleIndex = rules.indexOfFirst { it.optString("server") == "dns-direct" }
         assertTrue(directRuleIndex >= 0)
         assertTrue(rules.indexOf(hostsRule) > directRuleIndex)
+    }
+
+    // The service tells the app's own requests which local port its config runs, and the login that port takes.
+    @Test
+    fun aBuiltConfigKnowsItsLocalPort_andThatVpnModeLeavesItOut() {
+        val profile = addSocks(addGroup(), "192.0.2.61", 1080, "local-port")
+        fun local(forTest: Boolean = false) = build(profile, forTest = forTest).localProxy?.let { listOf(it.port, it.user, it.password) }
+        // Proxy mode asks for no login unless a setting says so.
+        assertEquals(listOf(DataStore.mixedPort, "", ""), local())
+        assertNull(local(forTest = true))
+        DataStore.serviceMode = Key.MODE_VPN
+        assertNull(local())
+        DataStore.requireProxyInVPN = true
+        // In VPN mode the port takes a login, with a secret of that one config.
+        val result = build(profile)
+        val login = result.localProxy!!
+        assertEquals(DataStore.mixedPort to Key.MIXED_USERNAME, login.port to login.user)
+        val users = objects(objects(JSONObject(result.config).getJSONArray("inbounds")).single { it.optString("tag") == TAG_MIXED }.getJSONArray("users"))
+        assertEquals(listOf(Key.MIXED_USERNAME to login.password), users.map { it.getString("username") to it.getString("password") })
+        assertTrue(login.password.length >= 32)
+        assertNotEquals(login.password, build(profile).localProxy!!.password)
+    }
+
+    // Custom JSON is merged in last and can replace the inbounds, so the port and the login are read from what runs.
+    @Test
+    fun customJsonThatMovesOrRemovesTheLocalPort_decidesWhatTheConfigReports() {
+        val profile = addSocks(addGroup(), "192.0.2.62", 1080, "custom-inbounds")
+        fun inbound(tag: String = TAG_MIXED, listen: String = "127.0.0.1", more: String = "") = """{"inbounds":[{"type":"mixed","tag":"$tag","listen":"$listen","listen_port":2090$more}]}"""
+        fun local(globalJson: String, profileJson: String = ""): List<Any>? {
+            DataStore.globalCustomConfig = globalJson
+            profile.requireBean().customConfigJson = profileJson
+            return build(profile).localProxy?.let { listOf(it.port, it.user, it.password) }
+        }
+        // Moved to another port, for all profiles or for this one, which is merged in after.
+        assertEquals(listOf(2090, "", ""), local(inbound()))
+        assertEquals(listOf(2090, "", ""), local("", inbound()))
+        assertEquals(listOf(2090, "", ""), local(inbound(listen = "0.0.0.0")))
+        assertEquals(listOf(2090, "", ""), local(inbound(more = ""","users":[]""")))
+        // A login that custom JSON wrote is the same at every start, so the app's own requests are not given it; nor
+        // do they go to a port that takes logins of others only, or speaks TLS.
+        assertNull(local(inbound(more = ""","users":[{"username":"${Key.MIXED_USERNAME}","password":"mine"}]""")))
+        assertNull(local(inbound(more = ""","users":[{"username":"other","password":"theirs"}]""")))
+        assertNull(local(inbound(more = ""","tls":{"enabled":true}""")))
+        // The core reads names without regard to case, so these are users and TLS as well. Two spellings of one name,
+        // here also the "Inbounds" next to the config's own "inbounds", leave open which of them the core takes.
+        assertNull(local(inbound(more = ""","Users":[{"username":"other","password":"theirs"}]""")))
+        assertNull(local(inbound(more = ""","TLS":{"Enabled":true}""")))
+        assertNull(local(inbound(more = ""","users":[],"USERS":[{"username":"other","password":"theirs"}]""")))
+        // To the core a long s is an s, so this is users too. A name outside ASCII is not judged.
+        assertNull(local(inbound(more = ""","u\u017fers":[{"username":"other","password":"theirs"}]""")))
+        assertNull(local(inbound(more = ""","users":[],"u\u017fers":[{"username":"other","password":"theirs"}]""")))
+        assertNull(local("""{"Inbounds":[{"type":"mixed","tag":"$TAG_MIXED","listen":"127.0.0.1","listen_port":2091}]}"""))
+        // Removed, renamed, or listening somewhere the app's requests do not connect.
+        assertNull(local("""{"inbounds":[]}"""))
+        assertNull(local("", """{"inbounds":[]}"""))
+        assertNull(local(inbound(tag = "other-in")))
+        assertNull(local(inbound(listen = "::1")))
+        assertNull(local(inbound(listen = "::")))
+        assertNull(local(inbound(listen = "192.0.2.1")))
+        assertNull(local("""{"inbounds":[{"type":"socks","tag":"$TAG_MIXED","listen":"127.0.0.1","listen_port":2090}]}"""))
+        assertNull(local("""{"inbounds":[{"type":"mixed","tag":"$TAG_MIXED","listen":"127.0.0.1"}]}"""))
+    }
+
+    // A full config runs as written. One made from an exported config still has the inbound, under its tag and
+    // without a login.
+    @Test
+    fun aFullConfig_reportsTheLocalPortItWasWrittenWith() {
+        val group = addGroup()
+        fun local(config: String) = build(
+            addProfile(
+                group,
+                ConfigBean().apply {
+                    name = "full-config"
+                    type = 0
+                    this.config = config
+                    initializeDefaultValues()
+                },
+            ),
+        ).localProxy?.let { listOf(it.port, it.user, it.password) }
+        assertEquals(listOf(2091, "", ""), local("""{"inbounds":[{"type":"mixed","tag":"$TAG_MIXED","listen":"127.0.0.1","listen_port":2091}]}"""))
+        assertNull(local("""{"inbounds":[{"type":"mixed","tag":"in","listen":"127.0.0.1","listen_port":2091}]}"""))
+        // The core reads names without regard to case.
+        assertEquals(listOf(2091, "", ""), local("""{"Inbounds":[{"Type":"mixed","Tag":"$TAG_MIXED","Listen":"127.0.0.1","Listen_Port":2091}]}"""))
+        assertNull(local("""{"inbounds":[{"type":"mixed","tag":"$TAG_MIXED","listen":"127.0.0.1","listen_port":2091,"Users":[{"Username":"${Key.MIXED_USERNAME}","Password":"mine"}]}]}"""))
+        // A login written into the config is the same at every start.
+        assertNull(local("""{"inbounds":[{"type":"mixed","tag":"$TAG_MIXED","listen":"127.0.0.1","listen_port":2091,"users":[{"username":"${Key.MIXED_USERNAME}","password":"mine"}]}]}"""))
+        assertNull(local("{}"))
+        assertNull(local("not a config"))
     }
 
     private fun addGroup(isSelector: Boolean = false, autoSelect: Boolean = false) = ConfigBuilderTestEnv.io {

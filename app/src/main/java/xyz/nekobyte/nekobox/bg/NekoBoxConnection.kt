@@ -6,8 +6,11 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.os.RemoteException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import xyz.nekobyte.nekobox.Action
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback
 import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
@@ -42,6 +45,59 @@ class NekoBoxConnection(
         const val CONNECTION_ID_LOCAL_API = 9
 
         var restartingApp = false
+
+        // How long a running service may take to answer. The answer arrives on the main thread.
+        private const val SERVICE_ANSWER_MS = 1_500L
+
+        // The services that were started, in whichever mode: the mode in the settings is that of the next start, and
+        // after a change of mode the old service can still be stopping while the new one runs. A service that a
+        // screen only holds on to was not started and runs nothing.
+        @Suppress("DEPRECATION") // It still tells an app of its own services, and nothing else is asked.
+        private fun startedServices(): List<ComponentName> {
+            val services = setOf(ProxyService::class.java.name, VpnService::class.java.name)
+            return NekoBox.activity.getRunningServices(Int.MAX_VALUE)
+                .filter { it.started && it.service.packageName == NekoBox.application.packageName && it.service.className in services }
+                .map { it.service }
+        }
+
+        /**
+         * Asks the service that runs one thing and unbinds again; null when none runs, or none has an answer in time.
+         * A process knows what the service does only while a connection of its own is bound, so code that also runs
+         * without one asks here: the subscription job, and the app's own requests. Nothing is started to answer. The
+         * answer arrives on the main thread, so that thread must not be blocked waiting for it.
+         */
+        suspend fun <T : Any> ask(context: Context, question: (INekoBoxService) -> T?): T? {
+            for (service in startedServices()) ask(context, service, question)?.let { return it }
+            return null
+        }
+
+        private suspend fun <T : Any> ask(context: Context, service: ComponentName, question: (INekoBoxService) -> T?): T? {
+            val answer = CompletableDeferred<T?>()
+            val asking = object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, binder: IBinder) {
+                    // Whatever the question throws goes to whoever asked, not to the main thread it is asked on.
+                    try {
+                        answer.complete(question(INekoBoxService.Stub.asInterface(binder)))
+                    } catch (_: RemoteException) {
+                        answer.complete(null)
+                    } catch (e: Exception) {
+                        answer.completeExceptionally(e)
+                    }
+                }
+
+                override fun onServiceDisconnected(name: ComponentName?) = Unit
+            }
+            try {
+                // Without BIND_AUTO_CREATE only a running service answers.
+                if (!context.bindService(Intent(Action.SERVICE).setComponent(service), asking, 0)) return null
+                return withTimeoutOrNull(SERVICE_ANSWER_MS) { answer.await() }
+            } finally {
+                try {
+                    context.unbindService(asking)
+                } catch (_: IllegalArgumentException) {
+                }
+            }
+        }
     }
 
     interface Callback {

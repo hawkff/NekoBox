@@ -4,7 +4,7 @@ import android.content.Context
 import libcore.Libcore
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
-import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.ui.sanitizeAssetFileName
 import java.io.File
 import java.io.RandomAccessFile
@@ -60,7 +60,7 @@ internal class ApiFiles(private val context: Context) {
         try {
             client.modernTLS()
             client.setTimeoutMs(120_000)
-            client.trySocks5(DataStore.mixedPort, DataStore.mixedInboundUser, DataStore.mixedInboundPass)
+            client.throughRunningProxy()
             val response = client.newRequest().apply { setURL(url) }.execute()
             response.writeToLimited(temporary.path, 256L * 1024 * 1024)
             requireApi(hash(temporary) == sha256, "Asset checksum does not match")

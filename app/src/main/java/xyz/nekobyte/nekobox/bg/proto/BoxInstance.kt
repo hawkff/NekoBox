@@ -51,7 +51,6 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
 
     protected open fun buildConfig() {
         config = buildConfig(profile)
-        DataStore.mixedInboundAuthed = DataStore.mixedInboundNeedsAuth
     }
 
     protected open suspend fun loadConfig() {

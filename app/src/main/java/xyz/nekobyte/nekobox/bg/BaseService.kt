@@ -19,6 +19,7 @@ import xyz.nekobyte.nekobox.Protocols
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback
+import xyz.nekobyte.nekobox.aidl.LocalProxy
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.proto.ProxyInstance
 import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
@@ -197,6 +198,15 @@ class BaseService {
 
         override fun getState(): Int = (data?.state ?: State.Idle).ordinal
         override fun getProfileName(): String = data?.proxy?.displayProfileName ?: "Idle"
+
+        // The local port of the config the service is connected with. Connected: the core has started with that
+        // config, which it does not with a port another app holds, so the port is this app's. The state is read
+        // after the config, so the config of a start still under way is not taken for the one that connected.
+        override fun getLocalProxy(): LocalProxy? {
+            val data = data ?: return null
+            val proxy = data.proxy?.takeIf { it.isInitialized() } ?: return null
+            return proxy.config.localProxy.takeIf { data.state == State.Connected && data.proxy === proxy }
+        }
 
         override fun registerCallback(cb: INekoBoxServiceCallback, id: Int) {
             if (id == NekoBoxConnection.CONNECTION_ID_RESTART_BG) {
@@ -508,7 +518,6 @@ class BaseService {
             data.locationSpoofing?.stop()
             DataStore.baseService = null
             DataStore.vpnService = null
-            DataStore.mixedInboundAuthed = false
 
             // Kill switch: a restart or a failure (every stop that carries a message) keeps the VPN
             // interface up so nothing leaks while the core is down. An explicit stop releases it.

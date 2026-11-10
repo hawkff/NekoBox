@@ -19,6 +19,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.SubscriptionFilterMode
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.bg.SubscriptionUpdater
+import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.database.*
 import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.KryoConverters
@@ -418,7 +419,7 @@ object RawUpdater : GroupUpdater() {
         val client = Libcore.newHttpClient()
         try {
             timeoutMillis?.let { client.setTimeoutMs(it.toInt()) }
-            client.trySocks5(DataStore.mixedPort, DataStore.mixedInboundUser, DataStore.mixedInboundPass)
+            client.throughRunningProxy()
             client.tryH3Direct()
             if (DataStore.appTLSVersion == "1.3") client.restrictedTLS()
             val response = client.newRequest().apply {

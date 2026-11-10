@@ -1,10 +1,14 @@
 package xyz.nekobyte.nekobox.aidl;
 
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback;
+import xyz.nekobyte.nekobox.aidl.LocalProxy;
 
 interface INekoBoxService {
   int getState();
   String getProfileName();
+  // The local mixed inbound of the connected service, for the app's own requests; null while
+  // the service is not connected or runs a config without that inbound.
+  @nullable LocalProxy getLocalProxy();
 
   void registerCallback(in INekoBoxServiceCallback cb, int id);
   oneway void unregisterCallback(in INekoBoxServiceCallback cb);

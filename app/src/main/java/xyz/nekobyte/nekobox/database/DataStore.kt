@@ -51,9 +51,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     @Volatile
     var serviceState = BaseService.State.Idle
 
-    @Volatile
-    var mixedInboundAuthed: Boolean = false
-
     val configurationStore = RoomPreferenceDataStore(
         PublicDatabase.kvPairDao,
         cached = true,
@@ -389,14 +386,13 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     // hopefully hashCode = mHandle doesn't change, currently this is true from KitKat to Nougat
     private val userIndex by lazy { Binder.getCallingUserHandle().hashCode() }
-    val mixedSecret: String get() = storedSecret(Key.MIXED_SECRET)
 
     // Credential handed to other devices when the connection is shared. Regenerating it revokes
-    // their access on the next reload while the app's own loopback user stays valid.
+    // their access on the next reload. The app's own loopback user has a secret of each config.
     val shareSecret: String get() = storedSecret(Key.SHARE_SECRET)
     fun regenerateShareSecret() = configurationStore.putString(Key.SHARE_SECRET, newSecret())
 
-    private fun newSecret() = java.util.UUID.randomUUID().toString().replace("-", "")
+    fun newSecret() = java.util.UUID.randomUUID().toString().replace("-", "")
 
     @Synchronized
     private fun storedSecret(key: String): String {
@@ -437,9 +433,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     // Authenticate the loopback mixed inbound in Proxy service mode (issue #1197).
     var proxyModeInboundAuth by configurationStore.boolean(Key.PROXY_MODE_INBOUND_AUTH)
-
-    val mixedInboundUser: String get() = if (mixedInboundAuthed) Key.MIXED_USERNAME else ""
-    val mixedInboundPass: String get() = if (mixedInboundAuthed) mixedSecret else ""
 
     fun initGlobal() {
         if (configurationStore.getString(Key.MIXED_PORT) == null) {

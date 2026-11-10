@@ -18,10 +18,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.bg.NekoBoxConnection
+import xyz.nekobyte.nekobox.bg.through
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.databinding.ItemCheckMoreBinding
 import xyz.nekobyte.nekobox.databinding.ItemCheckResultBinding
@@ -48,8 +49,7 @@ class ConnectionCheckActivity : ThemedActivity() {
     private var check: Job? = null
     private var lookup: Job? = null
 
-    // The client and address of the last check, for the proxycheck.io lookup on request.
-    private var lookupClient: OkHttpClient? = null
+    // The address of the last check, for the proxycheck.io lookup on request.
     private var lookupAddress: String? = null
 
     // The path the label and any results on screen belong to.
@@ -117,21 +117,21 @@ class ConnectionCheckActivity : ThemedActivity() {
     }
 
     // This app stays inside the VPN, so its requests and lookups take the path other apps take. In
-    // proxy mode only apps set to use the local proxy go through NekoBox, so the check does too.
-    private fun client(path: Path) = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .callTimeout(30, TimeUnit.SECONDS)
-        .apply {
-            if (path != Path.PROXY) return@apply
-            proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress("127.0.0.1", DataStore.mixedPort)))
-            // Only the service process knows whether the running inbound asks for credentials, so
-            // they are sent when it does: on its challenge, once.
-            proxyAuthenticator { _, response ->
-                response.request.takeIf { it.header("Proxy-Authorization") == null }?.newBuilder()
-                    ?.header("Proxy-Authorization", Credentials.basic(Key.MIXED_USERNAME, DataStore.mixedSecret))?.build()
+    // proxy mode only apps set to use the local proxy go through NekoBox, so the check does too:
+    // through the port the service says it listens on. A config that names none may still listen
+    // on the port in the settings, as a full custom config can; that gets no login. The client
+    // serves one check or one lookup: its login is that of the start it was set up in.
+    private suspend fun client(path: Path): OkHttpClient {
+        val local = if (path == Path.PROXY) NekoBoxConnection.ask(applicationContext) { it.localProxy } else null
+        return OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(30, TimeUnit.SECONDS)
+            .apply {
+                if (path != Path.PROXY) return@apply
+                if (local != null) through(local) else proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress("127.0.0.1", DataStore.mixedPort)))
             }
-        }
-        .build()
+            .build()
+    }
 
     private fun hideResults() {
         binding.connectionCheckFailure.isVisible = false
@@ -189,7 +189,6 @@ class ConnectionCheckActivity : ThemedActivity() {
                         followPath()
                         return@coroutineScope
                     }
-                    lookupClient = client
                     lookupAddress = public.firstOrNull()?.ip
                     rows(path, ipv4.await(), ipv6.await(), udp.await(), udpNetwork, matches, validation, tls)
                 }
@@ -316,13 +315,13 @@ class ConnectionCheckActivity : ThemedActivity() {
     // Sends the address to proxycheck.io through the same path as the check.
     private fun lookUp() {
         if (!followPath()) return
-        val client = lookupClient ?: return
+        val path = path()
         val address = lookupAddress ?: return
         binding.connectionCheckProxycheck.isEnabled = false
         lookup?.cancel()
         lookup = lifecycleScope.launch {
             try {
-                val result = AddressReputation.proxycheck(client, address)
+                val result = AddressReputation.proxycheck(client(path), address)
                 val flags = listOfNotNull(
                     R.string.connection_check_flag_vpn.takeIf { result.vpn },
                     R.string.connection_check_flag_proxy.takeIf { result.proxy },

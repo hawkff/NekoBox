@@ -8,6 +8,7 @@ import org.json.JSONException
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.SubscriptionFilterMode
+import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -79,7 +80,7 @@ object MullvadRelays {
         val client = Libcore.newHttpClient()
         try {
             client.modernTLS()
-            client.trySocks5(DataStore.mixedPort, DataStore.mixedInboundUser, DataStore.mixedInboundPass)
+            client.throughRunningProxy()
             return client.newRequest().apply { setURL(URL) }.execute().getContentStringLimited(MAX_BYTES)
         } finally {
             client.close()
