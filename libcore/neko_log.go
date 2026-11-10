@@ -1,7 +1,6 @@
 package libcore
 
 import (
-	"io"
 	"log"
 	"os"
 	"sync"
@@ -10,10 +9,13 @@ import (
 )
 
 // nekoLog is cache/neko.log. The UI and :bg processes of the app append to it concurrently,
-// so the startup trim, every write and NekoLogClear run under lockLog. Until setupLog runs,
-// and when opening the file fails, messages go to stderr instead.
+// so the trims, every write of the logger and NekoLogClear run under lockLog. What is written
+// straight to stderr, which setupLog points at the same file, takes no lock and starts no trim:
+// the next write of the logger looks at the size of the whole file. Until setupLog runs, and
+// when opening the file fails, messages go to stderr instead.
 var (
 	nekoLog        *os.File
+	nekoLogMax     int
 	nekoLogAccess  sync.Mutex
 	nekoLogDisable bool
 )
@@ -32,7 +34,8 @@ func lockLog(f *os.File) func() {
 }
 
 // setupLog opens path for append, keeps only its last maxSize bytes when trim is set, and
-// routes the standard logger and stderr (Go runtime panics) into it.
+// routes the standard logger and stderr (Go runtime panics) into it. Later writes of the
+// logger cut the file back to maxSize once it is longer than twice that.
 func setupLog(maxSize int, path string, trim bool) error {
 	if nekoLog != nil {
 		return nil
@@ -46,6 +49,7 @@ func setupLog(maxSize int, path string, trim bool) error {
 	}
 	unix.Dup2(int(f.Fd()), int(os.Stderr.Fd()))
 	nekoLog = f
+	nekoLogMax = maxSize
 	log.SetFlags(log.LstdFlags | log.LUTC)
 	log.SetOutput(nekoLogWriter{})
 	return nil
@@ -54,15 +58,26 @@ func setupLog(maxSize int, path string, trim bool) error {
 // keepLogTail drops everything but the last maxSize bytes of f.
 func keepLogTail(f *os.File, maxSize int) {
 	defer lockLog(f)()
-	size, err := f.Seek(0, io.SeekEnd)
-	if err != nil || size <= int64(maxSize) {
+	cutLog(f, maxSize, maxSize)
+}
+
+// cutLog drops everything but the last keep bytes of f once f is longer than limit. The
+// caller holds lockLog. The tail is read at its place and not from the file's offset: stderr
+// shares that offset once setupLog has run, and every line printed there moves it to the end.
+// shortcut: what stderr prints between the read of the tail and the truncation is lost, and
+// the Logs screen, the problem report and the API read the file without the lock, so a read
+// between the truncation and the rewrite comes back short; give stderr a file of its own and
+// read through the core under lockLog if either is ever seen.
+func cutLog(f *os.File, limit, keep int) {
+	info, err := f.Stat()
+	if err != nil || info.Size() <= int64(limit) {
 		return
 	}
-	if _, err := f.Seek(-int64(maxSize), io.SeekEnd); err != nil {
+	tail := make([]byte, keep)
+	if _, err := f.ReadAt(tail, info.Size()-int64(keep)); err != nil {
 		return
 	}
-	tail, err := io.ReadAll(f)
-	if err != nil || f.Truncate(0) != nil {
+	if f.Truncate(0) != nil {
 		return
 	}
 	f.Write(tail)
@@ -78,5 +93,9 @@ func (nekoLogWriter) Write(p []byte) (int, error) {
 		return os.Stderr.Write(p)
 	}
 	defer lockLog(nekoLog)()
-	return nekoLog.Write(p)
+	n, err := nekoLog.Write(p)
+	// A service that runs for weeks would grow the file without end. It is cut back to the
+	// limit once it is longer than twice that, so a full log is not rewritten on every line.
+	cutLog(nekoLog, 2*nekoLogMax, nekoLogMax)
+	return n, err
 }
