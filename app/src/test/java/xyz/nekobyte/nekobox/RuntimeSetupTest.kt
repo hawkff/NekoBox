@@ -2,7 +2,9 @@ package xyz.nekobyte.nekobox
 
 import android.app.Application
 import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Network
 import android.os.Build
 import kotlinx.coroutines.runBlocking
@@ -51,6 +53,18 @@ class RuntimeSetupTest {
         // The automation watcher is silent but stays visible.
         assertEquals(NotificationManager.IMPORTANCE_LOW, channels.getValue(AUTOMATION_NOTIFICATION_CHANNEL).importance)
         assertEquals(NekoBox.application.getString(R.string.service_vpn), channels.getValue("service-vpn").name)
+    }
+
+    // Only WorkManager's default process schedules work again after a reboot or a force stop, and the system starts
+    // WorkManager in the process of its job service.
+    @Test
+    fun workManagersDefaultProcessIsTheOneItsJobServiceRunsIn() {
+        val context = RuntimeEnvironment.getApplication()
+        val jobService = ComponentName(context, "androidx.work.impl.background.systemjob.SystemJobService")
+        assertEquals(
+            context.packageManager.getServiceInfo(jobService, PackageManager.MATCH_DISABLED_COMPONENTS).processName,
+            NekoBox().workManagerConfiguration.defaultProcessName,
+        )
     }
 
     @Test

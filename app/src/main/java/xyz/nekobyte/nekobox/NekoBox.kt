@@ -15,6 +15,7 @@ import android.os.StrictMode
 import android.os.UserManager
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
+import androidx.work.WorkManager
 import go.Seq
 import kotlinx.coroutines.DEBUG_PROPERTY_NAME
 import kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON
@@ -117,6 +118,8 @@ class NekoBox :
             runOnDefaultDispatcher {
                 DefaultNetworkListener.start(this) { underlyingNetwork = it }
                 migratePinnedProfileShortcuts(this@NekoBox)
+                // WorkManager schedules lost work again as it starts: a force stop cancels the subscription update's job.
+                WorkManager.getInstance(this@NekoBox)
             }
         }
 
@@ -148,9 +151,11 @@ class NekoBox :
         updateNotificationChannels()
     }
 
+    // The default process is the one that schedules work again after a reboot or a force stop: the main process, where
+    // the manifest leaves WorkManager's services and receivers.
     override val workManagerConfiguration: WorkConfiguration
         get() = WorkConfiguration.Builder()
-            .setDefaultProcessName("${BuildConfig.APPLICATION_ID}:bg")
+            .setDefaultProcessName(BuildConfig.APPLICATION_ID)
             .build()
 
     override fun onTrimMemory(level: Int) {
