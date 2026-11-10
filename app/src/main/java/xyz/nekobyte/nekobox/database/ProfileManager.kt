@@ -171,11 +171,6 @@ object ProfileManager {
         GroupManager.postReload(groupId)
     }
 
-    suspend fun updateProfile(profile: ProxyEntity) {
-        ProfileDatabase.proxyDao.updateProxy(profile)
-        iterator { onUpdated(profile, false) }
-    }
-
     suspend fun updateProfile(profiles: List<ProxyEntity>) {
         ProfileDatabase.proxyDao.updateProxy(profiles)
         profiles.forEach {

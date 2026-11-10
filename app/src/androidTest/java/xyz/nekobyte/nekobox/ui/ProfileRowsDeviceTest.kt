@@ -6,7 +6,9 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
+import android.view.View
 import android.widget.TextView
+import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
@@ -37,7 +39,7 @@ import xyz.nekobyte.nekobox.ui.profile.SocksSettingsActivity
 /**
  * What a profile's row and its editor do with what is stored: a move stores the new order alone, the Share menu copies
  * the stored profile's config, built off the main thread, a picker's row copies too and opens no editor, and an editor
- * reads its profile off the main thread.
+ * reads its profile off the main thread and saves its settings into the row as it is stored by then.
  */
 @RunWith(AndroidJUnit4::class)
 class ProfileRowsDeviceTest {
@@ -196,10 +198,35 @@ class ProfileRowsDeviceTest {
                 // The screen that asked for a profile is often an editor, and editors share one store for their fields.
                 assertNull(menu.findItem(R.id.action_edit))
                 assertNotNull(menu.findItem(R.id.action_share))
+                // A rebuilt picker puts a new list in place of the one that asked, so it starts no export that waits for a file.
+                val shared = holder.shareMenu(holder.view, holder.entity.id)!!.menu
+                assertNull(shared.findItem(R.id.action_config_export_file))
+                assertNotNull(shared.findItem(R.id.action_config_export_clipboard))
                 share(holder, R.id.action_standard_clipboard)
             }
             assertEquals(link, NekoBox.getClipboardText())
             awaitCopied(scenario)
+        }
+    }
+
+    // The editor's copy of the row is as old as the editor: what was stored while it was open stays.
+    @Test
+    fun anEditorsSave_keepsTheTrafficStoredWhileItWasOpen() {
+        val opened = profile(names[0])
+        val edit = Intent(context, SocksSettingsActivity::class.java).putExtra(ProfileSettingsActivity.EXTRA_PROFILE_ID, opened.id)
+        ActivityScenario.launch<SocksSettingsActivity>(edit).use { scenario ->
+            // The editor shows its fields once it has read its copy of the row.
+            await("the editor's fields") {
+                var shown = false
+                scenario.onActivity { shown = it.supportFragmentManager.findFragmentById(R.id.settings)?.view != null }
+                shown
+            }
+            ProfileDatabase.proxyDao.addLifetimeTraffic(opened.id, 100, 200)
+            DataStore.serverAddress = "198.51.100.9"
+            scenario.onActivity { it.findViewById<View>(R.id.action_apply).performClick() }
+            await("the save") { ProfileDatabase.proxyDao.getById(opened.id)!!.requireBean().serverAddress == "198.51.100.9" }
+            val saved = ProfileDatabase.proxyDao.getById(opened.id)!!
+            assertEquals(100L to 200L, saved.lifetimeRx to saved.lifetimeTx)
         }
     }
 
@@ -213,10 +240,16 @@ class ProfileRowsDeviceTest {
         val stored = profile(names[0])
         val edit = Intent(context, SocksSettingsActivity::class.java).putExtra(ProfileSettingsActivity.EXTRA_PROFILE_ID, stored.id)
         ActivityScenario.launch<SocksSettingsActivity>(edit).use { scenario ->
-            settle()
+            // The menu items that act on the stored profile show once it has been read.
+            fun awaitItsMenu() = await("the editor's menu") {
+                var shown = false
+                scenario.onActivity { shown = it.findViewById<Toolbar>(R.id.toolbar).menu.findItem(R.id.action_custom_config_json)?.isVisible == true }
+                shown
+            }
+            awaitItsMenu()
             // A recreated editor reads it again, before a menu asks for it on the main thread.
             scenario.recreate()
-            settle()
+            awaitItsMenu()
             scenario.onActivity { assertEquals(stored.id, it.proxyEntity?.id) }
         }
     }

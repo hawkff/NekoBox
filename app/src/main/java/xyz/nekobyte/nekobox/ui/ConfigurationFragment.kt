@@ -2099,29 +2099,23 @@ open class ConfigurationFragment @JvmOverloads constructor(
     }
 
     // The file takes the profile as it is stored now: only its id waits for the picker, apart from the editors' draft
-    // fields and small enough to keep when the screen is rebuilt meanwhile.
+    // fields and small enough to keep when the screen is rebuilt meanwhile. The screen can be left while the file is
+    // written, so the write asks nothing of it, and only a screen still there says how it went.
     private val exportConfig =
         registerForActivityResult(ActivityResultContracts.CreateDocument()) { data ->
             val profileId = exportingProfile
             exportingProfile = 0L
             if (data != null) {
                 runOnDefaultDispatcher {
-                    try {
+                    val failure = try {
                         val config = ProfileManager.getProfile(profileId)?.exportConfig()?.first ?: error(app.getString(R.string.action_export_err))
-                        requireActivity().contentResolver.openOutputStream(data)!!
-                            .bufferedWriter()
-                            .use {
-                                it.write(config)
-                            }
-                        onMainDispatcher {
-                            snackbar(getString(R.string.action_export_msg)).show()
-                        }
+                        app.contentResolver.openOutputStream(data)!!.bufferedWriter().use { it.write(config) }
+                        null
                     } catch (e: Exception) {
                         Logs.w(e)
-                        onMainDispatcher {
-                            snackbar(e.readableMessage).show()
-                        }
+                        e.readableMessage
                     }
+                    onMainDispatcher { if (isAdded) snackbar(failure ?: getString(R.string.action_export_msg)).show() }
                 }
             }
         }

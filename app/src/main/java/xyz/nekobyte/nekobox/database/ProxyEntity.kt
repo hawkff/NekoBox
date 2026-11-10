@@ -430,6 +430,18 @@ data class ProxyEntity(
         @Transaction
         fun updateProxy(proxies: List<ProxyEntity>): Int = proxies.sumOf { updateProxy(it) }
 
+        // An editor holds the row as it was read when it opened. Its save puts the edited settings into the row as stored
+        // now, so the traffic and the test result stored meanwhile stay. Null when the row is gone.
+        @Transaction
+        fun updateBean(id: Long, bean: AbstractBean): ProxyEntity? {
+            val stored = getById(id) ?: return null
+            updateProxy(stored.putBean(bean))
+            return stored
+        }
+
+        @Query("UPDATE proxy_entities SET groupId = :groupId WHERE id = :id")
+        fun updateGroup(id: Long, groupId: Long): Int
+
         @Query("UPDATE proxy_entities SET tailscaleBean = :bean WHERE id = :id AND type = 28 AND uuid = :identity")
         fun updateTailscaleBean(id: Long, identity: String, bean: TailscaleBean): Int
 

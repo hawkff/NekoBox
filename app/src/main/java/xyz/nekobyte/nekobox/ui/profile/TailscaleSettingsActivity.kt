@@ -377,8 +377,10 @@ class TailscaleSettingsActivity :
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val marker = resetTailscaleIdentity(profileId)
+                // Read here if nothing has read it yet: the main thread must not.
+                val stored = proxyEntity
                 onMainDispatcher {
-                    proxyEntity?.uuid = marker
+                    stored?.uuid = marker
                     baseline = baseline?.copy(identity = marker)
                     Toast.makeText(this@TailscaleSettingsActivity, R.string.tailscale_reset_identity_done, Toast.LENGTH_SHORT).show()
                 }

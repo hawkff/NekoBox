@@ -1610,6 +1610,9 @@ class ConfigurationGroupFragment : Fragment() {
                 popup.menu.removeItem(R.id.action_config_export_clipboard)
                 popup.menu.removeItem(R.id.action_config_export_file)
             }
+            // A picker copies and shows codes. Rebuilt by Android, it puts a new list in place of the one that asked, so a
+            // file picker's answer would find nobody waiting for it.
+            if (select) popup.menu.findItem(R.id.action_group_configuration).subMenu?.removeItem(R.id.action_config_export_file)
             popup.setOnMenuItemClickListener { handleShareMenu(it, profileId) }
             return popup
         }

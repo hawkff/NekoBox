@@ -94,9 +94,10 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
     abstract fun T.init()
     abstract fun T.serialize()
 
-    // The stored profile; a new one has none. onCreate reads it off the main thread, so the menus that ask for it
-    // there get what was read.
-    val proxyEntity by lazy { DataStore.editingId.takeIf { it != 0L }?.let { ProfileDatabase.proxyDao.getById(it) } }
+    // The stored profile; a new one has none. onCreate reads it off the main thread, and the menu items that ask for
+    // it on the main thread show once it has been read.
+    private val storedProfile = lazy { DataStore.editingId.takeIf { it != 0L }?.let { ProfileDatabase.proxyDao.getById(it) } }
+    val proxyEntity by storedProfile
     protected var isSubscription by Delegates.notNull<Boolean>()
     private var canMoveToOtherBasicGroup = false
     private var moveTargetGroups: List<ProxyGroup> = emptyList()
@@ -164,7 +165,10 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             }
         } else {
             // A recreated editor keeps its fields; only the stored profile is read again.
-            runOnDefaultDispatcher { proxyEntity }
+            runOnDefaultDispatcher {
+                proxyEntity
+                onMainDispatcher { invalidateOptionsMenu() }
+            }
         }
     }
 
@@ -184,7 +188,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
             }
             // Where it left from was measured with the old settings.
             DataStore.forgetProxyExits(listOf(proxyEntity!!.id))
-            ProfileManager.updateProfile(proxyEntity!!.apply { (requireBean() as T).serialize() })
+            // The stored row takes the edited settings and keeps the rest: the editor's copy is as old as the editor.
+            val edited = (proxyEntity!!.requireBean() as T).apply { serialize() }
+            ProfileDatabase.proxyDao.updateBean(proxyEntity!!.id, edited)?.let { ProfileManager.postUpdate(it) }
         }
         finish()
     }
@@ -193,17 +199,18 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.profile_config_menu, menu)
+        val read = DataStore.editingId == 0L || storedProfile.isInitialized()
         menu.findItem(R.id.action_move)?.apply {
-            isVisible = DataStore.editingId != 0L && canMoveToOtherBasicGroup
+            isVisible = read && DataStore.editingId != 0L && canMoveToOtherBasicGroup
         }
         menu.findItem(R.id.action_create_shortcut)?.apply {
             if (Build.VERSION.SDK_INT >= 26 && DataStore.editingId != 0L) {
-                isVisible = true // not new profile
+                isVisible = read // not new profile
             }
         }
         // shared menu item
-        menu.findItem(R.id.action_custom_outbound_json)?.isVisible = true
-        menu.findItem(R.id.action_custom_config_json)?.isVisible = true
+        menu.findItem(R.id.action_custom_outbound_json)?.isVisible = read
+        menu.findItem(R.id.action_custom_config_json)?.isVisible = read
         return true
     }
 
@@ -376,7 +383,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                             runOnDefaultDispatcher {
                                 val oldGroupId = ent.groupId
                                 ent.groupId = group.id
-                                ProfileManager.updateProfile(ent)
+                                // Only the group is stored: the editor's copy of the row is as old as the editor.
+                                ProfileDatabase.proxyDao.updateGroup(ent.id, group.id)
+                                ProfileManager.postUpdate(ent)
                                 GroupManager.postUpdate(oldGroupId) // reload
                                 GroupManager.postUpdate(group.id)
                                 DataStore.editingGroup = group.id // post switch animation
