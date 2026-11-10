@@ -164,6 +164,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
     private companion object {
         const val KEY_EXIT_PROXY_BASE = "exitProxyBase"
         const val KEY_THROUGH_LIST = "throughList"
+        const val KEY_EXPORTING_PROFILE = "exportingProfile"
 
         // What a checked proxy's connection reports about itself, its address among it.
         const val EXIT_TRACE = "https://www.cloudflare.com/cdn-cgi/trace"
@@ -539,6 +540,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
         if (savedInstanceState != null) {
             exitProxyBaseId = savedInstanceState.getLong(KEY_EXIT_PROXY_BASE, 0L)
             throughListId = savedInstanceState.getLong(KEY_THROUGH_LIST, 0L)
+            exportingProfile = savedInstanceState.getLong(KEY_EXPORTING_PROFILE, 0L)
             parentFragmentManager.beginTransaction()
                 .setReorderingAllowed(false)
                 .detach(this)
@@ -551,6 +553,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
         super.onSaveInstanceState(outState)
         outState.putLong(KEY_EXIT_PROXY_BASE, exitProxyBaseId)
         outState.putLong(KEY_THROUGH_LIST, throughListId)
+        outState.putLong(KEY_EXPORTING_PROFILE, exportingProfile)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -2082,27 +2085,37 @@ open class ConfigurationFragment @JvmOverloads constructor(
         }
     }
 
-    // internal (not private) so the extracted ConfigurationGroupFragment can pass this launcher
-    // to startFilesForResult via `parentFragment as ConfigurationFragment`.
-    internal val exportConfig =
+    /** The profile whose config waits for its file, from the file picker's launch to its answer; 0 when none does. */
+    internal var exportingProfile = 0L
+        private set
+
+    /**
+     * Asks where to save the config of [profileId] under [fileName]. One export waits for its file at a time, so the
+     * picker's answer is for that profile; a second one meanwhile fails with a message.
+     */
+    internal fun saveConfigAs(profileId: Long, fileName: String) {
+        if (exportingProfile != 0L) return snackbar(R.string.action_export_err).show()
+        if (startFilesForResult(exportConfig, fileName)) exportingProfile = profileId
+    }
+
+    // The file takes the profile as it is stored now: only its id waits for the picker, apart from the editors' draft
+    // fields and small enough to keep when the screen is rebuilt meanwhile. The screen can be left while the file is
+    // written, so the write asks nothing of it, and only a screen still there says how it went.
+    private val exportConfig =
         registerForActivityResult(ActivityResultContracts.CreateDocument()) { data ->
+            val profileId = exportingProfile
+            exportingProfile = 0L
             if (data != null) {
                 runOnDefaultDispatcher {
-                    try {
-                        (requireActivity() as MainActivity).contentResolver.openOutputStream(data)!!
-                            .bufferedWriter()
-                            .use {
-                                it.write(DataStore.serverConfig)
-                            }
-                        onMainDispatcher {
-                            snackbar(getString(R.string.action_export_msg)).show()
-                        }
+                    val failure = try {
+                        val config = ProfileManager.getProfile(profileId)?.exportConfig()?.first ?: error(app.getString(R.string.action_export_err))
+                        app.contentResolver.openOutputStream(data)!!.bufferedWriter().use { it.write(config) }
+                        null
                     } catch (e: Exception) {
                         Logs.w(e)
-                        onMainDispatcher {
-                            snackbar(e.readableMessage).show()
-                        }
+                        e.readableMessage
                     }
+                    onMainDispatcher { if (isAdded) snackbar(failure ?: getString(R.string.action_export_msg)).show() }
                 }
             }
         }

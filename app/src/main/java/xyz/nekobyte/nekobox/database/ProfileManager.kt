@@ -171,11 +171,6 @@ object ProfileManager {
         GroupManager.postReload(groupId)
     }
 
-    suspend fun updateProfile(profile: ProxyEntity) {
-        ProfileDatabase.proxyDao.updateProxy(profile)
-        iterator { onUpdated(profile, false) }
-    }
-
     suspend fun updateProfile(profiles: List<ProxyEntity>) {
         ProfileDatabase.proxyDao.updateProxy(profiles)
         profiles.forEach {
@@ -225,7 +220,7 @@ object ProfileManager {
         }
         iterator { onRemoved(groupId, profileId) }
         if (ProfileDatabase.proxyDao.countByGroup(groupId) > 1) {
-            GroupManager.rearrange(groupId)
+            ProfileDatabase.proxyDao.compactOrder(groupId)
         }
         pruneTailscaleState()
     }

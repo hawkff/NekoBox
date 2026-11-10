@@ -64,14 +64,6 @@ object GroupManager {
         iterator { groupUpdated(groupId) }
     }
 
-    fun rearrange(groupId: Long) {
-        val entities = ProfileDatabase.proxyDao.getByGroup(groupId)
-        for (index in entities.indices) {
-            entities[index].userOrder = (index + 1).toLong()
-        }
-        ProfileDatabase.proxyDao.updateProxy(entities)
-    }
-
     suspend fun postUpdate(group: ProxyGroup) {
         iterator { groupUpdated(group) }
     }

@@ -1,13 +1,22 @@
 package xyz.nekobyte.nekobox
 
+import com.esotericsoftware.kryo.io.ByteBufferOutput
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import xyz.nekobyte.nekobox.fmt.AbstractBean
 import xyz.nekobyte.nekobox.fmt.ArchivedBean
+import xyz.nekobyte.nekobox.fmt.KryoConverters
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 
 class DeduplicationTest {
 
@@ -83,6 +92,52 @@ class DeduplicationTest {
         assertTrue(values.add(wrap(http)))
     }
 
+    // Lists compare and hash the beans they show while another thread stores them: the comparison leaves the name out,
+    // and what is stored must not. The hash stops halfway through the bean here, and the bean is stored meanwhile.
+    @Test
+    fun aBeanStoredWhileItIsHashed_isStoredWhole() {
+        val bean = PausingBean().apply {
+            name = "kept"
+            initializeDefaultValues()
+        }
+        val whole = KryoConverters.serialize(bean)
+        val failure = AtomicReference<Throwable>()
+        val hashing = thread(start = false) {
+            try {
+                bean.hashCode()
+            } catch (e: Throwable) {
+                failure.set(e)
+            }
+        }
+        bean.pausing = hashing
+        hashing.start()
+        try {
+            assertTrue("the hash reached the bean's fields", bean.paused.await(30, TimeUnit.SECONDS))
+            assertArrayEquals(whole, KryoConverters.serialize(bean))
+        } finally {
+            bean.resume.countDown()
+            hashing.join()
+        }
+        assertNull(failure.get())
+    }
+
+    /** A bean whose fields take a while to write on the [pausing] thread: until [resume]. */
+    private class PausingBean : AbstractBean() {
+        var pausing: Thread? = null
+        val paused = CountDownLatch(1)
+        val resume = CountDownLatch(1)
+
+        override fun serialize(output: ByteBufferOutput) {
+            super.serialize(output)
+            if (Thread.currentThread() === pausing) {
+                paused.countDown()
+                resume.await()
+            }
+        }
+
+        override fun clone() = this
+    }
+
     private fun socks(password: String) = SOCKSBean().apply {
         serverAddress = "192.0.2.10"
         serverPort = 1080
@@ -100,5 +155,5 @@ class DeduplicationTest {
         initializeDefaultValues()
     }
 
-    private fun wrap(bean: xyz.nekobyte.nekobox.fmt.AbstractBean) = Protocols.Deduplication(bean)
+    private fun wrap(bean: AbstractBean) = Protocols.Deduplication(bean)
 }

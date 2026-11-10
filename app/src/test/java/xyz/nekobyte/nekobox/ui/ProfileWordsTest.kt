@@ -90,7 +90,7 @@ class ProfileWordsTest {
         // A server given by name takes the country of the address a test or a connection resolved it to.
         DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.77"), learned = 1_700_000_000_000)
         assertEquals("🇩🇪 Germany", ProfileWords.country(named("Auto proxy-6", "node.example")))
-        // Each name keeps when it was learned; the next lookup replaces both.
+        // Each name keeps when it was learned; a lookup that finds another address replaces both.
         val stored = JSONObject(DataStore.configurationStore.getString(Key.SERVER_ADDRESSES)!!).getJSONObject("node.example")
         assertEquals("192.0.2.77" to 1_700_000_000_000L, stored.getString("address") to stored.getLong("learned"))
         // A replaced database answers again for every known address, not only the one asked about.
