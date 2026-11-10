@@ -36,6 +36,11 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
     override fun launch() {
         box.setAsMain()
         super.launch() // start box
+        // The core keeps the server a group was last switched to as it ran, and starts with that one again. This
+        // start is for the profile it was given.
+        // shortcut: a connection the core takes before this line goes through the kept server for as long as it
+        // lasts, and the core has no setting to start without what it kept; give its selector one if that matters.
+        if (config.selectorGroupId >= 0L) config.profileTagMap[config.mainEntId]?.let { box.selectOutbound(it) }
         // ponytail: fixed cap; make it a setting if anyone needs a longer history.
         box.setConnectionHistory(if (DataStore.connectionDiagnostics) 300 else 0)
         // Assign the looper synchronously so close() always observes it (no
