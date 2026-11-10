@@ -47,7 +47,10 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
         // shortcut: a connection the core takes before this line goes through the kept server for as long as it
         // lasts, and the core has no setting to start without what it kept; give its selector one if that matters.
         if (config.selectorGroupId >= 0L) config.profileTagMap[config.mainEntId]?.let { box.selectOutbound(it) }
-        portListener = config.localProxy?.let { Libcore.findPortListener(it.port) }
+        portListener = config.localProxy?.let { local ->
+            // Without it the service reports no local port, and the app's own requests go out without the proxy.
+            Libcore.findPortListener(local.port).also { if (it == null) Logs.w("No listener of this start was found on local port ${local.port}") }
+        }
         // ponytail: fixed cap; make it a setting if anyone needs a longer history.
         box.setConnectionHistory(if (DataStore.connectionDiagnostics) 300 else 0)
         // Assign the looper synchronously so close() always observes it (no
