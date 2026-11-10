@@ -2,6 +2,9 @@ package xyz.nekobyte.nekobox.group
 
 import kotlinx.coroutines.*
 import xyz.nekobyte.nekobox.*
+import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.bg.NekoBoxConnection
+import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.bg.SubscriptionUpdater
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
@@ -65,8 +68,10 @@ abstract class GroupUpdater {
                             val results = if (
                                 NekoBox.underlyingNetwork != null &&
                                 DataStore.enableFakeDns &&
-                                DataStore.serviceState.started &&
-                                DataStore.serviceMode == Key.MODE_VPN
+                                DataStore.serviceMode == Key.MODE_VPN &&
+                                // Asked of Android for every lookup: the VPN can come up while a long update is at
+                                // work, and of the service this process knows only what its last screen saw.
+                                NetworkAutomation.ownVpnCarriesThisApp()
                             ) {
                                 // FakeDNS
                                 NekoBox.underlyingNetwork!!
@@ -155,26 +160,21 @@ abstract class GroupUpdater {
                 GroupManager.postReload(proxyGroup.id)
 
                 val subscription = proxyGroup.subscription!!
-                val connected = DataStore.serviceState.connected
 
-                if (byUser && (
-                        subscription.link?.startsWith(
-                            "http://",
-                        ) == true || subscription.updateWhenConnectedOnly!!
-                        ) && !connected
-                ) {
-                    if (userInterface == null || !userInterface.confirm(
-                            app.getString(R.string.update_subscription_warning),
-                        )
-                    ) {
-                        finishUpdate(proxyGroup)
-                        return@coroutineScope true
+                var declined = false
+                val done = try {
+                    // An update by hand over plain HTTP, or of a subscription kept for when a proxy is connected,
+                    // asks first when none is. Whether one is, is asked of the service: the local API also starts
+                    // updates with no screen bound to it, and this process then knows only what its last screen
+                    // saw. An update cancelled while it asks gives the group up like any other.
+                    declined = byUser &&
+                        (subscription.link?.startsWith("http://") == true || subscription.updateWhenConnectedOnly!!) &&
+                        NekoBoxConnection.ask(app) { BaseService.State.values()[it.state].takeIf { state -> state.connected } } == null &&
+                        (userInterface == null || !userInterface.confirm(app.getString(R.string.update_subscription_warning)))
+                    if (!declined) {
+                        RawUpdater.doUpdate(proxyGroup, subscription, userInterface, byUser)
+                        SubscriptionUpdater.notifyExpiry(proxyGroup)
                     }
-                }
-
-                try {
-                    RawUpdater.doUpdate(proxyGroup, subscription, userInterface, byUser)
-                    SubscriptionUpdater.notifyExpiry(proxyGroup)
                     true
                 } catch (e: CancellationException) {
                     finishUpdate(proxyGroup)
@@ -185,6 +185,9 @@ abstract class GroupUpdater {
                     finishUpdate(proxyGroup)
                     false
                 }
+                // Out here it runs once: in there, a failure to tell the lists would have it run again.
+                if (declined) finishUpdate(proxyGroup)
+                done
             }
         }
 

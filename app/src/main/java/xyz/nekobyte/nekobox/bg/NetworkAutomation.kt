@@ -337,6 +337,16 @@ object NetworkAutomation {
         return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && capabilities.ownerUid != Process.myUid()
     }
 
+    /**
+     * This app's own VPN carries its traffic: the default network of this app is a VPN, and its own as far as
+     * Android tells. Before Android 11 it does not tell whose a VPN is, and any counts.
+     */
+    fun ownVpnCarriesThisApp(): Boolean {
+        val connectivity = NekoBox.connectivity
+        val capabilities = runCatching { connectivity.getNetworkCapabilities(connectivity.activeNetwork) }.getOrNull() ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && (Build.VERSION.SDK_INT < 30 || capabilities.ownerUid == Process.myUid())
+    }
+
     // ---- service process, main thread ----
 
     private val tracker = Tracker()

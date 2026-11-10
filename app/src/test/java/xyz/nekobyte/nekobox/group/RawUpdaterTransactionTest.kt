@@ -532,6 +532,27 @@ class RawUpdaterTransactionTest {
         }
     }
 
+    // An update by hand over plain HTTP asks before it goes out with no proxy. One that ends at that question
+    // gives the group up, so the next update of it runs.
+    @Test
+    fun anUpdateCancelledAtItsQuestion_givesTheGroupUp() = runTest {
+        withContext(Dispatchers.IO) {
+            subscription.link = "http://subscription.example/list"
+            val asked = CompletableDeferred<Unit>()
+            val stuck = object : GroupManager.Interface by RecordingInterface(confirm = false) {
+                override suspend fun confirm(message: String): Boolean {
+                    asked.complete(Unit)
+                    awaitCancellation()
+                }
+            }
+            val update = launch { GroupUpdater.executeUpdate(group, byUser = true, userInterface = stuck) }
+            asked.await()
+            assertTrue(group.id in GroupUpdater.updating)
+            update.cancelAndJoin()
+            assertFalse(group.id in GroupUpdater.updating)
+        }
+    }
+
     @Test
     fun aWarningNobodyDismisses_neverHoldsTheUpdateOrTheNextOne() = runTest {
         withContext(Dispatchers.IO) {

@@ -189,8 +189,8 @@ class OwnRequestsDeviceTest {
         input.readUnsignedByte()
     }
 
-    private fun updateTheSubscription(watching: GroupManager.Interface? = null) = runBlocking(Dispatchers.IO) {
-        GroupUpdater.executeUpdate(ProfileDatabase.groupDao.getById(subscription)!!, byUser = false, userInterface = watching)
+    private fun updateTheSubscription(watching: GroupManager.Interface? = null, byUser: Boolean = false) = runBlocking(Dispatchers.IO) {
+        GroupUpdater.executeUpdate(ProfileDatabase.groupDao.getById(subscription)!!, byUser = byUser, userInterface = watching)
     }
 
     @Test
@@ -215,6 +215,24 @@ class OwnRequestsDeviceTest {
         // The proxy's server was asked for the subscription's address: the request went in through the local port.
         assertTrue("asked for ${upstream.asked}", "own-requests.invalid:80" in upstream.asked)
         assertEquals(listOf("Berlin"), ProfileDatabase.proxyDao.getByGroup(subscription).map { it.displayName() })
+    }
+
+    // An update by hand over plain HTTP asks first when no proxy is connected. Whether one is, is asked of the
+    // service: this process remembers what its last screen saw, and the local API starts updates long after that.
+    @Test
+    fun anUpdateByHand_asksBeforeItGoesOutWithNoProxy_whateverTheLastScreenSaw() {
+        // A screen saw the proxy connected and left; the proxy has stopped since.
+        DataStore.serviceState = BaseService.State.Connected
+        var asked = 0
+        val watching = object : GroupManager.Interface {
+            override suspend fun confirm(message: String) = false.also { asked++ }
+            override suspend fun alert(message: String) = Unit
+            override suspend fun onUpdateSuccess(group: ProxyGroup, changed: Int, added: List<String>, updated: Map<String, String>, deleted: List<String>, duplicate: List<String>, byUser: Boolean) = Unit
+            override suspend fun onUpdateFailure(group: ProxyGroup, message: String) = Unit
+        }
+        assertTrue("the update went out and failed", updateTheSubscription(watching, byUser = true))
+        assertEquals("the update did not ask", 1, asked)
+        assertTrue(upstream.asked.isEmpty())
     }
 
     @Test

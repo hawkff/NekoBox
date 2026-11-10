@@ -405,6 +405,27 @@ class NetworkAutomationLifecycleTest {
         }
     }
 
+    // A subscription's server names are looked up around this app's VPN while FakeDNS answers there. Whether that
+    // VPN carries the app is read from the default network at that moment, not from what a screen last saw.
+    @Test
+    fun thisAppsVpnAsItsDefaultNetworkIsToldFromAnother() {
+        assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
+        activeVpn(owner = Process.myUid())
+        assertTrue(NetworkAutomation.ownVpnCarriesThisApp())
+        activeVpn(owner = Process.INVALID_UID)
+        assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
+    }
+
+    // Before Android 11 the owner is not revealed: a VPN as the default network counts as this app's.
+    @Test
+    @Config(sdk = [28])
+    fun beforeAndroid11AnyVpnAsTheDefaultNetworkCountsAsThisApps() {
+        assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
+        manager.setActiveNetworkInfo(vpnInfo())
+        manager.setNetworkCapabilities(NekoBox.connectivity.activeNetwork, capabilities(NetworkCapabilities.TRANSPORT_VPN))
+        assertTrue(NetworkAutomation.ownVpnCarriesThisApp())
+    }
+
     // Before Android 11 the owner is not revealed, so any VPN counts.
     @Test
     @Config(sdk = [28])
