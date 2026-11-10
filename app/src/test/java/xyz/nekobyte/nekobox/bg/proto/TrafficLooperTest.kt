@@ -8,6 +8,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.withLock
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,6 +24,7 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
+import xyz.nekobyte.nekobox.fmt.TAG_PROXY
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.Logs
 import java.lang.reflect.Proxy
@@ -187,6 +190,25 @@ class TrafficLooperTest {
         carried(used, 7, 9)
         looper.stop()
         assertEquals(listOf(7L, 9L, 57L, 89L), stored(used))
+    }
+
+    // In a group that picks its server the profiles of a path share its tag, and only the picked profile counts.
+    @Test
+    fun inAGroupThatPicksItsServer_theSpeedIsReadFromThePickedProfile() = test {
+        looper = TrafficLooper(data, CoroutineScope(Dispatchers.IO))
+        data.proxy = ProxyInstance(used, service).also { it.looper = looper }
+        // The picked server's path lists another profile last, as a chain of only that server does.
+        val config = ConfigBuildResult("", emptyList(), used.id, mapOf("used" to listOf(used, idle)), mapOf(used.id to "used", idle.id to "idle-alias"), group)
+        data.traffic.withLock { looper.begin(config) }
+
+        val picked = looper.idMap.getValue(used.id)
+        assertSame(picked, looper.tagMap.getValue("used"))
+        assertEquals(TAG_PROXY to false, picked.tag to picked.ignore)
+        assertTrue(looper.idMap.getValue(idle.id).ignore)
+        carried(used, 5, 7)
+        looper.stop()
+        assertEquals(listOf(1_005L, 2_007L, 5L, 7L), stored(used))
+        assertEquals(listOf(30L, 40L, 0L, 0L), stored(idle))
     }
 
     // A store at shutdown that was on its way when the service stopped comes after the last one.

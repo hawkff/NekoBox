@@ -40,7 +40,7 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 		}
 	}
 	externalAssetsPath = unpacked
-	count, routing := 0, 0
+	count, routing, selector := 0, 0, 0
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -49,8 +49,11 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 			return nil
 		}
 		count++
-		if filepath.Base(filepath.Dir(path)) == "routing" {
+		switch filepath.Base(filepath.Dir(path)) {
+		case "routing":
 			routing++
+		case "selector":
+			selector++
 		}
 		t.Run(filepath.Base(path), func(t *testing.T) {
 			// Endpoints create their state directories relative to the working directory.
@@ -181,6 +184,10 @@ func TestGeneratedApplicationConfigs(t *testing.T) {
 	}
 	if routing == 0 {
 		t.Fatal("no generated routing configurations")
+	}
+	// Groups that pick their server, with profiles that share an outbound: the core has to take their tags.
+	if selector < 4 {
+		t.Fatalf("%d generated configurations of groups that pick their server, want 4", selector)
 	}
 	t.Logf("validated %d application configurations", count)
 }

@@ -26,6 +26,7 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ui.MainActivity
 import java.util.concurrent.CopyOnWriteArrayList
@@ -248,5 +249,41 @@ class TrafficDeviceTest {
             await("the service to stop again") { states.lastOrNull() == BaseService.State.Stopped }
             assertEquals("the server switched to earlier counted for this start", idleBefore, stored(idle).let { it.rx to it.tx })
         }
+    }
+
+    // A chain of one server is that server's outbound under another name: the group runs with both, and a switch to
+    // the chain is one the service makes as it runs, after which the chain is what counts.
+    @Test
+    fun aChainOfOneServer_runsInTheGroupNextToThatServer() {
+        val chain = runBlocking(Dispatchers.IO) {
+            ProfileManager.createProfile(
+                group,
+                ChainBean().apply {
+                    name = "Traffic chain"
+                    proxies = listOf(used)
+                },
+            ).id
+        }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            NekoBox.startService(byUser = false)
+            await("the proxy to connect") { states.lastOrNull() == BaseService.State.Connected }
+            // The service starts counting a moment after it reports itself connected.
+            await("the server's traffic") {
+                request()
+                rounds.any { round -> round.any { it.id == used && it.rx > 1_000 } }
+            }
+
+            val reported = states.size
+            NekoBox.reloadService(chain)
+            await("the chain to be what counts") {
+                request()
+                rounds.last().any { it.id == chain && it.rx > 0 && it.tx > 0 }
+            }
+            assertEquals("the service changed state for the switch", emptyList<BaseService.State>(), states.drop(reported))
+
+            NekoBox.stopService(byUser = false)
+            await("the service to stop") { DataStore.serviceState == BaseService.State.Stopped }
+        }
+        assertTrue(stored(chain).rx > 0 && stored(chain).tx > 0)
     }
 }

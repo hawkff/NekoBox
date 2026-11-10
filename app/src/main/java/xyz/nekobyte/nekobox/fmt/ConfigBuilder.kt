@@ -996,11 +996,40 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             }
         }
 
+        // A group that picks its server takes each tag once, and the app tells that group's members and the profiles
+        // of its rules apart by their tags. A chain of one hop is that hop's outbound, under that hop's tag. Of two
+        // profiles with one tag, one goes by an alias: a selector of its own with that outbound as its only choice.
+        // The suffix keeps an alias clear of the tags hops are given, which end in a number.
+        val tagHolders = HashMap<String, ProxyEntity>()
+
+        fun alias(profile: ProxyEntity, tag: String): String {
+            val alias = readableTag(profile.displayName() + "-alias", ChainBuildChanges())
+            tagHolders[alias] = profile
+            outbounds.add(
+                Outbound_SelectorOptions().apply {
+                    type = "selector"
+                    this.tag = alias
+                    this.outbounds = listOf(tag)
+                },
+            )
+            return alias
+        }
+
         // build outbounds
         if (buildSelector) {
             val list = ProfileDatabase.proxyDao.getByGroup(group.id).filter { it.canBuild() }
             list.forEach { member ->
-                buildChainOrSkip(member.id, member, true)?.let { tagMap[member.id] = it }
+                val tag = buildChainOrSkip(member.id, member, true) ?: return@forEach
+                val holder = tagHolders.put(tag, member)
+                tagMap[member.id] = when {
+                    holder == null -> tag
+
+                    // The server the outbound was built for keeps the tag, whichever of the two came first: a
+                    // lookup of that server's address reads the settings of the outbound it names.
+                    globalOutbounds[member.id] == tag -> tag.also { tagMap[holder.id] = alias(holder, tag) }
+
+                    else -> alias(member, tag).also { tagHolders[tag] = holder }
+                }
             }
             val memberTags = tagMap.values.toList()
             outbounds.add(
@@ -1030,7 +1059,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
         // build outbounds from route item
         extraProxies.forEach { (key, p) ->
-            if (key !in tagMap) buildChainOrSkip(key, p, false)?.let { tagMap[key] = it }
+            if (key !in tagMap) buildChainOrSkip(key, p, false)?.let { tagMap[key] = if (buildSelector && tagHolders.putIfAbsent(it, p) != null) alias(p, it) else it }
         }
 
         // Profile DNS for all queries follows the selected profile, which a selector can switch

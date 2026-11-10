@@ -28,7 +28,7 @@ class TrafficLooper(
     // What the running config's profiles counted, by profile and by tag. Read and changed only under data.traffic:
     // in a round of the loop, in a store and in a clear.
     internal val idMap = mutableMapOf<Long, TrafficUpdater.TrafficLooperData>() // id to 1 data
-    private val tagMap = mutableMapOf<String, TrafficUpdater.TrafficLooperData>() // tag to 1 data
+    internal val tagMap = mutableMapOf<String, TrafficUpdater.TrafficLooperData>() // tag to 1 data
 
     // for display
     private val itemBypass = TrafficUpdater.TrafficLooperData(tag = TAG_BYPASS)
@@ -124,26 +124,31 @@ class TrafficLooper(
         idMap[-1] = itemBypass
         val stored = ProfileDatabase.proxyDao.getTraffic().associateBy { it.id }
         val tags = hashSetOf(TAG_PROXY, TAG_BYPASS)
-        config.trafficMap.forEach { (tag, ents) ->
-            tags.add(tag)
-            for (ent in ents) {
-                val now = stored[ent.id]
-                val item = TrafficUpdater.TrafficLooperData(
-                    tag = tag,
-                    rx = now?.rx ?: 0,
-                    tx = now?.tx ?: 0,
-                    rxBase = now?.rx ?: 0,
-                    txBase = now?.tx ?: 0,
-                    ignore = config.selectorGroupId >= 0L,
-                )
-                idMap[ent.id] = item
-                // The last one listed stays: the profile the tag belongs to, which a switch of servers turns on.
-                tagMap[tag] = item
-                Logs.d("traffic count $tag to ${ent.id}")
-            }
+        tags += config.trafficMap.keys
+
+        fun count(id: Long, tag: String, ignore: Boolean) {
+            val now = stored[id]
+            val item = TrafficUpdater.TrafficLooperData(
+                tag = tag,
+                rx = now?.rx ?: 0,
+                tx = now?.tx ?: 0,
+                rxBase = now?.rx ?: 0,
+                txBase = now?.tx ?: 0,
+                ignore = ignore,
+            )
+            idMap[id] = item
+            // The last one listed stays: the profile the tag belongs to.
+            tagMap[tag] = item
+            Logs.d("traffic count $tag to $id")
         }
         if (config.selectorGroupId >= 0L) {
+            // In a group that picks its server only the picked profile counts, under the group's own tag. Each
+            // profile the config can pick has one item, known by the tag the config gave that profile alone; the
+            // hops of a path share tags and have none.
+            config.profileTagMap.forEach { (id, tag) -> count(id, tag, ignore = true) }
             applySelect(config.mainEntId)
+        } else {
+            config.trafficMap.forEach { (tag, ents) -> for (ent in ents) count(ent.id, tag, ignore = false) }
         }
         return tags
     }
