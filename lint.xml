@@ -21,6 +21,9 @@
          dependency gets a release, independent of the code. GradleDependency still
          reports SDK/AndroidX updates offline. -->
     <issue id="NewerVersionAvailable" severity="ignore" />
+    <!-- AndroidGradlePluginVersion asks for the latest Gradle too: it failed the day 9.9.1 came
+         out, with the wrapper on 9.9.0 and no change to the code. -->
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
     <issue id="UnusedAttribute" severity="ignore" />
     <issue id="UnknownNullness" severity="ignore" />
     <issue id="DiscouragedPrivateApi" severity="ignore" />
