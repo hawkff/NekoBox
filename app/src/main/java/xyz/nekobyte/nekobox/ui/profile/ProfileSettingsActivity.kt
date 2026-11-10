@@ -94,7 +94,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
     abstract fun T.init()
     abstract fun T.serialize()
 
-    val proxyEntity by lazy { ProfileDatabase.proxyDao.getById(DataStore.editingId) }
+    // The stored profile; a new one has none. onCreate reads it off the main thread, so the menus that ask for it
+    // there get what was read.
+    val proxyEntity by lazy { DataStore.editingId.takeIf { it != 0L }?.let { ProfileDatabase.proxyDao.getById(it) } }
     protected var isSubscription by Delegates.notNull<Boolean>()
     private var canMoveToOtherBasicGroup = false
     private var moveTargetGroups: List<ProxyGroup> = emptyList()
@@ -160,6 +162,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                         .commit()
                 }
             }
+        } else {
+            // A recreated editor keeps its fields; only the stored profile is read again.
+            runOnDefaultDispatcher { proxyEntity }
         }
     }
 

@@ -372,6 +372,15 @@ data class ProxyEntity(
         @Query("UPDATE proxy_entities SET userOrder = :order WHERE id = :id")
         fun updateOrder(id: Long, order: Long): Int
 
+        // A reorder stores the order alone. A list on show can be older than the stored rows: the service adds traffic and
+        // an update replaces servers meanwhile, and a whole row written back would undo that.
+        @Transaction
+        fun updateOrders(orders: Map<Long, Long>) = orders.forEach { (id, order) -> updateOrder(id, order) }
+
+        /** Numbers the group's rows from 1 in their order, closing the gap a removed row leaves. */
+        @Transaction
+        fun compactOrder(groupId: Long) = getIdsByGroup(groupId).forEachIndexed { index, id -> updateOrder(id, index + 1L) }
+
         @Query("SELECT COUNT(*) FROM proxy_entities WHERE groupId = :groupId")
         fun countByGroup(groupId: Long): Long
 

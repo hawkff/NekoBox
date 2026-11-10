@@ -162,5 +162,7 @@ abstract class ThemedActivity : AppCompatActivity {
         }
     }
 
-    internal open fun snackbarInternal(text: CharSequence): Snackbar = throw NotImplementedError()
+    // Over the screen's content, unless the screen has a layout of its own to place it in: the pickers host Home's
+    // lists, whose rows copy links and say so.
+    internal open fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(findViewById(android.R.id.content), text, Snackbar.LENGTH_LONG)
 }

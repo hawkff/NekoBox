@@ -346,9 +346,11 @@ class GroupFragment :
             notifyItemMoved(from, to)
         }
 
-        fun commitMove() = runOnDefaultDispatcher {
-            updated.forEach { ProfileDatabase.groupDao.updateGroup(it) }
+        // Only the order is stored: a group on show can be older than the stored one, which an update writes meanwhile.
+        fun commitMove() {
+            val orders = updated.associate { it.id to it.userOrder }
             updated.clear()
+            runOnDefaultDispatcher { orders.forEach { (id, order) -> ProfileDatabase.groupDao.updateOrder(id, order) } }
         }
 
         fun remove(index: Int) {

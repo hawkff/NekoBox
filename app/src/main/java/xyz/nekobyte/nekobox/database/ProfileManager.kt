@@ -225,7 +225,7 @@ object ProfileManager {
         }
         iterator { onRemoved(groupId, profileId) }
         if (ProfileDatabase.proxyDao.countByGroup(groupId) > 1) {
-            GroupManager.rearrange(groupId)
+            ProfileDatabase.proxyDao.compactOrder(groupId)
         }
         pruneTailscaleState()
     }

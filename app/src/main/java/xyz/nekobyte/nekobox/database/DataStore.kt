@@ -251,8 +251,17 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     private val addressLock = Any()
 
-    /** Keeps what [found] names resolved to and when, the newest last, at most 1000 names. */
+    /** Server names whose address is kept. */
+    const val SERVER_ADDRESSES_KEPT = 1000
+
+    /** Keeps what [found] names resolved to and when, the newest last, at most [SERVER_ADDRESSES_KEPT] names. */
     fun rememberServerAddresses(found: Map<String, String>, learned: Long = System.currentTimeMillis()) = synchronized(addressLock) {
+        // A check of a whole list asks about every server, and each change writes the whole text again. While fewer
+        // names are kept than the limit none is dropped, so a name that keeps its address is left where it is.
+        // shortcut: once the limit is reached, a name last written long ago can be dropped although it was looked up
+        // since, until one more lookup moves it; track lookups apart from the stored text if that shows.
+        val known = serverAddresses
+        if (known.size < SERVER_ADDRESSES_KEPT && found.all { (name, address) -> known[name] == address }) return@synchronized
         val stored = runCatching { JSONObject(configurationStore.getString(Key.SERVER_ADDRESSES).orEmpty()) }.getOrDefault(JSONObject())
         val addresses = LinkedHashMap<String, JSONObject>()
         for (name in stored.keys()) stored.optJSONObject(name)?.let { addresses[name] = it }
@@ -260,7 +269,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
             addresses.remove(name)
             addresses[name] = JSONObject().put("address", address).put("learned", learned)
         }
-        while (addresses.size > 1000) addresses.remove(addresses.keys.first())
+        while (addresses.size > SERVER_ADDRESSES_KEPT) addresses.remove(addresses.keys.first())
         configurationStore.putString(Key.SERVER_ADDRESSES, JSONObject(addresses as Map<*, *>).toString())
     }
 

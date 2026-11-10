@@ -27,8 +27,7 @@ object Protocols {
                 return bean.config == other.bean.config
             }
             if (bean.javaClass != other.bean.javaClass) return false
-            // AbstractBean equality serializes without the display name. Both dedup callers run
-            // serially; they must not compare the same mutable beans concurrently.
+            // AbstractBean equality compares the settings without the display name.
             return bean == other.bean
         }
     }

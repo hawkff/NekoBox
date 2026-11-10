@@ -23,8 +23,9 @@ import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 // reference MainActivity/ThemedActivity; keeping them here makes `ktx` a leaf w.r.t. `ui`
 // (breaks the ktx -> ui dependency cycle). Behavior is identical to the former ktx versions.
 
-fun Fragment.snackbar(textId: Int) = (requireActivity() as MainActivity).snackbar(textId)
-fun Fragment.snackbar(text: CharSequence) = (requireActivity() as MainActivity).snackbar(text)
+// Fragments show on more than MainActivity: the profile picker hosts Home's lists too.
+fun Fragment.snackbar(textId: Int) = (requireActivity() as ThemedActivity).snackbar(textId)
+fun Fragment.snackbar(text: CharSequence) = (requireActivity() as ThemedActivity).snackbar(text)
 
 /** What reports send, shown before they start: on first start, and when they are turned on in Settings. */
 fun Context.helpToImproveDialog(): MaterialAlertDialogBuilder = MaterialAlertDialogBuilder(this)
@@ -40,13 +41,16 @@ fun ThemedActivity.startFilesForResult(launcher: ActivityResultLauncher<String>,
     snackbar(getString(R.string.file_manager_missing)).show()
 }
 
-fun Fragment.startFilesForResult(launcher: ActivityResultLauncher<String>, input: String) {
+/** Opens the system's file picker; false, with a message, on a device without one. */
+fun Fragment.startFilesForResult(launcher: ActivityResultLauncher<String>, input: String): Boolean {
     try {
-        return launcher.launch(input)
+        launcher.launch(input)
+        return true
     } catch (_: ActivityNotFoundException) {
     } catch (_: SecurityException) {
     }
     (requireActivity() as ThemedActivity).snackbar(getString(R.string.file_manager_missing)).show()
+    return false
 }
 
 fun Context.applyHideFromRecentApps(hide: Boolean) {

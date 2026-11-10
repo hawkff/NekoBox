@@ -1,7 +1,10 @@
 package xyz.nekobyte.nekobox.database
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,5 +49,30 @@ class DataStoreParsedMapsTest {
         assertSame(DataStore.configurationStore.getString(Key.SERVER_ADDRESSES), DataStore.parsedServerAddresses.first)
         DataStore.rememberServerAddresses(mapOf("other.example" to "192.0.2.2"))
         assertEquals(mapOf("node.example" to "192.0.2.1", "other.example" to "192.0.2.2"), DataStore.serverAddresses)
+    }
+
+    // A check of a list asks about every server, and each change writes the whole text again: a name that still
+    // resolves to the address it has writes nothing.
+    @Test
+    fun aNameThatKeepsItsAddress_keepsItsEntry_andANewAddressReplacesIt() {
+        DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.1"), learned = 1_700_000_000_000)
+        val stored = DataStore.configurationStore.getString(Key.SERVER_ADDRESSES)
+        DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.1"), learned = 1_800_000_000_000)
+        assertSame(stored, DataStore.configurationStore.getString(Key.SERVER_ADDRESSES))
+        DataStore.rememberServerAddresses(mapOf("node.example" to "192.0.2.9"), learned = 1_800_000_000_000)
+        val entry = JSONObject(DataStore.configurationStore.getString(Key.SERVER_ADDRESSES)!!).getJSONObject("node.example")
+        assertEquals("192.0.2.9" to 1_800_000_000_000L, entry.getString("address") to entry.getLong("learned"))
+    }
+
+    // At the limit a new name drops the one written longest ago, so a lookup there moves its name to the end again.
+    @Test
+    fun atTheLimit_aNameLookedUpAgainOutlivesTheNextNewName() {
+        DataStore.rememberServerAddresses((1..DataStore.SERVER_ADDRESSES_KEPT).associate { "node$it.example" to "192.0.2.1" })
+        DataStore.rememberServerAddresses(mapOf("node1.example" to "192.0.2.1"))
+        DataStore.rememberServerAddresses(mapOf("new.example" to "192.0.2.2"))
+        val kept = DataStore.serverAddresses
+        assertEquals(DataStore.SERVER_ADDRESSES_KEPT, kept.size)
+        assertTrue("node1.example" in kept && "new.example" in kept)
+        assertFalse("node2.example" in kept)
     }
 }

@@ -24,6 +24,7 @@ import androidx.core.view.updatePaddingRelative
 import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -31,6 +32,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
@@ -1088,7 +1090,8 @@ class ConfigurationGroupFragment : Fragment() {
             return masterProfiles[profileId] ?: configurationList[profileId]
         }
 
-        private val updated = HashSet<ProxyEntity>()
+        // The orders a drag gave, by profile: a row moved again keeps its last one.
+        private val updated = HashMap<Long, Long>()
         private val pendingRemovalIds = HashSet<Long>()
 
         fun filter(name: String) {
@@ -1137,11 +1140,11 @@ class ConfigurationGroupFragment : Fragment() {
                 next.userOrder = previousOrder
                 previousOrder = order
                 configurationIdList[i] = next.id
-                updated.add(next)
+                updated[next.id] = next.userOrder
             }
             first.userOrder = previousOrder
             configurationIdList[to] = first.id
-            updated.add(first)
+            updated[first.id] = first.userOrder
             notifyItemMoved(from, to)
         }
 
@@ -1156,7 +1159,7 @@ class ConfigurationGroupFragment : Fragment() {
                 val newOrder = (i + 1).toLong()
                 if (item.userOrder != newOrder) {
                     item.userOrder = newOrder
-                    updated.add(item)
+                    updated[item.id] = newOrder
                 }
             }
 
@@ -1164,17 +1167,17 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         fun commitMove() {
-            val snapshot = updated.toList()
+            val orders = HashMap(updated)
             updated.clear()
             dragInProgress = false
-            if (snapshot.isEmpty()) {
+            if (orders.isEmpty()) {
                 submitMasterList()
                 return
             }
             displayPending = true
             runOnDefaultDispatcher {
                 try {
-                    ProfileDatabase.proxyDao.updateProxy(snapshot)
+                    ProfileDatabase.proxyDao.updateOrders(orders)
                 } catch (e: Exception) {
                     Logs.w(e)
                 }
@@ -1466,6 +1469,32 @@ class ConfigurationGroupFragment : Fragment() {
     val profileAccess = Mutex()
     val reloadAccess = Mutex()
 
+    /** Copies [text] and says whether it worked, on Home, the Proxies screen and in a picker alike. */
+    internal fun copyToClipboard(text: String) {
+        snackbar(if (NekoBox.trySetPrimaryClip(text)) R.string.action_export_msg else R.string.action_export_err).show()
+    }
+
+    /**
+     * Copies the stored profile's config, or asks where to save it. Building it reads the profile's group, its hops
+     * and the route rules, so it runs off the main thread. A screen left meanwhile gets the answer when it comes back,
+     * so nothing opens over the screen that took its place.
+     */
+    internal fun exportProfileConfig(profileId: Long, toFile: Boolean) {
+        val host = parentFragment as? ConfigurationFragment ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (config, fileName) = try {
+                onDefaultDispatcher { ProfileManager.getProfile(profileId)?.exportConfig() } ?: return@launch
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logs.w(e)
+                host.withResumed { snackbar(e.readableMessage).show() }
+                return@launch
+            }
+            host.withResumed { if (toFile) host.saveConfigAs(profileId, fileName) else copyToClipboard(config) }
+        }
+    }
+
     // Where a checked proxy left from, on the Proxies screen.
     private fun exitOf(profile: ProxyEntity) = DataStore.proxyExits[profile.id]?.takeIf { (parentFragment as? ConfigurationFragment)?.proxies == true }
 
@@ -1551,7 +1580,12 @@ class ConfigurationGroupFragment : Fragment() {
         lateinit var entity: ProxyEntity
 
         private fun showShareMenu(anchor: View, profileId: Long) {
-            val profile = adapter?.profileById(profileId) ?: return
+            shareMenu(anchor, profileId)?.show()
+        }
+
+        /** The row's Share menu, ready to show. */
+        internal fun shareMenu(anchor: View, profileId: Long): PopupMenu? {
+            val profile = adapter?.profileById(profileId) ?: return null
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
             // Rows with ⋮ keep it there; a one-column card shows buttons instead, so its Share menu holds it.
@@ -1577,7 +1611,7 @@ class ConfigurationGroupFragment : Fragment() {
                 popup.menu.removeItem(R.id.action_config_export_file)
             }
             popup.setOnMenuItemClickListener { handleShareMenu(it, profileId) }
-            popup.show()
+            return popup
         }
 
         val profileName: TextView = binding.profileName
@@ -1661,13 +1695,20 @@ class ConfigurationGroupFragment : Fragment() {
         }
 
         private fun showDoubleColumnMenu(anchor: View, profileId: Long) {
-            val host = parentFragment as? ConfigurationFragment ?: return
+            rowMenu(anchor, profileId)?.show()
+        }
+
+        /** The row's ⋮ menu, ready to show. */
+        internal fun rowMenu(anchor: View, profileId: Long): PopupMenu? {
+            val host = parentFragment as? ConfigurationFragment ?: return null
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(R.menu.double_column_item_menu, popup.menu)
-            // A picker picks: favorites are made on Home and the Proxies screen.
+            // A picker picks: favorites are made on Home and the Proxies screen. It opens no editor either: the screen that
+            // asked for a profile is often an editor itself, and every editor keeps its fields in one shared store.
             if (select) {
                 popup.menu.removeItem(R.id.action_delete)
                 popup.menu.removeItem(R.id.action_favorite)
+                popup.menu.removeItem(R.id.action_edit)
             }
             // A proxy connects at once or becomes a group's exit; Remove comes last, apart.
             if (host.proxies && !select) {
@@ -1722,7 +1763,7 @@ class ConfigurationGroupFragment : Fragment() {
                     else -> false
                 }
             }
-            popup.show()
+            return popup
         }
 
         private fun favoriteTitle(profileId: Long) = if (profileId in DataStore.favoriteSet) R.string.favorite_remove else R.string.favorite_add
@@ -1951,44 +1992,22 @@ class ConfigurationGroupFragment : Fragment() {
             QRCodeDialog(link, name).showAllowingStateLoss(parentFragmentManager)
         }
 
-        private fun export(link: String) {
-            val success = NekoBox.trySetPrimaryClip(link)
-            (activity as MainActivity).snackbar(
-                if (success) R.string.action_export_msg else R.string.action_export_err,
-            ).show()
-        }
-
         private fun handleShareMenu(item: MenuItem, profileId: Long): Boolean {
             val profile = adapter?.profileById(profileId) ?: return true
             try {
                 val name = profile.displayName().orEmpty()
                 when (item.itemId) {
                     R.id.action_favorite -> toggleFavorite(profileId)
-
                     R.id.action_standard_qr -> showCode(profile.toStdLink(), name)
-
-                    R.id.action_standard_clipboard -> export(profile.toStdLink())
-
+                    R.id.action_standard_clipboard -> copyToClipboard(profile.toStdLink())
                     R.id.action_universal_qr -> showCode(profile.requireBean().toUniversalLink(), name)
-
-                    R.id.action_universal_clipboard -> export(
-                        profile.requireBean().toUniversalLink(),
-                    )
-
-                    R.id.action_config_export_clipboard -> export(profile.exportConfig().first)
-
-                    R.id.action_config_export_file -> {
-                        val config = profile.exportConfig()
-                        DataStore.serverConfig = config.first
-                        startFilesForResult(
-                            (parentFragment as ConfigurationFragment).exportConfig,
-                            config.second,
-                        )
-                    }
+                    R.id.action_universal_clipboard -> copyToClipboard(profile.requireBean().toUniversalLink())
+                    R.id.action_config_export_clipboard -> exportProfileConfig(profileId, toFile = false)
+                    R.id.action_config_export_file -> exportProfileConfig(profileId, toFile = true)
                 }
             } catch (e: Exception) {
                 Logs.w(e)
-                (activity as MainActivity).snackbar(e.readableMessage).show()
+                snackbar(e.readableMessage).show()
             }
             return true
         }

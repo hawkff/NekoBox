@@ -2,9 +2,11 @@ package xyz.nekobyte.nekobox.fmt
 
 import com.esotericsoftware.kryo.io.ByteBufferInput
 import com.esotericsoftware.kryo.io.ByteBufferOutput
+import xyz.nekobyte.nekobox.ktx.byteBuffer
 import xyz.nekobyte.nekobox.ktx.unwrapIPV6Host
 import xyz.nekobyte.nekobox.ktx.wrapIPV6Host
 import xyz.nekobyte.nekobox.utils.JavaUtil
+import java.io.ByteArrayOutputStream
 
 abstract class AbstractBean : Serializable() {
     @JvmField var serverAddress: String? = null
@@ -40,15 +42,25 @@ abstract class AbstractBean : Serializable() {
         customConfigJson = customConfigJson ?: ""
     }
 
-    @Transient
-    private var serializeWithoutName = false
+    override fun serializeToBuffer(output: ByteBufferOutput) = serializeToBuffer(output, withName = true)
 
-    override fun serializeToBuffer(output: ByteBufferOutput) {
+    private fun serializeToBuffer(output: ByteBufferOutput, withName: Boolean) {
         serialize(output)
         output.writeInt(1)
-        if (!serializeWithoutName) output.writeString(name)
+        if (withName) output.writeString(name)
         output.writeString(customOutboundJson)
         output.writeString(customConfigJson)
+    }
+
+    // What equality compares: every stored field but the name. It leaves the bean as it is, so a bean compared or
+    // hashed on one thread can be stored on another.
+    private fun settings(): ByteArray {
+        val bytes = ByteArrayOutputStream()
+        bytes.byteBuffer().use { buffer ->
+            serializeToBuffer(buffer, withName = false)
+            buffer.flush()
+        }
+        return bytes.toByteArray()
     }
 
     override fun deserializeFromBuffer(input: ByteBufferInput) {
@@ -81,24 +93,10 @@ abstract class AbstractBean : Serializable() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AbstractBean || javaClass != other.javaClass) return false
-        try {
-            serializeWithoutName = true
-            other.serializeWithoutName = true
-            return KryoConverters.serialize(this).contentEquals(KryoConverters.serialize(other))
-        } finally {
-            serializeWithoutName = false
-            other.serializeWithoutName = false
-        }
+        return settings().contentEquals(other.settings())
     }
 
-    override fun hashCode(): Int {
-        try {
-            serializeWithoutName = true
-            return KryoConverters.serialize(this).contentHashCode()
-        } finally {
-            serializeWithoutName = false
-        }
-    }
+    override fun hashCode() = settings().contentHashCode()
 
     override fun toString() = "${javaClass.simpleName} ${JavaUtil.gson.toJson(this)}"
 }
