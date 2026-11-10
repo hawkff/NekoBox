@@ -30,7 +30,9 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.preference.EditTextPreferenceModifiers
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.utils.AppLocale
+import xyz.nekobyte.nekobox.utils.CORE_CRASH_FILE
 import xyz.nekobyte.nekobox.utils.Theme
+import xyz.nekobyte.nekobox.utils.UI_CRASH_FILE
 import java.io.File
 
 /**
@@ -626,7 +628,9 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
             for (child in children) {
                 val childFile = File(dir, child)
 
-                if (child == "neko.log") {
+                // The core holds these open and writes on: they are emptied in place, as a deleted file would take
+                // what is written next with it.
+                if (child == "neko.log" || child == CORE_CRASH_FILE || child == UI_CRASH_FILE) {
                     try {
                         childFile.writeText("")
                         continue

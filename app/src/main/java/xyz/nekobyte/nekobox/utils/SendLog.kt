@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import libcore.Libcore
 import xyz.nekobyte.nekobox.BuildConfig
-import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -14,7 +14,6 @@ import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import java.io.File
-import java.io.FileInputStream
 
 object SendLog {
     // Bounds what the report carries, so it stays readable before it is shared.
@@ -158,18 +157,11 @@ object SendLog {
         return out.append(text, last, text.length).toString()
     }
 
-    // Get log bytes from neko.log
+    // The newest [max] bytes of neko.log, or all of it. Read through the core, under the lock its writers and trims
+    // take: the file is cut back while it is written, and a reader that measured it first could find it shorter, or
+    // empty, by the time it read. The read can wait for a writer, so not on the main thread.
     fun getNekoLog(max: Long): ByteArray = try {
-        val file = File(
-            NekoBox.application.cacheDir,
-            "neko.log",
-        )
-        val len = file.length()
-        val stream = FileInputStream(file)
-        if (max in 1 until len) {
-            stream.skip(len - max) // TODO string?
-        }
-        stream.use { it.readBytes() }
+        Libcore.nekoLogTail(max) ?: ByteArray(0)
     } catch (e: Exception) {
         e.stackTraceToString().toByteArray()
     }

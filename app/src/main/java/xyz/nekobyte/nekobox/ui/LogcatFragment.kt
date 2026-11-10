@@ -10,6 +10,11 @@ import android.view.View
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import libcore.Libcore
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.databinding.LayoutLogcatBinding
@@ -23,6 +28,15 @@ class LogcatFragment :
     Toolbar.OnMenuItemClickListener {
 
     lateinit var binding: LayoutLogcatBinding
+
+    // The log being read for the screen. A newer read ends it, and so does a clear, once the log is empty: what it
+    // read is no longer the log.
+    private var reload: Job? = null
+
+    companion object {
+        // What reads the log for the screen.
+        internal var read: (Long) -> ByteArray = SendLog::getNekoLog
+    }
 
     @SuppressLint("RestrictedApi", "WrongConstant")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -42,35 +56,39 @@ class LogcatFragment :
     }
 
     private fun reloadSession() {
-        // sing-box bakes ANSI color codes into each log line, so parse them into
-        // foreground spans (instead of rendering the raw escape codes as text) and
-        // keep the colors the core emits (cyan INFO, yellow WARN, red ERROR, the
-        // per-connection-id color, ...).
-        val rendered = AnsiLog.render(String(SendLog.getNekoLog(50 * 1024)))
-        val span = SpannableString(rendered.text)
-        // Lines the core emits without an ANSI color (e.g. plain go-log lines) take the theme's secondary
-        // text: a fixed gray fell under 4.5:1 on the palettes' lighter canvases.
-        if (rendered.text.isNotEmpty()) {
-            span.setSpan(
-                ForegroundColorSpan(requireContext().getColorAttr(android.R.attr.textColorSecondary)),
-                0,
-                rendered.text.length,
-                SPAN_EXCLUSIVE_EXCLUSIVE,
-            )
-        }
-        for (run in rendered.spans) {
-            span.setSpan(
-                ForegroundColorSpan(run.color),
-                run.start,
-                run.end,
-                SPAN_EXCLUSIVE_EXCLUSIVE,
-            )
-        }
-        binding.textview.text = span
-        binding.textview.clearFocus()
-        // wait for the textview to finish its final layout before scrolling to the bottom
-        binding.textview.doOnLayout {
-            binding.scroolview.scrollTo(0, binding.textview.height)
+        reload?.cancel()
+        reload = viewLifecycleOwner.lifecycleScope.launch {
+            // sing-box bakes ANSI color codes into each log line, so parse them into
+            // foreground spans (instead of rendering the raw escape codes as text) and
+            // keep the colors the core emits (cyan INFO, yellow WARN, red ERROR, the
+            // per-connection-id color, ...). Off the main thread: the read waits for whoever is
+            // writing or trimming the log.
+            val rendered = withContext(Dispatchers.Default) { AnsiLog.render(String(read(50 * 1024))) }
+            val span = SpannableString(rendered.text)
+            // Lines the core emits without an ANSI color (e.g. plain go-log lines) take the theme's secondary
+            // text: a fixed gray fell under 4.5:1 on the palettes' lighter canvases.
+            if (rendered.text.isNotEmpty()) {
+                span.setSpan(
+                    ForegroundColorSpan(requireContext().getColorAttr(android.R.attr.textColorSecondary)),
+                    0,
+                    rendered.text.length,
+                    SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+            }
+            for (run in rendered.spans) {
+                span.setSpan(
+                    ForegroundColorSpan(run.color),
+                    run.start,
+                    run.end,
+                    SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+            }
+            binding.textview.text = span
+            binding.textview.clearFocus()
+            // wait for the textview to finish its final layout before scrolling to the bottom
+            binding.textview.doOnLayout {
+                binding.scroolview.scrollTo(0, binding.textview.height)
+            }
         }
     }
 
@@ -88,6 +106,7 @@ class LogcatFragment :
                         return@runOnDefaultDispatcher
                     }
                     onMainDispatcher {
+                        reload?.cancel()
                         binding.textview.text = ""
                     }
                 }

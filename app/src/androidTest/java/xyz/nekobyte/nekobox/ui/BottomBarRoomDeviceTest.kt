@@ -132,7 +132,9 @@ class BottomBarRoomDeviceTest {
 
             is NestedScrollView -> scroller.fullScroll(View.FOCUS_DOWN)
 
-            is ScrollView -> scroller.fullScroll(View.FOCUS_DOWN)
+            // By position: a full scroll also gives a child the focus, and a scroll view scrolls back for a child
+            // taller than itself that takes it, as the log is.
+            is ScrollView -> scroller.scrollTo(0, scroller.getChildAt(0)?.height ?: 0)
         }
     }
 

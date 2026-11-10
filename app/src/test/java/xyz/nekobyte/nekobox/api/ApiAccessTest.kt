@@ -166,11 +166,12 @@ class ApiAccessTest {
 
     @Test
     fun logReadsAreBoundedAndDoNotAcceptPaths() {
-        val context = RuntimeEnvironment.getApplication()
-        File(context.cacheDir, "neko.log").writeText("0123456789")
-        val files = ApiFiles(context)
+        // The log is read through the core, which JVM tests do not load: its newest bytes come from here instead.
+        val files = ApiFiles(RuntimeEnvironment.getApplication()) { max -> "0123456789".toByteArray().let { it.copyOfRange((it.size - max.toInt()).coerceAtLeast(0), it.size) } }
         assertEquals("789", files.log(3).getString("text"))
         assertTrue(files.log(3).getBoolean("truncated"))
+        assertEquals("0123456789" to false, files.log(10).let { it.getString("text") to it.getBoolean("truncated") })
+        assertEquals(10, files.log(64).getInt("bytes"))
         assertTrue(runCatching { files.log(0) }.isFailure)
         assertTrue(runCatching { files.log(1_048_577) }.isFailure)
     }

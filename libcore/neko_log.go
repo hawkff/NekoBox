@@ -64,10 +64,9 @@ func keepLogTail(f *os.File, maxSize int) {
 // cutLog drops everything but the last keep bytes of f once f is longer than limit. The
 // caller holds lockLog. The tail is read at its place and not from the file's offset: stderr
 // shares that offset once setupLog has run, and every line printed there moves it to the end.
-// shortcut: what stderr prints between the read of the tail and the truncation is lost, and
-// the Logs screen, the problem report and the API read the file without the lock, so a read
-// between the truncation and the rewrite comes back short; give stderr a file of its own and
-// read through the core under lockLog if either is ever seen.
+// shortcut: what stderr prints between the read of the tail and the truncation is lost, as the
+// runtime writes there without the lock. A fatal trace is also kept in the process's crash file
+// (see InitCore); give stderr a file of its own if more than that is ever needed.
 func cutLog(f *os.File, limit, keep int) {
 	info, err := f.Stat()
 	if err != nil || info.Size() <= int64(limit) {
@@ -81,6 +80,29 @@ func cutLog(f *os.File, limit, keep int) {
 		return
 	}
 	f.Write(tail)
+}
+
+// NekoLogTail returns the newest max bytes of the log, or all of it when max is not positive.
+// It measures and reads under lockLog, so no trim runs in between: a reader that took the
+// length on its own could find the file shorter, or empty, by the time it read.
+func NekoLogTail(max int64) []byte {
+	if nekoLog == nil {
+		return nil
+	}
+	defer lockLog(nekoLog)()
+	info, err := nekoLog.Stat()
+	if err != nil {
+		return nil
+	}
+	size := info.Size()
+	if max > 0 && size > max {
+		size = max
+	}
+	tail := make([]byte, size)
+	if _, err := nekoLog.ReadAt(tail, info.Size()-size); err != nil {
+		return nil
+	}
+	return tail
 }
 
 type nekoLogWriter struct{}
