@@ -33,6 +33,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
 import xyz.nekobyte.nekobox.fmt.AbstractBean
@@ -41,7 +42,6 @@ import xyz.nekobyte.nekobox.ui.AlertDialogFragment
 import xyz.nekobyte.nekobox.ui.Empty
 import xyz.nekobyte.nekobox.ui.ThemedActivity
 import xyz.nekobyte.nekobox.widget.ListListener
-import kotlin.properties.Delegates
 
 @Suppress("UNCHECKED_CAST")
 abstract class ProfileSettingsActivity<T : AbstractBean>(
@@ -81,7 +81,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
     companion object {
         const val EXTRA_PROFILE_ID = "id"
-        const val EXTRA_IS_SUBSCRIPTION = "sub"
 
         /** The group a new profile goes to, such as the list open on the Proxies screen; else the import target. */
         const val EXTRA_GROUP_ID = "group"
@@ -98,9 +97,15 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
     // it on the main thread show once it has been read.
     private val storedProfile = lazy { DataStore.editingId.takeIf { it != 0L }?.let { ProfileDatabase.proxyDao.getById(it) } }
     val proxyEntity by storedProfile
-    protected var isSubscription by Delegates.notNull<Boolean>()
     private var canMoveToOtherBasicGroup = false
     private var moveTargetGroups: List<ProxyGroup> = emptyList()
+
+    // Where the profile can move: the other basic groups, when it sits in one.
+    private fun readMoveTargets(entity: ProxyEntity) {
+        val groups = ProfileDatabase.groupDao.allGroups()
+        moveTargetGroups = groups.filter { it.type == GroupType.BASIC && it.id != entity.groupId }
+        canMoveToOtherBasicGroup = groups.firstOrNull { it.id == entity.groupId }?.type == GroupType.BASIC && moveTargetGroups.isNotEmpty()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -124,7 +129,6 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
         if (savedInstanceState == null) {
             val editingId = intent.getLongExtra(EXTRA_PROFILE_ID, 0L)
-            isSubscription = intent.getBooleanExtra(EXTRA_IS_SUBSCRIPTION, false)
             DataStore.editingId = editingId
             runOnDefaultDispatcher {
                 if (editingId == 0L) {
@@ -149,10 +153,7 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                         return@runOnDefaultDispatcher
                     }
                     DataStore.editingGroup = entity.groupId
-                    val groups = ProfileDatabase.groupDao.allGroups()
-                    moveTargetGroups = groups.filter { it.type == GroupType.BASIC && it.id != entity.groupId }
-                    canMoveToOtherBasicGroup = groups.firstOrNull { it.id == entity.groupId }?.type ==
-                        GroupType.BASIC && moveTargetGroups.isNotEmpty()
+                    readMoveTargets(entity)
                     (entity.requireBean() as T).init()
                 }
 
@@ -164,9 +165,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                 }
             }
         } else {
-            // A recreated editor keeps its fields; only the stored profile is read again.
+            // A recreated editor keeps its fields; the stored profile and where it can move are read again.
             runOnDefaultDispatcher {
-                proxyEntity
+                proxyEntity?.let(::readMoveTargets)
                 onMainDispatcher { invalidateOptionsMenu() }
             }
         }
@@ -199,18 +200,13 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.profile_config_menu, menu)
-        val read = DataStore.editingId == 0L || storedProfile.isInitialized()
-        menu.findItem(R.id.action_move)?.apply {
-            isVisible = read && DataStore.editingId != 0L && canMoveToOtherBasicGroup
-        }
-        menu.findItem(R.id.action_create_shortcut)?.apply {
-            if (Build.VERSION.SDK_INT >= 26 && DataStore.editingId != 0L) {
-                isVisible = read // not new profile
-            }
-        }
-        // shared menu item
-        menu.findItem(R.id.action_custom_outbound_json)?.isVisible = read
-        menu.findItem(R.id.action_custom_config_json)?.isVisible = read
+        // These act on the stored profile. A new profile has none until it is saved, and an existing one is read off
+        // the main thread first.
+        val stored = DataStore.editingId != 0L && storedProfile.isInitialized()
+        menu.findItem(R.id.action_move)?.isVisible = stored && canMoveToOtherBasicGroup
+        menu.findItem(R.id.action_create_shortcut)?.isVisible = stored && Build.VERSION.SDK_INT >= 26
+        menu.findItem(R.id.action_custom_outbound_json)?.isVisible = stored
+        menu.findItem(R.id.action_custom_config_json)?.isVisible = stored
         return true
     }
 

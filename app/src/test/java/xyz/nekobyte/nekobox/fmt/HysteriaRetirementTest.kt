@@ -78,7 +78,7 @@ class HysteriaRetirementTest {
             assertFalse(restored.canBuild())
             assertFalse(restored.needExternal())
             assertFalse(restored.haveSettings())
-            assertNull(restored.settingIntent(RuntimeEnvironment.getApplication(), false))
+            assertNull(restored.settingIntent(RuntimeEnvironment.getApplication()))
             assertTrue(restored.toStdLink().startsWith("hysteria://"))
             assertArrayEquals(KryoConverters.serialize(bean), KryoConverters.serialize(parseUniversal(bean.toUniversalLink())))
             assertThrows(IllegalArgumentException::class.java) { buildConfig(restored, forTest = true) }

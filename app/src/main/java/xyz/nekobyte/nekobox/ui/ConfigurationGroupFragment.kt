@@ -38,7 +38,6 @@ import kotlinx.coroutines.sync.withLock
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import xyz.nekobyte.nekobox.GroupLayout
 import xyz.nekobyte.nekobox.GroupOrder
-import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.Protocols
 import xyz.nekobyte.nekobox.R
@@ -151,10 +150,6 @@ class ConfigurationGroupFragment : Fragment() {
     var adapter: ConfigurationAdapter? = null
 
     private val isFavorites get() = proxyGroup.id == FAVORITES_GROUP_ID
-
-    // Favorites mixes groups, so each profile opens for editing as its own group allows.
-    @Volatile
-    private var subscriptionGroupIds = emptySet<Long>()
 
     // Favorites mixes groups, so each of its rows names the list it comes from.
     @Volatile
@@ -1416,7 +1411,6 @@ class ConfigurationGroupFragment : Fragment() {
             val (newProfiles, newProfileIds, baseStamps) = onDefaultDispatcher {
                 var profiles = if (isFavorites) {
                     val ids = DataStore.favoriteProfiles
-                    subscriptionGroupIds = ProfileDatabase.groupDao.subscriptions().mapTo(HashSet()) { it.id }
                     groupNames = ProfileDatabase.groupDao.allGroups().associate { it.id to it.displayName() }
                     ProfileDatabase.proxyDao.getEntities(ids).sortedBy { ids.indexOf(it.id) }
                 } else {
@@ -1607,12 +1601,13 @@ class ConfigurationGroupFragment : Fragment() {
             }
 
             if (!profile.canBuild()) {
-                popup.menu.removeItem(R.id.action_config_export_clipboard)
-                popup.menu.removeItem(R.id.action_config_export_file)
+                // No config can be made of it. The exports sit in this submenu, out of reach of a removal by their own ids.
+                popup.menu.removeItem(R.id.action_group_configuration)
+            } else if (select) {
+                // A picker copies and shows codes. Rebuilt by Android, it puts a new list in place of the one that asked,
+                // so a file picker's answer would find nobody waiting for it.
+                popup.menu.findItem(R.id.action_group_configuration).subMenu?.removeItem(R.id.action_config_export_file)
             }
-            // A picker copies and shows codes. Rebuilt by Android, it puts a new list in place of the one that asked, so a
-            // file picker's answer would find nobody waiting for it.
-            if (select) popup.menu.findItem(R.id.action_group_configuration).subMenu?.removeItem(R.id.action_config_export_file)
             popup.setOnMenuItemClickListener { handleShareMenu(it, profileId) }
             return popup
         }
@@ -1670,8 +1665,7 @@ class ConfigurationGroupFragment : Fragment() {
             val host = parentFragment as? ConfigurationFragment ?: return
             if (host.isRunningProfile(profileId)) return
             val profile = adapter?.profileById(profileId) ?: return
-            val subscription = if (isFavorites) profile.groupId in subscriptionGroupIds else proxyGroup.type == GroupType.SUBSCRIPTION
-            val intent = profile.settingIntent(anchor.context, subscription) ?: return
+            val intent = profile.settingIntent(anchor.context) ?: return
             anchor.context.startActivity(intent)
         }
 

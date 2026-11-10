@@ -415,7 +415,7 @@ class ProtocolRegistryDispatchTest {
             assertThrows(IllegalArgumentException::class.java) {
                 xyz.nekobyte.nekobox.group.RawUpdater.requireUpdatableProfiles(listOf(restored))
             }
-            assertNull(restored.settingIntent(org.robolectric.RuntimeEnvironment.getApplication(), false))
+            assertNull(restored.settingIntent(org.robolectric.RuntimeEnvironment.getApplication()))
             assertArrayEquals(KryoConverters.serialize(bean), KryoConverters.serialize(parseUniversal(bean.toUniversalLink())))
             assertThrows(IllegalArgumentException::class.java) {
                 ConfigBuilderTestEnv.io { buildConfig(restored, forTest = true) }

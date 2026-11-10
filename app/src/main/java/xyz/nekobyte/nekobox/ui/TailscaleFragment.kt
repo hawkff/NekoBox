@@ -45,15 +45,11 @@ class TailscaleFragment : ToolbarFragment(R.layout.layout_config_settings) {
             super.onResume()
             loading?.cancel()
             loading = lifecycleScope.launch {
-                val (nodes, subscriptions) = withContext(Dispatchers.IO) {
-                    val nodes = ProfileDatabase.proxyDao.run { getEntities(getIdsByType(ProxyEntity.TYPE_TAILSCALE)) }
-                    nodes to ProfileDatabase.groupDao.subscriptions().map { it.id }.toSet()
-                }
-                show(nodes, subscriptions)
+                show(withContext(Dispatchers.IO) { ProfileDatabase.proxyDao.run { getEntities(getIdsByType(ProxyEntity.TYPE_TAILSCALE)) } })
             }
         }
 
-        private fun show(nodes: List<ProxyEntity>, subscriptions: Set<Long>) {
+        private fun show(nodes: List<ProxyEntity>) {
             preferenceScreen.removeAll()
             for (node in nodes) {
                 val bean = node.tailscaleBean ?: continue
@@ -74,7 +70,7 @@ class TailscaleFragment : ToolbarFragment(R.layout.layout_config_settings) {
                             Toast.makeText(it, R.string.tailscale_node_in_use, Toast.LENGTH_SHORT).show()
                             null
                         } else {
-                            node.settingIntent(it, node.groupId in subscriptions)
+                            node.settingIntent(it)
                         }
                     },
                 )
