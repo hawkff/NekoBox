@@ -3,6 +3,8 @@ package xyz.nekobyte.nekobox.bg.proto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.runBlocking
+import libcore.Libcore
+import libcore.PortListener
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.bg.runRequiredCompletion
@@ -21,6 +23,10 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
 
     // for TrafficLooper
     var looper: TrafficLooper? = null
+
+    // The socket this start listens with on the local port of its config, for the app's own requests.
+    @Volatile
+    var portListener: PortListener? = null
 
     override fun buildConfig() {
         super.buildConfig()
@@ -41,6 +47,7 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
         // shortcut: a connection the core takes before this line goes through the kept server for as long as it
         // lasts, and the core has no setting to start without what it kept; give its selector one if that matters.
         if (config.selectorGroupId >= 0L) config.profileTagMap[config.mainEntId]?.let { box.selectOutbound(it) }
+        portListener = config.localProxy?.let { Libcore.findPortListener(it.port) }
         // ponytail: fixed cap; make it a setting if anyone needs a longer history.
         box.setConnectionHistory(if (DataStore.connectionDiagnostics) 300 else 0)
         // Assign the looper synchronously so close() always observes it (no

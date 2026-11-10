@@ -16,12 +16,103 @@ import (
 	"time"
 )
 
-func TestSocksHandshakeFailureAndCancellationCloseSocket(t *testing.T) {
-	for _, cancelHandshake := range []bool{false, true} {
-		name := "rejected"
-		if cancelHandshake {
-			name = "canceled"
+// portGuard answers a client that asks whether its start still runs: yes to the first sameFor
+// questions, no from then on. It counts the questions.
+type portGuard struct {
+	sameFor int32
+	asked   atomic.Int32
+}
+
+func (g *portGuard) SameStart() bool {
+	return g.asked.Add(1) <= g.sameFor
+}
+
+const always = 1 << 30
+
+// A client set up in a start of the service asks, for each connection to the local port, whether
+// that start still runs. When it does not, whatever listens there by now is sent no byte, and
+// the request does not go around the proxy either, with or without the direct HTTP/3 path.
+func TestARequestEndsWhenTheStartItWasSetUpInNoLongerRuns(t *testing.T) {
+	for _, portTaken := range []bool{true, false} {
+		for _, h3 := range []bool{false, true} {
+			t.Run("taken="+strconv.FormatBool(portTaken)+" h3="+strconv.FormatBool(h3), func(t *testing.T) {
+				var directConnections atomic.Int32
+				target := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}))
+				target.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+					if state == http.StateNew {
+						directConnections.Add(1)
+					}
+				}
+				target.Start()
+				defer target.Close()
+
+				listener, err := net.Listen("tcp", "127.0.0.1:0")
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer listener.Close()
+				// What the port's new holder is sent by the one client that connects.
+				received := make(chan []byte, 1)
+				if portTaken {
+					go func() {
+						conn, err := listener.Accept()
+						if err != nil {
+							return
+						}
+						defer conn.Close()
+						_ = conn.SetDeadline(time.Now().Add(raceTestTimeout))
+						sent, _ := io.ReadAll(conn)
+						received <- sent
+					}()
+				} else {
+					listener.Close()
+				}
+
+				guard := &portGuard{}
+				client := NewHttpClient().(*httpClient)
+				defer client.Close()
+				client.TrySocks5(int32(listener.Addr().(*net.TCPAddr).Port), "user", "password", guard)
+				if h3 {
+					client.TryH3Direct()
+				}
+				request := client.NewRequest()
+				if err := request.SetURL(target.URL); err != nil {
+					t.Fatal(err)
+				}
+				response, err := request.Execute()
+				if response != nil {
+					_, _ = response.GetContentLimited(1024)
+					t.Error("the request returned a response")
+				}
+				if !errors.Is(err, errOwnPortGone) {
+					t.Errorf("request error = %v, want %v", err, errOwnPortGone)
+				}
+				if asked := guard.asked.Load(); asked != 1 {
+					t.Errorf("the guard was asked %d times", asked)
+				}
+				if directConnections.Load() != 0 {
+					t.Error("the request went around the proxy")
+				}
+				if portTaken {
+					select {
+					case sent := <-received:
+						if len(sent) != 0 {
+							t.Errorf("the port's new holder was sent %q", sent)
+						}
+					case <-time.After(2 * raceTestTimeout):
+						t.Fatal("the connection to the port's new holder was not closed")
+					}
+				}
+			})
 		}
+	}
+}
+
+func TestSocksHandshakeFailureAndCancellationCloseSocket(t *testing.T) {
+	for _, name := range []string{"rejected", "canceled", "rejected as the start ended"} {
+		cancelHandshake := name == "canceled"
 		t.Run(name, func(t *testing.T) {
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			if err != nil {
@@ -30,7 +121,12 @@ func TestSocksHandshakeFailureAndCancellationCloseSocket(t *testing.T) {
 			defer listener.Close()
 			client := NewHttpClient().(*httpClient)
 			defer client.Close()
-			client.TrySocks5(int32(listener.Addr().(*net.TCPAddr).Port), "", "")
+			// With no guard, or one whose start still runs, a refused handshake is one to go around.
+			var guard OwnPortGuard
+			if name == "rejected as the start ended" {
+				guard = &portGuard{sameFor: 1}
+			}
+			client.TrySocks5(int32(listener.Addr().(*net.TCPAddr).Port), "", "", guard)
 			client.TryH3Direct()
 			ctx, cancel := context.WithTimeout(context.Background(), raceTestTimeout)
 			defer cancel()
@@ -58,6 +154,9 @@ func TestSocksHandshakeFailureAndCancellationCloseSocket(t *testing.T) {
 				t.Fatal(err)
 			}
 			wantErr := errFailConnectSocks5
+			if guard != nil {
+				wantErr = errOwnPortGone
+			}
 			if cancelHandshake {
 				cancel()
 				wantErr = context.Canceled
@@ -117,7 +216,9 @@ func TestSocksHandshakeTimeoutDoesNotFallback(t *testing.T) {
 			client := NewHttpClient().(*httpClient)
 			defer client.Close()
 			client.h1h2Client.Timeout = defaultHTTPDialTimeout + 5*time.Second
-			client.TrySocks5(int32(listener.Addr().(*net.TCPAddr).Port), "", "")
+			// A start that still runs changes nothing in what follows.
+			guard := &portGuard{sameFor: always}
+			client.TrySocks5(int32(listener.Addr().(*net.TCPAddr).Port), "", "", guard)
 			if h3 {
 				client.TryH3Direct()
 			}
@@ -135,6 +236,9 @@ func TestSocksHandshakeTimeoutDoesNotFallback(t *testing.T) {
 			}
 			if directConnections.Load() != 0 {
 				t.Error("handshake timeout dialed the destination directly")
+			}
+			if asked := guard.asked.Load(); asked != 1 {
+				t.Errorf("the guard was asked %d times", asked)
 			}
 			select {
 			case err := <-closed:

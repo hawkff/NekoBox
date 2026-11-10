@@ -880,6 +880,8 @@ class ConfigBuilderGoldenTest {
         fun local(forTest: Boolean = false) = build(profile, forTest = forTest).localProxy?.let { listOf(it.port, it.user, it.password) }
         // Proxy mode asks for no login unless a setting says so.
         assertEquals(listOf(DataStore.mixedPort, "", ""), local())
+        // With no login either, one config's port is told from the next one's.
+        assertNotEquals(build(profile).localProxy!!.start, build(profile).localProxy!!.start)
         assertNull(local(forTest = true))
         DataStore.serviceMode = Key.MODE_VPN
         assertNull(local())

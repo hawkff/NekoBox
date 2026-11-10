@@ -27,6 +27,16 @@ import (
 
 var errFailConnectSocks5 = errors.New("fail connect socks5")
 
+// errOwnPortGone ends a request of a client whose local port is no longer the one it was set up
+// with: see OwnPortGuard.
+var errOwnPortGone = errors.New("the proxy this request was set up to go through no longer runs")
+
+// OwnPortGuard tells a client whether the start of the service it was set up in still runs, with
+// its local port still open.
+type OwnPortGuard interface {
+	SameStart() bool
+}
+
 const (
 	defaultHTTPTimeout     = 120 * time.Second
 	defaultHTTPDialTimeout = 30 * time.Second
@@ -42,7 +52,7 @@ type HTTPClient interface {
 	SetTimeoutMs(timeoutMs int32) error
 	RestrictedTLS()
 	ModernTLS()
-	TrySocks5(port int32, username string, password string)
+	TrySocks5(port int32, username string, password string, guard OwnPortGuard)
 	TryH3Direct()
 	KeepAlive()
 	NewRequest() HTTPRequest
@@ -118,11 +128,23 @@ func (c *httpClient) RestrictedTLS() {
 
 // TrySocks5 prefers the local SOCKS proxy, with direct fallback for other SOCKS failures.
 // Handshake timeouts and cancellations fail the request without direct fallback.
-func (c *httpClient) TrySocks5(port int32, username string, password string) {
+//
+// guard, when there is one, is asked for every connection once it is made, and before a byte is
+// sent on it. A start that still runs has held the port ever since the client was set up, so the
+// connection has reached that start and nothing else. Once it no longer runs the request fails:
+// it goes neither to whatever holds the port by then nor around the proxy. That is asked again
+// when the handshake fails, before the request would go around the proxy for that.
+func (c *httpClient) TrySocks5(port int32, username string, password string, guard OwnPortGuard) {
 	dialer := &net.Dialer{Timeout: defaultHTTPDialTimeout}
 	c.h1h2Transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		for {
 			socksConn, err := dialer.DialContext(ctx, "tcp", "127.0.0.1:"+strconv.Itoa(int(port)))
+			if guard != nil && !guard.SameStart() {
+				if err == nil {
+					_ = socksConn.Close()
+				}
+				return nil, errOwnPortGone
+			}
 			if err != nil {
 				if c.tryH3Direct {
 					return nil, errFailConnectSocks5
@@ -147,6 +169,10 @@ func (c *httpClient) TrySocks5(port int32, username string, password string) {
 				}
 				if errors.Is(err, os.ErrDeadlineExceeded) {
 					return nil, err
+				}
+				// A start that ended under the handshake: the request does not go around it either.
+				if guard != nil && !guard.SameStart() {
+					return nil, errOwnPortGone
 				}
 				if c.tryH3Direct {
 					return nil, errFailConnectSocks5
