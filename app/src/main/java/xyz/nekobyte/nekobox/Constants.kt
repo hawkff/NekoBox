@@ -71,7 +71,6 @@ object Key {
     const val BYPASS_LAN_IN_CORE = "bypassLanInCore"
 
     const val MIXED_PORT = "mixedPort"
-    const val MIXED_SECRET = "mixedSecret" // storage key for the generated inbound secret
     const val MIXED_USERNAME = "neko" // username presented to the authed mixed inbound
     const val SHARE_SECRET = "shareSecret" // storage key for the credential handed to other devices
     const val SHARE_USERNAME = "share" // username other devices present to the shared inbound

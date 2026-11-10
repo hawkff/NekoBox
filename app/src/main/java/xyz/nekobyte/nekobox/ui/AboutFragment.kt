@@ -20,7 +20,7 @@ import org.json.JSONObject
 import xyz.nekobyte.nekobox.BuildConfig
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
-import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.databinding.LayoutAboutBinding
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
@@ -130,7 +130,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
             val found = try {
                 val client = Libcore.newHttpClient().apply {
                     modernTLS()
-                    trySocks5(DataStore.mixedPort, DataStore.mixedInboundUser, DataStore.mixedInboundPass)
+                    throughRunningProxy()
                 }
                 val response = client.newRequest().apply { setURL(LATEST) }.execute()
                 val release = JSONObject(response.getContentStringLimited(10L * 1024 * 1024))

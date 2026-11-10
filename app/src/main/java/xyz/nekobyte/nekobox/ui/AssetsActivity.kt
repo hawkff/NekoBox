@@ -16,6 +16,7 @@ import com.google.android.material.snackbar.Snackbar
 import libcore.Libcore
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.databinding.LayoutAssetItemBinding
 import xyz.nekobyte.nekobox.databinding.LayoutAssetsBinding
@@ -330,11 +331,7 @@ class AssetsActivity : ThemedActivity() {
         val client = Libcore.newHttpClient().apply {
             modernTLS()
             keepAlive()
-            trySocks5(
-                DataStore.mixedPort,
-                DataStore.mixedInboundUser,
-                DataStore.mixedInboundPass,
-            )
+            throughRunningProxy()
         }
 
         try {
@@ -412,11 +409,7 @@ class AssetsActivity : ThemedActivity() {
         val client = Libcore.newHttpClient().apply {
             modernTLS()
             keepAlive()
-            trySocks5(
-                DataStore.mixedPort,
-                DataStore.mixedInboundUser,
-                DataStore.mixedInboundPass,
-            )
+            throughRunningProxy()
         }
         try {
             val response = client.newRequest().apply {

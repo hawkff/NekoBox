@@ -2,11 +2,17 @@ package xyz.nekobyte.nekobox.fmt
 
 import android.os.Build
 import android.widget.Toast
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.SingBoxOptions.*
 import xyz.nekobyte.nekobox.TrafficSniffing
+import xyz.nekobyte.nekobox.aidl.LocalProxy
 import xyz.nekobyte.nekobox.bg.VpnService
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -212,6 +218,9 @@ class ConfigBuildResult(
     val wireguardInstances: Map<Long, List<WireGuardInstance>> = emptyMap(),
     // The config joins the Nebula network; full custom configs run as written, without it.
     val nebula: Boolean = false,
+    // The local mixed inbound the config runs, for the app's own requests, or null without one: VPN mode leaves it
+    // out unless a setting asks for it, and custom JSON can remove it.
+    val localProxy: LocalProxy? = null,
 ) {
     data class IndexEntity(var chain: LinkedHashMap<Int, ProxyEntity>)
 
@@ -314,6 +323,13 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 mapOf(tagProxy to listOf(proxy)), //
                 mapOf(proxy.id to tagProxy), //
                 -1L,
+                // A full config runs as written. One that kept the inbound's tag and asks for no login, as an
+                // exported config has it, still takes the app's own requests.
+                localProxy = try {
+                    localProxyOf(JsonParser.parseString(bean.config).asJsonObject, null)
+                } catch (_: RuntimeException) {
+                    null
+                },
             )
         }
     }
@@ -387,6 +403,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     // it onto a per-subscription resolver (keep it on the global direct path).
     val nonCustomFinalHosts = hashSetOf<String>()
     val isVPN = DataStore.serviceMode == Key.MODE_VPN
+    // The secret of the local port's own user, of this config alone. The service tells the app's own requests the
+    // one it runs with; one of them that comes after a stop can reach whatever took the port, and what it gives away
+    // then opens nothing any more.
+    val ownSecret = DataStore.newSecret()
     // Exported configs run elsewhere: keep their listener on loopback and leave this device's
     // inbound credentials out of them.
     val bind = if (!forTest && !forExport && DataStore.allowAccess) "0.0.0.0" else LOCALHOST
@@ -519,7 +539,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                                 add(
                                     User().also { u ->
                                         u.username = Key.MIXED_USERNAME
-                                        u.password = DataStore.mixedSecret
+                                        u.password = ownSecret
                                     },
                                 )
                                 // Other devices get their own credential, so regenerating it
@@ -1600,6 +1620,33 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             profileTailscaleNodes,
             wireguardInstances,
             joinNebula,
+            localProxyOf(configTree, ownSecret),
         )
     }
+}
+
+// The local mixed inbound in a finished config, as the app's own requests can use it. Read from the config as it will
+// run, after custom JSON was merged in: that can remove the inbound, move it or change who may log in. Null when the
+// inbound is gone, does not listen in the clear where those requests connect, on 127.0.0.1, or asks for a login
+// other than [secret], the one made for this config: a password that custom JSON wrote is the same at every start,
+// so one given away after a stop would still open the port.
+private fun localProxyOf(config: JsonObject, secret: String?): LocalProxy? {
+    // An object as the core reads it, by names without regard to case. Two names that differ in case only leave open
+    // which of them counts. So does a name outside ASCII: the core folds names by Unicode's rules, under which a
+    // long s is an s.
+    fun JsonObject.fields() = entrySet().associate { it.key.lowercase() to it.value }
+        .takeIf { it.size == size() && it.keys.all { name -> name.all { char -> char.code < 128 } } }
+    fun Map<String, JsonElement>.text(name: String) = (get(name) as? JsonPrimitive)?.takeIf { it.isString }?.asString
+    val inbounds = (config.fields()?.get("inbounds") as? JsonArray ?: return null).filterIsInstance<JsonObject>().map { it.fields() ?: return null }
+    val inbound = inbounds.singleOrNull { it.text("tag") == TAG_MIXED } ?: return null
+    val port = (inbound["listen_port"] as? JsonPrimitive)?.takeIf { it.isNumber }?.asInt ?: return null
+    if (inbound.text("type") != "mixed" || inbound.text("listen") !in setOf(LOCALHOST, "0.0.0.0") || port !in 1..65535) return null
+    // Anything under tls but a plain "enabled": false is taken for TLS.
+    val tls = inbound["tls"]?.takeUnless { it.isJsonNull }
+    if (tls != null && ((tls as? JsonObject)?.fields()?.get("enabled") as? JsonPrimitive)?.takeIf { it.isBoolean }?.asBoolean != false) return null
+    val users = inbound["users"]?.takeUnless { it.isJsonNull } ?: return LocalProxy(port, "", "")
+    if (users !is JsonArray) return null
+    if (users.size() == 0) return LocalProxy(port, "", "")
+    val own = users.map { (it as? JsonObject)?.fields() ?: return null }.filter { it.text("username") == Key.MIXED_USERNAME }
+    return if (secret != null && own.size == 1 && own.single().text("password") == secret) LocalProxy(port, Key.MIXED_USERNAME, secret) else null
 }

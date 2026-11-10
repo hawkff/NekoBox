@@ -15,7 +15,6 @@ import androidx.work.WorkerParameters
 import androidx.work.multiprocess.RemoteWorkManager
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
-import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.group.GroupUpdater
@@ -175,7 +174,8 @@ object SubscriptionUpdater {
                 ProfileDatabase.groupDao.subscriptions()
                     .mapNotNull { group -> group.subscription?.let { group to it } }
                     .filter { (_, sub) -> sub.autoUpdate!! }
-            if (!DataStore.serviceState.connected) {
+            // This job also runs with no screen bound to the service, so it asks the service for its state.
+            if (NekoBoxConnection.ask(applicationContext) { BaseService.State.values()[it.state].takeIf { state -> state.connected } } == null) {
                 Logs.d("work: not connected")
                 subscriptions = subscriptions.filter { (_, sub) -> !sub.updateWhenConnectedOnly!! }
             }
