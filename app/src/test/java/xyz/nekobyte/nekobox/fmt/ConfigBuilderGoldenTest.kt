@@ -460,6 +460,65 @@ class ConfigBuilderGoldenTest {
         assertResultMaps(result, first)
     }
 
+    // A chain of one hop is that hop's outbound under another name. In a group that picks its server both would go in
+    // under one tag, which the core refuses, so the chain gets a tag of its own that leads to that outbound.
+    @Test
+    fun selectorGroup_takesAMemberNextToAChainOfOnlyThatMember() {
+        // The core loads each of these in libcore's generated-config check.
+        val directory = File("build/generated-core-configs/selector").apply { mkdirs() }
+        for ((name, chainFirst, auto) in listOf(Triple("member-then-chain", false, false), Triple("chain-then-member", true, false), Triple("auto-chain-then-member", true, true))) {
+            ConfigBuilderTestEnv.reset()
+            DataStore.connectionTestURL = "http://example.com/generate_204"
+            val group = addGroup(isSelector = true, autoSelect = auto)
+            val member = addSocks(group, "192.0.2.51", 1091, "shared-member")
+            val other = addSocks(group, "192.0.2.52", 1092, "shared-other")
+            val chain = addChain(group, "shared-chain", member.id)
+            ConfigBuilderTestEnv.io {
+                ProfileDatabase.proxyDao.updateOrders(mapOf(member.id to (if (chainFirst) 3L else 1L), other.id to 2L, chain.id to (if (chainFirst) 1L else 3L)))
+            }
+
+            val result = build(member)
+            val root = JSONObject(result.config)
+            directory.resolve("$name.json").writeText(root.toString())
+            val outbounds = objects(root.getJSONArray("outbounds"))
+            val tags = listOf(member, other, chain).map { result.profileTagMap.getValue(it.id) }
+            assertEquals("$name: each profile has a tag of its own", 3, tags.toSet().size)
+            assertEquals(name, tags.toSet(), strings(outbounds.single { it.getString("tag") == "proxy" }.getJSONArray("outbounds")).toSet())
+            // Whichever of the two is built first, the server keeps the tag of its own outbound: a lookup of its
+            // address reads that outbound's settings. The chain is a selector that can only choose it.
+            assertEquals(name, outbounds.single { it.optString("type") == "socks" && it.optString("server") == "192.0.2.51" }.getString("tag"), tags[0])
+            val alias = outbounds.single { it.optString("type") == "selector" && it.getString("tag") != "proxy" }
+            assertEquals(name, tags[2], alias.getString("tag"))
+            assertEquals(name, listOf(tags[0]), strings(alias.getJSONArray("outbounds")))
+        }
+    }
+
+    // The profile of a rule is told from the group's members by its tag too, and its alias stays clear of the tags
+    // that hops are given: "g-" and the id of the server a path dials first.
+    @Test
+    fun selectorGroup_tellsARulesChainOfOneMemberFromThatMember() {
+        val member = addSocks(addGroup(isSelector = true), "192.0.2.53", 1093, "ruled-member")
+        val rules = addGroup()
+        val entry = addSocks(rules, "192.0.2.54", 1094, "ruled-entry")
+        val exit = addSocks(rules, "192.0.2.55", 1095, "ruled-exit")
+        val twoHops = addChain(rules, "ruled-two-hops", entry.id, exit.id)
+        val chain = addChain(rules, "g-${entry.id}", member.id)
+        ConfigBuilderTestEnv.io {
+            ProfileDatabase.rulesDao.createRule(RuleEntity(domains = "full:ruled.example", outbound = chain.id, enabled = true))
+            ProfileDatabase.rulesDao.createRule(RuleEntity(domains = "full:far.example", outbound = twoHops.id, enabled = true))
+        }
+
+        val result = build(member)
+        File("build/generated-core-configs/selector").apply { mkdirs() }.resolve("rule-chain.json").writeText(result.config)
+        val root = JSONObject(result.config)
+        val tags = objects(root.getJSONArray("outbounds")).map { it.getString("tag") }
+        assertEquals("an outbound's tag is used twice: $tags", tags.size, tags.toSet().size)
+        assertTrue("the path of the other rule dials its first server under the tag the chain is named after: $tags", "g-${entry.id}" in tags)
+        assertNotEquals(result.profileTagMap.getValue(member.id), result.profileTagMap.getValue(chain.id))
+        val rule = objects(root.getJSONObject("route").getJSONArray("rules")).single { it.toString().contains("ruled.example") }
+        assertEquals(result.profileTagMap.getValue(chain.id), rule.getString("outbound"))
+    }
+
     @Test
     fun autoSelectGroup_emitsUrltestOverEveryMember() {
         DataStore.connectionTestURL = "http://example.com/generate_204"
