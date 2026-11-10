@@ -130,4 +130,24 @@ class ProfileDatabaseMigrationTest {
             }
         }
     }
+
+    @Test
+    fun migrate16To17_preservesProfilesAndStartsTheirClearCountAtZero() {
+        helper.createDatabase(TEST_DB, 16).use { db ->
+            db.execSQL(
+                "INSERT INTO proxy_entities (id, groupId, type, userOrder, tx, rx, lifetimeRx, lifetimeTx, status, ping, uuid) " +
+                    "VALUES (7, 1, 0, 3, 200, 100, 5000, 6000, 1, 42, 'test-uuid-16to17')",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 17, true).use { db ->
+            db.query("SELECT id, userOrder, tx, rx, lifetimeRx, lifetimeTx, status, ping, uuid, trafficResets FROM proxy_entities").use { cursor ->
+                assertEquals("row count after 16->17 migration", 1, cursor.count)
+                assertTrue(cursor.moveToFirst())
+                assertEquals(listOf(7L, 3L, 200L, 100L, 5000L, 6000L, 1L, 42L), (0..7).map { cursor.getLong(it) })
+                assertEquals("test-uuid-16to17", cursor.getString(8))
+                assertEquals(0L, cursor.getLong(9))
+            }
+        }
+    }
 }

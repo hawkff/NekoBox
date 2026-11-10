@@ -15,7 +15,7 @@ import xyz.nekobyte.nekobox.fmt.KryoConverters
 
 @Database(
     entities = [ProxyGroup::class, ProxyEntity::class, RuleEntity::class],
-    version = 16,
+    version = 17,
     autoMigrations = [
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
@@ -33,6 +33,8 @@ import xyz.nekobyte.nekobox.fmt.KryoConverters
         // v15: additive proxy_entities.tailscaleBean column (nullable BLOB).
         AutoMigration(from = 14, to = 15),
         AutoMigration(from = 15, to = 16),
+        // v17: additive proxy_entities.trafficResets column (default 0).
+        AutoMigration(from = 16, to = 17),
     ],
 )
 @TypeConverters(KryoConverters::class)

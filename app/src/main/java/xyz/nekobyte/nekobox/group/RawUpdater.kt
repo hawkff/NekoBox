@@ -789,6 +789,7 @@ object RawUpdater : GroupUpdater() {
                     entity.rx = now.rx
                     entity.lifetimeTx = now.lifetimeTx
                     entity.lifetimeRx = now.lifetimeRx
+                    entity.trafficResets = now.trafficResets
                     entity.status = now.status
                     entity.ping = now.ping
                     entity.error = now.error

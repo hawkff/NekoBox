@@ -21,6 +21,8 @@ class TrafficUpdater(
         // lifetime accumulation idempotent across re-entrant persist()/applySelect calls.
         var lifetimeFlushedRx: Long = 0,
         var lifetimeFlushedTx: Long = 0,
+        // How often the profile's stored totals had been cleared when rx/tx were last matched to them.
+        var resets: Long = 0,
     ) {
         /** Whether this session moved the totals: a list that read the stored ones already shows the rest. */
         val counted get() = rx != rxBase || tx != txBase

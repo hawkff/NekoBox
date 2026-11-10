@@ -32,7 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * The traffic totals of profiles as the service keeps them while it runs: what it stores, and what becomes of a clear
- * from a screen, which sets the rows to zero on its own and then tells the service.
+ * from a screen, which sets the rows to zero on its own, counts the clear in them and then tells the service.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
@@ -95,7 +95,7 @@ class TrafficLooperTest {
         }
         return ProxyEntity(groupId = group).putBean(bean).apply {
             id = ProfileDatabase.proxyDao.addProxy(this)
-            ProfileDatabase.proxyDao.updateTraffic(id, rx, tx)
+            ProfileDatabase.proxyDao.updateTraffic(id, rx, tx, 0)
             this.rx = rx
             this.tx = tx
         }
@@ -173,23 +173,75 @@ class TrafficLooperTest {
         assertEquals(listOf(0L, 0L, 50L, 80L), stored(used))
     }
 
-    // A store can land between the screen's clear and the moment the service hears of it: at shutdown, or at a stop.
+    // A store can come between the screen's clear and the moment the service hears of it: at shutdown, or at a stop.
+    // It reads the clear from the rows, and does not bring back what was counted before it.
     @Test
-    fun totalsStoredAfterTheScreensClear_areClearedAgain_andTheListsAreTold() = test {
+    fun aStoreBetweenTheScreensClearAndTheServiceHearingOfIt_bringsNothingBack() = test {
         count()
         carried(used, 50, 80)
         ProfileDatabase.proxyDao.clearTraffic(group)
         looper.persist()
-        assertEquals(listOf(1_050L, 2_080L, 50L, 80L), stored(used))
+        assertEquals(listOf(0L, 0L, 50L, 80L), stored(used))
+        // Stored again, nothing is added to the lifetime totals a second time.
+        looper.persist()
+        assertEquals(listOf(0L, 0L, 50L, 80L), stored(used))
 
         data.clearTraffic(group)
 
         assertEquals(listOf(0L, 0L, 50L, 80L), stored(used))
-        // After the totals that store sent, the zeros.
         assertEquals(zeros(), sent.last().toSet())
         carried(used, 7, 9)
         looper.stop()
         assertEquals(listOf(7L, 9L, 57L, 89L), stored(used))
+    }
+
+    // The broadcast can also come after the service stored on its own and counted on. The lists are told what
+    // counts by then, not zeros that no row holds.
+    @Test
+    fun aClearHeardOfAfterALaterStore_tellsTheListsWhatWasCountedSince() = test {
+        count()
+        carried(used, 50, 80)
+        ProfileDatabase.proxyDao.clearTraffic(group)
+        looper.persist()
+        carried(used, 7, 9)
+        looper.stop()
+        assertEquals(listOf(7L, 9L, 57L, 89L), stored(used))
+
+        data.clearTraffic(group)
+
+        assertEquals(setOf(TrafficData(id = used.id, rx = 7, tx = 9), TrafficData(id = idle.id)), sent.last().toSet())
+        assertEquals(listOf(7L, 9L, 57L, 89L), stored(used))
+    }
+
+    // The service is told of a clear by a broadcast, which does not reach a service that is stopping. Its last store
+    // still leaves the cleared totals cleared, and the lifetime totals whole.
+    @Test
+    fun aClearTheServiceNeverHearsOf_standsAtItsLastStore() = test {
+        count()
+        carried(used, 50, 80)
+        ProfileDatabase.proxyDao.clearTraffic(group)
+
+        looper.stop()
+
+        assertEquals(listOf(0L, 0L, 50L, 80L), stored(used))
+        assertEquals(listOf(0L, 0L, 0L, 0L), stored(idle))
+        assertEquals(listOf(TrafficData(id = used.id)), sent.last())
+    }
+
+    // A profile used for the first time has nothing stored while the session counts for it. A clear counts in its
+    // row all the same, or the session's totals from before the clear would be stored after it.
+    @Test
+    fun aClearOfAProfileWithNothingStoredYet_alsoStandsAtTheLastStore() = test {
+        val fresh = add("fresh", 0, 0)
+        looper = TrafficLooper(data, CoroutineScope(Dispatchers.IO))
+        data.proxy = ProxyInstance(fresh, service).also { it.looper = looper }
+        data.traffic.withLock { looper.begin(ConfigBuildResult("", emptyList(), fresh.id, mapOf("fresh" to listOf(fresh)), mapOf(fresh.id to "fresh"), -1L)) }
+        carried(fresh, 5, 7)
+        ProfileDatabase.proxyDao.clearTraffic(group)
+
+        looper.stop()
+
+        assertEquals(listOf(0L, 0L, 5L, 7L), stored(fresh))
     }
 
     // In a group that picks its server the profiles of a path share its tag, and only the picked profile counts.

@@ -134,7 +134,7 @@ class ProfileRowWritesTest {
                 id = ProfileDatabase.proxyDao.addProxy(this)
             }
             for (profile in listOf(cleared, other)) {
-                ProfileDatabase.proxyDao.updateTraffic(profile.id, 300, 400)
+                ProfileDatabase.proxyDao.updateTraffic(profile.id, 300, 400, 0)
                 ProfileDatabase.proxyDao.addLifetimeTraffic(profile.id, 100, 200)
                 ProfileDatabase.proxyDao.updateTestResult(profile.id, 1, 42, null)
             }
@@ -145,6 +145,10 @@ class ProfileRowWritesTest {
             assertEquals(listOf(0L, 0L, 100L, 200L, 1L, 42L), listOf(stored.rx, stored.tx, stored.lifetimeRx, stored.lifetimeTx, stored.status.toLong(), stored.ping.toLong()))
             val untouched = ProfileDatabase.proxyDao.getById(other.id)!!
             assertEquals(300L to 400L, untouched.rx to untouched.tx)
+            // The rows count the clear, so totals counted before it are not stored after it. The other group's do not.
+            assertEquals(1L to 0L, stored.trafficResets to untouched.trafficResets)
+            assertEquals(0, ProfileDatabase.proxyDao.updateTraffic(cleared.id, 300, 400, 0))
+            assertEquals(1, ProfileDatabase.proxyDao.updateTraffic(cleared.id, 5, 6, 1))
         }
     }
 
@@ -153,7 +157,7 @@ class ProfileRowWritesTest {
         withContext(Dispatchers.IO) {
             val tested = add("first", 1)
             val untested = add("second", 2)
-            ProfileDatabase.proxyDao.updateTraffic(tested.id, 300, 400)
+            ProfileDatabase.proxyDao.updateTraffic(tested.id, 300, 400, 0)
             ProfileDatabase.proxyDao.updateTestResult(tested.id, 3, 0, "timeout")
 
             leavingTheRestOfTheRow("tx, rx, lifetimeRx, lifetimeTx, socksBean, userOrder, groupId") { ProfileManager.clearTestResults(groupId) }
