@@ -1445,44 +1445,12 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
             R.id.action_clear_traffic_statistics -> {
                 val groupId = tabGroupId()
-                runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
-                    val toClear = mutableListOf<ProxyEntity>()
-                    if (profiles.isNotEmpty()) {
-                        for (profile in profiles) {
-                            if (profile.tx != 0L || profile.rx != 0L) {
-                                profile.tx = 0
-                                profile.rx = 0
-                                toClear.add(profile)
-                            }
-                        }
-                    }
-                    if (toClear.isNotEmpty()) {
-                        ProfileManager.updateProfile(toClear)
-                    }
-                }
+                runOnDefaultDispatcher { ProfileManager.clearTraffic(groupId) }
             }
 
             R.id.action_connection_test_clear_results -> {
                 val groupId = tabGroupId()
-                runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
-                    val toClear = mutableListOf<ProxyEntity>()
-                    if (profiles.isNotEmpty()) {
-                        for (profile in profiles) {
-                            if (profile.status != 0) {
-                                profile.status = 0
-                                profile.ping = 0
-                                profile.error = null
-                                toClear.add(profile)
-                            }
-                        }
-                    }
-                    DataStore.forgetProxyExits(profiles.map { it.id })
-                    if (toClear.isNotEmpty()) {
-                        ProfileManager.updateProfile(toClear)
-                    }
-                }
+                runOnDefaultDispatcher { ProfileManager.clearTestResults(groupId) }
             }
 
             R.id.action_connection_test_delete_unavailable -> {

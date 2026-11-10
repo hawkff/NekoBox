@@ -38,13 +38,14 @@ class ProfileRowWritesTest {
         id = ProfileDatabase.proxyDao.addProxy(this)
     }
 
-    // Fails any statement in [block] that sets a profile's traffic, test result or settings, whatever values it sets.
-    private inline fun <T> leavingTheRestOfTheRow(block: () -> T): T {
+    // Fails any statement in [block] that sets one of [columns] of a profile's row, whatever values it sets: by
+    // default its traffic, test result and settings.
+    private inline fun <T> leavingTheRestOfTheRow(columns: String = "tx, rx, lifetimeRx, lifetimeTx, status, ping, socksBean", block: () -> T): T {
         val database = ProfileDatabase.instance.openHelper.writableDatabase
         database.execSQL(
             """
             CREATE TEMP TRIGGER rest_of_the_row
-            BEFORE UPDATE OF tx, rx, lifetimeRx, lifetimeTx, status, ping, socksBean ON proxy_entities
+            BEFORE UPDATE OF $columns ON proxy_entities
             BEGIN
                 SELECT RAISE(ABORT, 'the write set more of the row than it changed');
             END
@@ -121,6 +122,46 @@ class ProfileRowWritesTest {
 
             val stored = ProfileDatabase.proxyDao.getById(moved.id)!!
             assertEquals(listOf(other, 100L, 200L), listOf(stored.groupId, stored.lifetimeRx, stored.lifetimeTx))
+        }
+    }
+
+    // Clearing a group's traffic or its test results is one statement over the group's rows, not each row written back.
+    @Test
+    fun clearingAGroupsTraffic_leavesItsTestResultsAndTheOtherGroups() = runTest {
+        withContext(Dispatchers.IO) {
+            val cleared = add("first", 1)
+            val other = ProxyEntity(groupId = ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "other")), userOrder = 1).putBean(server("elsewhere", "192.0.2.9")).apply {
+                id = ProfileDatabase.proxyDao.addProxy(this)
+            }
+            for (profile in listOf(cleared, other)) {
+                ProfileDatabase.proxyDao.updateTraffic(profile.id, 300, 400)
+                ProfileDatabase.proxyDao.addLifetimeTraffic(profile.id, 100, 200)
+                ProfileDatabase.proxyDao.updateTestResult(profile.id, 1, 42, null)
+            }
+
+            leavingTheRestOfTheRow("lifetimeRx, lifetimeTx, status, ping, socksBean, userOrder, groupId") { ProfileManager.clearTraffic(groupId) }
+
+            val stored = ProfileDatabase.proxyDao.getById(cleared.id)!!
+            assertEquals(listOf(0L, 0L, 100L, 200L, 1L, 42L), listOf(stored.rx, stored.tx, stored.lifetimeRx, stored.lifetimeTx, stored.status.toLong(), stored.ping.toLong()))
+            val untouched = ProfileDatabase.proxyDao.getById(other.id)!!
+            assertEquals(300L to 400L, untouched.rx to untouched.tx)
+        }
+    }
+
+    @Test
+    fun clearingAGroupsTestResults_leavesItsTraffic() = runTest {
+        withContext(Dispatchers.IO) {
+            val tested = add("first", 1)
+            val untested = add("second", 2)
+            ProfileDatabase.proxyDao.updateTraffic(tested.id, 300, 400)
+            ProfileDatabase.proxyDao.updateTestResult(tested.id, 3, 0, "timeout")
+
+            leavingTheRestOfTheRow("tx, rx, lifetimeRx, lifetimeTx, socksBean, userOrder, groupId") { ProfileManager.clearTestResults(groupId) }
+
+            val stored = ProfileDatabase.proxyDao.getById(tested.id)!!
+            assertEquals(listOf(0L, 0L, 300L, 400L), listOf(stored.status.toLong(), stored.ping.toLong(), stored.rx, stored.tx))
+            assertNull(stored.error)
+            assertEquals(0, ProfileDatabase.proxyDao.getById(untested.id)!!.status)
         }
     }
 }

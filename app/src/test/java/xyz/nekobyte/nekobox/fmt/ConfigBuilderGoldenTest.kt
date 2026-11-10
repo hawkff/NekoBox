@@ -524,6 +524,12 @@ class ConfigBuilderGoldenTest {
             landingOutbounds.map { it.getString("detour") }.toSet(),
         )
         assertTrue(result.trafficMap.values.all { chain -> front in chain && landing in chain })
+        // Each path names its hops once, in the order it is dialed from its exit, and last the server it is the path
+        // of: the service reads the path's speed from that one, the only one that counts once a server is picked.
+        assertEquals(
+            setOf(listOf(landing.id, front.id, first.id), listOf(landing.id, front.id, second.id)),
+            result.trafficMap.values.map { chain -> chain.map { it.id } }.toSet(),
+        )
         assertTrue(result.profileTagMap.keys.containsAll(listOf(first.id, second.id)))
     }
 

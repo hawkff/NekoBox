@@ -296,4 +296,9 @@ object Action {
     const val EXTRA_AUTOMATED = "xyz.nekobyte.nekobox.EXTRA_AUTOMATED"
 
     const val RESET_UPSTREAM_CONNECTIONS = "xyz.nekobyte.nekobox.RESET_UPSTREAM_CONNECTIONS"
+
+    // The traffic totals of the group in the Long extra EXTRA_GROUP_ID were cleared. A running service keeps totals of
+    // its own and stores them when it stops, so it counts that group's profiles from zero again.
+    const val CLEAR_TRAFFIC = "xyz.nekobyte.nekobox.CLEAR_TRAFFIC"
+    const val EXTRA_GROUP_ID = "xyz.nekobyte.nekobox.EXTRA_GROUP_ID"
 }

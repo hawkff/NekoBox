@@ -21,7 +21,18 @@ class TrafficUpdater(
         // lifetime accumulation idempotent across re-entrant persist()/applySelect calls.
         var lifetimeFlushedRx: Long = 0,
         var lifetimeFlushedTx: Long = 0,
-    )
+    ) {
+        /** Whether this session moved the totals: a list that read the stored ones already shows the rest. */
+        val counted get() = rx != rxBase || tx != txBase
+
+        /** The totals start from zero again. What this session added so far stays, for the lifetime totals. */
+        fun clear() {
+            rxBase -= rx
+            txBase -= tx
+            rx = 0
+            tx = 0
+        }
+    }
 
     private fun updateOne(item: TrafficLooperData): TrafficLooperData {
         // last update
