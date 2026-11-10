@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -31,6 +32,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.ui.profile.ProfileSettingsActivity
@@ -47,6 +49,7 @@ class ProfileRowsDeviceTest {
     private val context = instrumentation.targetContext
     private val names = listOf("Row test alpha", "Row test bravo", "Row test charlie")
     private var group = 0L
+    private var otherGroup = 0L
     private var savedGroup = 0L
     private var savedLayout: String? = null
 
@@ -58,6 +61,8 @@ class ProfileRowsDeviceTest {
         savedGroup = DataStore.selectedGroup
         savedLayout = DataStore.configurationStore.getString(Key.GROUP_LAYOUT_MODE)
         group = ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "Row test servers", userOrder = 1_000_000L))
+        // A second basic group, so a profile of the first has somewhere to move.
+        otherGroup = ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "Row test other", userOrder = 1_000_001L))
         names.forEachIndexed { index, name ->
             ProfileDatabase.proxyDao.addProxy(
                 ProxyEntity(groupId = group, userOrder = index + 1L).putBean(
@@ -78,6 +83,7 @@ class ProfileRowsDeviceTest {
     fun tearDown() {
         ProfileDatabase.proxyDao.deleteAll(group)
         ProfileDatabase.groupDao.deleteById(group)
+        ProfileDatabase.groupDao.deleteById(otherGroup)
         DataStore.selectedGroup = savedGroup
         savedLayout.let { if (it == null) DataStore.configurationStore.remove(Key.GROUP_LAYOUT_MODE) else DataStore.configurationStore.putString(Key.GROUP_LAYOUT_MODE, it) }
     }
@@ -230,24 +236,62 @@ class ProfileRowsDeviceTest {
         }
     }
 
+    // A profile this build cannot run has no config to copy or save; its link can still be shared.
+    @Test
+    fun aProfileThatCannotRun_offersNoConfigToShare() {
+        ProfileDatabase.proxyDao.addProxy(
+            ProxyEntity(groupId = group, userOrder = 4L).putBean(
+                HysteriaBean().apply {
+                    protocolVersion = 1
+                    name = "Row test retired"
+                    serverAddress = "192.0.2.4"
+                    serverPorts = "443"
+                    initializeDefaultValues()
+                },
+            ),
+        )
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            await("the retired profile's row") {
+                var shown = false
+                scenario.onActivity { shown = runCatching { holder(it.currentScreen() as ConfigurationFragment, "Row test retired") }.isSuccess }
+                shown
+            }
+            scenario.onActivity {
+                val screen = it.currentScreen() as ConfigurationFragment
+                val retired = holder(screen, "Row test retired")
+                val menu = retired.shareMenu(retired.view, retired.entity.id)!!.menu
+                assertNull(menu.findItem(R.id.action_group_configuration))
+                assertNotNull(menu.findItem(R.id.action_group_clipboard))
+                // A profile that can run keeps both exports on Home.
+                val running = holder(screen, names[0])
+                assertNotNull(running.shareMenu(running.view, running.entity.id)!!.menu.findItem(R.id.action_config_export_file))
+            }
+        }
+    }
+
     @Test
     fun anEditor_readsItsProfileOffTheMainThread() {
-        // A new profile has none to read.
+        fun SocksSettingsActivity.item(id: Int) = findViewById<Toolbar>(R.id.toolbar).menu.findItem(id)
+        // A new profile has none to read, and nothing yet for the items that act on a stored profile.
         ActivityScenario.launch(SocksSettingsActivity::class.java).use { scenario ->
             settle()
-            scenario.onActivity { assertNull(it.proxyEntity) }
+            scenario.onActivity {
+                assertNull(it.proxyEntity)
+                assertNotNull(it.item(R.id.action_apply))
+                assertFalse(it.item(R.id.action_custom_config_json).isVisible || it.item(R.id.action_custom_outbound_json).isVisible)
+            }
         }
         val stored = profile(names[0])
         val edit = Intent(context, SocksSettingsActivity::class.java).putExtra(ProfileSettingsActivity.EXTRA_PROFILE_ID, stored.id)
         ActivityScenario.launch<SocksSettingsActivity>(edit).use { scenario ->
-            // The menu items that act on the stored profile show once it has been read.
+            // The menu items that act on the stored profile show once it has been read, Move with the groups it can go to.
             fun awaitItsMenu() = await("the editor's menu") {
                 var shown = false
-                scenario.onActivity { shown = it.findViewById<Toolbar>(R.id.toolbar).menu.findItem(R.id.action_custom_config_json)?.isVisible == true }
+                scenario.onActivity { shown = it.item(R.id.action_custom_config_json)?.isVisible == true && it.item(R.id.action_move)?.isVisible == true }
                 shown
             }
             awaitItsMenu()
-            // A recreated editor reads it again, before a menu asks for it on the main thread.
+            // A recreated editor reads both again, before a menu asks for the profile on the main thread.
             scenario.recreate()
             awaitItsMenu()
             scenario.onActivity { assertEquals(stored.id, it.proxyEntity?.id) }

@@ -338,12 +338,11 @@ data class ProxyEntity(
         return this
     }
 
-    fun settingIntent(ctx: Context, isSubscription: Boolean): Intent? {
+    fun settingIntent(ctx: Context): Intent? {
         if (!haveSettings()) return null
         val activityClass = ProtocolRegistry.forType(type)?.settingsActivityClass ?: return null
         return Intent(ctx, activityClass).apply {
             putExtra(ProfileSettingsActivity.EXTRA_PROFILE_ID, id)
-            putExtra(ProfileSettingsActivity.EXTRA_IS_SUBSCRIPTION, isSubscription)
         }
     }
 
