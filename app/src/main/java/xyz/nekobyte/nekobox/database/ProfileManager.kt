@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.database
 
 import android.database.sqlite.SQLiteCantOpenDatabaseException
 import xyz.nekobyte.nekobox.GroupType
+import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.fmt.AbstractBean
@@ -171,13 +172,6 @@ object ProfileManager {
         GroupManager.postReload(groupId)
     }
 
-    suspend fun updateProfile(profiles: List<ProxyEntity>) {
-        ProfileDatabase.proxyDao.updateProxy(profiles)
-        profiles.forEach {
-            iterator { onUpdated(it, false) }
-        }
-    }
-
     // A probe may finish after an edit, subscription refresh or restore.
     internal suspend fun updateTestResults(results: List<ProfileTestResult>) {
         if (results.isEmpty()) return
@@ -193,6 +187,35 @@ object ProfileManager {
 
     suspend fun updateTraffic(profileId: Long, rx: Long, tx: Long) {
         ProfileDatabase.proxyDao.updateTraffic(profileId, rx, tx)
+    }
+
+    /**
+     * Sets the traffic totals of [groupId]'s profiles to zero, with one statement for the rows. A running service is
+     * told too: it keeps totals of its own, sends them to the lists and stores them when it stops.
+     */
+    suspend fun clearTraffic(groupId: Long) {
+        val counted = ProfileDatabase.proxyDao.getByGroup(groupId).filter { it.rx != 0L || it.tx != 0L }
+        ProfileDatabase.proxyDao.clearTraffic(groupId)
+        NekoBox.clearTraffic(groupId)
+        for (profile in counted) {
+            profile.rx = 0
+            profile.tx = 0
+            postUpdate(profile)
+        }
+    }
+
+    /** Forgets the test results of [groupId]'s profiles, and where its checked proxies left from. */
+    suspend fun clearTestResults(groupId: Long) {
+        val profiles = ProfileDatabase.proxyDao.getByGroup(groupId)
+        DataStore.forgetProxyExits(profiles.map { it.id })
+        if (ProfileDatabase.proxyDao.clearTestResults(groupId) == 0) return
+        for (profile in profiles) {
+            if (profile.status == 0) continue
+            profile.status = 0
+            profile.ping = 0
+            profile.error = null
+            postUpdate(profile)
+        }
     }
 
     // Add a per-session DELTA (never absolute) into the profile's lifetime columns (schema v12).

@@ -276,6 +276,10 @@ class NekoBox :
             Intent(Action.CLOSE).setPackage(application.packageName).putExtra(Action.EXTRA_AUTOMATED, !byUser),
         )
 
+        fun clearTraffic(groupId: Long) = application.sendBroadcast(
+            Intent(Action.CLEAR_TRAFFIC).setPackage(application.packageName).putExtra(Action.EXTRA_GROUP_ID, groupId),
+        )
+
         var underlyingNetwork: Network? = null
 
         var appVersionNameForDisplay = {

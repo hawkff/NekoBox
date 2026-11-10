@@ -19,6 +19,7 @@ import xyz.nekobyte.nekobox.Protocols
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback
+import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.proto.ProxyInstance
 import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
 import xyz.nekobyte.nekobox.database.DataStore
@@ -101,6 +102,8 @@ class BaseService {
                     }
                 }
 
+                Action.CLEAR_TRAFFIC -> runOnDefaultDispatcher { clearTraffic(intent.getLongExtra(Action.EXTRA_GROUP_ID, 0L)) }
+
                 Action.RESET_UPSTREAM_CONNECTIONS -> runOnDefaultDispatcher {
                     Libcore.resetAllConnections(true)
                     runOnMainDispatcher {
@@ -138,6 +141,29 @@ class BaseService {
         // From the end of a restart's teardown until the onStartCommand of its new start: stopped,
         // but only on the way to running again. Main thread only.
         var restarting = false
+
+        // Held, one at a time, by whoever counts traffic, stores the totals of profiles or clears them: a round of
+        // the TrafficLooper, its last store, the one at shutdown and a clear. So a total is never stored from what
+        // was counted before a clear.
+        val traffic = Mutex()
+
+        /**
+         * A screen cleared the traffic totals of [groupId]'s profiles. What the session counted for them starts from
+         * zero as well, and totals it stored between the screen's clear and this one are cleared again. The lists
+         * are sent the zeros: they can show what a round or a store sent them, which the screen did not find in the
+         * rows it cleared.
+         * shortcut: a clear whose broadcast arrives after the receiver is unregistered is not applied, so a last
+         * store that landed after the screen's clear stays; closing that takes a clear the service can read from the
+         * rows or has to acknowledge, if it is ever seen.
+         */
+        suspend fun clearTraffic(groupId: Long) = traffic.withLock {
+            // The profiles the group has now, not the ones it had when the config was built.
+            val ids = ProfileDatabase.proxyDao.getIdsByGroup(groupId)
+            proxy?.looper?.cleared(ids)
+            ProfileDatabase.proxyDao.clearTraffic(groupId)
+            val zeros = ids.map { TrafficData(id = it) }
+            binder.broadcast { it.cbTrafficUpdateList(zeros) }
+        }
 
         fun changeState(s: State, msg: String? = null) {
             if (state == s && msg == null) return
@@ -722,6 +748,7 @@ class BaseService {
                 addAction(Action.CLOSE)
                 addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
                 addAction(Action.RESET_UPSTREAM_CONNECTIONS)
+                addAction(Action.CLEAR_TRAFFIC)
                 addAction(NetworkAutomationService.ACTION_RECHECK)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

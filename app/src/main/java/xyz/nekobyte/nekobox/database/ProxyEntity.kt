@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.io.ByteBufferOutput
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.SingBoxOptions.BrutalOptions
 import xyz.nekobyte.nekobox.SingBoxOptions.MultiplexOptions
+import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.fmt.*
 import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
@@ -355,6 +356,10 @@ data class ProxyEntity(
         @Query("SELECT id FROM proxy_entities WHERE groupId = :groupId ORDER BY userOrder")
         fun getIdsByGroup(groupId: Long): List<Long>
 
+        // Every profile's traffic totals, without the rest of the rows.
+        @Query("SELECT id, rx, tx FROM proxy_entities")
+        fun getTraffic(): List<TrafficData>
+
         @Query("SELECT id FROM proxy_entities WHERE type = :type")
         fun getIdsByType(type: Int): List<Long>
 
@@ -452,6 +457,12 @@ data class ProxyEntity(
 
         @Query("UPDATE proxy_entities SET rx = :rx, tx = :tx WHERE id = :proxyId")
         fun updateTraffic(proxyId: Long, rx: Long, tx: Long): Int
+
+        @Query("UPDATE proxy_entities SET rx = 0, tx = 0 WHERE groupId = :groupId AND (rx != 0 OR tx != 0)")
+        fun clearTraffic(groupId: Long): Int
+
+        @Query("UPDATE proxy_entities SET status = 0, ping = 0, error = NULL WHERE groupId = :groupId AND status != 0")
+        fun clearTestResults(groupId: Long): Int
 
         // Additive lifetime accumulation (schema v12). Callers pass the per-session DELTA since
         // the last flush (never absolute totals) so re-entrant persist() cannot double-count.

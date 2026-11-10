@@ -631,10 +631,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 }
                 chainTailscaleProfiles += hop.id
             }
-            val chainTrafficSet = HashSet<ProxyEntity>().apply {
-                plusAssign(profileList)
-                add(entity)
-            }
+            // The chain's hops, each once and in the chain's order, and then the profile itself: the service reads a
+            // tag's speed from the last profile listed for it, and in a group that picks its server while it runs
+            // only the picked profile counts. Told apart by id: hashing a whole profile serializes its settings.
+            val chainTraffic = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
 
             var currentOutbound: SingBoxOption
             lateinit var pastOutbound: SingBoxOption
@@ -943,7 +943,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                             ),
                 ) { NekoBox.application.getString(R.string.route_proxy_invalid, entity.displayName()) }
             }
-            trafficMap[chainTagOut] = chainTrafficSet.toList()
+            trafficMap[chainTagOut] = chainTraffic
             // Reserve only for a chain that built completely; a hop that fails later releases them.
             tailscaleProfiles += chainTailscaleProfiles
             tailscaleEndpoints += chainTailscaleEndpoints
