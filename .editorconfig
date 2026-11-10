@@ -8,6 +8,10 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
+# Gradle generates its Windows launcher with CRLF line endings.
+[gradlew.bat]
+end_of_line = crlf
+
 [*.{kt,kts}]
 ktlint_code_style = intellij_idea
 max_line_length = 120
