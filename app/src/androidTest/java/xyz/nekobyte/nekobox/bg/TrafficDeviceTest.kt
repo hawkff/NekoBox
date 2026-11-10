@@ -158,7 +158,7 @@ class TrafficDeviceTest {
     private fun request() {
         val client = Libcore.newHttpClient()
         try {
-            client.trySocks5(DataStore.mixedPort, "", "")
+            client.trySocks5(DataStore.mixedPort, "", "", null)
             client.newRequest().apply { setURL("http://traffic.invalid/") }.execute()
         } finally {
             client.close()

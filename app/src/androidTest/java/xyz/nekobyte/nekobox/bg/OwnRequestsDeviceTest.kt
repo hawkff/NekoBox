@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import libcore.HTTPClient
 import libcore.Libcore
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -240,9 +241,22 @@ class OwnRequestsDeviceTest {
         // Nothing runs: no proxy to go through, and no wait for a service.
         assertNull(state())
         assertNull(localProxy())
-        // Something else listens on the port the settings name. What each of its clients sent it, one after the other.
+        // Something else listens on the port the settings name.
+        val received = whileSomethingElseListensOn(DataStore.mixedPort) {
+            assertNull(localProxy())
+            // A real request of the app's own meanwhile: it has nowhere to go and fails, but not into that port.
+            updateTheSubscription()
+        }
+        assertEquals("the app's request connected to it too", listOf(listOf<Byte>(127)), received)
+        assertTrue(upstream.asked.isEmpty())
+    }
+
+    // Something else listens on the port while the block runs. What each of its clients sent it, one after the
+    // other; the test's own client comes last with one byte, 127: once the listener has seen that one, it has seen
+    // all that came before.
+    private fun whileSomethingElseListensOn(port: Int, block: () -> Unit): List<List<Byte>> {
         val received = CopyOnWriteArrayList<List<Byte>>()
-        ServerSocket(DataStore.mixedPort, 50, loopback).use { other ->
+        ServerSocket(port, 50, loopback).use { other ->
             thread(isDaemon = true) {
                 while (true) {
                     val client = runCatching { other.accept() }.getOrNull() ?: break
@@ -260,57 +274,80 @@ class OwnRequestsDeviceTest {
                     }
                 }
             }
-            assertNull(localProxy())
-            // A real request of the app's own meanwhile: it has nowhere to go and fails, but not into that port.
-            updateTheSubscription()
-            // The test's own client comes last: once the listener has seen it, it has seen all that came before.
+            block()
             Socket(loopback, other.localPort).use { it.getOutputStream().write(127) }
             await("the listener to see the test's own client") { received.lastOrNull() == listOf<Byte>(127) }
         }
-        assertEquals("the app's request connected to it too", 1, received.size)
-        assertTrue(upstream.asked.isEmpty())
+        return received.toList()
     }
 
+    // How a request of the client's ends: null when it was answered.
+    private fun failureOf(client: HTTPClient) = runCatching { client.newRequest().apply { setURL("http://own-requests.invalid/list") }.execute() }.exceptionOrNull()?.message
+
+    // A client set up while the service runs keeps the port and the login for its later requests, and asks for each
+    // of them whether that start still runs. After a stop its requests fail: whatever took the port is sent nothing,
+    // and the next start, which is another one with another login, is not asked to serve them.
     @Test
-    fun aLoginGivenToWhateverTookThePortAfterAStop_opensNothingAtTheNextStart() {
+    fun aClientSetUpInOneStart_sendsNothingToWhatTakesThePortAfterIt_norToTheNextStart() {
         connect()
         val first = localProxy()!!
-        // A client set up while the service runs keeps the port and the login for its later requests.
-        val client = Libcore.newHttpClient().apply { trySocks5(first.port, first.user, first.password) }
-        val taken = CopyOnWriteArrayList<Pair<String, String>>()
+        val client = Libcore.newHttpClient().apply { throughRunningProxy() }
         try {
+            assertNull("the proxy's server had ${upstream.trouble}", failureOf(client))
+            assertEquals(listOf("own-requests.invalid:80"), upstream.asked.toList())
+
             stop()
             assertNull(localProxy())
-            // Something else takes the port and asks whoever connects for a login.
-            ServerSocket(first.port, 50, loopback).use { other ->
-                thread(isDaemon = true) {
-                    runCatching {
-                        other.accept().use {
-                            it.soTimeout = 10_000
-                            val input = DataInputStream(it.getInputStream())
-                            check(input.readUnsignedByte() == 5)
-                            input.readFully(ByteArray(input.readUnsignedByte()))
-                            it.getOutputStream().write(byteArrayOf(5, 2))
-                            check(input.readUnsignedByte() == 1)
-                            val user = String(ByteArray(input.readUnsignedByte()).also(input::readFully))
-                            taken += user to String(ByteArray(input.readUnsignedByte()).also(input::readFully))
-                        }
-                    }
-                }
-                runCatching { client.newRequest().apply { setURL("http://own-requests.invalid/list") }.execute() }
-                await("the client's login to reach the other listener") { taken.isNotEmpty() }
+            var failure: String? = null
+            val received = whileSomethingElseListensOn(first.port) { failure = failureOf(client) }
+            assertTrue("the request ended with $failure", failure.orEmpty().contains("no longer runs"))
+            // The client connected, asked the service, and left without a byte.
+            assertEquals(listOf(emptyList(), listOf<Byte>(127)), received)
+
+            connect()
+            val second = localProxy()!!
+            assertEquals(first.port, second.port)
+            assertNotEquals(first.start, second.start)
+            assertNotEquals(first.password, second.password)
+            assertTrue(failureOf(client).orEmpty().contains("no longer runs"))
+            assertEquals("the next start served the client", 1, upstream.asked.size)
+            assertEquals("the local port takes the login of this start", 0, answerToLogin(second.port, second.user, second.password))
+            assertNotEquals("the local port still takes the login of the start before", 0, answerToLogin(second.port, first.user, first.password))
+        } finally {
+            client.close()
+        }
+    }
+
+    // A local port with no login has nothing secret to tell one start from the next by. A start is told all the same.
+    @Test
+    fun withNoLoginOnThePort_aClientSetUpInOneStart_isNotServedByTheNext() {
+        runBlocking(Dispatchers.IO) {
+            DataStore.proxyModeInboundAuth = false
+            DataStore.configurationStore.awaitWrites()
+        }
+        connect()
+        val first = localProxy()!!
+        assertEquals("", first.password)
+        val client = Libcore.newHttpClient().apply { throughRunningProxy() }
+        try {
+            assertNull("the proxy's server had ${upstream.trouble}", failureOf(client))
+            stop()
+            connect()
+            val second = localProxy()!!
+            assertEquals(first.port to "", second.port to second.password)
+            assertNotEquals(first.start, second.start)
+            assertTrue(failureOf(client).orEmpty().contains("no longer runs"))
+            assertEquals("the next start served the client", 1, upstream.asked.size)
+            // A client set up in this start is served.
+            val fresh = Libcore.newHttpClient().apply { throughRunningProxy() }
+            try {
+                assertNull("the proxy's server had ${upstream.trouble}", failureOf(fresh))
+            } finally {
+                fresh.close()
             }
         } finally {
             client.close()
         }
-        assertEquals(first.user to first.password, taken.single())
-
-        connect()
-        val second = localProxy()!!
-        assertEquals(first.port, second.port)
-        assertNotEquals(first.password, second.password)
-        assertEquals("the local port takes the login of this start", 0, answerToLogin(second.port, second.user, second.password))
-        assertNotEquals("the local port still takes the login of the start before", 0, answerToLogin(second.port, taken.single().first, taken.single().second))
     }
 
     // A request through the client, which ends at the proxy's server: that stands in for the site and speaks no TLS.

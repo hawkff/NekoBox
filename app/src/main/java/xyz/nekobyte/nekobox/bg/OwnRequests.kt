@@ -21,12 +21,15 @@ fun localProxy(): LocalProxy? = runBlocking { NekoBoxConnection.ask(app) { it.lo
 
 /**
  * Sends this client's requests through the running proxy when there is one to go through: see [localProxy]. The
- * client keeps the port and the login for all it does afterwards. Should the service stop meanwhile and something
- * else take the port, that gets the client's next request with a login that opens nothing: every start has a secret
- * of its own.
+ * client keeps the port and the login for all it does afterwards. For every connection it makes there it asks,
+ * before it sends a byte, whether the start it was set up in still runs with the port open: the port has then been
+ * the service's all along, and so is what the connection reached. Once that start is gone the client's requests
+ * fail. They go neither to whatever holds the port by then nor around the proxy.
  */
 fun HTTPClient.throughRunningProxy() {
-    localProxy()?.let { trySocks5(it.port, it.user, it.password) }
+    val local = localProxy() ?: return
+    // A failure to ask is no yes. Nothing may be thrown at the core, which asks.
+    trySocks5(local.port, local.user, local.password) { runCatching { localProxy()?.start == local.start }.getOrDefault(false) }
 }
 
 /**

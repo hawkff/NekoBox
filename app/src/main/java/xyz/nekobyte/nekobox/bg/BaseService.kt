@@ -200,11 +200,14 @@ class BaseService {
         override fun getProfileName(): String = data?.proxy?.displayProfileName ?: "Idle"
 
         // The local port of the config the service is connected with. Connected: the core has started with that
-        // config, which it does not with a port another app holds, so the port is this app's. The state is read
-        // after the config, so the config of a start still under way is not taken for the one that connected.
+        // config, which it does not with a port another app holds, so the port is this app's. The core still
+        // listens there with the socket of that start: it gives a listener up after an accept error it does not
+        // retry and runs on without it, and the port is then whoever's binds it next. The state is read last, so
+        // neither the config of a start still under way nor a start that took this one's place meanwhile passes.
         override fun getLocalProxy(): LocalProxy? {
             val data = data ?: return null
             val proxy = data.proxy?.takeIf { it.isInitialized() } ?: return null
+            if (proxy.portListener?.alive() != true) return null
             return proxy.config.localProxy.takeIf { data.state == State.Connected && data.proxy === proxy }
         }
 
