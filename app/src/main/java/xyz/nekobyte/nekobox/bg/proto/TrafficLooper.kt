@@ -11,6 +11,7 @@ import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.StoredTraffic
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.TAG_BYPASS
 import xyz.nekobyte.nekobox.fmt.TAG_PROXY
@@ -60,17 +61,18 @@ class TrafficLooper(
      */
     suspend fun persist() = data.traffic.withLock { if (!stopped) store() }
 
-    // Flushes the cumulative rx/tx of the profiles this session counted traffic for into the DB (ProxyEntity.tx/rx
-    // via ProfileManager.updateTraffic) and broadcasts a final traffic update. The rows of the rest hold their totals
-    // already. The caller holds data.traffic.
+    // Flushes the cumulative rx/tx of the profiles this session counted traffic for into the DB (ProxyEntity.tx/rx)
+    // and broadcasts a final traffic update. The rows of the rest hold their totals already. The caller holds
+    // data.traffic.
     private suspend fun store() {
         if (!DataStore.profileTrafficStatistics) return
+        reconcile()
         val traffic = ArrayList<TrafficData>()
         for ((id, item) in idMap) {
             if (item === itemBypass || !item.counted) continue
-            ProfileManager.updateTraffic(id, item.rx, item.tx)
+            val stored = put(id, item)
             flushLifetimeDelta(id, item)
-            traffic.add(TrafficData(id = id, rx = item.rx, tx = item.tx))
+            if (stored) traffic.add(TrafficData(id = id, rx = item.rx, tx = item.tx))
         }
         data.binder.broadcast { b ->
             b.cbTrafficUpdateList(traffic)
@@ -109,10 +111,25 @@ class TrafficLooper(
         selectChannel.trySend(id)
     }
 
-    /** A screen cleared the totals of these profiles: they count from zero again. The caller holds data.traffic. */
-    fun cleared(ids: List<Long>) {
-        for (id in ids) idMap[id]?.clear()
+    /**
+     * Takes up the clears screens made since the items last looked at their rows: an item whose stored totals were
+     * cleared counts from zero like them. The rows tell, so it does not take the service to have heard of a clear.
+     * Returns the rows' totals as it read them. The caller holds data.traffic.
+     */
+    fun reconcile(): Map<Long, StoredTraffic> {
+        val stored = ProfileDatabase.proxyDao.getTraffic().associateBy { it.id }
+        for ((id, item) in idMap) {
+            val now = stored[id] ?: continue
+            if (now.trafficResets == item.resets) continue
+            item.clear()
+            item.resets = now.trafficResets
+        }
+        return stored
     }
+
+    // Stores an item's totals onto the ones it counted from. False when those were cleared in the instant since
+    // reconcile() looked, or the row is gone: the zeros of the clear stand.
+    private fun put(id: Long, item: TrafficUpdater.TrafficLooperData) = ProfileDatabase.proxyDao.updateTraffic(id, item.rx, item.tx, item.resets) > 0
 
     /**
      * The config's profiles start counting, from the totals their rows hold now: the config read them when it was
@@ -135,6 +152,7 @@ class TrafficLooper(
                 rxBase = now?.rx ?: 0,
                 txBase = now?.tx ?: 0,
                 ignore = ignore,
+                resets = now?.trafficResets ?: 0,
             )
             idMap[id] = item
             // The last one listed stays: the profile the tag belongs to.
@@ -165,7 +183,8 @@ class TrafficLooper(
             // finish on its own could land after a clear, or after the last totals were stored at a stop. This item
             // counts for that profile alone, while its tag can list more of them, such as the hops of a chain.
             if (DataStore.profileTrafficStatistics) {
-                ProfileManager.updateTraffic(selectorNowId, rx, tx)
+                reconcile()
+                put(selectorNowId, this)
                 flushLifetimeDelta(selectorNowId, this)
             }
         }

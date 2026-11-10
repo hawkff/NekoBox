@@ -94,8 +94,8 @@ class TrafficDeviceTest {
             used = ProfileManager.createProfile(group, server("Traffic used")).id
             idle = ProfileManager.createProfile(group, server("Traffic idle")).id
             // Totals from earlier sessions.
-            ProfileDatabase.proxyDao.updateTraffic(used, 1_000, 2_000)
-            ProfileDatabase.proxyDao.updateTraffic(idle, 30, 40)
+            ProfileDatabase.proxyDao.updateTraffic(used, 1_000, 2_000, 0)
+            ProfileDatabase.proxyDao.updateTraffic(idle, 30, 40, 0)
             DataStore.selectedProxy = used
             DataStore.serviceMode = Key.MODE_PROXY
             // The test's own request gives the local port no login.

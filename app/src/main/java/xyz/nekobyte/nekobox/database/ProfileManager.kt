@@ -185,13 +185,11 @@ object ProfileManager {
         }
     }
 
-    suspend fun updateTraffic(profileId: Long, rx: Long, tx: Long) {
-        ProfileDatabase.proxyDao.updateTraffic(profileId, rx, tx)
-    }
-
     /**
-     * Sets the traffic totals of [groupId]'s profiles to zero, with one statement for the rows. A running service is
-     * told too: it keeps totals of its own, sends them to the lists and stores them when it stops.
+     * Sets the traffic totals of [groupId]'s profiles to zero, with one statement for the rows, which also counts
+     * the clear in each of them. A running service is told too: it keeps totals of its own, sends them to the lists
+     * and stores them when it stops. Should it not hear of the clear, as while it stops, the count in the rows keeps
+     * what it counted before the clear from being stored after it.
      */
     suspend fun clearTraffic(groupId: Long) {
         val counted = ProfileDatabase.proxyDao.getByGroup(groupId).filter { it.rx != 0L || it.tx != 0L }

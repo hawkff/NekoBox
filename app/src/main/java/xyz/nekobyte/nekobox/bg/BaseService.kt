@@ -150,20 +150,19 @@ class BaseService {
 
         /**
          * A screen cleared the traffic totals of [groupId]'s profiles. What the session counted for them starts from
-         * zero as well, and totals it stored between the screen's clear and this one are cleared again. The lists
-         * are sent the zeros: they can show what a round or a store sent them, which the screen did not find in the
-         * rows it cleared.
-         * shortcut: a clear whose broadcast arrives after the receiver is unregistered is not applied, so a last
-         * store that landed after the screen's clear stays; closing that takes a clear the service can read from the
-         * rows or has to acknowledge, if it is ever seen.
+         * zero as well: it reads from the rows which were cleared. The lists are sent what counts for each profile
+         * now: they can show what a round or a store sent them, which the screen did not find in the rows it
+         * cleared. That is zero, unless the service stored on its own and counted on before it heard of the clear.
+         * A clear it does not hear of at all, as while it stops, is read from the rows at the next store.
          */
         suspend fun clearTraffic(groupId: Long) = traffic.withLock {
+            val looper = proxy?.looper
+            val stored = looper?.reconcile() ?: ProfileDatabase.proxyDao.getTraffic().associateBy { it.id }
             // The profiles the group has now, not the ones it had when the config was built.
-            val ids = ProfileDatabase.proxyDao.getIdsByGroup(groupId)
-            proxy?.looper?.cleared(ids)
-            ProfileDatabase.proxyDao.clearTraffic(groupId)
-            val zeros = ids.map { TrafficData(id = it) }
-            binder.broadcast { it.cbTrafficUpdateList(zeros) }
+            val now = ProfileDatabase.proxyDao.getIdsByGroup(groupId).mapNotNull { id ->
+                looper?.idMap?.get(id)?.let { TrafficData(id = id, rx = it.rx, tx = it.tx) } ?: stored[id]?.let { TrafficData(id = id, rx = it.rx, tx = it.tx) }
+            }
+            binder.broadcast { it.cbTrafficUpdateList(now) }
         }
 
         fun changeState(s: State, msg: String? = null) {

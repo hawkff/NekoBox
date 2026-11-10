@@ -8,7 +8,6 @@ import com.esotericsoftware.kryo.io.ByteBufferOutput
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.SingBoxOptions.BrutalOptions
 import xyz.nekobyte.nekobox.SingBoxOptions.MultiplexOptions
-import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.fmt.*
 import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.http.HttpBean
@@ -36,6 +35,9 @@ import xyz.nekobyte.nekobox.proxy.shadowtls.ShadowTLSBean
 import xyz.nekobyte.nekobox.ui.profile.ProfileSettingsActivity
 import java.util.UUID
 
+/** A profile's traffic totals as stored, and how often they were cleared. */
+class StoredTraffic(val id: Long, val rx: Long, val tx: Long, val trafficResets: Long)
+
 @Entity(
     tableName = "proxy_entities",
     indices = [Index("groupId", name = "groupId")],
@@ -55,6 +57,10 @@ data class ProxyEntity(
     var lifetimeRx: Long = 0L,
     @ColumnInfo(defaultValue = "0")
     var lifetimeTx: Long = 0L,
+    // How often tx/rx were cleared (schema v17). A session that stores totals names the count it started from, so
+    // what it counted before a clear is not stored after it. Like the lifetime totals, no part of the wire format.
+    @ColumnInfo(defaultValue = "0")
+    var trafficResets: Long = 0L,
     var status: Int = 0,
     var ping: Int = 0,
     // Tailscale node provenance; unrelated to protocol authentication UUID fields in beans.
@@ -357,8 +363,8 @@ data class ProxyEntity(
         fun getIdsByGroup(groupId: Long): List<Long>
 
         // Every profile's traffic totals, without the rest of the rows.
-        @Query("SELECT id, rx, tx FROM proxy_entities")
-        fun getTraffic(): List<TrafficData>
+        @Query("SELECT id, rx, tx, trafficResets FROM proxy_entities")
+        fun getTraffic(): List<StoredTraffic>
 
         @Query("SELECT id FROM proxy_entities WHERE type = :type")
         fun getIdsByType(type: Int): List<Long>
@@ -455,10 +461,14 @@ data class ProxyEntity(
         @Query("UPDATE proxy_entities SET status = :status, ping = :ping, error = :error WHERE id = :id")
         fun updateTestResult(id: Long, status: Int, ping: Int, error: String?): Int
 
-        @Query("UPDATE proxy_entities SET rx = :rx, tx = :tx WHERE id = :proxyId")
-        fun updateTraffic(proxyId: Long, rx: Long, tx: Long): Int
+        // Onto the totals a session started from, and no others: once they were cleared, what the session counted
+        // before that is not theirs. 0 when they were, or the row is gone.
+        @Query("UPDATE proxy_entities SET rx = :rx, tx = :tx WHERE id = :proxyId AND trafficResets = :resets")
+        fun updateTraffic(proxyId: Long, rx: Long, tx: Long, resets: Long): Int
 
-        @Query("UPDATE proxy_entities SET rx = 0, tx = 0 WHERE groupId = :groupId AND (rx != 0 OR tx != 0)")
+        // Every row of the group, the ones at zero too: a running session may have counted for one of them and not
+        // stored it yet.
+        @Query("UPDATE proxy_entities SET rx = 0, tx = 0, trafficResets = trafficResets + 1 WHERE groupId = :groupId")
         fun clearTraffic(groupId: Long): Int
 
         @Query("UPDATE proxy_entities SET status = 0, ping = 0, error = NULL WHERE groupId = :groupId AND status != 0")
