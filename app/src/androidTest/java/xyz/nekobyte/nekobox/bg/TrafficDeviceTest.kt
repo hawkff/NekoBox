@@ -210,4 +210,43 @@ class TrafficDeviceTest {
         assertTrue(stored(idle).rx > 0 && stored(idle).tx > 0)
         assertTrue(stored(used).lifetimeRx > stored(used).rx && stored(used).lifetimeTx > stored(used).tx)
     }
+
+    // The core keeps the server a group was switched to while it ran. The next start is for the server selected
+    // by then, which can be another one.
+    @Test
+    fun aStart_usesTheSelectedServer_notTheOneTheGroupWasLastSwitchedTo() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            NekoBox.startService(byUser = false)
+            await("the proxy to connect") { states.lastOrNull() == BaseService.State.Connected }
+            NekoBox.reloadService(idle)
+            await("the other server to count") {
+                request()
+                rounds.lastOrNull().orEmpty().any { it.id == idle && it.rx > 30 }
+            }
+            NekoBox.stopService(byUser = false)
+            await("the service to stop") { states.lastOrNull() == BaseService.State.Stopped }
+
+            // What the first start counted is in the rows now, and the lists were sent as much: from here on only
+            // more than that is this start's.
+            val usedBefore = stored(used).rx
+            val idleBefore = stored(idle).let { it.rx to it.tx }
+            // The screens followed the switch. The server is selected again as a tap on its row does.
+            runBlocking(Dispatchers.IO) {
+                DataStore.selectedProxy = used
+                DataStore.configurationStore.awaitWrites()
+            }
+            NekoBox.startService(byUser = false)
+            await("the proxy to connect again") { states.lastOrNull() == BaseService.State.Connected }
+            // The service starts counting a moment after it reports itself connected.
+            await("the selected server to count") {
+                request()
+                rounds.last().any { it.id == used && it.rx > usedBefore }
+            }
+            assertEquals("the screens were told of another server", used, DataStore.selectedProxy)
+
+            NekoBox.stopService(byUser = false)
+            await("the service to stop again") { states.lastOrNull() == BaseService.State.Stopped }
+            assertEquals("the server switched to earlier counted for this start", idleBefore, stored(idle).let { it.rx to it.tx })
+        }
+    }
 }
