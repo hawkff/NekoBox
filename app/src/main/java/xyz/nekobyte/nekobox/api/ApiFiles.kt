@@ -6,12 +6,12 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.ui.sanitizeAssetFileName
+import xyz.nekobyte.nekobox.utils.SendLog
 import java.io.File
-import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.Base64
 
-internal class ApiFiles(private val context: Context) {
+internal class ApiFiles(private val context: Context, private val logTail: (Long) -> ByteArray = SendLog::getNekoLog) {
     private val root get() = context.getExternalFilesDir(null) ?: context.filesDir
 
     private fun asset(name: String): File {
@@ -82,16 +82,10 @@ internal class ApiFiles(private val context: Context) {
 
     fun log(maxBytes: Long): JSONObject {
         requireApi(maxBytes in 1..1_048_576, "maxBytes must be 1..1048576")
-        val file = File(context.cacheDir, "neko.log")
-        if (!file.isFile) return JSONObject().put("text", "").put("bytes", 0)
-        return RandomAccessFile(file, "r").use { input ->
-            val length = input.length()
-            input.seek((length - maxBytes).coerceAtLeast(0))
-            val bytes = ByteArray(minOf(length, maxBytes).toInt())
-            val count = input.read(bytes).coerceAtLeast(0)
-            JSONObject().put("text", String(bytes, 0, count, Charsets.UTF_8)).put("bytes", count)
-                .put("truncated", length > maxBytes)
-        }
+        // One byte more than asked for tells whether the log is longer than what is returned.
+        val read = logTail(maxBytes + 1)
+        val bytes = if (read.size > maxBytes) read.copyOfRange(1, read.size) else read
+        return JSONObject().put("text", String(bytes, Charsets.UTF_8)).put("bytes", bytes.size).put("truncated", read.size > maxBytes)
     }
 
     private fun info(file: File) = JSONObject().put("name", file.name).put("bytes", file.length()).put("sha256", hash(file))

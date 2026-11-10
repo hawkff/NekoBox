@@ -121,7 +121,9 @@ internal class ConnectionAttempt(private val report: (ConnectionReport) -> Unit 
 }
 
 /** The file the core writes its fatal panics to, under the cache directory; see InitCore in libcore. */
+// The Go runtime's last fatal trace, a file for each process: the service's, where the core runs, and the screens'.
 internal const val CORE_CRASH_FILE = "core-crash.txt"
+internal const val UI_CRASH_FILE = "core-crash-ui.txt"
 
 private val DIGITS = Regex("[0-9]+")
 
@@ -331,12 +333,12 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
                 },
             )
         }.onFailure { Logs.w("Telemetry network callback failed") }
-        // The core runs in the service process and leaves its last panic there.
-        if (!isMainProcess) worker.execute { reportCoreCrash() }
+        // The Go runtime leaves its last panic in a file of the process it ran in: the core's in the service's.
+        worker.execute { reportCoreCrash(if (isMainProcess) UI_CRASH_FILE else CORE_CRASH_FILE) }
     }
 
-    private fun reportCoreCrash() {
-        val file = File(app.cacheDir, CORE_CRASH_FILE)
+    private fun reportCoreCrash(name: String) {
+        val file = File(app.cacheDir, name)
         val dump = runCatching { file.readText() }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
         // The core keeps the file open for appending, so it is emptied, not deleted.
         runCatching { RandomAccessFile(file, "rw").use { it.setLength(0) } }
