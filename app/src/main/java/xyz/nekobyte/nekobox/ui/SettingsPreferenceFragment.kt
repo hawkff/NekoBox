@@ -630,7 +630,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
 
                 // The core holds these open and writes on: they are emptied in place, as a deleted file would take
                 // what is written next with it.
-                if (child == "neko.log" || child == CORE_CRASH_FILE || child == UI_CRASH_FILE) {
+                if (child == "neko.log" || child == CORE_CRASH_FILE || child == UI_CRASH_FILE || child.startsWith("core-stderr")) {
                     try {
                         childFile.writeText("")
                         continue

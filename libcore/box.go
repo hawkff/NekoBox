@@ -118,6 +118,13 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 		return nil, fmt.Errorf("decode config: %v", err)
 	}
 
+	// A config that sends the core's log to stderr gets it in the app's log, where the core's log
+	// goes anyway: stderr has a file of its own here, for what prints with no lock, which is not
+	// cut back while the process runs.
+	if options.Log != nil && options.Log.Output == "stderr" {
+		options.Log.Output = ""
+	}
+
 	// sing-box opens a cache file for every core with a platform log writer, at cache.db in the working
 	// directory unless the config names one. Cores running side by side, as URL tests do, then queue for
 	// its lock and fail with "initialize cache-file: timeout". A core whose config keeps no cache file of

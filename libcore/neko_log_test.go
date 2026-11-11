@@ -3,6 +3,7 @@ package libcore
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -53,51 +54,94 @@ func TestALogWrittenPastTwiceItsLimitIsCutBackToTheLimit(t *testing.T) {
 	}
 }
 
-// stderr is the same open file after setupLog, so both share one offset, and every line the Go
-// runtime prints there moves it to the end. A cut that read its tail from that offset kept
-// nothing whenever such a line came between its seek and its read.
-func TestACutKeepsItsTailWhileStderrWritesToTheSameFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "neko.log")
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0o644)
+// Whoever prints to stderr takes no lock, so stderr has a file of its own and not the log, where
+// a cut could lose a line. What a run left in that file goes into the log when its process starts
+// next, once, and in a size the log keeps.
+func TestWhatARunLeftOnStderrGoesIntoTheLogAtTheNextStart(t *testing.T) {
+	dir := t.TempDir()
+	logFile, err := os.OpenFile(filepath.Join(dir, "neko.log"), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logFile.Close()
+	log, limit, disabled := nekoLog, nekoLogMax, nekoLogDisable
+	nekoLog, nekoLogMax, nekoLogDisable = logFile, 50<<10, false
+	defer func() { nekoLog, nekoLogMax, nekoLogDisable = log, limit, disabled }()
+	logFile.WriteString("a line of the log\n")
+
+	path := filepath.Join(dir, "core-stderr.txt")
+	// A run of the process: it takes what the run before left, and prints.
+	run := func(prints string) {
+		f, err := stderrFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		if info, err := f.Stat(); err != nil || info.Size() != 0 {
+			t.Fatalf("the file was not emptied for the next run: %v, %v", info, err)
+		}
+		f.WriteString(prints)
+	}
+	// As the runtime prints when it dies: no newline at the end.
+	const dump = "a line\npanic: boom\n\ngoroutine 1 [running]:\nmain.main()\n\t/x/main.go:1 +0x1"
+	run(dump)
+	run("")
+	logged := string(NekoLogTail(0))
+	if !strings.HasPrefix(logged, "a line of the log\n") || !strings.HasSuffix(logged, " the run before this one printed to stderr:\n"+dump+"\n") {
+		t.Fatalf("the log holds %q", logged)
+	}
+	run("")
+	if again := string(NekoLogTail(0)); again != logged {
+		t.Fatalf("what a run left was put into the log again: %q", again)
+	}
+
+	// A panic that starts just before the end that is kept anyway: nothing is left out, and
+	// nothing is put between the two parts.
+	short := "panic: boom\n" + strings.Repeat("x", nekoLogMax/2-len("anic: boom\n")) + "\n"
+	run(short)
+	run("")
+	if logged := string(NekoLogTail(0)); !strings.HasSuffix(logged, " the run before this one printed to stderr:\n"+short) {
+		t.Fatalf("the log ends %q", logged[max(0, len(logged)-80):])
+	}
+
+	// A trace of every goroutine, longer than the log keeps: its first lines and its end go in,
+	// and a cut of the log back to its limit leaves both.
+	run("noise\nfatal error: all of it\n\ngoroutine 1 [running]:\n" + strings.Repeat("goroutine 2 [select]:\n", 20000) + "the end")
+	run("")
+	nekoLogWriter{}.Write([]byte("a line after\n"))
+	keepLogTail(logFile, nekoLogMax)
+	logged = string(NekoLogTail(0))
+	if len(logged) != nekoLogMax {
+		t.Fatalf("the log was not cut back: %d bytes", len(logged))
+	}
+	at := strings.Index(logged, " the run before this one printed to stderr:\nfatal error: all of it\n\ngoroutine 1 [running]:\n")
+	if at < 0 || !strings.Contains(logged[at:], "\n[...]\n") || !strings.HasSuffix(logged, "the end\na line after\n") {
+		t.Fatal("the log has not the start and the end of the long trace after its cut")
+	}
+}
+
+// What cannot be put into the log stays in the file, for the next start to take.
+func TestWhatARunLeftOnStderrStaysWhenItCannotBeTaken(t *testing.T) {
+	dir := t.TempDir()
+	closed, err := os.OpenFile(filepath.Join(dir, "neko.log"), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed.Close()
+	log := nekoLog
+	nekoLog = closed
+	defer func() { nekoLog = log }()
+	path := filepath.Join(dir, "core-stderr.txt")
+	if err := os.WriteFile(path, []byte("panic: kept\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := stderrFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	// A duplicate shares the open file and its offset, as stderr does after Dup2.
-	duplicate, err := unix.Dup(int(f.Fd()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	stderr := os.NewFile(uintptr(duplicate), "stderr")
-	defer stderr.Close()
-	stop, stopped := make(chan struct{}), make(chan struct{})
-	go func() {
-		defer close(stopped)
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				stderr.Write([]byte("x"))
-			}
-		}
-	}()
-	defer func() {
-		close(stop)
-		<-stopped
-	}()
-
-	line := []byte("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
-	for i := range 2000 {
-		f.Write(line)
-		unlock := lockLog(f)
-		cutLog(f, 32, 32)
-		info, _ := f.Stat()
-		unlock()
-		// The tail, and whatever stderr added since.
-		if info.Size() < 32 {
-			t.Fatalf("cut %d kept %d bytes", i, info.Size())
-		}
+	if left, _ := os.ReadFile(path); string(left) != "panic: kept\n" {
+		t.Fatalf("the file holds %q after a log that could not be written", left)
 	}
 }
 
