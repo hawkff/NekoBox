@@ -82,9 +82,10 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 		// and a cut could lose the line. What a run left in its file is put into the log when the
 		// process starts next. Once for a process: a core set up again, as tests do, leaves its
 		// stderr where it is.
-		// shortcut: the file is not cut back while its process runs, cap it if anything is ever
-		// found to print to stderr in bulk. The core's loggers did, and go through the log: see
-		// below and NewSingBoxInstance.
+		// The core's loggers printed there in bulk and go through the log instead: see below and
+		// NewSingBoxInstance.
+		// shortcut: the file is looked at once a minute and emptied past stderrCap, whatever it
+		// holds, see capFile; rotate it instead if anything is ever found to print there in bulk.
 		stderrName := "core-stderr-ui.txt"
 		if isBgProcess {
 			stderrName = "core-stderr.txt"
@@ -96,6 +97,11 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 				log.Println("stderr file:", err)
 			} else {
 				stderrTaken = true
+				go func() {
+					for range time.Tick(time.Minute) {
+						capFile(int(os.Stderr.Fd()), stderrCap)
+					}
+				}()
 			}
 			// Stderr keeps its own descriptor.
 			f.Close()

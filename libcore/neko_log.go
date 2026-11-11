@@ -80,6 +80,19 @@ func cutLog(f *os.File, limit, keep int) {
 	f.Write(tail)
 }
 
+// stderrCap is how long the file of this process's stderr may get while the process runs.
+const stderrCap = 4 << 20
+
+// capFile empties the file behind fd once it is longer than limit. For the file of stderr, which
+// nothing else cuts back while its process runs: what prints there takes no lock, so a cut that
+// kept an end could lose a line all the same, and that much output is no trace but noise.
+func capFile(fd int, limit int64) {
+	var info unix.Stat_t
+	if unix.Fstat(fd, &info) == nil && info.Size > limit {
+		unix.Ftruncate(fd, 0)
+	}
+}
+
 // stderrRead is how much of what a run left on stderr the next one reads.
 const stderrRead = 16 << 20
 
