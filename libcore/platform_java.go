@@ -8,7 +8,6 @@ var isBgProcess bool
 
 type AppPlatformInterface interface {
 	UseOfficialAssets() bool
-	Selector_OnProxySelected(selectorTag string, tag string)
 }
 
 type BoxPlatformInterface interface {

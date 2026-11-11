@@ -71,3 +71,45 @@ func TestACoreKeepsTheCacheFileItsConfigKeeps(t *testing.T) {
 		})
 	}
 }
+
+// A selector takes up the outbound it was last switched to from the cache file. A start that is for
+// another one, as the app's are for the selected profile, has that forgotten before the core starts.
+func TestACoreStartsWithItsConfigsOutboundOnceTheKeptOneIsForgotten(t *testing.T) {
+	t.Chdir(t.TempDir())
+	started := func(forget bool) *BoxInstance {
+		instance, err := NewSingBoxInstance(`{"log":{"level":"panic"},"experimental":{"cache_file":{"enabled":true}},
+			"outbounds":[{"type":"selector","tag":"proxy","outbounds":["first","second"],"default":"first"},
+			{"type":"direct","tag":"first"},{"type":"direct","tag":"second"}]}`, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { instance.Close() })
+		if forget {
+			if err := instance.ForgetSelected(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := instance.PreStart(); err != nil {
+			t.Fatal(err)
+		}
+		return instance
+	}
+	switched := started(false)
+	if !switched.SelectOutbound("second") {
+		t.Fatal("the selector did not take the switch")
+	}
+	switched.Close()
+	kept := started(false)
+	if selected := kept.SelectedOutbound(); selected != "second" {
+		t.Fatalf("the core started with %q, where it keeps what it was switched to", selected)
+	}
+	kept.Close()
+	// Forgetting is not a switch: twice in a row it still leaves the config's outbound.
+	for range 2 {
+		forgotten := started(true)
+		if selected := forgotten.SelectedOutbound(); selected != "first" {
+			t.Fatalf("the core started with %q after the kept outbound was forgotten", selected)
+		}
+		forgotten.Close()
+	}
+}

@@ -41,12 +41,11 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
 
     override fun launch() {
         box.setAsMain()
+        // The core keeps the server a group was last switched to as it ran, and would start with that one again.
+        // This start is for the profile it was given, which its config names: what the core kept goes first, so
+        // no connection is ever taken through the other server.
+        if (config.selectorGroupId >= 0L && !config.autoSelect) box.forgetSelected()
         super.launch() // start box
-        // The core keeps the server a group was last switched to as it ran, and starts with that one again. This
-        // start is for the profile it was given.
-        // shortcut: a connection the core takes before this line goes through the kept server for as long as it
-        // lasts, and the core has no setting to start without what it kept; give its selector one if that matters.
-        if (config.selectorGroupId >= 0L) config.profileTagMap[config.mainEntId]?.let { box.selectOutbound(it) }
         portListener = config.localProxy?.let { local ->
             // Without it the service reports no local port, and the app's own requests go out without the proxy.
             Libcore.findPortListener(local.port).also { if (it == null) Logs.w("No listener of this start was found on local port ${local.port}") }
