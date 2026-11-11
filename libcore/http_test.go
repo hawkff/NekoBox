@@ -110,6 +110,57 @@ func TestARequestEndsWhenTheStartItWasSetUpInNoLongerRuns(t *testing.T) {
 	}
 }
 
+// The start a client was set up in still runs, and no connection to its port can be made: the
+// core holds the port and no longer takes connections there. The request fails. It does not go
+// around the proxy, with or without the direct HTTP/3 path.
+func TestARequestDoesNotGoAroundAPortOfItsStartThatDoesNotAnswer(t *testing.T) {
+	for _, h3 := range []bool{false, true} {
+		t.Run("h3="+strconv.FormatBool(h3), func(t *testing.T) {
+			var directConnections atomic.Int32
+			target := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			target.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+				if state == http.StateNew {
+					directConnections.Add(1)
+				}
+			}
+			target.Start()
+			defer target.Close()
+			// A port nothing listens on stands in for one whose queue is full: no connection either way.
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			port := int32(listener.Addr().(*net.TCPAddr).Port)
+			listener.Close()
+
+			guard := &portGuard{sameFor: always}
+			client := NewHttpClient().(*httpClient)
+			defer client.Close()
+			client.TrySocks5(port, "", "", guard)
+			if h3 {
+				client.TryH3Direct()
+			}
+			request := client.NewRequest()
+			if err := request.SetURL(target.URL); err != nil {
+				t.Fatal(err)
+			}
+			response, err := request.Execute()
+			if response != nil {
+				_, _ = response.GetContentLimited(1024)
+				t.Error("the request returned a response")
+			}
+			if err == nil || errors.Is(err, errOwnPortGone) {
+				t.Errorf("request error = %v, want the failed connection", err)
+			}
+			if directConnections.Load() != 0 {
+				t.Error("the request went around the proxy")
+			}
+		})
+	}
+}
+
 func TestSocksHandshakeFailureAndCancellationCloseSocket(t *testing.T) {
 	for _, name := range []string{"rejected", "canceled", "rejected as the start ended"} {
 		cancelHandshake := name == "canceled"

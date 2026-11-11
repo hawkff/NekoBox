@@ -133,7 +133,9 @@ func (c *httpClient) RestrictedTLS() {
 // sent on it. A start that still runs has held the port ever since the client was set up, so the
 // connection has reached that start and nothing else. Once it no longer runs the request fails:
 // it goes neither to whatever holds the port by then nor around the proxy. That is asked again
-// when the handshake fails, before the request would go around the proxy for that.
+// when the handshake fails, before the request would go around the proxy for that. A connection
+// that cannot be made while the start runs fails the request too: the port is the start's, which
+// holds it even when its core no longer takes connections there.
 func (c *httpClient) TrySocks5(port int32, username string, password string, guard OwnPortGuard) {
 	dialer := &net.Dialer{Timeout: defaultHTTPDialTimeout}
 	c.h1h2Transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -146,6 +148,11 @@ func (c *httpClient) TrySocks5(port int32, username string, password string, gua
 				return nil, errOwnPortGone
 			}
 			if err != nil {
+				// The start still runs, so the port is its own and does not answer: the request does
+				// not go around the proxy for that.
+				if guard != nil {
+					return nil, err
+				}
 				if c.tryH3Direct {
 					return nil, errFailConnectSocks5
 				}
