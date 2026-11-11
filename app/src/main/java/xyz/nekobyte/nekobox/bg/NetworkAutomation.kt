@@ -338,13 +338,18 @@ object NetworkAutomation {
     }
 
     /**
-     * This app's own VPN carries its traffic: the default network of this app is a VPN, and its own as far as
-     * Android tells. Before Android 11 it does not tell whose a VPN is, and any counts.
+     * This app's own VPN carries its traffic: the default network of this app is a VPN, and this app's. Before
+     * Android 11 nothing tells whose a VPN is. There it is this app's while its VPN service is started: a device
+     * runs one VPN at a time, and that service stops when another app takes over.
+     * shortcut: for as long as that stop takes, the other app's VPN still counts as this app's; ask the service for
+     * its state if that moment ever matters. Asking Android to prepare this app's VPN would take the VPN back.
      */
     fun ownVpnCarriesThisApp(): Boolean {
         val connectivity = NekoBox.connectivity
         val capabilities = runCatching { connectivity.getNetworkCapabilities(connectivity.activeNetwork) }.getOrNull() ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) && (Build.VERSION.SDK_INT < 30 || capabilities.ownerUid == Process.myUid())
+        if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return false
+        if (Build.VERSION.SDK_INT >= 30) return capabilities.ownerUid == Process.myUid()
+        return NekoBoxConnection.startedServices().any { it.className == VpnService::class.java.name }
     }
 
     // ---- service process, main thread ----
