@@ -9,6 +9,9 @@ interface INekoBoxService {
   // The local mixed inbound of the connected service, for the app's own requests; null while
   // the service is not connected or runs a config without that inbound.
   @nullable LocalProxy getLocalProxy();
+  // Another app's VPN took the place of this service's: its tunnel is no longer this app's, though
+  // the service is still started while it stops.
+  boolean getRevoked();
 
   void registerCallback(in INekoBoxServiceCallback cb, int id);
   oneway void unregisterCallback(in INekoBoxServiceCallback cb);

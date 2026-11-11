@@ -339,17 +339,18 @@ object NetworkAutomation {
 
     /**
      * This app's own VPN carries its traffic: the default network of this app is a VPN, and this app's. Before
-     * Android 11 nothing tells whose a VPN is. There it is this app's while its VPN service is started: a device
-     * runs one VPN at a time, and that service stops when another app takes over.
-     * shortcut: for as long as that stop takes, the other app's VPN still counts as this app's; ask the service for
-     * its state if that moment ever matters. Asking Android to prepare this app's VPN would take the VPN back.
+     * Android 11 nothing tells whose a VPN is. There it is this app's while its VPN service is started and has not
+     * been told that another app's VPN took its place: a device runs one VPN at a time, and a service that was told
+     * so is still started while it stops. A service that gives no answer counts as not told: a lookup that goes
+     * around another app's VPN for that moment does less harm than a made-up address stored for a server's.
      */
-    fun ownVpnCarriesThisApp(): Boolean {
+    suspend fun ownVpnCarriesThisApp(): Boolean {
         val connectivity = NekoBox.connectivity
         val capabilities = runCatching { connectivity.getNetworkCapabilities(connectivity.activeNetwork) }.getOrNull() ?: return false
         if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return false
         if (Build.VERSION.SDK_INT >= 30) return capabilities.ownerUid == Process.myUid()
-        return NekoBoxConnection.startedServices().any { it.className == VpnService::class.java.name }
+        val service = NekoBoxConnection.startedServices().firstOrNull { it.className == VpnService::class.java.name } ?: return false
+        return NekoBoxConnection.ask(NekoBox.application, service) { it.revoked } != true
     }
 
     // ---- service process, main thread ----

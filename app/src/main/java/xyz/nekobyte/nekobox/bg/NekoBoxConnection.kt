@@ -71,7 +71,7 @@ class NekoBoxConnection(
             return null
         }
 
-        private suspend fun <T : Any> ask(context: Context, service: ComponentName, question: (INekoBoxService) -> T?): T? {
+        internal suspend fun <T : Any> ask(context: Context, service: ComponentName, question: (INekoBoxService) -> T?): T? {
             val answer = CompletableDeferred<T?>()
             val asking = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder) {

@@ -98,6 +98,8 @@ class VpnService :
             // automation, at boot, this service's own restart or Android starting its always-on
             // VPN, never asks for VPN permission from the background.
             val unattended = intent?.getBooleanExtra(Action.EXTRA_AUTOMATED, true) != false
+            // Before Android is asked whose the VPN is: see BaseService.Data.revokes.
+            data.startSaw = data.revokes.get()
             when {
                 // A running service ignores a further start.
                 unattended && data.state != BaseService.State.Stopped -> return super<BaseService.Interface>.onStartCommand(intent, flags, startId)
@@ -371,6 +373,8 @@ class VpnService :
     // Android revoked the VPN: the user disconnected it in the system settings, or another VPN app
     // took over. Network automation takes that as a manual stop. Called on a binder thread.
     override fun onRevoke() {
+        // At once: the tunnel is the other app's from here on, while this service takes its time to stop.
+        data.revokes.incrementAndGet()
         runOnMainDispatcher {
             NetworkAutomation.onUserStop(this@VpnService)
             stopRunner()

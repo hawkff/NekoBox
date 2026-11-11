@@ -12,9 +12,15 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
+import android.os.Binder
+import android.os.IInterface
 import android.os.Looper
 import android.os.PowerManager
 import android.os.Process
+import android.os.RemoteException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -40,6 +46,7 @@ import xyz.nekobyte.nekobox.Action
 import xyz.nekobyte.nekobox.BootReceiver
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
+import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.NetworkAutomation.Blocked
 import xyz.nekobyte.nekobox.bg.NetworkAutomation.Rule
 import xyz.nekobyte.nekobox.database.DataStore
@@ -47,6 +54,7 @@ import xyz.nekobyte.nekobox.database.preference.KeyValuePair
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.ktx.Logs
+import java.lang.reflect.Proxy
 import java.util.concurrent.TimeUnit
 
 /**
@@ -406,22 +414,33 @@ class NetworkAutomationLifecycleTest {
         }
     }
 
+    // What the check says, asked off the main thread as a lookup asks: an answer of the service arrives on that one.
+    private fun ownVpnCarriesThisApp(): Boolean {
+        val answer = CoroutineScope(Dispatchers.IO).async { NetworkAutomation.ownVpnCarriesThisApp() }
+        while (!answer.isCompleted) {
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(5)
+        }
+        return runBlocking { answer.await() }
+    }
+
     // A subscription's server names are looked up around this app's VPN while FakeDNS answers there. Whether that
     // VPN carries the app is read from the default network at that moment, not from what a screen last saw.
     @Test
     fun thisAppsVpnAsItsDefaultNetworkIsToldFromAnother() {
-        assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
+        assertFalse(ownVpnCarriesThisApp())
         activeVpn(owner = Process.myUid())
-        assertTrue(NetworkAutomation.ownVpnCarriesThisApp())
+        assertTrue(ownVpnCarriesThisApp())
         activeVpn(owner = Process.INVALID_UID)
-        assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
+        assertFalse(ownVpnCarriesThisApp())
     }
 
     // Before Android 11 the owner is not revealed. A VPN as the default network is this app's while its VPN service
-    // is started, and another app's otherwise: with only the proxy service started, or none.
+    // is started and was not told that another app's VPN took its place, and another app's otherwise: also with
+    // only the proxy service started, or none.
     @Test
     @Config(sdk = [28])
-    fun beforeAndroid11AVpnIsThisAppsWhileItsVpnServiceIsStarted() {
+    fun beforeAndroid11AVpnIsThisAppsWhileItsVpnServiceRunsUnrevoked() {
         fun started(vararg services: Class<*>) = shadowOf(NekoBox.activity).setServices(
             services.map { service ->
                 ActivityManager.RunningServiceInfo().apply {
@@ -430,19 +449,53 @@ class NetworkAutomationLifecycleTest {
                 }
             },
         )
+        // What the VPN service answers when it is asked whether its VPN was taken over: null for a call that fails.
+        var revoked: Boolean? = false
+        lateinit var binder: Binder
+        val service = Proxy.newProxyInstance(INekoBoxService::class.java.classLoader, arrayOf(INekoBoxService::class.java)) { _, method, _ ->
+            when (method.name) {
+                "getRevoked" -> revoked ?: throw RemoteException()
+                "asBinder" -> binder
+                else -> null
+            }
+        } as INekoBoxService
+        binder = object : Binder() {
+            override fun queryLocalInterface(descriptor: String): IInterface = service
+        }
+        shadowOf(app).setComponentNameAndServiceForBindService(ComponentName(app, VpnService::class.java), binder)
         started(VpnService::class.java)
-        assertFalse("no VPN carries the app", NetworkAutomation.ownVpnCarriesThisApp())
+        assertFalse("no VPN carries the app", ownVpnCarriesThisApp())
         manager.setActiveNetworkInfo(vpnInfo())
         manager.setNetworkCapabilities(NekoBox.connectivity.activeNetwork, capabilities(NetworkCapabilities.TRANSPORT_VPN))
         try {
-            assertTrue(NetworkAutomation.ownVpnCarriesThisApp())
+            assertTrue(ownVpnCarriesThisApp())
+            revoked = null
+            assertTrue("a service that cannot answer counts as not told", ownVpnCarriesThisApp())
+            revoked = true
+            assertFalse("the VPN that took over was taken for this app's", ownVpnCarriesThisApp())
+            revoked = false
             started(ProxyService::class.java)
-            assertFalse("another app's VPN was taken for this app's", NetworkAutomation.ownVpnCarriesThisApp())
+            assertFalse("another app's VPN was taken for this app's", ownVpnCarriesThisApp())
             started()
-            assertFalse("another app's VPN was taken for this app's", NetworkAutomation.ownVpnCarriesThisApp())
+            assertFalse("another app's VPN was taken for this app's", ownVpnCarriesThisApp())
         } finally {
             started()
         }
+    }
+
+    // A start notes how many takeovers its service was told of before it asks whose the VPN is. One told between
+    // that and the start's acceptance stands; the start after it owns the VPN again.
+    @Test
+    fun aTakeoverToldWhileAStartIsAcceptedIsNotForgotten() = withVpnService { service ->
+        val data = service.data
+        assertFalse(data.revoked)
+        data.startSaw = data.revokes.get()
+        data.revokes.incrementAndGet()
+        data.ownedSince = data.startSaw
+        assertTrue(data.revoked)
+        data.startSaw = data.revokes.get()
+        data.ownedSince = data.startSaw
+        assertFalse(data.revoked)
     }
 
     // Before Android 11 the owner is not revealed, so any VPN counts.
