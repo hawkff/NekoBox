@@ -40,6 +40,7 @@ import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.utils.profileKind
 import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 // Kill switch reconnect backoff while the VPN interface is held with no core behind it.
 private const val KILL_SWITCH_RETRY_INITIAL_MS = 5_000L
@@ -75,6 +76,18 @@ class BaseService {
         @Volatile var state = State.Stopped
 
         @Volatile var proxy: ProxyInstance? = null
+
+        // Another app's VPN took this service's place: its tunnel is no longer this app's, though the service is
+        // still started while it stops. Takeovers are counted as they are told (VpnService.onRevoke, on a Binder
+        // thread). A start notes the count before it asks Android whose the VPN is, and owns the VPN from that
+        // count on once it is accepted: a takeover told in between is not that start's to forget.
+        val revokes = AtomicInteger()
+        var startSaw = 0
+
+        @Volatile var ownedSince = 0
+
+        // The count a start owns from is read first: read last, it could match a count read before a takeover.
+        val revoked get() = ownedSince != revokes.get()
         var notification: ServiceNotification? = null
         var locationSpoofing: LocationSpoofing? = null
 
@@ -197,6 +210,7 @@ class BaseService {
 
         override fun getState(): Int = (data?.state ?: State.Idle).ordinal
         override fun getProfileName(): String = data?.proxy?.displayProfileName ?: "Idle"
+        override fun getRevoked() = data?.revoked == true
 
         // The local port of the config the service is connected with. Connected: the core has started with that
         // config, which it does not with a port another app holds, so the port is this app's. And it has stayed
@@ -694,6 +708,7 @@ class BaseService {
             // write-through DB commit having landed. -1 / absent => read selectedProxy from store.
             val ipcProfileId = intent?.getLongExtra(Action.EXTRA_PROFILE_ID, -1L) ?: -1L
 
+            data.ownedSince = data.startSaw
             data.changeState(State.Connecting)
             blockWhileConnecting()
             // Register the CLOSE/RELOAD/SHUTDOWN receiver SYNCHRONOUSLY here, before the async

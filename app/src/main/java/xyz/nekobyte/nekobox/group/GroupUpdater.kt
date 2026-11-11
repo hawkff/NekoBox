@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.group
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
 import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
@@ -46,6 +47,7 @@ abstract class GroupUpdater {
     protected suspend fun forceResolve(profiles: List<AbstractBean>, groupId: Long?) {
         val ipv6Mode = DataStore.ipv6Mode
         val lookupPool = newFixedThreadPoolContext(5, "DNS Lookup")
+        val lookups = Semaphore(5)
         val progress = Progress(profiles.size)
         if (groupId != null) {
             GroupUpdater.progress[groupId] = progress
@@ -64,6 +66,8 @@ abstract class GroupUpdater {
                     if (profile.serverAddress!!.isIpAddress()) continue
 
                     launch(lookupPool) {
+                        // One lookup a thread: a lookup that waits for the service's answer gives its thread up.
+                        lookups.acquire()
                         try {
                             val results = if (
                                 NekoBox.underlyingNetwork != null &&
@@ -87,6 +91,8 @@ abstract class GroupUpdater {
                             throw e
                         } catch (e: Exception) {
                             Logs.d("Lookup ${profile.serverAddress} failed: ${e.readableMessage}", e)
+                        } finally {
+                            lookups.release()
                         }
                         if (groupId != null) {
                             progress.increment()
