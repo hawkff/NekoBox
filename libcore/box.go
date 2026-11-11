@@ -21,6 +21,8 @@ import (
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/common/conntrack"
 	"github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/experimental/cachefile"
+	sblog "github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
@@ -88,6 +90,8 @@ type BoxInstance struct {
 	endpoints []option.Endpoint
 	// This core's own cache file directory, when its config names no cache file.
 	cacheDir string
+	// The cache file as configured, for ForgetSelected.
+	cacheFile option.CacheFileOptions
 }
 
 func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *BoxInstance, err error) {
@@ -144,6 +148,7 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 		outbounds:    options.Outbounds,
 		endpoints:    options.Endpoints,
 		cacheDir:     cacheDir,
+		cacheFile:    *options.Experimental.CacheFile,
 	}
 	b.Box.Router().AppendTracker(b.connections)
 
@@ -287,6 +292,23 @@ func (b *BoxInstance) QueryStats(tag, direct string) int64 {
 		return 0
 	}
 	return b.v2api.QueryStats(fmt.Sprintf("outbound>>>%s>>>traffic>>>%s", tag, direct))
+}
+
+// ForgetSelected takes out of the cache file what the "proxy" selector was last switched to, so
+// that the core starts with the outbound its config names. For before Start: a selector takes up
+// what the cache file holds while the core starts, ahead of the listeners, and a switch made
+// after the start would leave what was accepted meanwhile on the other outbound. The cache file
+// is opened as the core will open it, and closed again.
+func (b *BoxInstance) ForgetSelected() (err error) {
+	defer deferPanicToError("box.ForgetSelected", func(err_ error) { err = err_ })
+	logger := sblog.NewNOPFactory().NewLogger("cache-file")
+	scope := adapter.NewScope(b.ctx, logger)
+	defer scope.Close()
+	file := cachefile.New(b.ctx, logger, b.cacheFile)
+	if err := file.Start(adapter.StartStateInitialize, scope); err != nil {
+		return err
+	}
+	return file.StoreSelected("proxy", "")
 }
 
 func (b *BoxInstance) SelectOutbound(tag string) bool {

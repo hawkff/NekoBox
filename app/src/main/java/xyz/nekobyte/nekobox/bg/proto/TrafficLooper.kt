@@ -1,7 +1,6 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.withLock
 import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
@@ -34,11 +33,6 @@ class TrafficLooper(
     // for display
     private val itemBypass = TrafficUpdater.TrafficLooperData(tag = TAG_BYPASS)
 
-    // Selector switches arrive from the JNI selector callback (NativeInterface) on a separate
-    // coroutine. Funnel them through this channel so the loop applies them in a round of its own.
-    // CONFLATED: only the latest selected id matters; superseded switches are safe to drop.
-    private val selectChannel = Channel<Long>(Channel.CONFLATED)
-
     // The last totals are stored. Read and set under data.traffic.
     private var stopped = false
 
@@ -46,7 +40,6 @@ class TrafficLooper(
         // cancelAndJoin (not cancel): wait for the loop coroutine to actually finish before the
         // final flush.
         job?.cancelAndJoin()
-        selectChannel.close()
         data.traffic.withLock {
             // finally traffic post
             store()
@@ -104,12 +97,6 @@ class TrafficLooper(
 
     var selectorNowId = -114514L
     var selectorNowFakeTag = ""
-
-    // Non-blocking entry for the JNI selector callback (NativeInterface). Posts the request;
-    // it is applied on the loop coroutine via applySelect(). Never touches the maps directly.
-    fun selectMain(id: Long) {
-        selectChannel.trySend(id)
-    }
 
     /**
      * Takes up the clears screens made since the items last looked at their rows: an item whose stored totals were
@@ -246,11 +233,6 @@ class TrafficLooper(
                     }
                 }
 
-                // Apply any selector switches posted from the JNI callback.
-                while (true) {
-                    val sel = selectChannel.tryReceive().getOrNull() ?: break
-                    applySelect(sel)
-                }
                 if (proxy.config.selectorGroupId >= 0L) followGroupSelection(proxy)
 
                 updater.updateAll()

@@ -441,10 +441,8 @@ class BaseService {
             // instance. In those states fall through to the state machine below. selectorTag was
             // resolved off the main thread by the caller (null => no fast-path).
             if (s == State.Connected && selectorTag != null && selectorTag.isNotBlank()) {
-                // select from GUI
+                // The traffic loop sees the group's new pick in its next round and tells the screens.
                 data.proxy!!.box.selectOutbound(selectorTag)
-                // or select from webui
-                // => selector_OnProxySelected
                 return
             }
             when {

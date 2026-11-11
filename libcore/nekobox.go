@@ -10,7 +10,6 @@ import (
 
 	"log"
 
-	"github.com/sagernet/sing-box/nekoutils"
 	"github.com/sagernet/sing-box/option"
 	"golang.org/x/sys/unix"
 )
@@ -86,9 +85,6 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 		}
 		f.Close()
 	}
-
-	// nekoutils
-	nekoutils.Selector_OnProxySelected = appPlatform.Selector_OnProxySelected
 
 	// Set up some component
 	go func() {

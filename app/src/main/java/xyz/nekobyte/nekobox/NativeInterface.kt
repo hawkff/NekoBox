@@ -18,12 +18,9 @@ import libcore.Libcore
 import org.json.JSONArray
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.bg.BaseService
-import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.database.DataStore
-import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
-import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.utils.PackageCache
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -148,31 +145,7 @@ class NativeInterface :
         }
     }.toString()
 
-    // App configuration and selector callbacks
+    // App configuration
 
     override fun useOfficialAssets(): Boolean = DataStore.rulesProvider == 0
-
-    override fun selector_OnProxySelected(selectorTag: String, tag: String) {
-        if (selectorTag != "proxy") {
-            Logs.d("other selector: $selectorTag")
-            return
-        }
-        Libcore.resetAllConnections(true)
-        DataStore.baseService?.apply {
-            runOnDefaultDispatcher {
-                val proxy = data.proxy ?: return@runOnDefaultDispatcher
-                val id = proxy.config.profileTagMap
-                    .filterValues { it == tag }.keys.firstOrNull() ?: -1
-                val ent = ProfileDatabase.proxyDao.getById(id) ?: return@runOnDefaultDispatcher
-                // traffic & title
-                proxy.looper?.selectMain(id)
-                proxy.displayProfileName = ServiceNotification.genTitle(ent)
-                data.notification?.postNotificationTitle(proxy.displayProfileName)
-                // post binder
-                data.binder.broadcast { b ->
-                    b.cbSelectorUpdate(id)
-                }
-            }
-        }
-    }
 }
