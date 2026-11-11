@@ -25,8 +25,6 @@ import (
 	"github.com/sagernet/sing/protocol/socks/socks5"
 )
 
-var errFailConnectSocks5 = errors.New("fail connect socks5")
-
 // errOwnPortGone ends a request of a client whose local port is no longer the one it was set up
 // with: see OwnPortGuard.
 var errOwnPortGone = errors.New("the proxy this request was set up to go through no longer runs")
@@ -52,7 +50,7 @@ type HTTPClient interface {
 	SetTimeoutMs(timeoutMs int32) error
 	RestrictedTLS()
 	ModernTLS()
-	TrySocks5(port int32, username string, password string, guard OwnPortGuard)
+	ThroughSocks5(port int32, username string, password string, guard OwnPortGuard)
 	TryH3Direct()
 	KeepAlive()
 	NewRequest() HTTPRequest
@@ -84,7 +82,7 @@ type httpClient struct {
 	tls           tls.Config
 	h1h2Transport http.Transport
 	h1h2Client    http.Client
-	trySocks5     bool
+	throughSocks5 bool
 	tryH3Direct   bool
 }
 
@@ -126,71 +124,54 @@ func (c *httpClient) RestrictedTLS() {
 	// })
 }
 
-// TrySocks5 prefers the local SOCKS proxy, with direct fallback for other SOCKS failures.
-// Handshake timeouts and cancellations fail the request without direct fallback.
+// ThroughSocks5 sends the client's requests through the local SOCKS proxy of the running service,
+// or fails them: nothing that goes wrong at the port sends a request around the proxy. Not a
+// connection that cannot be made, as the start holds the port even when its core no longer
+// takes connections there. And not a handshake that fails: the proxy could not connect the
+// request, or closed what was open at the port for a switch to another server.
 //
 // guard, when there is one, is asked for every connection once it is made, and before a byte is
 // sent on it. A start that still runs has held the port ever since the client was set up, so the
-// connection has reached that start and nothing else. Once it no longer runs the request fails:
-// it goes neither to whatever holds the port by then nor around the proxy. That is asked again
-// when the handshake fails, before the request would go around the proxy for that. A connection
-// that cannot be made while the start runs fails the request too: the port is the start's, which
-// holds it even when its core no longer takes connections there.
-func (c *httpClient) TrySocks5(port int32, username string, password string, guard OwnPortGuard) {
+// connection has reached that start and nothing else. Once it no longer runs the request fails
+// with errOwnPortGone, also when that shows in a handshake that fails: whatever holds the port
+// by then is sent nothing.
+func (c *httpClient) ThroughSocks5(port int32, username string, password string, guard OwnPortGuard) {
 	dialer := &net.Dialer{Timeout: defaultHTTPDialTimeout}
 	c.h1h2Transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		for {
-			socksConn, err := dialer.DialContext(ctx, "tcp", "127.0.0.1:"+strconv.Itoa(int(port)))
+		socksConn, err := dialer.DialContext(ctx, "tcp", "127.0.0.1:"+strconv.Itoa(int(port)))
+		if guard != nil && !guard.SameStart() {
+			if err == nil {
+				_ = socksConn.Close()
+			}
+			return nil, errOwnPortGone
+		}
+		if err != nil {
+			return nil, err
+		}
+		stop := context.AfterFunc(ctx, func() { _ = socksConn.Close() })
+		err = socksConn.SetDeadline(time.Now().Add(defaultHTTPDialTimeout))
+		if err == nil {
+			_, err = socks.ClientHandshake5(socksConn, socks5.CommandConnect, metadata.ParseSocksaddr(addr), username, password)
+		}
+		if !stop() {
+			err = ctx.Err()
+		}
+		if err == nil {
+			err = socksConn.SetDeadline(time.Time{})
+		}
+		if err != nil {
+			_ = socksConn.Close()
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			if guard != nil && !guard.SameStart() {
-				if err == nil {
-					_ = socksConn.Close()
-				}
 				return nil, errOwnPortGone
 			}
-			if err != nil {
-				// The start still runs, so the port is its own and does not answer: the request does
-				// not go around the proxy for that.
-				if guard != nil {
-					return nil, err
-				}
-				if c.tryH3Direct {
-					return nil, errFailConnectSocks5
-				}
-				break
-			}
-			stop := context.AfterFunc(ctx, func() { _ = socksConn.Close() })
-			err = socksConn.SetDeadline(time.Now().Add(defaultHTTPDialTimeout))
-			if err == nil {
-				_, err = socks.ClientHandshake5(socksConn, socks5.CommandConnect, metadata.ParseSocksaddr(addr), username, password)
-			}
-			if !stop() {
-				err = ctx.Err()
-			}
-			if err == nil {
-				err = socksConn.SetDeadline(time.Time{})
-			}
-			if err != nil {
-				_ = socksConn.Close()
-				if ctx.Err() != nil {
-					return nil, ctx.Err()
-				}
-				if errors.Is(err, os.ErrDeadlineExceeded) {
-					return nil, err
-				}
-				// A start that ended under the handshake: the request does not go around it either.
-				if guard != nil && !guard.SameStart() {
-					return nil, errOwnPortGone
-				}
-				if c.tryH3Direct {
-					return nil, errFailConnectSocks5
-				}
-				break
-			}
-			return socksConn, nil
+			return nil, err
 		}
-		return dialer.DialContext(ctx, network, addr)
+		return socksConn, nil
 	}
-	c.trySocks5 = true
+	c.throughSocks5 = true
 }
 
 func (c *httpClient) TryH3Direct() {
@@ -308,8 +289,8 @@ func effectivePort(u *url.URL) string {
 
 func (r *httpRequest) Execute() (HTTPResponse, error) {
 	defer deferPanicToError("http execute", func(err error) { log.Println(err) })
-	// full direct
-	if r.tryH3Direct && !r.trySocks5 {
+	// Only a client that goes through no proxy: the direct paths would go around one.
+	if r.tryH3Direct && !r.throughSocks5 {
 		return r.doH3Direct()
 	}
 	// A per-request copy shares the transport but carries this request's redirect policy, so
@@ -318,10 +299,6 @@ func (r *httpRequest) Execute() (HTTPResponse, error) {
 	client.CheckRedirect = r.checkRedirect
 	response, err := client.Do(&r.request)
 	if err != nil {
-		// trySocks5 && tryH3Direct
-		if r.tryH3Direct && errors.Is(err, errFailConnectSocks5) {
-			return r.doH3Direct()
-		}
 		return nil, err
 	}
 	httpResp := &httpResponse{Response: response}

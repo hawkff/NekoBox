@@ -34,12 +34,13 @@ private fun LocalProxy.stillRuns() = runCatching { localProxy()?.start == start 
  * Sends this client's requests through the running proxy when there is one to go through: see [localProxy]. The
  * client keeps the port and the login for all it does afterwards. For every connection it makes there it asks,
  * before it sends a byte, whether the start it was set up in still runs: see [stillRuns]. Once that start is gone
- * the client's requests fail. They go neither to whatever holds the port by then nor around the proxy.
+ * the client's requests fail. They go neither to whatever holds the port by then nor around the proxy. A request the
+ * proxy cannot connect fails as well: none goes around a proxy that runs.
  */
 fun HTTPClient.throughRunningProxy() {
     val local = localProxy() ?: return
     // Nothing may be thrown at the core, which asks.
-    trySocks5(local.port, local.user, local.password) { local.stillRuns() }
+    throughSocks5(local.port, local.user, local.password) { local.stillRuns() }
 }
 
 /**
