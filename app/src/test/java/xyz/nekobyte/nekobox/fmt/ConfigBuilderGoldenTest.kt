@@ -484,6 +484,8 @@ class ConfigBuilderGoldenTest {
             val tags = listOf(member, other, chain).map { result.profileTagMap.getValue(it.id) }
             assertEquals("$name: each profile has a tag of its own", 3, tags.toSet().size)
             assertEquals(name, tags.toSet(), strings(outbounds.single { it.getString("tag") == "proxy" }.getJSONArray("outbounds")).toSet())
+            // A switch by hand closes what is open on the server left. A group that picks on its own leaves it.
+            assertEquals(name, !auto, outbounds.single { it.getString("tag") == "proxy" }.optBoolean("interrupt_exist_connections"))
             // Whichever of the two is built first, the server keeps the tag of its own outbound: a lookup of its
             // address reads that outbound's settings. The chain is a selector that can only choose it.
             assertEquals(name, outbounds.single { it.optString("type") == "socks" && it.optString("server") == "192.0.2.51" }.getString("tag"), tags[0])
