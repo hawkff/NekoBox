@@ -189,9 +189,17 @@ class GroupsScreenDeviceTest {
             }
             settle()
 
-            // Remove asks first, naming the groups, then takes both off at once.
-            val dialog = instrumentation.uiAutomation.rootInActiveWindow
-            assertEquals(1, dialog.findAccessibilityNodeInfosByText(context.resources.getQuantityString(R.plurals.group_remove, 2, 2)).size)
+            // Remove asks first, naming the groups, then takes both off at once. Android 10 takes a moment to hand
+            // out the window of a dialog that is already on screen.
+            val asks = context.resources.getQuantityString(R.plurals.group_remove, 2, 2)
+            var window: AccessibilityNodeInfo? = instrumentation.uiAutomation.rootInActiveWindow
+            var tries = 0
+            while (window?.findAccessibilityNodeInfosByText(asks)?.size != 1 && tries++ < 100) {
+                Thread.sleep(100)
+                window = instrumentation.uiAutomation.rootInActiveWindow
+            }
+            val dialog = window!!
+            assertEquals(1, dialog.findAccessibilityNodeInfosByText(asks).size)
             for (name in names) assertTrue(name, dialog.findAccessibilityNodeInfosByText(name).isNotEmpty())
             val remove = dialog.findAccessibilityNodeInfosByText(context.getString(R.string.delete)).first { it.className?.toString() == Button::class.java.name }
             assertTrue(remove.performAction(AccessibilityNodeInfo.ACTION_CLICK))
