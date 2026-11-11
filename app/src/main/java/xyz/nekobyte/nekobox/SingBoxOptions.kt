@@ -1458,6 +1458,8 @@ class SingBoxOptions {
         @SerializedName("default")
         @JvmField
         var default_: String? = null
+
+        @JvmField var interrupt_exist_connections: Boolean? = null
     }
 
     class Outbound_URLTestOptions : Outbound() {

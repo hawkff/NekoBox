@@ -1050,6 +1050,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         tag = TAG_PROXY
                         default_ = tagMap[proxy.id]
                         this.outbounds = memberTags
+                        // A switch is a tap on another server: what is open on the server left is closed, and
+                        // does not stay there for as long as a download or a call lasts.
+                        interrupt_exist_connections = true
                     }
                 },
             )

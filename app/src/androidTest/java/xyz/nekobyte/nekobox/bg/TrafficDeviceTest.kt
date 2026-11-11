@@ -29,6 +29,11 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.ui.MainActivity
+import java.io.DataInputStream
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -165,6 +170,12 @@ class TrafficDeviceTest {
         }
     }
 
+    // A switch closes what is open on the server left, so a request it catches fails. The next one tells. The core
+    // closes a moment after it has picked the other server, so that the pick shows is not yet the end of that.
+    private fun requestAcrossASwitch() {
+        runCatching { request() }
+    }
+
     private fun stored(id: Long) = ProfileDatabase.proxyDao.getById(id)!!
 
     @Test
@@ -198,8 +209,10 @@ class TrafficDeviceTest {
             atSwitch = stored(used).let { it.rx to it.tx }
             assertEquals(0L to 0L, stored(idle).rx to stored(idle).tx)
             // What goes through the proxy from here on counts for the other server.
-            request()
-            await("the other server to count") { rounds.last().any { it.id == idle && it.rx > 0 && it.tx > 0 } }
+            await("the other server to count") {
+                requestAcrossASwitch()
+                rounds.last().any { it.id == idle && it.rx > 0 && it.tx > 0 }
+            }
             assertEquals("the service changed state for the switch", emptyList<BaseService.State>(), states.drop(reported))
 
             NekoBox.stopService(byUser = false)
@@ -221,7 +234,7 @@ class TrafficDeviceTest {
             await("the proxy to connect") { states.lastOrNull() == BaseService.State.Connected }
             NekoBox.reloadService(idle)
             await("the other server to count") {
-                request()
+                requestAcrossASwitch()
                 rounds.lastOrNull().orEmpty().any { it.id == idle && it.rx > 30 }
             }
             NekoBox.stopService(byUser = false)
@@ -251,6 +264,56 @@ class TrafficDeviceTest {
         }
     }
 
+    // A switch to another server of the group closes what is open on the server left: nothing stays there for as
+    // long as a download or a call lasts.
+    @Test
+    fun aSwitch_closesWhatIsOpenOnTheServerLeft() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            NekoBox.startService(byUser = false)
+            await("the proxy to connect") { states.lastOrNull() == BaseService.State.Connected }
+            Socket().use { open ->
+                // 127.0.0.1 by its bytes: Android's loopback address is the IPv6 one.
+                open.connect(InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)), DataStore.mixedPort), 5_000)
+                // Shorter than the server keeps a connection that asks it nothing.
+                open.soTimeout = 8_000
+                val input = DataInputStream(open.getInputStream())
+                val output = open.getOutputStream()
+                // SOCKS5 with no login, then a connection to a name, which the server takes and holds.
+                output.write(byteArrayOf(5, 1, 0))
+                input.readFully(ByteArray(2))
+                val name = "traffic.invalid".toByteArray()
+                output.write(byteArrayOf(5, 1, 0, 3, name.size.toByte()) + name + byteArrayOf(0, 80))
+                // The answer: version, result, a reserved byte, then the address the port is bound to.
+                input.readFully(ByteArray(3))
+                val address = when (input.readUnsignedByte()) {
+                    1 -> 4
+                    4 -> 16
+                    else -> input.readUnsignedByte()
+                }
+                input.readFully(ByteArray(address + 2))
+                // The port answers before the core has gone on to the server: it first waits for what the client sends.
+                await("the connection to reach the server") { "traffic.invalid:80" in upstream.asked }
+
+                val start = localProxy()!!.start
+                NekoBox.reloadService(idle)
+                // A read that times out found the connection still open. One that is reset found it closed.
+                val end = runCatching { input.read() }.getOrElse { if (it is SocketTimeoutException) 0 else -1 }
+                assertEquals("the connection stayed open on the server left", -1, end)
+                // Closed by the switch. Not by the server, which gives up a connection that asks it nothing:
+                assertFalse("the server gave the connection up: ${upstream.trouble}", upstream.trouble.any { "SocketTimeoutException" in it })
+                // and not by a restart, which closes everything: the other server carries what is asked from here
+                // on, on top of the totals it started from, in the same start of the service.
+                await("the other server to count") {
+                    requestAcrossASwitch()
+                    rounds.lastOrNull()?.any { it.id == idle && it.rx > 30 && it.tx > 40 } == true
+                }
+                assertEquals("the service started again for the switch", start, localProxy()?.start)
+            }
+            NekoBox.stopService(byUser = false)
+            await("the service to stop") { DataStore.serviceState == BaseService.State.Stopped }
+        }
+    }
+
     // A chain of one server is that server's outbound under another name: the group runs with both, and a switch to
     // the chain is one the service makes as it runs, after which the chain is what counts.
     @Test
@@ -276,7 +339,7 @@ class TrafficDeviceTest {
             val reported = states.size
             NekoBox.reloadService(chain)
             await("the chain to be what counts") {
-                request()
+                requestAcrossASwitch()
                 rounds.last().any { it.id == chain && it.rx > 0 && it.tx > 0 }
             }
             assertEquals("the service changed state for the switch", emptyList<BaseService.State>(), states.drop(reported))
