@@ -3,8 +3,11 @@ package libcore
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 // Cores side by side, as URL tests run them, open their own cache files: on the one sing-box picks by
@@ -111,5 +114,57 @@ func TestACoreStartsWithItsConfigsOutboundOnceTheKeptOneIsForgotten(t *testing.T
 			t.Fatalf("the core started with %q after the kept outbound was forgotten", selected)
 		}
 		forgotten.Close()
+	}
+}
+
+// A full config may send the core's log to stderr. Stderr is a file of its own in the app, not
+// cut back while the process runs, so that log goes where the core's log goes anyway.
+func TestACoreThatLogsToStderrLogsThroughTheApp(t *testing.T) {
+	t.Chdir(t.TempDir())
+	logFile, err := os.CreateTemp(t.TempDir(), "log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logFile.Close()
+	log, limit, disabled := nekoLog, nekoLogMax, nekoLogDisable
+	nekoLog, nekoLogMax, nekoLogDisable = logFile, 1<<20, false
+	defer func() { nekoLog, nekoLogMax, nekoLogDisable = log, limit, disabled }()
+	saved, err := unix.Dup(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Close(saved)
+	printed, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer printed.Close()
+	// Both the descriptor and the variable: the core's logger takes the variable, which the
+	// test runner can point elsewhere.
+	stderr := os.Stderr
+	if err := unix.Dup2(int(printed.Fd()), 2); err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = printed
+	restore := sync.OnceFunc(func() {
+		os.Stderr = stderr
+		unix.Dup2(saved, 2)
+	})
+	defer restore()
+	instance, err := NewSingBoxInstance(`{"log":{"level":"trace","output":"stderr"},"outbounds":[{"type":"direct","tag":"direct"}]}`, nil)
+	if err == nil {
+		err = instance.PreStart()
+		instance.Close()
+	}
+	restore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info, err := printed.Stat(); err != nil || info.Size() != 0 {
+		text, _ := os.ReadFile(printed.Name())
+		t.Fatalf("the core printed to stderr: %q", text)
+	}
+	if info, err := logFile.Stat(); err != nil || info.Size() == 0 {
+		t.Fatalf("the core's log did not reach the app's: %v, %v", info, err)
 	}
 }

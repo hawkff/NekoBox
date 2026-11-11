@@ -1,18 +1,24 @@
 package libcore
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 	_ "unsafe"
 
 	"log"
 
+	sblog "github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"golang.org/x/sys/unix"
 )
+
+// stderrTaken is set once this process's stderr has its file.
+var stderrTaken bool
 
 //go:linkname resourcePaths github.com/sagernet/sing-box/constant.resourcePaths
 var resourcePaths []string
@@ -69,12 +75,38 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	nekoLogDisable = !logEnable
 	if err := setupLog(int(maxLogSizeKb)*1024, filepath.Join(cachePath, "neko.log"), isBgProcess); err != nil {
 		log.Println("open log:", err)
+	} else if !stderrTaken {
+		// What this process prints to stderr goes to a file of its own: core-stderr.txt in the
+		// service's process and core-stderr-ui.txt in the screens'. Not to the log, where it went
+		// before: that is cut back while it is written, whoever prints to stderr takes no lock,
+		// and a cut could lose the line. What a run left in its file is put into the log when the
+		// process starts next. Once for a process: a core set up again, as tests do, leaves its
+		// stderr where it is.
+		// shortcut: the file is not cut back while its process runs, cap it if anything is ever
+		// found to print to stderr in bulk. The core's loggers did, and go through the log: see
+		// below and NewSingBoxInstance.
+		stderrName := "core-stderr-ui.txt"
+		if isBgProcess {
+			stderrName = "core-stderr.txt"
+		}
+		if f, err := stderrFile(filepath.Join(cachePath, stderrName)); err != nil {
+			log.Println("stderr file:", err)
+		} else {
+			if err := unix.Dup2(int(f.Fd()), int(os.Stderr.Fd())); err != nil {
+				log.Println("stderr file:", err)
+			} else {
+				stderrTaken = true
+			}
+			// Stderr keeps its own descriptor.
+			f.Close()
+		}
 	}
 	// A fatal panic of the Go runtime also goes to a crash file, which the app reports when this
 	// process starts next: core-crash.txt in the service's process, where the core runs, and
 	// core-crash-ui.txt in the screens'. A file for each, because the report empties its file
-	// while the other process may be writing its own. The copy in the log can be lost to a trim.
-	// SetCrashOutput keeps its own descriptor, so the file can be closed here.
+	// while the other process may be writing its own. A file apart from stderr's, which holds
+	// whatever else was printed there. SetCrashOutput keeps its own descriptor, so the file can
+	// be closed here.
 	crashFile := "core-crash-ui.txt"
 	if isBgProcess {
 		crashFile = "core-crash.txt"
@@ -84,6 +116,12 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 			log.Println("crash output:", err)
 		}
 		f.Close()
+	}
+	// The core's global logger, which parts of it fall back to, prints to stderr on its own, at
+	// every level. It goes through the log like every other line.
+	global := sblog.NewDefaultFactory(context.Background(), sblog.Formatter{BaseTime: time.Now()}, nekoLogWriter{}, "", nil, false)
+	if err := global.Start(); err == nil {
+		sblog.SetStdLogger(global.Logger())
 	}
 
 	// Set up some component
