@@ -120,6 +120,36 @@ func TestWhatARunLeftOnStderrGoesIntoTheLogAtTheNextStart(t *testing.T) {
 	}
 }
 
+// The file of stderr is not cut back while its process runs, only emptied once it is longer than
+// its cap. Whatever prints there afterwards goes on at its start.
+func TestTheFileOfStderrIsEmptiedPastItsCap(t *testing.T) {
+	f, err := os.OpenFile(filepath.Join(t.TempDir(), "core-stderr.txt"), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	size := func() int64 {
+		info, err := f.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return info.Size()
+	}
+	f.WriteString(strings.Repeat("x", 100))
+	capFile(int(f.Fd()), 100)
+	if size() != 100 {
+		t.Fatalf("a file at its cap was cut to %d bytes", size())
+	}
+	capFile(int(f.Fd()), 99)
+	if size() != 0 {
+		t.Fatalf("a file past its cap holds %d bytes", size())
+	}
+	f.WriteString("after")
+	if size() != 5 {
+		t.Fatalf("what was printed after the cap left the file %d bytes long", size())
+	}
+}
+
 // What cannot be put into the log stays in the file, for the next start to take.
 func TestWhatARunLeftOnStderrStaysWhenItCannotBeTaken(t *testing.T) {
 	dir := t.TempDir()
