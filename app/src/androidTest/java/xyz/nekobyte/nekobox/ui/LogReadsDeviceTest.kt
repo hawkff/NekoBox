@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -112,6 +113,49 @@ class LogReadsDeviceTest {
             choose(scenario, R.id.action_clear_logcat)
             awaitShown(scenario, "")
             letBackUnshown(scenario, third, "")
+        }
+    }
+
+    // The log is selectable text, which takes the focus on a tap. The scroll view moves for the focus, and left the
+    // room it keeps clear for the bars out of that: a tap at the end of the log moved its last lines under the bar.
+    @Test
+    fun theLogStaysWhereItIsWhenItTakesTheFocus() {
+        next((1..400).joinToString("\n") { "line $it" }).let.countDown()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.displayFragmentWithId(R.id.nav_logcat) }
+            // What the screen is asked to do, and where its scroll view stands once that has settled.
+            fun scroll(act: (LogcatFragment) -> Unit = {}): Int {
+                scenario.onActivity { act(it.currentScreen() as LogcatFragment) }
+                instrumentation.waitForIdleSync()
+                var at = 0
+                scenario.onActivity { at = (it.currentScreen() as LogcatFragment).binding.scroolview.scrollY }
+                return at
+            }
+            // The screen opens at the end of the log.
+            val deadline = SystemClock.elapsedRealtime() + 40_000
+            while (scroll() == 0) {
+                check(SystemClock.elapsedRealtime() < deadline) { "Timed out waiting for the log to be shown at its end" }
+                SystemClock.sleep(100)
+            }
+            // At the end of the log and at its start: the log has no focus, is put at that edge, and takes the focus
+            // as a tap gives it.
+            for (start in listOf(false, true)) {
+                var edge = 0
+                val before = scroll {
+                    it.binding.textview.clearFocus()
+                    assertFalse("the log kept the focus", it.binding.textview.isFocused)
+                    // The end is where the padding below the log is in view, the room for the bars with it.
+                    if (!start) edge = it.binding.textview.height + it.binding.scroolview.paddingTop + it.binding.scroolview.paddingBottom - it.binding.scroolview.height
+                    it.binding.scroolview.scrollTo(0, edge)
+                }
+                assertTrue("the log is no longer than its screen", start || edge > 0)
+                assertEquals("the log is not at its ${if (start) "start" else "end"}", edge, before)
+                val after = scroll {
+                    assertTrue(it.binding.textview.requestFocus())
+                    assertTrue(it.binding.textview.isFocused)
+                }
+                assertEquals("the log moved as it took the focus at its ${if (start) "start" else "end"}", before, after)
+            }
         }
     }
 }
