@@ -53,7 +53,7 @@ class NekoBoxConnection(
         // after a change of mode the old service can still be stopping while the new one runs. A service that a
         // screen only holds on to was not started and runs nothing.
         @Suppress("DEPRECATION") // It still tells an app of its own services, and nothing else is asked.
-        private fun startedServices(): List<ComponentName> {
+        internal fun startedServices(): List<ComponentName> {
             val services = setOf(ProxyService::class.java.name, VpnService::class.java.name)
             return NekoBox.activity.getRunningServices(Int.MAX_VALUE)
                 .filter { it.started && it.service.packageName == NekoBox.application.packageName && it.service.className in services }

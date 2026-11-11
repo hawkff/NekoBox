@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.bg
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.AppOpsManager
 import android.app.Application
 import android.app.NotificationManager
@@ -416,14 +417,32 @@ class NetworkAutomationLifecycleTest {
         assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
     }
 
-    // Before Android 11 the owner is not revealed: a VPN as the default network counts as this app's.
+    // Before Android 11 the owner is not revealed. A VPN as the default network is this app's while its VPN service
+    // is started, and another app's otherwise: with only the proxy service started, or none.
     @Test
     @Config(sdk = [28])
-    fun beforeAndroid11AnyVpnAsTheDefaultNetworkCountsAsThisApps() {
-        assertFalse(NetworkAutomation.ownVpnCarriesThisApp())
+    fun beforeAndroid11AVpnIsThisAppsWhileItsVpnServiceIsStarted() {
+        fun started(vararg services: Class<*>) = shadowOf(NekoBox.activity).setServices(
+            services.map { service ->
+                ActivityManager.RunningServiceInfo().apply {
+                    started = true
+                    this.service = ComponentName(app, service)
+                }
+            },
+        )
+        started(VpnService::class.java)
+        assertFalse("no VPN carries the app", NetworkAutomation.ownVpnCarriesThisApp())
         manager.setActiveNetworkInfo(vpnInfo())
         manager.setNetworkCapabilities(NekoBox.connectivity.activeNetwork, capabilities(NetworkCapabilities.TRANSPORT_VPN))
-        assertTrue(NetworkAutomation.ownVpnCarriesThisApp())
+        try {
+            assertTrue(NetworkAutomation.ownVpnCarriesThisApp())
+            started(ProxyService::class.java)
+            assertFalse("another app's VPN was taken for this app's", NetworkAutomation.ownVpnCarriesThisApp())
+            started()
+            assertFalse("another app's VPN was taken for this app's", NetworkAutomation.ownVpnCarriesThisApp())
+        } finally {
+            started()
+        }
     }
 
     // Before Android 11 the owner is not revealed, so any VPN counts.
