@@ -3,8 +3,6 @@ package xyz.nekobyte.nekobox.bg.proto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.runBlocking
-import libcore.Libcore
-import libcore.PortListener
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.bg.runRequiredCompletion
@@ -24,9 +22,10 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
     // for TrafficLooper
     var looper: TrafficLooper? = null
 
-    // The socket this start listens with on the local port of its config, for the app's own requests.
+    // Whether the core holds the socket it listens with on the local port of its config, for the app's own
+    // requests: from this start until its core is closed nothing else can have that port.
     @Volatile
-    var portListener: PortListener? = null
+    var holdsPort = false
 
     override fun buildConfig() {
         super.buildConfig()
@@ -46,10 +45,8 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
         // no connection is ever taken through the other server.
         if (config.selectorGroupId >= 0L && !config.autoSelect) box.forgetSelected()
         super.launch() // start box
-        portListener = config.localProxy?.let { local ->
-            // Without it the service reports no local port, and the app's own requests go out without the proxy.
-            Libcore.findPortListener(local.port).also { if (it == null) Logs.w("No listener of this start was found on local port ${local.port}") }
-        }
+        // Without it the service reports no local port, and the app's own requests go out without the proxy.
+        holdsPort = config.localProxy?.let { local -> box.holdPort(local.port).also { if (!it) Logs.w("No listener of this start was found on local port ${local.port}") } } == true
         // ponytail: fixed cap; make it a setting if anyone needs a longer history.
         box.setConnectionHistory(if (DataStore.connectionDiagnostics) 300 else 0)
         // Assign the looper synchronously so close() always observes it (no

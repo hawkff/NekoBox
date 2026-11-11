@@ -15,7 +15,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -40,10 +39,8 @@ import java.io.DataInputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
 /**
@@ -376,50 +373,27 @@ class OwnRequestsDeviceTest {
         assertTrue("the local port refused a client of this start; the proxy's server had ${upstream.trouble}", reached(fresh) > before)
     }
 
-    // A client kept from the start before can have reached something else that took the port in between, on a
-    // connection that is still open when the service runs again. Asked for a login there, it gives none.
+    // A client of the connection check kept from a start that ended connects to whatever took the port, asks the
+    // service, and leaves without a byte: not the address it was asked for, and not the login. The next start is
+    // not asked to serve it either.
     @Test
-    fun whatHeldAConnectionOfAKeptClientAcrossARestart_isGivenNoLogin() {
+    fun aKeptClientOfTheConnectionCheck_sendsNothingToWhatTakesThePortAfterItsStart() {
         connect()
-        // It waits for its answer for as long as the service takes to start again.
-        val kept = OkHttpClient.Builder().through(localProxy()!!).readTimeout(60, TimeUnit.SECONDS).build()
-        stop()
-        // Something else takes the port and the client's next connection, then stops listening and keeps that one.
-        val failure = AtomicReference<Throwable>()
-        val held = ServerSocket(DataStore.mixedPort, 50, loopback).use { other ->
-            thread(isDaemon = true) {
-                failure.set(runCatching { kept.newCall(Request.Builder().url("https://own-requests.invalid/").build()).execute().close() }.exceptionOrNull())
-            }
-            other.soTimeout = 20_000
-            try {
-                other.accept()
-            } catch (e: SocketTimeoutException) {
-                throw AssertionError("the client did not connect; its request ended with ${failure.get()}", e)
-            }
-        }
-        held.use {
-            it.soTimeout = 5_000
-            val asked = StringBuilder()
-            while (!asked.endsWith("\r\n\r\n")) asked.append(it.getInputStream().read().also { next -> check(next >= 0) }.toChar())
-            assertFalse("with no service running the client sent $asked", asked.contains("Proxy-Authorization", ignoreCase = true))
+        val first = localProxy()!!
+        val kept = OkHttpClient.Builder().through(first).callTimeout(20, TimeUnit.SECONDS).build()
+        val before = reached(kept)
+        assertTrue("the local port refused the client; the proxy's server had ${upstream.trouble}", before >= 1)
 
-            connect()
-            assertTrue(localProxy()!!.password.isNotEmpty())
-            it.getOutputStream().write("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"proxy\"\r\nContent-Length: 0\r\n\r\n".toByteArray())
-            it.getOutputStream().flush()
-            // Whatever the client sends until it gives the connection up.
-            val answered = StringBuilder()
-            runCatching {
-                while (true) {
-                    val next = it.getInputStream().read()
-                    if (next < 0) break
-                    answered.append(next.toChar())
-                }
-            }
-            assertFalse("asked for a login, the client sent $answered", answered.contains("Proxy-Authorization", ignoreCase = true))
+        stop()
+        var failure: Throwable? = null
+        val received = whileSomethingElseListensOn(first.port) {
+            failure = runCatching { kept.newCall(Request.Builder().url("https://own-requests.invalid/").build()).execute().close() }.exceptionOrNull()
         }
-        // The client was asked and declined, rather than having given up before.
-        await("the client's request to end") { failure.get() != null }
-        assertEquals("Failed to authenticate with proxy", failure.get().message)
+        assertTrue("the request ended with $failure", generateSequence(failure) { it.cause }.any { it.message.orEmpty().contains("no longer runs") })
+        // The test's own client came last; before it, the kept client's connections, one or more.
+        assertTrue("the port's new holder was sent $received", received.size >= 2 && received.last() == listOf<Byte>(127) && received.dropLast(1).all { it.isEmpty() })
+
+        connect()
+        assertEquals("the next start served the client", before, reached(kept))
     }
 }

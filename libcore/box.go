@@ -27,6 +27,7 @@ import (
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/pause"
+	"golang.org/x/sys/unix"
 )
 
 // mainInstance is the core the service runs. mainAccess also guards protectCloser, so a core
@@ -92,6 +93,9 @@ type BoxInstance struct {
 	cacheDir string
 	// The cache file as configured, for ForgetSelected.
 	cacheFile option.CacheFileOptions
+	// A descriptor of the socket the core listens with on the app's local port: see HoldPort.
+	holdsPort bool
+	portHold  int
 }
 
 func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *BoxInstance, err error) {
@@ -201,6 +205,13 @@ func (b *BoxInstance) Close() (err error) {
 	done := b.closeDone
 	b.access.Unlock()
 	defer close(done)
+	// Once the core has closed its own listener, and also when closing it panics: only then is the
+	// port free again, for the next start.
+	defer func() {
+		if b.holdsPort {
+			unix.Close(b.portHold)
+		}
+	}()
 
 	// Stop admission before cancellation; workers never need access to finish.
 	if b.cancel != nil {
@@ -292,6 +303,26 @@ func (b *BoxInstance) QueryStats(tag, direct string) int64 {
 		return 0
 	}
 	return b.v2api.QueryStats(fmt.Sprintf("outbound>>>%s>>>traffic>>>%s", tag, direct))
+}
+
+// HoldPort keeps the socket this core listens with on port, the app's local port, open until the
+// core is closed, and reports whether it found that socket. The core gives a listener up after an
+// accept error it does not retry and runs on without it; the port would then be whoever's binds
+// it next. Held, it stays this process's for as long as this core runs: a connection made to it
+// has reached this core's socket and nothing else, though after such an error it waits there
+// unanswered.
+func (b *BoxInstance) HoldPort(port int32) bool {
+	b.access.Lock()
+	defer b.access.Unlock()
+	if b.state != 1 {
+		return false
+	}
+	if !b.holdsPort {
+		if held := holdListener(port); held >= 0 {
+			b.holdsPort, b.portHold = true, held
+		}
+	}
+	return b.holdsPort
 }
 
 // ForgetSelected takes out of the cache file what the "proxy" selector was last switched to, so
