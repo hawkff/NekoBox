@@ -812,8 +812,9 @@ object RawUpdater : GroupUpdater() {
                     val bean = planned.requireBean()
                     val old = now.requireBean()
                     refreshBean(old, bean)
-                    // A test result and an exit measured with the old settings say nothing now; a new remark keeps them.
-                    if (old != bean) {
+                    // A test result and an exit measured with the old connection say nothing now; a new remark, also a
+                    // sing-box outbound's tag, keeps them.
+                    if (connectionKey(old, null) != connectionKey(bean, null)) {
                         now.status = 0
                         now.ping = 0
                         now.error = null

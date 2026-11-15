@@ -432,6 +432,22 @@ class RawUpdaterTransactionTest {
     }
 
     @Test
+    fun aSingBoxOutboundWhoseTagAloneChanges_keepsItsTestResultAndExit() = runTest {
+        withContext(Dispatchers.IO) {
+            RawUpdater.updateFromContent(group, subscription, singBoxOutbounds(listOf("Edge | 5 GB" to "198.51.100.1")))
+            val tested = ProfileDatabase.proxyDao.getByGroup(group.id).single()
+            assertTrue(tested.requireBean() is ConfigBean)
+            ProfileDatabase.proxyDao.updateProxy(tested.apply { status = 1; ping = 42 })
+            DataStore.rememberProxyExits(mapOf(tested.id to "198.51.100.9"))
+            RawUpdater.updateFromContent(group, subscription, singBoxOutbounds(listOf("Edge | 4 GB" to "198.51.100.1")))
+            val renamed = ProfileDatabase.proxyDao.getById(tested.id)!!
+            assertEquals("Edge | 4 GB", renamed.displayName())
+            assertEquals(42, renamed.ping)
+            assertEquals("198.51.100.9", DataStore.proxyExits[tested.id])
+        }
+    }
+
+    @Test
     fun remarkChanges_preserveProfileIdsHistoryAndOverrides() = runTest {
         withContext(Dispatchers.IO) {
             val before = ProfileDatabase.proxyDao.getByGroup(group.id).associateBy { it.requireBean().serverAddress }
