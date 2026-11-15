@@ -431,8 +431,8 @@ object RawUpdater : GroupUpdater() {
             client.throughRunningProxy()
             client.tryH3Direct()
             if (DataStore.appTLSVersion == "1.3") client.restrictedTLS()
+            if (DataStore.allowInsecureOnRequest) client.allowInsecure()
             val response = client.newRequest().apply {
-                if (DataStore.allowInsecureOnRequest) allowInsecure()
                 setURL(url)
                 setUserAgent(userAgent)
                 // The header set Happ introduced; 3x-ui, Marzban and Remnawave count devices by it.

@@ -138,10 +138,6 @@ func (w *boxPlatformInterfaceWrapper) ReadWIFIState(ctx context.Context) adapter
 	}
 }
 
-func (w *boxPlatformInterfaceWrapper) SystemCertificates() []string {
-	return nil
-}
-
 func (w *boxPlatformInterfaceWrapper) UsePlatformConnectionOwnerFinder() bool {
 	return true
 }

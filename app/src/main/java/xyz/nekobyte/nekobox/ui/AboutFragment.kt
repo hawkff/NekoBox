@@ -129,7 +129,6 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
         runOnIoDispatcher {
             val found = try {
                 val client = Libcore.newHttpClient().apply {
-                    modernTLS()
                     throughRunningProxy()
                 }
                 val response = client.newRequest().apply { setURL(LATEST) }.execute()

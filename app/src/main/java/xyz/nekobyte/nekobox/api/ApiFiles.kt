@@ -58,7 +58,6 @@ internal class ApiFiles(private val context: Context, private val logTail: (Long
         val temporary = File.createTempFile("api-asset-", ".tmp", root)
         val client = Libcore.newHttpClient()
         try {
-            client.modernTLS()
             client.setTimeoutMs(120_000)
             client.throughRunningProxy()
             val response = client.newRequest().apply { setURL(url) }.execute()
