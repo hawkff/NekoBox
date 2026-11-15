@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -89,6 +90,8 @@ class AppUpdatesTest {
 
     @Test
     fun theDailyCheckFollowsTheSetting() {
+        // Store builds never schedule the check.
+        assumeTrue(AppUpdates.checksReleases)
         ConfigBuilderTestEnv.reset()
         val context = RuntimeEnvironment.getApplication()
         if (!WorkManager.isInitialized()) WorkManager.initialize(context, Configuration.Builder().build())
