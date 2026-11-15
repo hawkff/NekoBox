@@ -171,7 +171,7 @@ internal class AppApi(
             val changes = it.objectValue("values")
             settings.patch(changes, it.flag("confirm"))
             JSONObject().put("changed", JSONArray(changes.keysSet().toList())).put("reloadRequired", true)
-                .put("restartRequired", changes.keysSet().any { key -> key in setOf(Key.APP_THEME, Key.NIGHT_THEME, Key.LIQUID_GLASS, Key.APP_LANGUAGE, Key.LOG_LEVEL, Key.LOG_BUF_SIZE) })
+                .put("restartRequired", changes.keysSet().any { key -> key in setOf(Key.APP_THEME, Key.NIGHT_THEME, Key.LIQUID_GLASS, Key.APP_LANGUAGE, Key.LOG_LEVEL, Key.LOG_BUF_SIZE, Key.TRUST_USER_CERTIFICATES) })
         }
         automationCommands()
         tailscaleCommands()

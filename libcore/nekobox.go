@@ -135,8 +135,6 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	go func() {
 		defer deferPanicToError("InitCore-go", func(err error) { log.Println(err) })
 
-		useAndroidTrustStore()
-
 		// bg
 		if isBgProcess {
 			extractAssets()

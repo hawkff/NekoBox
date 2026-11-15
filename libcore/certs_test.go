@@ -1,6 +1,7 @@
 package libcore
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -41,27 +42,7 @@ func TestSetSystemRootsReplacesGoRoots(t *testing.T) {
 	}
 	t.Cleanup(func() { setSystemRoots(saved) })
 
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	template := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "test root"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(time.Hour),
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageCertSign,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := x509.ParseCertificate(der)
-	if err != nil {
-		t.Fatal(err)
-	}
+	root := testRoot(t, "test root")
 	roots := x509.NewCertPool()
 	roots.AddCert(root)
 
@@ -78,20 +59,132 @@ func TestSetSystemRootsReplacesGoRoots(t *testing.T) {
 	}
 }
 
-// Off Android the store finds no Android certificates, as on a device that returns none: Go's
-// own roots stay.
-func TestUseAndroidTrustStoreKeepsGoRootsWithoutAndroidCertificates(t *testing.T) {
+func testRoot(t *testing.T, name string) *x509.Certificate {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: name},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+func verifies(root *x509.Certificate, roots *x509.CertPool) bool {
+	_, err := root.Verify(x509.VerifyOptions{Roots: roots})
+	return err == nil
+}
+
+// A DER sequence that does not parse as a certificate, as one with a negative serial number does not.
+var unparseableCertificate = []byte{0x30, 0x03, 0x02, 0x01, 0x00}
+
+func TestTrustedRootsSkipsAnUnparseableCertificate(t *testing.T) {
+	first, second := testRoot(t, "first"), testRoot(t, "second")
+	der := append(append(append([]byte{}, first.Raw...), unparseableCertificate...), second.Raw...)
+	roots := trustedRoots(der, false)
+	if roots == nil || !verifies(first, roots) || !verifies(second, roots) {
+		t.Fatal("the certificates around an unparseable one are not trusted")
+	}
+}
+
+func TestTrustedRootsAddsCertificatesToTheMozillaList(t *testing.T) {
+	mozilla := trustedRoots(nil, true)
+	if mozilla == nil {
+		t.Fatal("no Mozilla list")
+	}
+	if mozilla.Equal(x509.NewCertPool()) {
+		t.Fatal("the Mozilla list is empty")
+	}
+	root := testRoot(t, "user root")
+	roots := trustedRoots(root.Raw, true)
+	if !verifies(root, roots) {
+		t.Fatal("the certificate is not trusted")
+	}
+	mozilla.AddCert(root)
+	if !roots.Equal(mozilla) {
+		t.Fatal("the Mozilla list is not the base")
+	}
+}
+
+// Android's KeyStore read failed or held nothing usable: Go's own roots stay.
+func TestSetTrustedRootsKeepsGoRootsWithoutCertificates(t *testing.T) {
 	before, err := x509.SystemCertPool()
 	if err != nil {
 		t.Skip("no system roots on this host:", err)
 	}
 	t.Cleanup(func() { setSystemRoots(before) })
-	useAndroidTrustStore()
-	after, err := x509.SystemCertPool()
-	if err != nil {
-		t.Fatal(err)
+	for _, der := range [][]byte{nil, unparseableCertificate, {0xff}} {
+		SetTrustedRoots(der, false)
+		after, err := x509.SystemCertPool()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !after.Equal(before) {
+			t.Fatalf("Go's system roots changed for % x", der)
+		}
 	}
-	if !after.Equal(before) {
-		t.Fatal("Go's system roots changed")
+}
+
+func TestRequestsWaitForAnnouncedRoots(t *testing.T) {
+	// Nothing announced: no wait.
+	start := time.Now()
+	awaitTrustedRoots(context.Background())
+	if time.Since(start) > time.Second {
+		t.Fatal("waited without an announcement")
+	}
+
+	ExpectTrustedRoots()
+	waited := make(chan struct{})
+	go func() {
+		awaitTrustedRoots(context.Background())
+		close(waited)
+	}()
+	select {
+	case <-waited:
+		t.Fatal("did not wait for the roots")
+	case <-time.After(100 * time.Millisecond):
+	}
+	SetTrustedRoots(nil, false)
+	select {
+	case <-waited:
+	case <-time.After(time.Second):
+		t.Fatal("still waiting after the roots were set")
+	}
+
+	// A cancelled request does not wait.
+	ExpectTrustedRoots()
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	start = time.Now()
+	awaitTrustedRoots(cancelled)
+	if time.Since(start) > time.Second {
+		t.Fatal("a cancelled request waited")
+	}
+	SetTrustedRoots(nil, false)
+
+	// An announcement nobody answers ends at the bound.
+	saved := trustedRootsWait
+	trustedRootsWait = 50 * time.Millisecond
+	t.Cleanup(func() { trustedRootsWait = saved; trustedRootsReady.Store(nil) })
+	ExpectTrustedRoots()
+	start = time.Now()
+	awaitTrustedRoots(context.Background())
+	if elapsed := time.Since(start); elapsed < 50*time.Millisecond || elapsed > time.Second {
+		t.Fatalf("waited %v", elapsed)
 	}
 }

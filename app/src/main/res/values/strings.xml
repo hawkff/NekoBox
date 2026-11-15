@@ -1121,6 +1121,8 @@
     <string name="bypass_lan_summary">Local network addresses skip the VPN</string>
     <string name="bypass_lan_in_core_summary">The core sends local addresses out directly. Works in proxy mode too</string>
     <string name="global_allow_insecure_summary">Skip certificate checks for every profile. Unsafe.</string>
+    <string name="trust_user_certificates">Trust certificates installed in Android Settings</string>
+    <string name="trust_user_certificates_summary">For subscriptions, rule assets and update checks. Proxy connections and Tailscale follow the core\'s own rules. Certificate authorities installed in Android Settings can read these connections.</string>
     <string name="rules_provider_official_summary">SagerNet\'s geosite and geoip lists</string>
     <string name="rules_provider_china_summary">Lists tuned for China</string>
     <string name="rules_provider_iran_summary">Lists tuned for Iran</string>

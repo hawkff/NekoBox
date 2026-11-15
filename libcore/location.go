@@ -95,6 +95,7 @@ func LookupOutboundLocation(i *BoxInstance, tag, link string) (location string, 
 		return "", errors.New("invalid location lookup URL")
 	}
 	request.Header.Set("Accept", "application/json")
+	awaitTrustedRoots(ctx)
 	response, err := client.Do(request)
 	if err != nil {
 		return "", errors.New("location lookup failed")

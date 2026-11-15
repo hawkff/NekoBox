@@ -418,4 +418,6 @@
     <plurals name="config_lines">
         <item quantity="other">%d 行</item>
     </plurals>
+    <string name="trust_user_certificates">Android の設定でインストールした証明書を信頼する</string>
+    <string name="trust_user_certificates_summary">サブスクリプション、ルールアセット、更新の確認に使います。プロキシ接続と Tailscale はコア独自のルールに従います。Android の設定でインストールした認証局は、これらの接続を読み取れます。</string>
 </resources>

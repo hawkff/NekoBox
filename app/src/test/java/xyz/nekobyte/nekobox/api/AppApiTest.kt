@@ -286,6 +286,13 @@ class AppApiTest {
         error("invalid_parameters", "settings.set", params("values" to params(Key.MIXED_PORT to "65536")))
         error("invalid_parameters", "settings.set", params("values" to params(Key.LOG_LEVEL to 2)))
         error("confirmation_required", "settings.set", params("values" to params(Key.ALLOW_ACCESS to true)))
+        error("confirmation_required", "settings.set", params("values" to params(Key.TRUST_USER_CERTIFICATES to true)))
+        assertTrue(objectResult("settings.set", params("values" to params(Key.TRUST_USER_CERTIFICATES to false))).getBoolean("restartRequired"))
+        val customConfig = """{"certificate":{"store":"none"}}"""
+        error("confirmation_required", "settings.set", params("values" to params(Key.GLOBAL_CUSTOM_CONFIG to customConfig)))
+        objectResult("settings.set", params("values" to params(Key.GLOBAL_CUSTOM_CONFIG to customConfig), "confirm" to true))
+        assertEquals(customConfig, DataStore.globalCustomConfig)
+        objectResult("settings.set", params("values" to params(Key.GLOBAL_CUSTOM_CONFIG to "")))
         objectResult("settings.set", params("values" to params(Key.MIXED_PORT to "2088", Key.BYPASS_MODE to false)))
         assertEquals("2088", objectResult("settings.get").getString(Key.MIXED_PORT))
         assertFalse(DataStore.bypass)
