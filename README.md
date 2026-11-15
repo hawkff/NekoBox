@@ -153,7 +153,7 @@ Settings > Leak protection has these controls:
 
 These controls work in VPN mode. A running service does not prove that protection works, so run a connection test after each start or reconnect.
 
-The app's own requests, such as subscription updates, rule asset downloads and the update check, trust only the certificate authorities built into Android. A certificate authority you installed in Android Settings counts only after you turn on Trust certificates installed in Android Settings under Settings > TLS security and restart the app. Proxy connections, DNS and Tailscale follow the core's own rules.
+The app's own requests, such as subscription updates, rule asset downloads and the update check, trust only the certificate authorities built into Android, or on Android 8 and older the core's copy of Mozilla's list. A certificate authority you installed in Android Settings counts only after you turn on Trust certificates installed in Android Settings under Settings > TLS security and restart the app. Proxy connections, DNS and Tailscale follow the core's own rules.
 
 ## Automation, sharing and diagnostics
 
