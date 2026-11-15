@@ -38,6 +38,21 @@ class ResolvedServerNameTest {
     }
 
     @Test
+    fun forcedResolutionPicksIpv6OnlyWhenPreferred() {
+        val addresses = listOf(InetAddress.getByName("2001:db8::1"), InetAddress.getByName("192.0.2.1"))
+        for ((ipv6First, expected) in listOf(false to "192.0.2.1", true to "2001:db8:0:0:0:0:0:1")) {
+            for (order in listOf(addresses, addresses.reversed())) {
+                val bean = TuicBean().apply {
+                    serverAddress = "proxy.example"
+                    initializeDefaultValues()
+                }
+                RawUpdater.rewriteAddress(bean, order, ipv6First)
+                assertEquals(expected, bean.serverAddress)
+            }
+        }
+    }
+
+    @Test
     fun tuicClashIpOverrideKeepsTheCertificateHostname() = runBlocking {
         for (sni in listOf("", "explicit.example")) {
             val text = """

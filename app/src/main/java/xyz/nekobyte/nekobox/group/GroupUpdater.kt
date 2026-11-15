@@ -107,7 +107,8 @@ abstract class GroupUpdater {
     }
 
     internal fun rewriteAddress(bean: AbstractBean, addresses: List<InetAddress>, ipv6First: Boolean) {
-        val address = addresses.sortedBy { (it is Inet4Address) xor ipv6First }[0].hostAddress
+        // false sorts first: IPv4 first unless IPv6 is preferred.
+        val address = addresses.sortedBy { (it is Inet4Address) == ipv6First }[0].hostAddress
 
         with(bean) {
             when (this) {
