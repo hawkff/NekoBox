@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_channel">更新</string>
+    <string name="check_updates_automatically">自動檢查更新</string>
+    <string name="check_updates_automatically_summary">每天一次，已連線時透過正在執行的代理</string>
+    <string name="app_update_available">NekoBox %s 已發布</string>
+    <string name="app_update_action">更新</string>
+    <string name="app_update_connection_note">NekoBox 更新時連線會短暫中斷。如果開啟了「自動連線」，連線會自動恢復。</string>
+    <string name="app_update_downloading">正在下載更新…</string>
+    <string name="app_update_rejected">下載的檔案不是此應用程式的有效更新，已刪除。</string>
+</resources>

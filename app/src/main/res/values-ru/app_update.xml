@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_channel">Обновления</string>
+    <string name="check_updates_automatically">Проверять обновления автоматически</string>
+    <string name="check_updates_automatically_summary">Раз в день, через запущенный прокси, если он подключён</string>
+    <string name="app_update_available">Доступна NekoBox %s</string>
+    <string name="app_update_action">Обновить</string>
+    <string name="app_update_connection_note">Пока NekoBox обновляется, соединение ненадолго прервётся. Оно восстановится само, если включено «Автоматическое подключение».</string>
+    <string name="app_update_downloading">Загрузка обновления…</string>
+    <string name="app_update_rejected">Загруженный файл не является обновлением этого приложения и удалён.</string>
+</resources>

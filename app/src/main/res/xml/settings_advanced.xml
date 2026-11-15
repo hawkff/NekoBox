@@ -8,6 +8,12 @@
         app:key="helpToImprove"
         app:summary="@string/help_to_improve_summary"
         app:title="@string/help_to_improve" />
+    <SwitchPreference
+        app:defaultValue="true"
+        app:icon="@drawable/ic_update"
+        app:key="checkUpdates"
+        app:summary="@string/check_updates_automatically_summary"
+        app:title="@string/check_updates_automatically" />
     <xyz.nekobyte.nekobox.ui.ChoicePreference
         app:defaultValue="0"
         app:entries="@array/log_level"

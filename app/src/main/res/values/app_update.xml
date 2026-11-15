@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Updates of the app: the notification channel, the setting, Home's banner and the update dialog -->
+    <string name="app_update_channel">Updates</string>
+    <string name="check_updates_automatically">Check for updates automatically</string>
+    <string name="check_updates_automatically_summary">Once a day, through the running proxy when one is connected</string>
+    <string name="app_update_available">NekoBox %s is available</string>
+    <string name="app_update_action">Update</string>
+    <string name="app_update_connection_note">The connection stops for a moment while NekoBox updates. It comes back on its own if Auto-connect is on.</string>
+    <string name="app_update_downloading">Downloading the update…</string>
+    <string name="app_update_rejected">The download is not a valid update of this app and was deleted.</string>
+</resources>
