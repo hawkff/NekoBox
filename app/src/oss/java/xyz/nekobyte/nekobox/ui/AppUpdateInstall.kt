@@ -61,6 +61,7 @@ object AppUpdateInstall {
         if (!inApp || apk == null) return activity.openReleasePage(release)
         if (Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) {
             // Android asks once whether this app may install others; the download starts when the user comes back.
+            // shortcut: if Android ends the app while its settings screen shows, the user taps Update again.
             lateinit var allowed: ActivityResultLauncher<Intent>
             allowed = activity.activityResultRegistry.register("appUpdateInstalls", ActivityResultContracts.StartActivityForResult()) {
                 allowed.unregister()
@@ -86,9 +87,10 @@ object AppUpdateInstall {
             .setCancelable(false)
             .show()
         job = runOnIoDispatcher {
-            // A file of this attempt alone: a cancelled one may still be downloading into its own.
-            val file = File.createTempFile("app-update", ".apk", app.cacheDir)
+            var file: File? = null
             val failure = try {
+                // A file of this attempt alone: a cancelled one may still be downloading into its own.
+                file = File.createTempFile("app-update", ".apk", app.cacheDir)
                 Libcore.newHttpClient().apply {
                     setTimeoutMs(DOWNLOAD_TIMEOUT_MS)
                     throughRunningProxy()
@@ -108,7 +110,7 @@ object AppUpdateInstall {
                 e.readableMessage
             } finally {
                 // The session holds its own copy once written.
-                file.delete()
+                file?.delete()
             }
             runOnMainDispatcher {
                 if (!activity.isDestroyed) progress.dismiss()

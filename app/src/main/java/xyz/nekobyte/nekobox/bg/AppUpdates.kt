@@ -139,7 +139,9 @@ object AppUpdates : OnPreferenceDataStoreChangeListener {
                 Logs.w(e)
                 return Result.retry()
             }
-            // Once per release: a refused notification leaves the banner and About to show it.
+            // Once per release: a refused notification leaves the banner and About to show it. Not after the check
+            // was stopped or turned off while it fetched.
+            if (isStopped || !DataStore.checkUpdates) return Result.success()
             if (release != null && release.version != DataStore.updateNotified) {
                 DataStore.updateNotified = release.version
                 notify(release)
