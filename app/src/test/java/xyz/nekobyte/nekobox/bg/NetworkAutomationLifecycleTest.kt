@@ -801,8 +801,8 @@ class NetworkAutomationLifecycleTest {
             service.onStartCommand(Intent().putExtra(Action.EXTRA_AUTOMATED, false), 0, 1)
             assertEquals(ServiceNotification.notificationId, shadowOf(service).lastForegroundNotificationId)
             service.stopRunner()
-            idle()
-            assertTrue(shadowOf(service).isForegroundStopped)
+            // The stop waits for the preparing job to end on another thread.
+            assertNotNull(await { true.takeIf { shadowOf(service).isForegroundStopped } })
         }
     }
 
