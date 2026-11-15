@@ -269,9 +269,13 @@ internal class AppApi(
                 output.fd.sync()
             }
             check(recovery.readBytes().contentEquals(bytes))
-            // Each copy holds credentials, so only the newest ones stay; the one just written is always among them.
-            directory.listFiles().orEmpty().filter { it.isFile && it.extension == "json" && it != recovery }
-                .sortedByDescending { it.lastModified() }.drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
+            // Each copy holds credentials, so only the newest ones stay. Their times only count up, whatever the clock does
+            // (restores run one at a time), so the order of the copies is the order of the restores.
+            val older = directory.listFiles().orEmpty().filter { it.isFile && it.extension == "json" && it != recovery }
+            older.maxOfOrNull { it.lastModified() }?.let { last ->
+                if (recovery.lastModified() <= last) check(recovery.setLastModified(last + 1000))
+            }
+            older.sortedByDescending { it.lastModified() }.drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
             try {
                 restoreBackup(content, profiles, rules, settings, DatabaseBackupRestoreOperations)
             } catch (_: Exception) {

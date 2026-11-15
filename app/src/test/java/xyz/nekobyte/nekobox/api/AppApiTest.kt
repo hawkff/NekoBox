@@ -449,10 +449,15 @@ class AppApiTest {
         profile(group())
         val content = objectResult("backup.export", params("includeSecrets" to true))
         val restore = params("content" to content, "profiles" to true, "rules" to false, "settings" to false, "confirm" to true)
-        val ids = (1..4).map { objectResult("backup.restore", restore).getString("recoveryId") }
+        // A clock set back after the first two restores, and restores within one second, keep their order.
+        val directory = java.io.File(RuntimeEnvironment.getApplication().noBackupFilesDir, "api-recovery")
+        val ids = (1..4).map { restoreNumber ->
+            objectResult("backup.restore", restore).getString("recoveryId").also { id ->
+                if (restoreNumber <= 2) java.io.File(directory, "$id.json").setLastModified(System.currentTimeMillis() + 3_600_000L)
+            }
+        }
         val kept = result("backup.recoveries") as JSONArray
-        assertEquals(3, kept.length())
-        assertTrue((0 until kept.length()).any { kept.getJSONObject(it).getString("id") == ids.last() })
+        assertEquals(ids.takeLast(3).toSet(), (0 until kept.length()).map { kept.getJSONObject(it).getString("id") }.toSet())
         objectResult("backup.recovery", params("id" to ids.last(), "includeSecrets" to true))
     }
 

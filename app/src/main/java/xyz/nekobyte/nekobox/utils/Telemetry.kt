@@ -314,9 +314,12 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
                 override fun onInvalidated(tables: Set<String>) {
                     worker.execute {
                         try {
-                            // Settings also change in the other process and during backup restore. The store refreshes
-                            // its own copy, which may not have happened yet, so the consent row is read directly.
-                            update(PublicDatabase.kvPairDao[Key.HELP_TO_IMPROVE]?.boolean ?: false)
+                            // Settings also change in the other process and during backup restore. Only the consent row
+                            // is read; when it changed, the store's copy, which the reports are checked against, is read
+                            // again first.
+                            val enabled = PublicDatabase.kvPairDao[Key.HELP_TO_IMPROVE]?.boolean ?: false
+                            if (enabled != DataStore.helpToImprove) DataStore.configurationStore.refreshBlocking()
+                            update(enabled)
                         } catch (_: Exception) {
                             stop()
                         }
