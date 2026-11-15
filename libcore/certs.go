@@ -1,6 +1,7 @@
 package libcore
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"log"
@@ -45,6 +46,8 @@ func awaitTrustedRoots() {
 // der, one after another, on top of the core's copy of Mozilla's list when mozilla is set. With
 // nothing to trust, Go keeps its default roots.
 func SetTrustedRoots(der []byte, mozilla bool) {
+	// gomobile lends the Java array only for this call, and parsed certificates point into their input.
+	der = bytes.Clone(der)
 	if roots := trustedRoots(der, mozilla); roots != nil {
 		setSystemRoots(roots)
 	}
