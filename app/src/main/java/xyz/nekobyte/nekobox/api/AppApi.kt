@@ -51,6 +51,7 @@ internal class AppApi(
         // Listener replacement must not let a new token overlap an accepted command.
         val commandGate = Mutex()
         const val KEPT_RECOVERY_BACKUPS = 3
+        private const val BASELINE_RECOVERY = "baseline"
     }
 
     private class Command(
@@ -275,16 +276,22 @@ internal class AppApi(
             older.maxOfOrNull { it.lastModified() }?.let { last ->
                 if (recovery.lastModified() <= last) check(recovery.setLastModified(last + 1000))
             }
-            // A failed restore leaves a mix, and the copies from before it must stay; retries still keep at most twice as
-            // many.
-            fun prune(kept: Int) = older.sortedByDescending { it.lastModified() }.drop(kept - 1).forEach { it.delete() }
+            // A failed restore leaves a mix of old and new sections. The copy taken before the first of a run of failed
+            // restores is the last one of the data as it was: it stays until a restore finishes. Of the others, the newest
+            // ones stay.
+            val baseline = File(directory, BASELINE_RECOVERY)
+            val baselineCopy = baseline.takeIf { it.isFile }?.readText()?.let { File(directory, "$it.json") }
+            fun prune(keep: File?) = older.filter { it != keep }.sortedByDescending { it.lastModified() }
+                .drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
             try {
                 restoreBackup(content, profiles, rules, settings, DatabaseBackupRestoreOperations)
             } catch (_: Exception) {
-                prune(2 * KEPT_RECOVERY_BACKUPS)
+                if (baselineCopy?.isFile != true) baseline.writeText(recoveryId)
+                prune(keep = baselineCopy)
                 reject("restore_failed", "Restore did not finish; read backup.recovery with id=$recoveryId before retrying")
             }
-            prune(KEPT_RECOVERY_BACKUPS)
+            baseline.delete()
+            prune(keep = null)
             ProfileManager.ruleIterator { onCleared() }
             ProfileDatabase.groupDao.allGroups().forEach { group -> GroupManager.postReload(group.id) }
             JSONObject().put("restored", true).put("recoveryId", recoveryId).put("restartRequired", true)

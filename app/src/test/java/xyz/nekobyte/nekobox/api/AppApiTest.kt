@@ -457,8 +457,34 @@ class AppApiTest {
             }
         }
         val kept = result("backup.recoveries") as JSONArray
+        assertEquals(4, ids.toSet().size)
+        assertEquals(3, kept.length())
         assertEquals(ids.takeLast(3).toSet(), (0 until kept.length()).map { kept.getJSONObject(it).getString("id") }.toSet())
         objectResult("backup.recovery", params("id" to ids.last(), "includeSecrets" to true))
+    }
+
+    // A failed restore can leave some sections replaced: the copy from before the first failure stays through retries.
+    @Test
+    fun failedRestoresKeepTheCopyFromBeforeTheFirstFailure() {
+        profile(group())
+        val content = objectResult("backup.export", params("includeSecrets" to true))
+        val restore = params("content" to content, "profiles" to true, "rules" to false, "settings" to false, "confirm" to true)
+        fun kept() = (result("backup.recoveries") as JSONArray).let { list -> (0 until list.length()).map { list.getJSONObject(it).getString("id") }.toSet() }
+        val db = ProfileDatabase.instance.openHelper.writableDatabase
+        db.execSQL("CREATE TRIGGER refuse_restore BEFORE INSERT ON proxy_entities BEGIN SELECT RAISE(ABORT, 'refused'); END")
+        val failed = try {
+            (1..5).map {
+                val error = response("backup.restore", restore).getJSONObject("error")
+                assertEquals("restore_failed", error.getString("code"))
+                Regex("id=([0-9a-f-]{36})").find(error.getString("message"))!!.groupValues[1]
+            }
+        } finally {
+            db.execSQL("DROP TRIGGER refuse_restore")
+        }
+        assertEquals(setOf(failed[0], failed[2], failed[3], failed[4]), kept())
+        // Once a restore finishes, that copy counts like the others.
+        val restored = objectResult("backup.restore", restore).getString("recoveryId")
+        assertEquals(setOf(failed[3], failed[4], restored), kept())
     }
 
     @Test
