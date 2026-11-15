@@ -275,12 +275,13 @@ internal class AppApi(
             older.maxOfOrNull { it.lastModified() }?.let { last ->
                 if (recovery.lastModified() <= last) check(recovery.setLastModified(last + 1000))
             }
-            older.sortedByDescending { it.lastModified() }.drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
             try {
                 restoreBackup(content, profiles, rules, settings, DatabaseBackupRestoreOperations)
             } catch (_: Exception) {
                 reject("restore_failed", "Restore did not finish; read backup.recovery with id=$recoveryId before retrying")
             }
+            // Only after a restore that finished: a failed one leaves a mix, and the copy from before it must stay.
+            older.sortedByDescending { it.lastModified() }.drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
             ProfileManager.ruleIterator { onCleared() }
             ProfileDatabase.groupDao.allGroups().forEach { group -> GroupManager.postReload(group.id) }
             JSONObject().put("restored", true).put("recoveryId", recoveryId).put("restartRequired", true)
