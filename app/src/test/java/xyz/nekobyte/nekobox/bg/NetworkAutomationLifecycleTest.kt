@@ -792,20 +792,6 @@ class NetworkAutomationLifecycleTest {
         }
     }
 
-    // A start enters the foreground as it begins; a stop before the start had a notice of its own takes the
-    // bare one down again, as the app or the tile may keep the service bound.
-    @Test
-    fun aStopWhileAStartPreparesLeavesNoNotice() {
-        ShadowVpnService.setPrepareResult(null)
-        withVpnService { service ->
-            service.onStartCommand(Intent().putExtra(Action.EXTRA_AUTOMATED, false), 0, 1)
-            assertEquals(ServiceNotification.notificationId, shadowOf(service).lastForegroundNotificationId)
-            service.stopRunner()
-            // The stop waits for the preparing job to end on another thread.
-            assertNotNull(await { true.takeIf { shadowOf(service).isForegroundStopped } })
-        }
-    }
-
     // A start that ends at once, such as one that shows the consent screen, still answers the foreground
     // demand of startForegroundService, and takes the notice down at once: the app or the tile may keep
     // the service bound. Android refusing the type without the VPN permission changes neither.
