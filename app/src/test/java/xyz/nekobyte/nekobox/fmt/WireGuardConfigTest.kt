@@ -453,7 +453,7 @@ class WireGuardConfigTest {
     }
 
     @Test
-    fun globalModeLeavesOutDomainsOfProfilesOnlyRulesUse() {
+    fun globalModeLeavesOutProfilesOnlyRulesUse() {
         val main = add(socks("main"))
         val tunnel = add(
             wg("rule-tunnel") {
@@ -465,11 +465,16 @@ class WireGuardConfigTest {
         )
         rules(RuleEntity(domains = "full:corp.example", outbound = tunnel.id))
         fun hasProfileDns() = JSONObject(build(main).config).getJSONObject("dns").objects("servers").any { it.getString("tag") == "dns-wg-${tunnel.id}" }
+        fun hasTunnel() = JSONObject(build(main).config).let { config ->
+            (config.objects("outbounds") + config.objects("endpoints")).any { it.optString("type") == "wireguard" }
+        }
 
         assertTrue(hasProfileDns())
+        assertTrue(hasTunnel())
         DataStore.globalMode = true
         try {
             assertFalse(hasProfileDns())
+            assertFalse(hasTunnel())
             // The selected chain keeps its own listed domains in Global mode.
             assertTrue(JSONObject(build(tunnel).config).getJSONObject("dns").objects("servers").any { it.getString("tag") == "dns-wg-${tunnel.id}" })
         } finally {

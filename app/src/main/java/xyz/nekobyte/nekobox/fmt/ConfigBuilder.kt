@@ -151,10 +151,9 @@ internal fun parseDnsHosts(value: String): Map<String, List<String>> {
     return hosts.mapValues { (_, addresses) -> addresses.distinct() }
 }
 
-// Extract the server hostname for a bean, mirroring the bypassDNSBeans logic
-// (ConfigBean stores its address inside the parsed JSON "server" field). Falls back to
-// bean.serverAddress when the JSON has no usable "server" so custom-resolver host mapping
-// is preserved for those configs.
+// Extract the server hostname for a bean (ConfigBean stores its address inside the parsed
+// JSON "server" field). Falls back to bean.serverAddress when the JSON has no usable "server"
+// so custom-resolver host mapping is preserved for those configs.
 private fun serverHostOf(bean: AbstractBean): String? {
     val fallback = bean.serverAddress?.takeIf { it.isNotBlank() }
     if (bean is ConfigBean) {
@@ -359,7 +358,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
 
     fun ProxyEntity.resolveChain(): MutableList<ProxyEntity> = resolveChain(this, lookupCache)
 
-    val extraRules = if (forTest) listOf() else ProfileDatabase.rulesDao.enabledRules()
+    // Global mode ignores the routing rules, so their target profiles are not built either.
+    val extraRules = if (forTest || DataStore.globalMode) listOf() else ProfileDatabase.rulesDao.enabledRules()
     val extraProxies =
         if (forTest) {
             mapOf()
@@ -387,7 +387,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     }
     val userDNSRuleList = mutableListOf<DNSRule_DefaultOptions>()
     val domainListDNSDirectForce = mutableListOf<String>()
-    val bypassDNSBeans = hashSetOf<AbstractBean>()
+    // Server hosts of the first hops, looked up directly. Hosts, not beans: a bean's hash serializes it.
+    val bypassDNSHosts = linkedSetOf<String>()
     // Per-subscription custom resolver (#71). Maps a subscription group's resolver to the
     // exact server hostnames imported from that subscription, so the resolver is used ONLY
     // for those domains.
@@ -690,7 +691,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 if (index == profileList.lastIndex) {
                     needGlobal = true
                     tagOut = "g-" + proxyEntity.id
-                    changes.add(bypassDNSBeans, proxyEntity.requireBean())
+                    serverHostOf(proxyEntity.requireBean())?.let { changes.add(bypassDNSHosts, it) }
 
                     // Per-subscription custom resolver (#71). The resolver belongs to the
                     // subscription that owns this chain (entity.groupId), not necessarily the
@@ -1066,12 +1067,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
 
         // Profile DNS for all queries follows the selected profile, which a selector can switch
-        // without a rebuild. Listed domains apply wherever their profile carries traffic: Global
-        // mode ignores the routing rules, so a profile built only for a rule stays out. Ambiguity
-        // fails the build instead of depending on build order.
-        val rulesApply = forTest || !DataStore.globalMode
-        val activeProfileDns = profileDnsList.filter { (selected, _) -> selected || rulesApply }
-        val selectedProfileDns = activeProfileDns.filter { (selected, dns) -> selected && dns.mode == WireGuardDnsMode.ALL }
+        // without a rebuild. Listed domains apply wherever their profile carries traffic.
+        // Ambiguity fails the build instead of depending on build order.
+        val selectedProfileDns = profileDnsList.filter { (selected, dns) -> selected && dns.mode == WireGuardDnsMode.ALL }
             .map { it.second }.distinctBy { it.profileId }
         if (buildSelector) {
             selectedProfileDns.firstOrNull()?.let {
@@ -1081,7 +1079,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         require(selectedProfileDns.size <= 1) {
             NekoBox.application.getString(R.string.wireguard_dns_chain_conflict, selectedProfileDns[0].name, selectedProfileDns[1].name)
         }
-        val domainProfileDns = activeProfileDns.map { it.second }.filter { it.mode == WireGuardDnsMode.DOMAINS }.distinctBy { it.profileId }
+        val domainProfileDns = profileDnsList.map { it.second }.filter { it.mode == WireGuardDnsMode.DOMAINS }.distinctBy { it.profileId }
         domainProfileDns.forEachIndexed { index, first ->
             for (second in domainProfileDns.drop(index + 1)) {
                 val shared = first.domains.firstOrNull { a -> second.domains.any { b -> a == b || a.endsWith(".$b") || b.endsWith(".$a") } }
@@ -1397,22 +1395,12 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         fun isExclusiveCustomHost(host: String): Boolean = hostResolvers[host]?.size == 1 && !nonCustomFinalHosts.contains(host)
 
         // Bypass Lookup for the first profile
-        bypassDNSBeans.forEach {
-            var serverAddr = it.serverAddress
-
-            if (it is ConfigBean) {
-                var config = mutableMapOf<String, Any>()
-                config = gson.fromJson(it.config, config.javaClass)
-                config["server"]?.apply {
-                    serverAddr = toString()
-                }
-            }
-
-            if (!serverAddr!!.isIpAddress()) {
+        bypassDNSHosts.forEach { serverAddr ->
+            if (!serverAddr.isIpAddress()) {
                 // Servers handled by a dedicated per-subscription resolver are kept out of the
                 // global direct-DNS force list to avoid conflicting routing (#71). Only do this
                 // for hosts exclusive to a single custom-resolver subscription.
-                if (!isExclusiveCustomHost(serverAddr!!)) {
+                if (!isExclusiveCustomHost(serverAddr)) {
                     domainListDNSDirectForce.add("full:$serverAddr")
                 }
             }
