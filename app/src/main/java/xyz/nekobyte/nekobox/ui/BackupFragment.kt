@@ -679,7 +679,8 @@ class BackupFragment : NamedFragment(R.layout.layout_backup) {
                                     import.backupRules.isChecked,
                                     import.backupSettings.isChecked,
                                 )
-                                triggerFullRestart(requireContext())
+                                // The data is written: restart even if the screen was rebuilt meanwhile.
+                                triggerFullRestart(activity)
                             }.onFailure {
                                 Logs.w(it)
                                 onMainDispatcher {

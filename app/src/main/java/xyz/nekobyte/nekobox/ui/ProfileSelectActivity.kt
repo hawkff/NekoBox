@@ -18,6 +18,8 @@ class ProfileSelectActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // A rebuilt screen gets its picker back from the fragment manager.
+        if (savedInstanceState != null) return
         val selected = IntentCompat.getParcelableExtra(intent, EXTRA_SELECTED, ProxyEntity::class.java)
 
         supportFragmentManager.beginTransaction()

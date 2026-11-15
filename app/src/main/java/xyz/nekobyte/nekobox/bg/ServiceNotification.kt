@@ -65,7 +65,8 @@ class ServiceNotification(
         }
     }
 
-    var listenPostSpeed = true
+    // Speed updates only while someone can see them; a start with the screen off begins without.
+    var listenPostSpeed = NekoBox.power.isInteractive
 
     suspend fun postNotificationSpeedUpdate(stats: SpeedDisplayData) {
         useBuilder {
@@ -217,9 +218,7 @@ class ServiceNotification(
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (service.data.state == BaseService.State.Connected) {
-            listenPostSpeed = intent.action == Intent.ACTION_SCREEN_ON
-        }
+        listenPostSpeed = intent.action == Intent.ACTION_SCREEN_ON
     }
 
     private suspend fun show() = useBuilder {

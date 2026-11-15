@@ -209,6 +209,16 @@ class NetworkAutomationLifecycleTest {
     }
 
     @Test
+    fun theBootReceiverIgnoresBroadcastsTheSystemDoesNotSend() {
+        DataStore.configurationStore.putBoolean(Key.PERSIST_ACROSS_REBOOT, true)
+        DataStore.selectedProxy = 5L
+        // Any app can send the exported receiver an explicit broadcast; only boot and app updates restore.
+        BootReceiver().onReceive(app, Intent("com.example.START"))
+        BootReceiver().onReceive(app, Intent())
+        assertNull(shadowOf(app).nextStartedService)
+    }
+
+    @Test
     fun onlyAUserStartLiftsThePause() {
         automation(enabled = true, paused = true, connectOnMobile)
         DataStore.configurationStore.putBoolean(Key.PERSIST_ACROSS_REBOOT, true)

@@ -145,12 +145,11 @@ class MainActivity :
         }
 
         binding.fab.setOnClickListener {
-            if (DataStore.serviceState.canStop) {
-                NekoBox.stopService()
-            } else {
-                connect.launch(
-                    null,
-                )
+            when {
+                DataStore.serviceState.canStop -> NekoBox.stopService()
+                // Without a profile the start would end at once, after the VPN permission dialog on a first run.
+                DataStore.selectedProxy == 0L -> snackbar(R.string.profile_empty).show()
+                else -> connect.launch(null)
             }
         }
         binding.stats.setOnClickListener { if (DataStore.serviceState.connected) binding.stats.testConnection() }

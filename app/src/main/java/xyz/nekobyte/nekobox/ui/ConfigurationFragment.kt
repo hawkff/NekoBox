@@ -28,6 +28,8 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.net.toUri
+import androidx.core.os.BundleCompat
+import androidx.core.os.bundleOf
 import androidx.core.view.MenuCompat
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
@@ -147,9 +149,9 @@ import kotlin.collections.set
  * Proxies screen ([proxies], see ProxiesFragment) it shows only the lists of proxies, which Home leaves out.
  */
 open class ConfigurationFragment @JvmOverloads constructor(
-    val select: Boolean = false,
-    val selectedItem: ProxyEntity? = null,
-    val titleRes: Int = 0,
+    select: Boolean = false,
+    selectedItem: ProxyEntity? = null,
+    titleRes: Int = 0,
     val proxies: Boolean = false,
 ) : ToolbarFragment(R.layout.layout_group_list),
     PopupMenu.OnMenuItemClickListener,
@@ -161,7 +163,19 @@ open class ConfigurationFragment @JvmOverloads constructor(
         fun returnProfile(profileId: Long)
     }
 
+    init {
+        // Android rebuilds a fragment through its no-argument constructor and hands back only its arguments.
+        if (select) arguments = bundleOf(ARG_SELECT to true, ARG_SELECTED_ITEM to selectedItem, ARG_TITLE to titleRes)
+    }
+
+    val select by lazy { arguments?.getBoolean(ARG_SELECT) == true }
+    val selectedItem by lazy { arguments?.let { BundleCompat.getParcelable(it, ARG_SELECTED_ITEM, ProxyEntity::class.java) } }
+    val titleRes by lazy { arguments?.getInt(ARG_TITLE) ?: 0 }
+
     private companion object {
+        const val ARG_SELECT = "select"
+        const val ARG_SELECTED_ITEM = "selectedItem"
+        const val ARG_TITLE = "title"
         const val KEY_EXIT_PROXY_BASE = "exitProxyBase"
         const val KEY_THROUGH_LIST = "throughList"
         const val KEY_EXPORTING_PROFILE = "exportingProfile"
@@ -1510,23 +1524,26 @@ open class ConfigurationFragment @JvmOverloads constructor(
                             // ensure the globalMode write-through has committed before offering
                             // reload (the :bg reload re-reads globalMode from the DB)
                             DataStore.configurationStore.awaitWrites()
-                            snackbar(getString(R.string.need_reload)).setAction(R.string.apply) {
-                                runOnDefaultDispatcher {
-                                    try {
-                                        DataStore.configurationStore.awaitWrites()
-                                        NekoBox.reloadService()
-                                    } catch (e: Exception) {
-                                        Logs.w(e)
-                                        onMainDispatcher {
-                                            snackbar(getString(R.string.service_failed)).show()
+                            onMainDispatcher {
+                                if (!isAdded) return@onMainDispatcher
+                                snackbar(getString(R.string.need_reload)).setAction(R.string.apply) {
+                                    runOnDefaultDispatcher {
+                                        try {
+                                            DataStore.configurationStore.awaitWrites()
+                                            NekoBox.reloadService()
+                                        } catch (e: Exception) {
+                                            Logs.w(e)
+                                            onMainDispatcher {
+                                                if (isAdded) snackbar(getString(R.string.service_failed)).show()
+                                            }
                                         }
                                     }
-                                }
-                            }.show()
+                                }.show()
+                            }
                         } catch (e: Exception) {
                             Logs.w(e)
                             onMainDispatcher {
-                                snackbar(getString(R.string.service_failed)).show()
+                                if (isAdded) snackbar(getString(R.string.service_failed)).show()
                             }
                         }
                     }
@@ -1718,7 +1735,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
                                 if (icmpPing) {
                                     profile.status = 2
-                                    profile.error = getString(
+                                    profile.error = app.getString(
                                         if (message.contains("timeout")) R.string.connection_test_timeout_error else R.string.connection_test_unreachable,
                                     )
                                 } else {
@@ -1726,17 +1743,17 @@ open class ConfigurationFragment @JvmOverloads constructor(
                                     when {
                                         !message.contains("failed:") ->
                                             profile.error =
-                                                getString(R.string.connection_test_timeout_error)
+                                                app.getString(R.string.connection_test_timeout_error)
 
                                         else -> when {
                                             message.contains("ECONNREFUSED") -> {
                                                 profile.error =
-                                                    getString(R.string.connection_test_refused)
+                                                    app.getString(R.string.connection_test_refused)
                                             }
 
                                             message.contains("ENETUNREACH") -> {
                                                 profile.error =
-                                                    getString(R.string.connection_test_unreachable)
+                                                    app.getString(R.string.connection_test_unreachable)
                                             }
 
                                             else -> {

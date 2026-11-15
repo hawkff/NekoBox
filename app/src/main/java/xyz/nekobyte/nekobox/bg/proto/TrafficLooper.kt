@@ -18,6 +18,9 @@ import xyz.nekobyte.nekobox.ktx.Logs
 
 internal fun trafficPollingInterval(notificationInterval: Int) = notificationInterval.takeIf { it > 0 }?.toLong() ?: 1_000L
 
+/** The outbound tags whose traffic the core counts in a config: the selected path, direct, and each profile's own. */
+internal fun statsTags(config: ConfigBuildResult) = setOf(TAG_PROXY, TAG_BYPASS) + config.trafficMap.keys
+
 class TrafficLooper(
     val data: BaseService.Data,
     private val sc: CoroutineScope,
@@ -120,15 +123,12 @@ class TrafficLooper(
 
     /**
      * The config's profiles start counting, from the totals their rows hold now: the config read them when it was
-     * built, and a screen may have cleared them since. Returns the tags the core is to count. The caller holds
-     * data.traffic.
+     * built, and a screen may have cleared them since. The caller holds data.traffic.
      */
-    internal suspend fun begin(config: ConfigBuildResult): Set<String> {
+    internal suspend fun begin(config: ConfigBuildResult) {
         idMap.clear()
         idMap[-1] = itemBypass
         val stored = ProfileDatabase.proxyDao.getTraffic().associateBy { it.id }
-        val tags = hashSetOf(TAG_PROXY, TAG_BYPASS)
-        tags += config.trafficMap.keys
 
         fun count(id: Long, tag: String, ignore: Boolean) {
             val now = stored[id]
@@ -155,7 +155,6 @@ class TrafficLooper(
         } else {
             config.trafficMap.forEach { (tag, ents) -> for (ent in ents) count(ent.id, tag, ignore = false) }
         }
-        return tags
     }
 
     // The caller holds data.traffic.
@@ -223,14 +222,11 @@ class TrafficLooper(
             // lists are told within the round, so its totals never reach them after the zeros of a later clear.
             val speed = data.traffic.withLock {
                 val updater = trafficUpdater ?: run {
-                    val tags = begin(proxy.config)
+                    begin(proxy.config)
                     TrafficUpdater(
                         box = proxy.box,
                         items = idMap.values.toList(),
-                    ).also {
-                        trafficUpdater = it
-                        proxy.box.setV2rayStats(tags.joinToString("\n"))
-                    }
+                    ).also { trafficUpdater = it }
                 }
 
                 if (proxy.config.selectorGroupId >= 0L) followGroupSelection(proxy)

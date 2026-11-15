@@ -716,6 +716,9 @@ class BaseService {
             // delivered rather than lost (the receiver used to be registered only after the
             // off-main work, opening a drop window).
             registerCloseReceiver()
+            // startForegroundService wants the foreground at once, also from a start that fails or is stopped
+            // while it prepares: Android kills the process of a service that stops before startForeground.
+            if (data.notification == null) data.notification = createNotification("")
             // Read config off-main first (PublicDatabase no longer allows main-thread queries),
             // then run the existing connect logic on the main dispatcher. onStartCommand returns
             // synchronously; the null-profile short-circuit now lives inside the job.
@@ -797,8 +800,7 @@ class BaseService {
         private fun onStartConnect(proxy: ProxyInstance?, attempt: ConnectionAttempt): Job? {
             this as Context
             val data = data
-            if (proxy == null) { // gracefully shutdown: https://stackoverflow.com/q/47337857/2245107
-                data.notification = createNotification("")
+            if (proxy == null) {
                 attempt.complete(ConnectionOutcome.NO_PROFILE)
                 stopRunner(false, getString(R.string.profile_empty))
                 return null
@@ -811,9 +813,9 @@ class BaseService {
                 try {
                     // Reuse the title computed during ProxyInstance construction (off the main
                     // thread); calling genTitle() here would do a groupDao read on the main thread.
-                    // A kill-switch hold left the previous notification alive; replace it.
-                    data.notification?.destroy()
-                    data.notification = createNotification(proxy.displayProfileName)
+                    // The start's notification, or the one a kill-switch hold left, takes the profile's name.
+                    val notification = data.notification
+                    if (notification == null) data.notification = createNotification(proxy.displayProfileName) else notification.postNotificationTitle(proxy.displayProfileName)
 
                     Executable.killAll() // clean up old processes
                     preInit()

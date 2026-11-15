@@ -44,6 +44,9 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
         // This start is for the profile it was given, which its config names: what the core kept goes first, so
         // no connection is ever taken through the other server.
         if (config.selectorGroupId >= 0L && !config.autoSelect) box.forgetSelected()
+        // The core counts only connections routed after the counter is in, and adding it to a running core
+        // races the routing of others.
+        if (service != null) box.setV2rayStats(statsTags(config).joinToString("\n"))
         super.launch() // start box
         // Without it the service reports no local port, and the app's own requests go out without the proxy.
         holdsPort = config.localProxy?.let { local -> box.holdPort(local.port).also { if (!it) Logs.w("No listener of this start was found on local port ${local.port}") } } == true

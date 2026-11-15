@@ -17,6 +17,8 @@ class SwitchActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // A rebuilt screen gets its picker back from the fragment manager.
+        if (savedInstanceState != null) return
         supportFragmentManager.beginTransaction()
             .replace(
                 R.id.fragment_holder,

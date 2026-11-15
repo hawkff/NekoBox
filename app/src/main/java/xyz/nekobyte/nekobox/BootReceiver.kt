@@ -39,6 +39,8 @@ class BootReceiver : BroadcastReceiver() {
         // Boot and app updates restart the service or the network automation watcher.
         val wanted get() = DataStore.persistAcrossReboot || DataStore.networkAutomation
 
+        private val SYSTEM_ACTIONS = setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED)
+
         /**
          * After boot or an app update; not a manual start. A pause a manual stop set stays, and the VPN
          * stays off without its permission or while Android reports another VPN, which can also belong
@@ -54,6 +56,8 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        // The receiver is exported for these system broadcasts; another app can send it anything else.
+        if (intent.action !in SYSTEM_ACTIONS) return
         runOnDefaultDispatcher {
             SubscriptionUpdater.reconfigureUpdater()
         }
