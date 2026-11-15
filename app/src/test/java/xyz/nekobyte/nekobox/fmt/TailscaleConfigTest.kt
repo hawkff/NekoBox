@@ -271,7 +271,10 @@ class TailscaleConfigTest {
         for (mode in modes) {
             val config = fixture("extra-chain-$mode", build(node, mode), "tailnet")
             assertEquals(1, config.objects("endpoints").size)
-            if (mode != "test") {
+            if (mode == "global") {
+                // Global mode ignores the rules, so their targets are not built.
+                assertTrue(config.objects("outbounds").none { it.optString("tag") == "socks" })
+            } else if (mode != "test") {
                 assertEquals("tailnet", config.objects("outbounds").single { it.optString("tag") == "socks" }.getString("detour"))
             }
             assertMagicDns(config, mode == "test")
