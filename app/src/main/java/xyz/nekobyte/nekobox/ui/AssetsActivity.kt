@@ -203,12 +203,12 @@ class AssetsActivity : ThemedActivity() {
             val filesDir = getExternalFilesDir(null) ?: filesDir
             val files = filesDir.listFiles()
                 ?.filter { it.isFile && it.name.endsWith(".db") && it.name !in assetNames }
-            assets.clear()
-            assets.add(File(filesDir, "geoip.db"))
-            assets.add(File(filesDir, "geosite.db"))
-            if (files != null) assets.addAll(files)
+            val fresh = assetNames.map { File(filesDir, it) } + files.orEmpty()
 
+            // Updates call this from worker threads; the list changes on the main thread, with its notice.
             layout.refreshLayout.post {
+                assets.clear()
+                assets.addAll(fresh)
                 notifyDataSetChanged()
             }
         }
