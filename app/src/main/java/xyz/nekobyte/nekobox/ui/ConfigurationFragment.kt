@@ -28,8 +28,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.net.toUri
-import androidx.core.os.BundleCompat
-import androidx.core.os.bundleOf
 import androidx.core.view.MenuCompat
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
@@ -149,9 +147,9 @@ import kotlin.collections.set
  * Proxies screen ([proxies], see ProxiesFragment) it shows only the lists of proxies, which Home leaves out.
  */
 open class ConfigurationFragment @JvmOverloads constructor(
-    select: Boolean = false,
-    selectedItem: ProxyEntity? = null,
-    titleRes: Int = 0,
+    val select: Boolean = false,
+    val selectedItem: ProxyEntity? = null,
+    val titleRes: Int = 0,
     val proxies: Boolean = false,
 ) : ToolbarFragment(R.layout.layout_group_list),
     PopupMenu.OnMenuItemClickListener,
@@ -163,19 +161,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
         fun returnProfile(profileId: Long)
     }
 
-    init {
-        // Android rebuilds a fragment through its no-argument constructor and hands back only its arguments.
-        if (select) arguments = bundleOf(ARG_SELECT to true, ARG_SELECTED_ITEM to selectedItem, ARG_TITLE to titleRes)
-    }
-
-    val select by lazy { arguments?.getBoolean(ARG_SELECT) == true }
-    val selectedItem by lazy { arguments?.let { BundleCompat.getParcelable(it, ARG_SELECTED_ITEM, ProxyEntity::class.java) } }
-    val titleRes by lazy { arguments?.getInt(ARG_TITLE) ?: 0 }
-
     private companion object {
-        const val ARG_SELECT = "select"
-        const val ARG_SELECTED_ITEM = "selectedItem"
-        const val ARG_TITLE = "title"
         const val KEY_EXIT_PROXY_BASE = "exitProxyBase"
         const val KEY_THROUGH_LIST = "throughList"
         const val KEY_EXPORTING_PROFILE = "exportingProfile"
