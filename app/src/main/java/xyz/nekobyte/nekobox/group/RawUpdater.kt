@@ -287,6 +287,8 @@ object RawUpdater : GroupUpdater() {
             servedByBackup = download.url != link,
             requestFormat = download.format.takeIf { customUserAgent.isBlank() },
             reconfigureUpdater = reconfigureUpdater,
+            content = download.content,
+            parsedContent = download.parsed,
         )
     }
 
@@ -307,6 +309,8 @@ object RawUpdater : GroupUpdater() {
         val meta: Map<String, String>,
         val preview: ImportPreview,
         val compatible: Boolean,
+        val content: SubscriptionContent,
+        val parsed: ParsedContent,
     )
 
     /** A response that arrived but holds no profiles this app can import. */
@@ -380,8 +384,9 @@ object RawUpdater : GroupUpdater() {
                     // The update may have been canceled while the fetch blocked.
                     currentCoroutineContext().ensureActive()
                     val report = ImportReport()
+                    val content = readSubscriptionContent(response.text)
                     val parsed = try {
-                        parseContent(readSubscriptionContent(response.text).body, report = report)
+                        parseContent(content.body, report = report)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (_: Exception) {
@@ -402,6 +407,8 @@ object RawUpdater : GroupUpdater() {
                         META_KEYS.associateWith { response.header(it).trim() }.filterValues { it.isNotEmpty() },
                         ImportPreview.of(parsed),
                         compatible(parsed.proxies),
+                        content,
+                        parsed,
                     )
                     val previous = best
                     if (previous == null || (candidate.compatible && !previous.compatible) ||
@@ -473,14 +480,16 @@ object RawUpdater : GroupUpdater() {
         servedByBackup: Boolean = false,
         requestFormat: Int? = SubscriptionFormat.DEFAULT,
         reconfigureUpdater: suspend () -> Unit = { SubscriptionUpdater.reconfigureUpdater() },
+        // A fetched response arrives already read and parsed.
+        content: SubscriptionContent = readSubscriptionContent(text),
+        parsedContent: ParsedContent? = null,
     ) {
         val previousWarning = subscription.importWarning.orEmpty()
-        val content = readSubscriptionContent(text)
         // Header values win over preamble lines, and a fetch that omits a key clears it.
         val meta = content.meta + httpMeta
         val updateIntervalMinutes = meta["profile-update-interval"]?.toIntOrNull()?.takeIf { it > 0 }
             ?.coerceAtMost(MAX_UPDATE_INTERVAL_HOURS)?.times(60)
-        val parsed = parseContent(content.body) ?: error(app.getString(R.string.no_proxies_found_in_subscription))
+        val parsed = parsedContent ?: parseContent(content.body) ?: error(app.getString(R.string.no_proxies_found_in_subscription))
         var proxies = parsed.proxies
         val preview = ImportPreview.of(parsed)
         Telemetry.importOutcome(parsed.report.format, preview)
@@ -533,12 +542,6 @@ object RawUpdater : GroupUpdater() {
 
         ensureUniqueNames(proxies)
 
-        if (subscription.forceResolve!!) {
-            forceResolve(proxies, proxyGroup.id)
-            // Nameless nodes are named by their address, and two hosts can resolve to one.
-            ensureUniqueNames(proxies)
-        }
-
         val filterMode = subscription.filterMode ?: SubscriptionFilterMode.DISABLED
         val filterRegex = subscription.filterRegex ?: ""
         var selected: (String) -> Boolean = { true }
@@ -555,6 +558,13 @@ object RawUpdater : GroupUpdater() {
             proxies = proxies.filter { selected(it.displayName()) }
             Logs.d("After filter (mode=$filterMode): ${proxies.size}")
             check(proxies.isNotEmpty()) { app.getString(R.string.subscription_filter_empty) }
+        }
+
+        // Only the nodes the filter keeps are looked up; the filter sees host names.
+        if (subscription.forceResolve!!) {
+            forceResolve(proxies, proxyGroup.id)
+            // Nameless nodes are named by their address, and two hosts can resolve to one.
+            ensureUniqueNames(proxies)
         }
 
         val exists = ProfileDatabase.proxyDao.getByGroup(proxyGroup.id)
@@ -706,10 +716,9 @@ object RawUpdater : GroupUpdater() {
         val toInsert = ArrayList<ProxyEntity>()
         val added = mutableListOf<String>()
         val updated = mutableMapOf<String, String>()
-        val deleted = toDelete.map { it.displayName() }
 
         var userOrder = 1L
-        var changed = toDelete.size
+        var changed = 0
         for ((name, bean) in nameMap.entries) {
             if (toReplace.contains(name)) {
                 val entity = toReplace[name]!!
@@ -779,7 +788,8 @@ object RawUpdater : GroupUpdater() {
         lateinit var updatedGroup: ProxyGroup
 
         var updatedCount = 0
-        var deletedCount = 0
+        var deletedIds = emptySet<Long>()
+        val retested = ArrayList<Long>()
         // Nothing is stored for an update that was canceled, for example while it asked the user.
         currentCoroutineContext().ensureActive()
         ProfileDatabase.instance.runInTransaction {
@@ -800,14 +810,25 @@ object RawUpdater : GroupUpdater() {
                 for (planned in toUpdate) {
                     val now = checkNotNull(saved[planned.id]?.takeIf { it.groupId == proxyGroup.id }) { PROFILES_CHANGED }
                     val bean = planned.requireBean()
-                    refreshBean(now.requireBean(), bean)
+                    val old = now.requireBean()
+                    refreshBean(old, bean)
+                    // A test result and an exit measured with the old settings say nothing now; a new remark keeps them.
+                    if (old != bean) {
+                        now.status = 0
+                        now.ping = 0
+                        now.error = null
+                        retested += now.id
+                    }
                     now.putBean(bean)
                     now.userOrder = planned.userOrder
                     updatedCount += ProfileDatabase.proxyDao.updateProxy(now)
                 }
             }
             if (toDelete.isNotEmpty()) {
-                deletedCount = ProfileDatabase.proxyDao.deleteInGroup(proxyGroup.id, toDelete.map { it.id })
+                // Rows moved to another group meanwhile stay there.
+                val inGroup = ProfileDatabase.proxyDao.getIdsByGroup(proxyGroup.id).toHashSet()
+                deletedIds = toDelete.map { it.id }.filterTo(HashSet()) { it in inGroup }
+                ProfileDatabase.proxyDao.deleteInGroup(proxyGroup.id, deletedIds.toList())
             }
             // Retained rows and rows whose order alone changed need only an order update; keep their serialized payloads
             // byte-for-byte.
@@ -825,6 +846,9 @@ object RawUpdater : GroupUpdater() {
 
             ProfileDatabase.groupDao.updateGroup(updatedGroup)
         }
+        if (retested.isNotEmpty()) DataStore.forgetProxyExits(retested)
+        val deleted = toDelete.filter { it.id in deletedIds }.map { it.displayName() }
+        changed += deleted.size
         // Publish metadata only after the profile transaction commits.
         proxyGroup.name = updatedGroup.name
         proxyGroup.userOrder = updatedGroup.userOrder
@@ -852,7 +876,7 @@ object RawUpdater : GroupUpdater() {
 
         Logs.d("Inserted profiles: ${toInsert.size}")
         Logs.d("Updated profiles: $updatedCount")
-        Logs.d("Deleted profiles: $deletedCount")
+        Logs.d("Deleted profiles: ${deleted.size}")
         finishUpdate(proxyGroup)
 
         userInterface?.onUpdateSuccess(

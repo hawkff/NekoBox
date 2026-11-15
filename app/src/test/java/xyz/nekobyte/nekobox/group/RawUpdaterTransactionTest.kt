@@ -217,10 +217,7 @@ class RawUpdaterTransactionTest {
                 assertEquals(old.rx, entity.rx)
                 assertEquals(old.lifetimeTx, entity.lifetimeTx)
                 assertEquals(old.lifetimeRx, entity.lifetimeRx)
-                assertEquals(old.status, entity.status)
-                assertEquals(old.ping, entity.ping)
                 assertEquals(old.uuid, entity.uuid)
-                assertEquals(old.error, entity.error)
                 assertEquals(old.requireBean().customOutboundJson, entity.requireBean().customOutboundJson)
                 assertEquals(old.requireBean().customConfigJson, entity.requireBean().customConfigJson)
             }
@@ -270,8 +267,11 @@ class RawUpdaterTransactionTest {
             // The provider dropped it: it is not deleted from the group it went to.
             val stale = stored.getValue("stale")
             afterTheUpdateReadTheProfiles { ProfileDatabase.proxyDao.updateGroup(stale.id, other.id) }
-            RawUpdater.updateFromContent(group, subscription, validContent)
+            val ui = RecordingInterface(confirm = false)
+            RawUpdater.updateFromContent(group, subscription, validContent, ui)
             assertEquals(other.id, ProfileDatabase.proxyDao.getById(stale.id)?.groupId)
+            // The summary does not list it as deleted.
+            assertEquals(emptyList<String>(), ui.deleted)
             assertEquals(listOf("second", "first", "added"), ProfileDatabase.proxyDao.getByGroup(group.id).map { it.displayName() })
 
             // The provider changed it: it is not taken back, and the update fails without storing anything.
@@ -371,6 +371,63 @@ class RawUpdaterTransactionTest {
             val after = ProfileDatabase.proxyDao.getByGroup(group.id)
             assertEquals(listOf(loopback, loopback), after.map { it.requireBean().serverAddress })
             assertEquals(2, after.map { it.displayName() }.toSet().size)
+        }
+    }
+
+    @Test
+    fun forcedResolution_runsAfterTheFilterOnHostNames() = runTest {
+        withContext(Dispatchers.IO) {
+            DataStore.ipv6Mode = IPv6Mode.DISABLE
+            // localhost resolves from the hosts file, with no DNS query.
+            val loopback = InetAddress.getAllByName("localhost").first { it is Inet4Address }.hostAddress
+            subscription.forceResolve = true
+            subscription.filterMode = SubscriptionFilterMode.INCLUDE
+            subscription.filterRegex = "^localhost"
+            ProfileDatabase.groupDao.updateGroup(group)
+            RawUpdater.updateFromContent(group, subscription, "socks://localhost:1080\nsocks://192.0.2.9:1080#other")
+            assertEquals(listOf(loopback), ProfileDatabase.proxyDao.getByGroup(group.id).map { it.requireBean().serverAddress })
+        }
+    }
+
+    @Test
+    fun aFetchedResponse_isParsedOnce() = runTest {
+        withContext(Dispatchers.IO) {
+            val body = "socks://192.0.2.1:1080#first\nsocks://192.0.2.22:1080#second"
+            var tries = 0
+            Logs.sink = { if ("Trying SOCKS parser" in it) tries++ }
+            RawUpdater.parseImport(body)
+            val perParse = tries
+            tries = 0
+            var fetches = 0
+            RawUpdater.updateFromLink(group, subscription, null, byUser = false, reconfigureUpdater = {}) { _, _, _ ->
+                fetches++
+                RawUpdater.FetchedResponse(body) { "" }
+            }
+            assertTrue(perParse > 0)
+            assertEquals(fetches * perParse, tries)
+        }
+    }
+
+    @Test
+    fun aNodeWhoseSettingsChange_losesItsTestResultAndExit() = runTest {
+        withContext(Dispatchers.IO) {
+            val stored = ProfileDatabase.proxyDao.getByGroup(group.id).associateBy { it.displayName() }
+            val first = stored.getValue("first")
+            val second = stored.getValue("second")
+            DataStore.rememberProxyExits(mapOf(first.id to "198.51.100.1", second.id to "198.51.100.2"))
+            // second moves to another server; first gets a new remark only.
+            RawUpdater.updateFromContent(group, subscription, "socks://192.0.2.22:1080#second\nsocks://192.0.2.1:1080#renamed")
+            val moved = ProfileDatabase.proxyDao.getById(second.id)!!
+            assertEquals(0, moved.status)
+            assertEquals(0, moved.ping)
+            assertNull(moved.error)
+            val renamed = ProfileDatabase.proxyDao.getById(first.id)!!
+            assertEquals("renamed", renamed.displayName())
+            assertEquals(first.status, renamed.status)
+            assertEquals(first.ping, renamed.ping)
+            assertEquals(first.error, renamed.error)
+            assertNull(DataStore.proxyExits[second.id])
+            assertEquals("198.51.100.1", DataStore.proxyExits[first.id])
         }
     }
 
