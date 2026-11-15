@@ -93,18 +93,23 @@ class RoutingProfilesActivity : ThemedActivity() {
     // Accepts export JSON, sn://routing/ links and Happ/INCY routing profiles alike. Replacing one
     // of the user's profiles (and applying it live when that profile is active), or importing a
     // provider profile with settings it cannot apply, needs a confirmation first.
-    private fun importText(text: String) = lifecycleScope.launch {
-        val (candidate, replaced) = withContext(Dispatchers.Default) {
-            RoutingProfiles.parse(text).let { it to it?.let(RoutingProfiles::replacementFor) }
+    // The parse runs off the main thread and outlives a rebuilt screen, so an import that needs no answer still lands.
+    private fun importText(text: String) = runOnDefaultDispatcher {
+        val candidate = RoutingProfiles.parse(text)
+        val replaced = candidate?.let(RoutingProfiles::replacementFor)
+        onMainDispatcher { offerImport(candidate, replaced) }
+    }
+
+    private fun offerImport(candidate: RoutingProfiles.Profile?, replaced: RoutingProfiles.Profile?) {
+        if (candidate != null && replaced == null && candidate.notes.isEmpty()) {
+            store(candidate)
+            return
         }
-        if (isFinishing) return@launch
+        // A screen that is closing cannot show the outcome or ask.
+        if (isFinishing || isDestroyed) return
         if (candidate == null) {
             snackbar(R.string.routing_profile_import_invalid).show()
-            return@launch
-        }
-        if (replaced == null && candidate.notes.isEmpty()) {
-            store(candidate)
-            return@launch
+            return
         }
         val message = listOfNotNull(
             replaced?.let {

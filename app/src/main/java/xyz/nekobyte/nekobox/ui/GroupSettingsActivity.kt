@@ -607,7 +607,12 @@ class GroupSettingsActivity :
             setTitle(R.string.unsaved_changes_prompt)
             setPositiveButton(R.string.yes) { _, _ ->
                 val activity = requireActivity() as GroupSettingsActivity
-                if (activity.check()) runOnDefaultDispatcher { activity.saveAndExit() }
+                // A dialog restored after the process ended asks about a draft that is gone.
+                if (!activity.needSave()) {
+                    activity.finish()
+                } else if (activity.check()) {
+                    runOnDefaultDispatcher { activity.saveAndExit() }
+                }
             }
             setNegativeButton(R.string.no) { _, _ ->
                 requireActivity().finish()
