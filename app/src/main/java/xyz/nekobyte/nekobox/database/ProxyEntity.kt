@@ -397,6 +397,15 @@ data class ProxyEntity(
         @Query("SELECT COUNT(*) FROM proxy_entities WHERE groupId = :groupId")
         fun countByGroup(groupId: Long): Long
 
+        /** Profiles per group, for the groups that have any. */
+        @Query("SELECT groupId, COUNT(*) AS count FROM proxy_entities GROUP BY groupId")
+        fun countsByGroup(): Map<
+            @MapColumn("groupId")
+            Long,
+            @MapColumn("count")
+            Long,
+            >
+
         @Query("SELECT  MAX(userOrder) + 1 FROM proxy_entities WHERE groupId = :groupId")
         fun nextOrder(groupId: Long): Long?
 
