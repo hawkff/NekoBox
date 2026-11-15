@@ -61,10 +61,21 @@ internal fun parseRelease(json: JSONObject, abis: List<String>): AppRelease {
     val asset = abis.firstNotNullOfOrNull { abi -> apks.firstOrNull { it.getString("name").endsWith("-$abi.apk") } }
     return AppRelease(
         version = json.getString("name"),
-        notes = json.optString("body").trim(),
+        notes = plainNotes(json.optString("body")),
         page = json.getString("html_url"),
         apk = asset?.let { apk -> sha256OfDigest(apk.optString("digest"))?.let { ReleaseApk(apk.getString("browser_download_url"), it) } },
     )
+}
+
+/** Release notes as plain text for the update dialog: Markdown marks and link targets go, long notes are cut at a line. */
+internal fun plainNotes(markdown: String, max: Int = 1500): String {
+    val text = markdown.lineSequence().filterNot { it.startsWith("**Full Changelog**") }.joinToString("\n")
+        .replace(Regex("""\[([^\]]+)]\([^)]*\)"""), "$1")
+        .replace("**", "")
+        .replace("`", "")
+        .replace(Regex("\n{3,}"), "\n\n")
+        .trim()
+    return if (text.length <= max) text else text.take(max).substringBeforeLast('\n') + "\n…"
 }
 
 /** Home's banner shows the release found newer than this build until it is dismissed for that release. */

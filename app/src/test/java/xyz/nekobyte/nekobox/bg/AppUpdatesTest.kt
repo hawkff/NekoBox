@@ -109,4 +109,13 @@ class AppUpdatesTest {
             DataStore.configurationStore.unregisterChangeListener(AppUpdates)
         }
     }
+
+    @Test
+    fun releaseNotesBecomePlainText() {
+        val notes = plainNotes("**Subscriptions**\n- Fixes `geoip` lists, see [the docs](https://example.com).\n\n\n\n**Full Changelog**: https://example.com/compare")
+        assertEquals("Subscriptions\n- Fixes geoip lists, see the docs.", notes)
+        val long = (1..400).joinToString("\n") { "- line $it" }
+        val cut = plainNotes(long)
+        assertTrue(cut.length <= 1502 && cut.endsWith("\n…") && cut.lines().dropLast(1).all { it.startsWith("- line ") })
+    }
 }
