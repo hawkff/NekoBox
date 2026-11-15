@@ -49,7 +49,7 @@ const (
 type HTTPClient interface {
 	SetTimeoutMs(timeoutMs int32) error
 	RestrictedTLS()
-	ModernTLS()
+	AllowInsecure()
 	ThroughSocks5(port int32, username string, password string, guard OwnPortGuard)
 	TryH3Direct()
 	KeepAlive()
@@ -61,7 +61,6 @@ type HTTPRequest interface {
 	SetURL(link string) error
 	SetUserAgent(userAgent string)
 	SetHeader(key string, value string)
-	AllowInsecure()
 	Execute() (HTTPResponse, error)
 }
 
@@ -110,18 +109,12 @@ func (c *httpClient) SetTimeoutMs(timeoutMs int32) error {
 	return nil
 }
 
-func (c *httpClient) ModernTLS() {
-	c.tls.MinVersion = tls.VersionTLS12
-	// c.tls.CipherSuites = nekoutils.Map(tls.CipherSuites(), func(it *tls.CipherSuite) uint16 { return it.ID })
-}
-
 func (c *httpClient) RestrictedTLS() {
 	c.tls.MinVersion = tls.VersionTLS13
-	// c.tls.CipherSuites = nekoutils.Map(nekoutils.Filter(tls.CipherSuites(), func(it *tls.CipherSuite) bool {
-	// 	return nekoutils.Contains(it.SupportedVersions, uint16(tls.VersionTLS13))
-	// }), func(it *tls.CipherSuite) uint16 {
-	// 	return it.ID
-	// })
+}
+
+func (c *httpClient) AllowInsecure() {
+	c.tls.InsecureSkipVerify = true
 }
 
 // ThroughSocks5 sends the client's requests through the local SOCKS proxy of the running service,
@@ -200,10 +193,6 @@ type httpRequest struct {
 	*httpClient
 	request       http.Request
 	customHeaders []string
-}
-
-func (r *httpRequest) AllowInsecure() {
-	r.tls.InsecureSkipVerify = true
 }
 
 func (r *httpRequest) SetURL(link string) (err error) {

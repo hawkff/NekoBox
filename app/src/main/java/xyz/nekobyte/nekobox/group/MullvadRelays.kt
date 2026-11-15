@@ -79,7 +79,6 @@ object MullvadRelays {
     fun fetch(): String {
         val client = Libcore.newHttpClient()
         try {
-            client.modernTLS()
             client.throughRunningProxy()
             return client.newRequest().apply { setURL(URL) }.execute().getContentStringLimited(MAX_BYTES)
         } finally {
