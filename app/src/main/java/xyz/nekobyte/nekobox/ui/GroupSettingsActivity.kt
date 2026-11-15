@@ -74,6 +74,9 @@ class GroupSettingsActivity :
     // Set while the form shows the settings, so that its listeners don't write them back.
     private var filling = false
 
+    // Set once the form shows the settings; a profile picked before that would be overwritten by them.
+    private var started = false
+
     fun ProxyGroup.init() {
         DataStore.groupName = name ?: ""
         DataStore.groupType = type
@@ -184,7 +187,8 @@ class GroupSettingsActivity :
             insets
         }
 
-        if (savedInstanceState != null) {
+        // A draft from a process that ended is gone: the editor starts over from the stored group.
+        if (savedInstanceState != null && savedInstanceState.getString(DRAFT_STORE) == DataStore.profileCacheStoreId) {
             // The settings store still holds the draft; the offers and the flag come back from the state.
             pendingLinkOffer = savedInstanceState.getString(LINK_OFFER).orEmpty()
             pendingBackupOffer = savedInstanceState.getString(BACKUP_OFFER).orEmpty()
@@ -243,6 +247,7 @@ class GroupSettingsActivity :
         super.onSaveInstanceState(outState)
         outState.putString(LINK_OFFER, pendingLinkOffer)
         outState.putString(BACKUP_OFFER, pendingBackupOffer)
+        outState.putString(DRAFT_STORE, DataStore.profileCacheStoreId)
         if (::binding.isInitialized) outState.putBoolean(MORE, binding.more.isVisible)
     }
 
@@ -283,6 +288,7 @@ class GroupSettingsActivity :
         offerFormats()
         offerIntervals()
         filling = false
+        started = true
 
         fun EditText.writes(write: (String) -> Unit) = doAfterTextChanged {
             if (filling) return@doAfterTextChanged
@@ -708,7 +714,7 @@ class GroupSettingsActivity :
     private val selectLanding = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { picked(it.resultCode, it.data, front = false) }
 
     private fun picked(resultCode: Int, data: Intent?, front: Boolean) {
-        if (resultCode != Activity.RESULT_OK) return
+        if (resultCode != Activity.RESULT_OK || !started) return
         val id = data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0) ?: return
         if (id <= 0) return
         if (front) {
@@ -746,6 +752,7 @@ class GroupSettingsActivity :
         private const val LINK_OFFER = "linkOffer"
         private const val BACKUP_OFFER = "backupOffer"
         private const val MORE = "more"
+        private const val DRAFT_STORE = "draftStore"
 
         /** Quick picks for the update interval, in minutes: an hour, six and twelve hours, a day. */
         private val INTERVALS = listOf(60, 360, 720, 1440)

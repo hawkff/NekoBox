@@ -58,6 +58,10 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     )
     val profileCacheStore = RoomPreferenceDataStore(InMemoryKeyValuePairDao())
 
+    // The editors' drafts in profileCacheStore end with the process. An editor saves this id with its state: one
+    // rebuilt with another id finds its draft gone.
+    val profileCacheStoreId = java.util.UUID.randomUUID().toString()
+
     // last used, but may not be running
     var currentProfile by configurationStore.long(Key.PROFILE_CURRENT)
 
