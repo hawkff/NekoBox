@@ -2,6 +2,7 @@ package libcore
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"slices"
 
@@ -58,6 +59,7 @@ func init() {
 		if err := g.Open(filepath.Join(externalAssetsPath, "geosite.db")); err != nil {
 			return nil, err
 		}
+		defer g.geositeReader.Upstream().(io.Closer).Close()
 		return g.Rules(name)
 	}
 }

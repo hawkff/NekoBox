@@ -248,12 +248,14 @@ func (e *nebulaEndpoint) Start(stage adapter.StartStage, scope *adapter.Scope) e
 	reader, writer := device.Pipe()
 	go func() {
 		packet := make([]byte, 65535)
+		packets := [][]byte{nil}
 		for {
 			n, err := reader.Read(packet)
 			if err != nil {
 				return
 			}
-			_, _ = stack.Write([][]byte{packet[:n]}, 0)
+			packets[0] = packet[:n]
+			_, _ = stack.Write(packets, 0)
 		}
 	}()
 	go func() {
