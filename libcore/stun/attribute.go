@@ -65,9 +65,14 @@ func newChangeReqAttribute(changeIP bool, changePort bool) *attribute {
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //	|                X-Address (Variable)
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//
+// A value shorter than the header gives nil; the address is cut at 16 bytes.
 func (v *attribute) xorAddr(transID []byte) *Host {
+	if len(v.value) < 4 {
+		return nil
+	}
 	xorIP := make([]byte, 16)
-	for i := 0; i < len(v.value)-4; i++ {
+	for i := 0; i < len(v.value)-4 && i < len(xorIP); i++ {
 		xorIP[i] = v.value[i+4] ^ transID[i]
 	}
 	family := uint16(v.value[1])
@@ -91,14 +96,23 @@ func (v *attribute) xorAddr(transID []byte) *Host {
 //	|                 Address (32 bits or 128 bits)                 |
 //	|                                                               |
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//
+// A value shorter than the header gives nil; the address is cut at 16 bytes.
 func (v *attribute) rawAddr() *Host {
+	if len(v.value) < 4 {
+		return nil
+	}
 	host := new(Host)
 	host.family = uint16(v.value[1])
 	host.port = binary.BigEndian.Uint16(v.value[2:4])
+	ip := v.value[4:]
 	// Truncate if IPv4, otherwise net.IP sometimes renders it as an IPv6 address.
-	if host.family == attributeFamilyIPv4 {
-		v.value = v.value[:8]
+	if host.family == attributeFamilyIPv4 && len(ip) > 4 {
+		ip = ip[:4]
 	}
-	host.ip = net.IP(v.value[4:]).String()
+	if len(ip) > 16 {
+		ip = ip[:16]
+	}
+	host.ip = net.IP(ip).String()
 	return host
 }

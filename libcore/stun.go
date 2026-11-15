@@ -42,9 +42,15 @@ type StunResult struct {
 	Error   string
 }
 
-func StunTest(server string) *StunResult {
+func StunTest(server string) (ret *StunResult) {
 	//note: this library doesn't support stun1.l.google.com:19302
-	ret := &StunResult{}
+	ret = &StunResult{}
+	// A malformed reply must not panic across JNI, which kills the process.
+	defer func() {
+		if r := recover(); r != nil {
+			ret = &StunResult{Problem: StunFailed, Error: fmt.Sprint(r)}
+		}
+	}()
 	var text string
 
 	// Old NAT Type Test

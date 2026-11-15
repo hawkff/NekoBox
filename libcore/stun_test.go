@@ -1,7 +1,9 @@
 package libcore
 
 import (
+	"encoding/binary"
 	"errors"
+	"net"
 	"testing"
 
 	"libcore/stun"
@@ -34,5 +36,39 @@ func TestDescribeBehaviorNamesWhatTheTestsFound(t *testing.T) {
 		if got != c.want {
 			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
 		}
+	}
+}
+
+// A reply with an empty XOR-MAPPED-ADDRESS used to panic, which kills the app across JNI.
+func TestStunTestSurvivesAnEmptyMappedAddress(t *testing.T) {
+	server, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	go func() {
+		request := make([]byte, 1500)
+		for {
+			n, addr, err := server.ReadFrom(request)
+			if err != nil {
+				return
+			}
+			if n < 20 {
+				continue
+			}
+			reply := binary.BigEndian.AppendUint16(nil, 0x0101) // binding response
+			reply = binary.BigEndian.AppendUint16(reply, 12)
+			reply = append(reply, request[4:20]...)              // magic cookie and transaction ID
+			reply = binary.BigEndian.AppendUint16(reply, 0x0020) // XOR-MAPPED-ADDRESS, empty
+			reply = binary.BigEndian.AppendUint16(reply, 0)
+			reply = binary.BigEndian.AppendUint16(reply, 0x8022) // SOFTWARE, so the empty one is not last
+			reply = binary.BigEndian.AppendUint16(reply, 4)
+			reply = append(reply, "test"...)
+			_, _ = server.WriteTo(reply, addr)
+		}
+	}()
+	result := StunTest(server.LocalAddr().String())
+	if result.Problem != StunUnsupported || result.PublicAddress != "" {
+		t.Fatalf("got %+v", result)
 	}
 }
