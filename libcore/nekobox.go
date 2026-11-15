@@ -67,6 +67,7 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	resourcePaths = append(resourcePaths, externalAssets)
 	externalAssetsPath = externalAssets
 	internalAssetsPath = internalAssets
+	geoipCacheDir = filepath.Join(cachePath, "geoip")
 
 	// Set up log
 	if maxLogSizeKb < 50 {
