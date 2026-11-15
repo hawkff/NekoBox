@@ -29,5 +29,7 @@ func useAndroidTrustStore() {
 func setSystemRoots(roots *x509.CertPool) {
 	// Go loads its system roots once, on first use; done first, that cannot replace these later.
 	x509.SystemCertPool()
+	systemRootsMu.Lock()
 	systemRoots = roots
+	systemRootsMu.Unlock()
 }

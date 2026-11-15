@@ -21,12 +21,6 @@ func TestGeoIPCIDRsCache(t *testing.T) {
 	}
 	cacheDir := filepath.Join(t.TempDir(), "geoip")
 	cacheFile := filepath.Join(cacheDir, "us.txt")
-	forgetMemo := func() {
-		geoipMemo.Lock()
-		geoipMemo.stamp = ""
-		geoipMemo.Unlock()
-	}
-	t.Cleanup(forgetMemo)
 	lookup := func() []string {
 		t.Helper()
 		cidrs, err := geoipCIDRs(db, cacheDir, "us")
@@ -45,7 +39,6 @@ func TestGeoIPCIDRsCache(t *testing.T) {
 	}
 
 	// A scan keeps the country's networks only and writes them down.
-	forgetMemo()
 	scanned := lookup()
 	google := netip.MustParseAddr("8.8.8.8")
 	if !slices.ContainsFunc(scanned, func(cidr string) bool { return netip.MustParsePrefix(cidr).Contains(google) }) {
@@ -69,19 +62,18 @@ func TestGeoIPCIDRsCache(t *testing.T) {
 	if err := writeGeoIPCache(cacheFile, stamp, marked); err != nil {
 		t.Fatal(err)
 	}
-	forgetMemo()
 	if got := lookup(); !slices.Equal(got, marked) {
 		t.Fatalf("cache hit: got %v", got)
 	}
-	// The memo answers without the file.
+	// Nothing is kept in memory: without the file, the database is scanned again.
 	if err := os.Remove(cacheFile); err != nil {
 		t.Fatal(err)
 	}
-	if got := lookup(); !slices.Equal(got, marked) {
-		t.Fatalf("memo hit: got %v", got)
+	if got := lookup(); !slices.Equal(got, scanned) {
+		t.Fatal("file removed: the database was not scanned again")
 	}
 
-	// Another database, as after an asset update, is scanned again, whatever the memo holds.
+	// Another database, as after an asset update, is scanned again.
 	if err := writeGeoIPCache(cacheFile, stamp, marked); err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +94,6 @@ func TestGeoIPCIDRsCache(t *testing.T) {
 		if err := os.WriteFile(cacheFile, []byte(broken), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		forgetMemo()
 		if got := lookup(); !slices.Equal(got, scanned) {
 			t.Fatalf("broken file %q: not scanned again", broken)
 		}
@@ -124,5 +115,33 @@ func TestGeoIPCIDRsCache(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name() != "us.txt" {
 		t.Fatalf("cache directory holds %v", entries)
+	}
+}
+
+func TestRemoveStaleGeoIPTempsKeepsFilesInUse(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"us.txt", "us.txt.1.tmp", "ru.txt.2.tmp"} {
+		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := time.Now().Add(-geoipTempMaxAge - time.Minute)
+	for _, name := range []string{"us.txt", "ru.txt.2.tmp"} {
+		if err := os.Chtimes(filepath.Join(dir, name), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	removeStaleGeoIPTemps(dir)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	// The old temporary file goes; a recent one may still be written, and the cache file stays.
+	if !slices.Equal(names, []string{"us.txt", "us.txt.1.tmp"}) {
+		t.Fatalf("left %v", names)
 	}
 }

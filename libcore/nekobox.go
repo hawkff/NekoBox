@@ -140,6 +140,7 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 		// bg
 		if isBgProcess {
 			extractAssets()
+			removeStaleGeoIPTemps(geoipCacheDir)
 		}
 	}()
 }
