@@ -172,7 +172,8 @@ class RouteSettingsActivity : ThemedActivity() {
         if (!::draft.isInitialized || reading) return
         outState.putParcelable(DRAFT, draft)
         outState.putParcelable(ORIGINAL, original)
-        outState.putString(DRAFT_STORE, DataStore.profileCacheStoreId)
+        // Until this screen fills the store again, it stays one a new process emptied.
+        if (storeSeeded) outState.putString(DRAFT_STORE, DataStore.profileCacheStoreId)
         outState.putBoolean(MORE, binding.more.isVisible)
     }
 

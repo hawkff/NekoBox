@@ -97,6 +97,7 @@ class RoutingProfilesActivity : ThemedActivity() {
         val (candidate, replaced) = withContext(Dispatchers.Default) {
             RoutingProfiles.parse(text).let { it to it?.let(RoutingProfiles::replacementFor) }
         }
+        if (isFinishing) return@launch
         if (candidate == null) {
             snackbar(R.string.routing_profile_import_invalid).show()
             return@launch

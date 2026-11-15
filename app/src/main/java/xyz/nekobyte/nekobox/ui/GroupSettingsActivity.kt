@@ -74,8 +74,9 @@ class GroupSettingsActivity :
     // Set while the form shows the settings, so that its listeners don't write them back.
     private var filling = false
 
-    // Set once the form shows the settings; a profile picked before that would be overwritten by them.
+    // Set once the form shows the settings; a profile picked before that waits for them, as they would overwrite it.
     private var started = false
+    private var pendingPick: Pair<Long, Boolean>? = null
 
     fun ProxyGroup.init() {
         DataStore.groupName = name ?: ""
@@ -229,6 +230,10 @@ class GroupSettingsActivity :
                 start(open = null)
                 DataStore.dirty = prefilled
                 DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
+                pendingPick?.let { (id, front) ->
+                    pendingPick = null
+                    pick(id, front)
+                }
             }
         }
     }
@@ -714,9 +719,13 @@ class GroupSettingsActivity :
     private val selectLanding = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { picked(it.resultCode, it.data, front = false) }
 
     private fun picked(resultCode: Int, data: Intent?, front: Boolean) {
-        if (resultCode != Activity.RESULT_OK || !started) return
+        if (resultCode != Activity.RESULT_OK) return
         val id = data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0) ?: return
         if (id <= 0) return
+        if (started) pick(id, front) else pendingPick = id to front
+    }
+
+    private fun pick(id: Long, front: Boolean) {
         if (front) {
             DataStore.frontProxy = id
             DataStore.frontProxyTmp = PROXY_PROFILE
