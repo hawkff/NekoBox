@@ -247,6 +247,11 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun deeplyNestedJson_yieldsNoProfilesInsteadOfCrashing() = runTest {
+        assertNull(RawUpdater.parseRaw("[".repeat(1_000_000)))
+    }
+
+    @Test
     fun jsonEndpointValidation_preservesHysteria2PortStorage() = runTest {
         val bean = RawUpdater.parseRaw("""{"server":"192.0.2.3:8443","auth":"example"}""")!!.single() as HysteriaBean
         assertEquals("192.0.2.3", bean.serverAddress)

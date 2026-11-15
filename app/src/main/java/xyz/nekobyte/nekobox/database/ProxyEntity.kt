@@ -382,6 +382,9 @@ data class ProxyEntity(
         @Query("UPDATE proxy_entities SET userOrder = :order WHERE id = :id")
         fun updateOrder(id: Long, order: Long): Int
 
+        @Query("UPDATE proxy_entities SET userOrder = :order WHERE id = :id AND groupId = :groupId")
+        fun updateOrderInGroup(groupId: Long, id: Long, order: Long): Int
+
         // A reorder stores the order alone. A list on show can be older than the stored rows: the service adds traffic and
         // an update replaces servers meanwhile, and a whole row written back would undo that.
         @Transaction
@@ -406,17 +409,18 @@ data class ProxyEntity(
         @Query("DELETE FROM proxy_entities WHERE id IN (:proxyIds)")
         fun deleteByIds(proxyIds: List<Long>): Int
 
+        @Query("DELETE FROM proxy_entities WHERE groupId = :groupId AND id IN (:ids)")
+        fun deleteInGroupBatch(groupId: Long, ids: List<Long>): Int
+
+        // Rows moved to another group meanwhile stay. SQLite before Android 12 takes at most 999 values in one statement.
+        @Transaction
+        fun deleteInGroup(groupId: Long, ids: List<Long>): Int = ids.distinct().chunked(500).sumOf { deleteInGroupBatch(groupId, it) }
+
         @Query("DELETE FROM proxy_entities WHERE groupId = :groupId")
         fun deleteByGroup(groupId: Long)
 
         @Query("DELETE FROM proxy_entities WHERE groupId in (:groupId)")
         fun deleteByGroup(groupId: LongArray)
-
-        @Delete
-        fun deleteProxy(proxy: ProxyEntity): Int
-
-        @Delete
-        fun deleteProxy(proxies: List<ProxyEntity>): Int
 
         @Update
         fun updateProxyRow(proxy: ProxyEntity): Int

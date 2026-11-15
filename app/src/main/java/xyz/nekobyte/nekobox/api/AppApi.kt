@@ -512,6 +512,8 @@ internal class AppApi(
             }
             if (values.has("subscription")) {
                 requireApi(group.type == GroupType.SUBSCRIPTION, "Group is not a subscription")
+                // A running update writes the subscription settings it started with when it ends, as the editor knows.
+                requireApi(group.id !in GroupUpdater.updating, "Group is being updated")
                 group.subscription = subscription(group.subscription, values.objectValue("subscription"))
             }
             GroupManager.updateGroup(group)
