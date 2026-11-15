@@ -24,7 +24,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.GroupOrder
 import xyz.nekobyte.nekobox.GroupType
+import xyz.nekobyte.nekobox.IPv6Mode
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.SubscriptionFilterMode
@@ -47,6 +49,8 @@ import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 import xyz.nekobyte.nekobox.ui.BackupFormatV2
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.util.Base64
 
 @RunWith(RobolectricTestRunner::class)
@@ -254,6 +258,101 @@ class RawUpdaterTransactionTest {
             assertEquals(9, stored.ping)
             // The update itself still lands: the profile moved up.
             assertEquals(2L, stored.userOrder)
+        }
+    }
+
+    @Test
+    fun aProfileMovedToAnotherGroupDuringAnUpdate_staysThere() = runTest {
+        withContext(Dispatchers.IO) {
+            val stored = ProfileDatabase.proxyDao.getByGroup(group.id).associateBy { it.displayName() }
+            val other = ProxyGroup(name = "other").also { it.id = ProfileDatabase.groupDao.createGroup(it) }
+
+            // The provider dropped it: it is not deleted from the group it went to.
+            val stale = stored.getValue("stale")
+            afterTheUpdateReadTheProfiles { ProfileDatabase.proxyDao.updateGroup(stale.id, other.id) }
+            RawUpdater.updateFromContent(group, subscription, validContent)
+            assertEquals(other.id, ProfileDatabase.proxyDao.getById(stale.id)?.groupId)
+            assertEquals(listOf("second", "first", "added"), ProfileDatabase.proxyDao.getByGroup(group.id).map { it.displayName() })
+
+            // The provider changed it: it is not taken back, and the update fails without storing anything.
+            val second = stored.getValue("second")
+            afterTheUpdateReadTheProfiles { ProfileDatabase.proxyDao.updateGroup(second.id, other.id) }
+            val failure = runCatching {
+                RawUpdater.updateFromContent(group, subscription, validContent.replace("192.0.2.22", "192.0.2.23"))
+            }.exceptionOrNull()
+            assertTrue(failure?.message.orEmpty().startsWith("Exist profiles:"))
+            val moved = ProfileDatabase.proxyDao.getById(second.id)!!
+            assertEquals(other.id, moved.groupId)
+            assertEquals("192.0.2.22", moved.requireBean().serverAddress)
+        }
+    }
+
+    @Test
+    fun groupSettingsSavedAfterTheUpdateWasQueued_stay() = runTest {
+        withContext(Dispatchers.IO) {
+            val first = ProfileDatabase.proxyDao.getByGroup(group.id).single { it.displayName() == "first" }
+            // The update holds the group as read before these were saved.
+            ProfileDatabase.groupDao.updateGroup(group.copy(frontProxy = first.id, userOrder = 2, order = GroupOrder.BY_NAME))
+            RawUpdater.updateFromContent(group, subscription, validContent)
+            val stored = ProfileDatabase.groupDao.getById(group.id)!!
+            assertEquals(first.id, stored.frontProxy)
+            assertEquals(2L, stored.userOrder)
+            assertEquals(GroupOrder.BY_NAME, stored.order)
+            assertEquals("Body title", stored.name)
+            assertTrue(subscription.lastUpdated!! > 1234)
+            // The caller's copy now shows what was stored.
+            assertEquals(first.id, group.frontProxy)
+            assertEquals(2L, group.userOrder)
+            assertEquals(GroupOrder.BY_NAME, group.order)
+        }
+    }
+
+    @Test
+    fun anUpdateOfAGroupGoneOrNoLongerASubscription_endsQuietly() = runTest {
+        withContext(Dispatchers.IO) {
+            val ui = RecordingInterface(confirm = false)
+            ProfileDatabase.groupDao.updateGroup(group.copy(type = GroupType.BASIC))
+            assertFalse(GroupUpdater.executeUpdate(group, byUser = false, userInterface = ui))
+            assertFalse(group.id in GroupUpdater.updating)
+
+            GroupManager.deleteGroup(listOf(group)) {}
+            assertFalse(GroupUpdater.executeUpdate(group, byUser = false, userInterface = ui))
+            assertFalse(group.id in GroupUpdater.updating)
+            assertTrue(ui.failures.isEmpty())
+        }
+    }
+
+    @Test
+    fun nodesThatOnlyMoved_keepTheirStoredSettingsUnwritten() = runTest {
+        withContext(Dispatchers.IO) {
+            val links = listOf("socks://192.0.2.1:1080#first", "socks://192.0.2.2:1080#second")
+            RawUpdater.updateFromContent(group, subscription, links.joinToString("\n"))
+            val db = ProfileDatabase.instance.openHelper.writableDatabase
+            db.execSQL("CREATE TRIGGER no_bean_rewrite BEFORE UPDATE OF socksBean ON proxy_entities BEGIN SELECT RAISE(ABORT, 'bean rewritten'); END")
+            try {
+                RawUpdater.updateFromContent(group, subscription, links.reversed().joinToString("\n"))
+            } finally {
+                db.execSQL("DROP TRIGGER no_bean_rewrite")
+            }
+            val after = ProfileDatabase.proxyDao.getByGroup(group.id)
+            assertEquals(listOf("second", "first"), after.map { it.displayName() })
+            assertEquals(listOf(1L, 2L), after.map { it.userOrder })
+        }
+    }
+
+    @Test
+    fun forcedResolution_keepsNamelessNodesThatResolveToOneAddress() = runTest {
+        withContext(Dispatchers.IO) {
+            DataStore.ipv6Mode = IPv6Mode.DISABLE
+            // localhost resolves from the hosts file, with no DNS query.
+            val loopback = InetAddress.getAllByName("localhost").first { it is Inet4Address }.hostAddress
+            subscription.forceResolve = true
+            subscription.deduplication = false
+            ProfileDatabase.groupDao.updateGroup(group)
+            RawUpdater.updateFromContent(group, subscription, "socks://localhost:1080\nsocks://$loopback:1080")
+            val after = ProfileDatabase.proxyDao.getByGroup(group.id)
+            assertEquals(listOf(loopback, loopback), after.map { it.requireBean().serverAddress })
+            assertEquals(2, after.map { it.displayName() }.toSet().size)
         }
     }
 
@@ -540,6 +639,7 @@ class RawUpdaterTransactionTest {
     fun anUpdateCancelledAtItsQuestion_givesTheGroupUp() = runTest {
         withContext(Dispatchers.IO) {
             subscription.link = "http://subscription.example/list"
+            ProfileDatabase.groupDao.updateGroup(group)
             val asked = CompletableDeferred<Unit>()
             val stuck = object : GroupManager.Interface by RecordingInterface(confirm = false) {
                 override suspend fun confirm(message: String): Boolean {
@@ -758,11 +858,11 @@ class RawUpdaterTransactionTest {
             RawUpdater.updateFromContent(group, subscription, validContent, httpTitle = "base64:!", contentDisposition = "attachment; filename*=UTF-8''Disposition%20title")
             assertEquals("Disposition title", group.name)
             assertEquals("download=30; total=100", subscription.subscriptionUserinfo)
-            group.name = "Subscription #1"
+            ProfileDatabase.groupDao.updateGroup(group.apply { name = "Subscription #1" })
             RawUpdater.updateFromContent(group, subscription, validContent, httpTitle = " ", httpUserinfo = " ", contentDisposition = "attachment; filename*=UTF-8''%invalid")
             assertEquals("Body title", group.name)
             assertEquals("download=30; total=100", subscription.subscriptionUserinfo)
-            group.name = "Custom name"
+            ProfileDatabase.groupDao.updateGroup(group.apply { name = "Custom name" })
             val links = validContent.lines().filterNot { it.startsWith('#') }.joinToString("\n")
             RawUpdater.updateFromContent(group, subscription, links, httpTitle = "Ignored title")
             assertEquals("Custom name", group.name)
@@ -770,6 +870,17 @@ class RawUpdaterTransactionTest {
             RawUpdater.updateFromContent(group, subscription, links, httpUserinfo = "")
             assertEquals("", subscription.subscriptionUserinfo)
             assertEquals("Custom name", ProfileDatabase.groupDao.getById(group.id)!!.name)
+        }
+    }
+
+    /** Runs [action] once, after the update read the stored profiles and before it stores its changes. */
+    private fun afterTheUpdateReadTheProfiles(action: () -> Unit) {
+        var done = false
+        Logs.sink = { message ->
+            if (!done && "toReplace profiles:" in message) {
+                done = true
+                action()
+            }
         }
     }
 
@@ -794,6 +905,7 @@ class RawUpdaterTransactionTest {
     private class RecordingInterface(private val confirm: Boolean, private val onAlert: suspend () -> Unit = {}) : GroupManager.Interface {
         val confirms = mutableListOf<String>()
         val alerts = mutableListOf<String>()
+        val failures = mutableListOf<String>()
         var added = emptyList<String>()
         var updated = emptyMap<String, String>()
         var deleted = emptyList<String>()
@@ -822,7 +934,9 @@ class RawUpdaterTransactionTest {
             this.deleted = deleted
         }
 
-        override suspend fun onUpdateFailure(group: ProxyGroup, message: String) {}
+        override suspend fun onUpdateFailure(group: ProxyGroup, message: String) {
+            failures += message
+        }
     }
 
     private suspend fun assertRejected(content: String): Throwable {

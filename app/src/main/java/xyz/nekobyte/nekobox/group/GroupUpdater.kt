@@ -9,6 +9,7 @@ import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.bg.SubscriptionUpdater
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
+import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.AbstractBean
@@ -155,13 +156,20 @@ abstract class GroupUpdater {
         }
 
         suspend fun executeUpdate(
-            proxyGroup: ProxyGroup,
+            queuedGroup: ProxyGroup,
             byUser: Boolean,
             userInterface: GroupManager.Interface? = GroupManager.userInterface,
         ): Boolean {
             return coroutineScope {
-                if (!updating.add(proxyGroup.id)) {
+                if (!updating.add(queuedGroup.id)) {
                     // already updating this group in another run; skip quietly
+                    return@coroutineScope false
+                }
+                // The group as stored now: the caller's copy may predate edits saved since it was read.
+                val proxyGroup = ProfileDatabase.groupDao.getById(queuedGroup.id)
+                    ?.takeIf { it.type == GroupType.SUBSCRIPTION && it.subscription != null }
+                if (proxyGroup == null) {
+                    updating.remove(queuedGroup.id)
                     return@coroutineScope false
                 }
                 GroupManager.postReload(proxyGroup.id)

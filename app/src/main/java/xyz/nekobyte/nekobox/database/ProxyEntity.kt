@@ -406,6 +406,13 @@ data class ProxyEntity(
         @Query("DELETE FROM proxy_entities WHERE id IN (:proxyIds)")
         fun deleteByIds(proxyIds: List<Long>): Int
 
+        @Query("DELETE FROM proxy_entities WHERE groupId = :groupId AND id IN (:ids)")
+        fun deleteInGroupBatch(groupId: Long, ids: List<Long>): Int
+
+        // Rows moved to another group meanwhile stay. SQLite before Android 12 takes at most 999 values in one statement.
+        @Transaction
+        fun deleteInGroup(groupId: Long, ids: List<Long>): Int = ids.distinct().chunked(500).sumOf { deleteInGroupBatch(groupId, it) }
+
         @Query("DELETE FROM proxy_entities WHERE groupId = :groupId")
         fun deleteByGroup(groupId: Long)
 

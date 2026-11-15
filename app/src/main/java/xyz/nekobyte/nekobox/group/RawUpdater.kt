@@ -531,7 +531,11 @@ object RawUpdater : GroupUpdater() {
 
         ensureUniqueNames(proxies)
 
-        if (subscription.forceResolve!!) forceResolve(proxies, proxyGroup.id)
+        if (subscription.forceResolve!!) {
+            forceResolve(proxies, proxyGroup.id)
+            // Nameless nodes are named by their address, and two hosts can resolve to one.
+            ensureUniqueNames(proxies)
+        }
 
         val filterMode = subscription.filterMode ?: SubscriptionFilterMode.DISABLED
         val filterRegex = subscription.filterRegex ?: ""
@@ -653,7 +657,10 @@ object RawUpdater : GroupUpdater() {
                 if (notice != previousWarning) {
                     val noted = KryoConverters.deserialize(SubscriptionBean(), KryoConverters.serialize(subscription))
                     noted.importWarning = notice
-                    ProfileDatabase.groupDao.updateGroup(proxyGroup.copy(subscription = noted))
+                    // The row as stored now: settings saved while the update ran stay.
+                    ProfileDatabase.instance.runInTransaction {
+                        ProfileDatabase.groupDao.getById(proxyGroup.id)?.let { ProfileDatabase.groupDao.updateGroup(it.copy(subscription = noted)) }
+                    }
                     subscription.importWarning = notice
                 }
                 error(notice)
@@ -706,8 +713,10 @@ object RawUpdater : GroupUpdater() {
                 val entity = toReplace[name]!!
                 val oldName = entity.displayName()
                 val reconciliation = reconcileExistingProfile(entity, bean, userOrder)
-                if (reconciliation.contentChanged || reconciliation.orderChanged) {
+                if (reconciliation.contentChanged) {
                     toUpdate.add(entity)
+                } else if (reconciliation.orderChanged) {
+                    keptOrderChanges[entity.id] = userOrder
                 }
                 if (reconciliation.contentChanged) {
                     changed++
@@ -765,10 +774,7 @@ object RawUpdater : GroupUpdater() {
         val scheduleChanged = updatedSubscription.autoUpdate != subscription.autoUpdate ||
             updatedSubscription.autoUpdateDelay != subscription.autoUpdateDelay ||
             (updatedSubscription.expiry() != null) != (subscription.expiry() != null)
-        val updatedGroup = proxyGroup.copy(subscription = updatedSubscription)
-        if (updatedGroup.name?.startsWith("Subscription #") == true && remoteName != null) {
-            updatedGroup.name = remoteName
-        }
+        lateinit var updatedGroup: ProxyGroup
 
         var updatedCount = 0
         var deletedCount = 0
@@ -776,30 +782,34 @@ object RawUpdater : GroupUpdater() {
         currentCoroutineContext().ensureActive()
         ProfileDatabase.instance.runInTransaction {
             // A group deleted while the update ran takes no profiles: the update fails and stores nothing.
-            checkNotNull(ProfileDatabase.groupDao.getById(proxyGroup.id)) { "Group deleted during the update" }
+            val stored = checkNotNull(ProfileDatabase.groupDao.getById(proxyGroup.id)) { "Group deleted during the update" }
+            // The row as stored now: settings saved while the update ran (exit, order, sorting) stay.
+            updatedGroup = stored.copy(subscription = updatedSubscription)
+            if (stored.name?.startsWith("Subscription #") == true && remoteName != null) {
+                updatedGroup.name = remoteName
+            }
             if (toInsert.isNotEmpty()) {
                 ProfileDatabase.proxyDao.insert(toInsert)
             }
             if (toUpdate.isNotEmpty()) {
-                // Traffic and test results saved while the update ran stay: the rows read before it carry older ones.
+                // The planned changes go onto the rows as stored now: traffic, test results and local settings saved
+                // while the update ran stay. A row moved to another group meanwhile is left there; the count below
+                // then fails the update.
                 val saved = ProfileDatabase.proxyDao.getEntities(toUpdate.map { it.id }).associateBy { it.id }
-                for (entity in toUpdate) {
-                    val now = saved[entity.id] ?: continue
-                    entity.tx = now.tx
-                    entity.rx = now.rx
-                    entity.lifetimeTx = now.lifetimeTx
-                    entity.lifetimeRx = now.lifetimeRx
-                    entity.trafficResets = now.trafficResets
-                    entity.status = now.status
-                    entity.ping = now.ping
-                    entity.error = now.error
+                for (planned in toUpdate) {
+                    val now = saved[planned.id]?.takeIf { it.groupId == proxyGroup.id } ?: continue
+                    val bean = planned.requireBean()
+                    refreshBean(now.requireBean(), bean)
+                    now.putBean(bean)
+                    now.userOrder = planned.userOrder
+                    updatedCount += ProfileDatabase.proxyDao.updateProxy(now)
                 }
-                updatedCount = ProfileDatabase.proxyDao.updateProxy(toUpdate)
             }
             if (toDelete.isNotEmpty()) {
-                deletedCount = ProfileDatabase.proxyDao.deleteProxy(toDelete)
+                deletedCount = ProfileDatabase.proxyDao.deleteInGroup(proxyGroup.id, toDelete.map { it.id })
             }
-            // Retained rows need only an order update; keep their serialized payloads byte-for-byte.
+            // Retained rows and rows whose order alone changed need only an order update; keep their serialized payloads
+            // byte-for-byte.
             for ((id, order) in keptOrderChanges) updatedCount += ProfileDatabase.proxyDao.updateOrder(id, order)
 
             val existCount = ProfileDatabase.proxyDao.countByGroup(proxyGroup.id).toInt()
@@ -813,6 +823,12 @@ object RawUpdater : GroupUpdater() {
         }
         // Publish metadata only after the profile transaction commits.
         proxyGroup.name = updatedGroup.name
+        proxyGroup.userOrder = updatedGroup.userOrder
+        proxyGroup.order = updatedGroup.order
+        proxyGroup.isSelector = updatedGroup.isSelector
+        proxyGroup.autoSelect = updatedGroup.autoSelect
+        proxyGroup.frontProxy = updatedGroup.frontProxy
+        proxyGroup.landingProxy = updatedGroup.landingProxy
         subscription.subscriptionUserinfo = updatedSubscription.subscriptionUserinfo
         subscription.lastUpdated = updatedSubscription.lastUpdated
         subscription.importWarning = updatedSubscription.importWarning
@@ -1669,6 +1685,10 @@ object RawUpdater : GroupUpdater() {
                 parseJSON(json, report).takeIf { it.isNotEmpty() }
             } catch (_: Exception) {
                 Logs.w("Subscription JSON rejected")
+                null
+            } catch (_: StackOverflowError) {
+                // org.json reads nested arrays and objects recursively, with no depth limit.
+                Logs.w("Subscription JSON nested too deeply")
                 null
             }
         }
