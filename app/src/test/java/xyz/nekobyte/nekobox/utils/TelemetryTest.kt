@@ -36,10 +36,12 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.preference.PublicDatabase
 import xyz.nekobyte.nekobox.database.preference.RoomPreferenceDataStore
+import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
 import java.io.File
@@ -54,6 +56,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Config(sdk = [24, 35], application = Application::class)
 class TelemetryTest {
     private val analyticsCache get() = RuntimeEnvironment.getApplication().cacheDir.resolve("telemetry-posthog")
+
+    @Test
+    fun declinedConsentIsTornDownOnlyOnce() {
+        ConfigBuilderTestEnv.reset()
+        Telemetry.update(enabled = false)
+        // The service process's queue directory; a repeated decline must not run the teardown again.
+        val cache = NekoBox.application.cacheDir.resolve("telemetry-posthog-service").apply { mkdirs() }
+        Telemetry.update(enabled = false)
+        assertTrue(cache.isDirectory)
+    }
 
     @Test
     fun reportHostsComeFromTheConfiguredServices() {

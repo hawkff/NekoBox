@@ -216,6 +216,10 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
     private var consent = AtomicBoolean(false)
     private var mainProcess = false
 
+    // Whether stop() ran since the SDKs were last set up; worker thread only. False at first so a
+    // declined launch still clears what an earlier process left behind.
+    private var stopped = false
+
     // close() keeps the SDK executors alive for setup(), so retain and reuse their owner.
     private var analytics: PostHogInterface? = null
     private var analyticsHttp: OkHttpClient? = null
@@ -310,9 +314,9 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
                 override fun onInvalidated(tables: Set<String>) {
                     worker.execute {
                         try {
-                            // Settings also change in the other process and during backup restore.
-                            DataStore.configurationStore.refreshBlocking()
-                            update()
+                            // Settings also change in the other process and during backup restore. The store refreshes
+                            // its own copy, which may not have happened yet, so the consent row is read directly.
+                            update(PublicDatabase.kvPairDao[Key.HELP_TO_IMPROVE]?.boolean ?: false)
                         } catch (_: Exception) {
                             stop()
                         }
@@ -353,13 +357,14 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
         worker.execute { update() }
     }
 
-    private fun update() {
-        if (!DataStore.helpToImprove) {
-            stop()
+    internal fun update(enabled: Boolean = DataStore.helpToImprove) {
+        if (!enabled) {
+            if (!stopped) stop()
             return
         }
         if (consent.get()) return
         stop()
+        stopped = false
         val permission = AtomicBoolean(true)
         consent = permission
         val allowed = { permission.get() && runCatching { DataStore.helpToImprove }.getOrDefault(false) }
@@ -396,6 +401,7 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
         analyticsHttp = null
         if (!analyticsCache.deleteRecursively()) Logs.w("PostHog cache cleanup failed")
         Sentry.close()
+        stopped = true
     }
 }
 
