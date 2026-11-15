@@ -69,7 +69,7 @@ fun buildSingBoxOutboundJuicityBean(bean: JuicityBean): Outbound_JuicityOptions 
         if (bean.sni!!.isNotBlank()) {
             server_name = bean.sni
         }
-        insecure = bean.allowInsecure!! || DataStore.globalAllowInsecure || bean.pinnedCertchainSha256!!.isNotBlank()
+        insecure = bean.allowInsecure!! || DataStore.globalAllowInsecure
     }
 
     if (bean.pinnedCertchainSha256!!.isNotBlank()) {

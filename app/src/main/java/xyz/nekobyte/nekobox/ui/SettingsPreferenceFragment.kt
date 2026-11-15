@@ -502,7 +502,12 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     }
 
     private fun setupTls() {
+        findPreference<SwitchPreference>(Key.GLOBAL_ALLOW_INSECURE)?.onPreferenceChangeListener = reloadListener
         findPreference<SwitchPreference>(Key.ENABLE_TLS_FRAGMENT)?.onPreferenceChangeListener = reloadListener
+        findPreference<SwitchPreference>(Key.TRUST_USER_CERTIFICATES)?.setOnPreferenceChangeListener { _, _ ->
+            needRestart()
+            true
+        }
     }
 
     private fun setupNotification() {

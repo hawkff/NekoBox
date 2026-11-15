@@ -1076,6 +1076,8 @@
     <string name="bypass_lan_summary">Адреса локальной сети идут мимо VPN</string>
     <string name="bypass_lan_in_core_summary">Ядро отправляет локальные адреса напрямую. Работает и в режиме прокси</string>
     <string name="global_allow_insecure_summary">Не проверять сертификаты ни у одного профиля. Небезопасно.</string>
+    <string name="trust_user_certificates">Доверять сертификатам, установленным в настройках Android</string>
+    <string name="trust_user_certificates_summary">Для подписок, файлов правил и проверки обновлений. Прокси-подключения и Tailscale следуют собственным правилам ядра. Центры сертификации, установленные в настройках Android, смогут читать эти подключения.</string>
     <string name="rules_provider_official_summary">Списки geosite и geoip от SagerNet</string>
     <string name="rules_provider_china_summary">Списки для Китая</string>
     <string name="rules_provider_iran_summary">Списки для Ирана</string>

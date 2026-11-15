@@ -141,7 +141,7 @@ internal class ApiSettings(private val context: Context, private val serviceStat
             else -> requireApi(value is String && value.length <= 1_048_576, "$key must be a string")
         }
         if (setting.values.isNotEmpty()) requireApi(value in setting.values, "$key is not an allowed choice")
-        val unsafeEnables = setOf(Key.ALLOW_ACCESS, Key.APPEND_HTTP_PROXY, Key.GLOBAL_ALLOW_INSECURE, Key.ALLOW_INSECURE_ON_REQUEST, Key.GPS_SPOOFING)
+        val unsafeEnables = setOf(Key.ALLOW_ACCESS, Key.APPEND_HTTP_PROXY, Key.GLOBAL_ALLOW_INSECURE, Key.ALLOW_INSECURE_ON_REQUEST, Key.GPS_SPOOFING, Key.TRUST_USER_CERTIFICATES)
         if (key in unsafeEnables && value == true && !confirm) reject("confirmation_required", "Enabling $key requires confirm=true")
         when (key) {
             Key.MIXED_PORT -> requireApi((value as String).toIntOrNull() in 1024..65535, "mixedPort must be 1024..65535")
@@ -178,7 +178,9 @@ internal class ApiSettings(private val context: Context, private val serviceStat
                 runCatching { Libcore.readNebulaConfig(value) }.onFailure { reject("invalid_parameters", "nebulaConfig: ${it.message}") }
             }
 
+            // It can replace every root the core trusts.
             Key.GLOBAL_CUSTOM_CONFIG -> if ((value as String).isNotBlank()) {
+                if (!confirm) reject("confirmation_required", "A non-blank globalCustomConfig requires confirm=true")
                 requireApi(runCatching { JSONObject(value) }.isSuccess, "globalCustomConfig must contain a JSON object")
             }
         }

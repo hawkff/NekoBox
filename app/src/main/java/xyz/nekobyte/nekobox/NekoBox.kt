@@ -74,6 +74,8 @@ class NekoBox :
             updateNotificationChannels()
             externalAssets.mkdirs()
             Seq.setContext(this)
+            // The app's own Go requests wait for the roots read below, which stays off the main thread.
+            Libcore.expectTrustedRoots()
             // Prime the cached configurationStore off the main thread before the first
             // synchronous read below (logBufSize/logLevel). PublicDatabase no longer allows
             // main-thread queries, so the bulk-SELECT prime must run on PrefSnapshotExecutor;
@@ -108,6 +110,15 @@ class NekoBox :
                 DataStore.logLevel > 0,
                 nativeInterface, nativeInterface, LocalResolverImpl,
             )
+            Thread {
+                val der = runCatching { AndroidTrustStore.trustedDer(AndroidTrustStore.read(), DataStore.trustUserCertificates) }
+                    .onFailure { Logs.w("trusted roots", it) }.getOrDefault(ByteArray(0))
+                // Called in any case: the requests waiting for it go on, with Go's default roots if none were read.
+                Libcore.setTrustedRoots(der, AndroidTrustStore.useMozilla)
+            }.apply {
+                isDaemon = true
+                start()
+            }
 
             runOnDefaultDispatcher {
                 PackageCache.register()

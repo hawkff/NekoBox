@@ -88,7 +88,7 @@ class GlobalPreferencesLayoutTest {
             "protectionBattery", "protectionLockdown", "protectionNotes", "proxyApps", "proxyModeInboundAuth", "remoteDns", "requireProxyInVPN", "resetSettings", "resolveDestination",
             "rulesGeoipUrl", "rulesGeositeUrl", "rulesProvider", "rulesUpdateInterval", "serviceMode",
             "showBottomBar", "showDirectSpeed", "showGroupInNotification", "speedInterval",
-            "trafficSniffing", "tunImplementation", "wakeResetConnections", "webrtcLeakProtection",
+            "trafficSniffing", "trustUserCertificates", "tunImplementation", "wakeResetConnections", "webrtcLeakProtection",
         )
     }
 }
