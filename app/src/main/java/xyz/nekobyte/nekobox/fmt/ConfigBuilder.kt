@@ -359,7 +359,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     fun ProxyEntity.resolveChain(): MutableList<ProxyEntity> = resolveChain(this, lookupCache)
 
     // Global mode ignores the routing rules, so their target profiles are not built either.
-    val extraRules = if (forTest || DataStore.globalMode) listOf() else ProfileDatabase.rulesDao.enabledRules()
+    // Read once: a switch made while this config builds must not leave rules without the targets they name.
+    val globalMode = !forTest && DataStore.globalMode
+    val extraRules = if (forTest || globalMode) listOf() else ProfileDatabase.rulesDao.enabledRules()
     val extraProxies =
         if (forTest) {
             mapOf()
@@ -1139,7 +1141,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
 
         // check global mode before applying user rules
-        if (!forTest && DataStore.globalMode) {
+        if (globalMode) {
             // rule handling in global mode
             addTailnetRouteRules()
 
