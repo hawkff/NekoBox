@@ -67,6 +67,7 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	resourcePaths = append(resourcePaths, externalAssets)
 	externalAssetsPath = externalAssets
 	internalAssetsPath = internalAssets
+	geoipCacheDir = filepath.Join(cachePath, "geoip")
 
 	// Set up log
 	if maxLogSizeKb < 50 {
@@ -134,11 +135,7 @@ func InitCore(process, cachePath, internalAssets, externalAssets string,
 	go func() {
 		defer deferPanicToError("InitCore-go", func(err error) { log.Println(err) })
 
-		// certs
-		pem, err := os.ReadFile(externalAssetsPath + "ca.pem")
-		if err == nil {
-			updateRootCACerts(pem)
-		}
+		useAndroidTrustStore()
 
 		// bg
 		if isBgProcess {

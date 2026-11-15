@@ -66,15 +66,13 @@ func newChangeReqAttribute(changeIP bool, changePort bool) *attribute {
 //	|                X-Address (Variable)
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 func (v *attribute) xorAddr(transID []byte) *Host {
-	xorIP := make([]byte, 16)
-	for i := 0; i < len(v.value)-4; i++ {
-		xorIP[i] = v.value[i+4] ^ transID[i]
+	family, port, address := v.addressValue()
+	if address == nil {
+		return nil
 	}
-	family := uint16(v.value[1])
-	port := binary.BigEndian.Uint16(v.value[2:4])
-	// Truncate if IPv4, otherwise net.IP sometimes renders it as an IPv6 address.
-	if family == attributeFamilyIPv4 {
-		xorIP = xorIP[:4]
+	xorIP := make([]byte, len(address))
+	for i := range address {
+		xorIP[i] = address[i] ^ transID[i]
 	}
 	x := binary.BigEndian.Uint16(transID[:2])
 	return &Host{family, net.IP(xorIP).String(), port ^ x}
@@ -92,13 +90,29 @@ func (v *attribute) xorAddr(transID []byte) *Host {
 //	|                                                               |
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 func (v *attribute) rawAddr() *Host {
-	host := new(Host)
-	host.family = uint16(v.value[1])
-	host.port = binary.BigEndian.Uint16(v.value[2:4])
-	// Truncate if IPv4, otherwise net.IP sometimes renders it as an IPv6 address.
-	if host.family == attributeFamilyIPv4 {
-		v.value = v.value[:8]
+	family, port, address := v.addressValue()
+	if address == nil {
+		return nil
 	}
-	host.ip = net.IP(v.value[4:]).String()
-	return host
+	return &Host{family, net.IP(address).String(), port}
+}
+
+// addressValue splits an address attribute's value into family, port and an address of the family's length.
+// A value of an unknown family, or too short for its family, gives no address; bytes past it are ignored.
+func (v *attribute) addressValue() (family, port uint16, address []byte) {
+	if len(v.value) < 4 {
+		return 0, 0, nil
+	}
+	family = uint16(v.value[1])
+	size := 0
+	switch family {
+	case attributeFamilyIPv4:
+		size = 4
+	case attributeFamilyIPV6:
+		size = 16
+	}
+	if size == 0 || len(v.value) < 4+size {
+		return 0, 0, nil
+	}
+	return family, binary.BigEndian.Uint16(v.value[2:4]), v.value[4 : 4+size]
 }

@@ -1,10 +1,15 @@
 package libcore
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"net"
+	"net/netip"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/oschwald/maxminddb-golang"
 	C "github.com/sagernet/sing-box/constant"
@@ -12,59 +17,146 @@ import (
 	"github.com/sagernet/sing-box/option"
 )
 
-type geoip struct {
-	geoipReader *maxminddb.Reader
+// geoipCacheDir holds a country's networks per file, <code>.txt, so a core start does not walk
+// the whole database for each geoip: rule set. Set by InitCore; empty means no files.
+var geoipCacheDir string
+
+// geoipCacheFormat starts the stamp line; change it when the file layout changes.
+const geoipCacheFormat = "geoip-cidr-v1"
+
+// geoipMemo keeps the lists of this process for the database it last saw.
+var geoipMemo struct {
+	sync.Mutex
+	stamp string
+	cidrs map[string][]string
 }
 
-func (g *geoip) Open(path string) error {
-	geoipReader, err := maxminddb.Open(path)
-	g.geoipReader = geoipReader
-	return err
+// geoipCIDRs returns the networks the database at dbPath gives the country code, from the memo,
+// then from cacheDir, then from a scan of the database, which refills both.
+func geoipCIDRs(dbPath, cacheDir, code string) ([]string, error) {
+	info, err := os.Stat(dbPath)
+	if err != nil {
+		return nil, err
+	}
+	// A new database, an asset update for one, has another size or time.
+	stamp := fmt.Sprintf("%s %d %d", geoipCacheFormat, info.Size(), info.ModTime().UnixNano())
+
+	geoipMemo.Lock()
+	defer geoipMemo.Unlock()
+	if geoipMemo.stamp != stamp {
+		geoipMemo.stamp, geoipMemo.cidrs = stamp, map[string][]string{}
+	}
+	if cidrs, ok := geoipMemo.cidrs[code]; ok {
+		return cidrs, nil
+	}
+	cacheFile := ""
+	if cacheDir != "" && code != "" && strings.Trim(code, "abcdefghijklmnopqrstuvwxyz0123456789-_") == "" {
+		cacheFile = filepath.Join(cacheDir, code+".txt")
+	}
+	cidrs := readGeoIPCache(cacheFile, stamp)
+	if cidrs == nil {
+		if cidrs, err = scanGeoIP(dbPath, code); err != nil {
+			return nil, err
+		}
+		if cacheFile != "" {
+			if err := writeGeoIPCache(cacheFile, stamp, cidrs); err != nil {
+				log.Println("geoip cache:", err)
+			}
+		}
+	}
+	geoipMemo.cidrs[code] = cidrs
+	return cidrs, nil
 }
 
-func (g *geoip) Rules(countryCode string) ([]option.HeadlessRule, error) {
-	networks := g.geoipReader.Networks(maxminddb.SkipAliasedNetworks)
-	countryMap := make(map[string][]*net.IPNet)
+func scanGeoIP(dbPath, code string) ([]string, error) {
+	reader, err := maxminddb.Open(dbPath)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	networks := reader.Networks(maxminddb.SkipAliasedNetworks)
 	var (
-		ipNet           *net.IPNet
-		nextCountryCode string
-		err             error
+		cidrs   []string
+		ipNet   *net.IPNet
+		country string
 	)
 	for networks.Next() {
-		ipNet, err = networks.Network(&nextCountryCode)
+		ipNet, err = networks.Network(&country)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get network: %w", err)
 		}
-		countryMap[nextCountryCode] = append(countryMap[nextCountryCode], ipNet)
+		if country == code {
+			cidrs = append(cidrs, ipNet.String())
+		}
 	}
-
-	ipNets := countryMap[strings.ToLower(countryCode)]
-
-	if len(ipNets) == 0 {
-		return nil, fmt.Errorf("no networks found for country code: %s", countryCode)
+	if err := networks.Err(); err != nil {
+		return nil, err
 	}
-
-	var headlessRule option.DefaultHeadlessRule
-	headlessRule.IPCIDR = make([]string, 0, len(ipNets))
-	for _, cidr := range ipNets {
-		headlessRule.IPCIDR = append(headlessRule.IPCIDR, cidr.String())
+	if len(cidrs) == 0 {
+		return nil, fmt.Errorf("no networks found for country code: %s", code)
 	}
+	return cidrs, nil
+}
 
-	return []option.HeadlessRule{
-		{
-			Type:           C.RuleTypeDefault,
-			DefaultOptions: headlessRule,
-		},
-	}, nil
+// readGeoIPCache returns the networks of a cache file made for stamp, or nil when the file is
+// missing, made for another database or unreadable.
+func readGeoIPCache(path, stamp string) []string {
+	if path == "" {
+		return nil
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	lines := strings.Split(strings.TrimSuffix(string(content), "\n"), "\n")
+	if lines[0] != stamp || len(lines) < 2 {
+		return nil
+	}
+	for _, line := range lines[1:] {
+		if _, err := netip.ParsePrefix(line); err != nil {
+			return nil
+		}
+	}
+	return lines[1:]
+}
+
+// writeGeoIPCache writes a temporary file and renames it, so a reader, in this process or the
+// other one, sees a whole file or none, whoever writes at the same time.
+func writeGeoIPCache(path, stamp string, cidrs []string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	w := bufio.NewWriter(tmp)
+	w.WriteString(stamp + "\n")
+	for _, cidr := range cidrs {
+		w.WriteString(cidr + "\n")
+	}
+	err = w.Flush()
+	if closeErr := tmp.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }
 
 func init() {
 	nekoutils.GetGeoIPHeadlessRules = func(name string) ([]option.HeadlessRule, error) {
-		g := new(geoip)
-		if err := g.Open(filepath.Join(externalAssetsPath, "geoip.db")); err != nil {
+		cidrs, err := geoipCIDRs(filepath.Join(externalAssetsPath, geoipDat), geoipCacheDir, strings.ToLower(name))
+		if err != nil {
 			return nil, err
 		}
-		defer g.geoipReader.Close()
-		return g.Rules(name)
+		return []option.HeadlessRule{
+			{
+				Type:           C.RuleTypeDefault,
+				DefaultOptions: option.DefaultHeadlessRule{IPCIDR: cidrs},
+			},
+		}, nil
 	}
 }

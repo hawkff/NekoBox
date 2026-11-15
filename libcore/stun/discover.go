@@ -134,7 +134,7 @@ func (c *Client) discover(conn net.PacketConn, addr *net.UDPAddr) (_ NATType, _ 
 		resp.serverAddr.Port() != uint16(caddr.Port) {
 		fakeFullCone = true
 	}
-	if mappedAddr.IP() == resp.mappedAddr.IP() && mappedAddr.Port() == resp.mappedAddr.Port() {
+	if sameHost(mappedAddr, resp.mappedAddr) {
 		// Perform test3 to see if the client can receive packet sent
 		// from another port.
 		resp, err = c.test3(conn, caddr)
@@ -185,8 +185,11 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 	if err != nil {
 		return nil, err
 	}
-	if resp2.mappedAddr.IP() == resp1.mappedAddr.IP() &&
-		resp2.mappedAddr.Port() == resp1.mappedAddr.Port() {
+	// Mapping is told from the addresses the server saw; a reply without one tells nothing.
+	if resp1.mappedAddr == nil || resp2.mappedAddr == nil {
+		return nil, ErrNoMappedAddress
+	}
+	if sameHost(resp2.mappedAddr, resp1.mappedAddr) {
 		natBehavior.MappingType = BehaviorTypeEndpoint
 	}
 
@@ -199,8 +202,10 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 		if err != nil {
 			return nil, err
 		}
-		if resp3.mappedAddr.IP() == resp2.mappedAddr.IP() &&
-			resp3.mappedAddr.Port() == resp2.mappedAddr.Port() {
+		if resp3.mappedAddr == nil {
+			return nil, ErrNoMappedAddress
+		}
+		if sameHost(resp3.mappedAddr, resp2.mappedAddr) {
 			natBehavior.MappingType = BehaviorTypeAddr
 		} else {
 			natBehavior.MappingType = BehaviorTypeAddrAndPort
@@ -234,4 +239,9 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 	}
 
 	return natBehavior, nil
+}
+
+// sameHost reports whether both mapped addresses are present and equal; a reply may lack one.
+func sameHost(a, b *Host) bool {
+	return a != nil && b != nil && a.IP() == b.IP() && a.Port() == b.Port()
 }
