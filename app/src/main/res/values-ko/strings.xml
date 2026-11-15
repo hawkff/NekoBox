@@ -377,7 +377,7 @@
     <string name="restore_in_progress">복원이 이미 진행 중입니다</string>
     <string name="restore_cancelled">복원 작업이 취소되었습니다</string>
     <string name="ruleset_update_interval">규칙 세트 업데이트 간격</string>
-    <string name="ruleset_update_interval_summary">원격 규칙 세트 업데이트 간격. 예: 1h, 30m, 3600s. 자동 업데이트를 비활성화하려면 0으로 설정하세요</string>
+    <string name="ruleset_update_interval_summary">원격 규칙 세트 업데이트 간격. 예: 1h, 30m. 단위 없는 숫자는 시간으로 처리됩니다. 0으로 두면 기본값인 하루 1회 업데이트가 유지됩니다</string>
     <string name="ruleset_prefix_error">규칙 세트 형식 오류: rsip: 또는 rssite:로 시작해야 합니다</string>
     <string name="clear_cache">캐시 지우기</string>
     <string name="clear_cache_summary">일부 비정상적인 문제를 해결하기 위해 앱 캐시 파일을 지웁니다</string>

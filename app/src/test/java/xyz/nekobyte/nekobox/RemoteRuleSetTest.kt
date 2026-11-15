@@ -48,7 +48,15 @@ class RemoteRuleSetTest {
             val rules = mutableListOf<RuleSet>()
             generateRemoteRuleSet(parsed.first, rules, "0")
             assertEquals("source", rules.single().format)
-            assertEquals("0", rules.single().update_interval)
+            assertEquals(null, rules.single().update_interval)
+        }
+    }
+
+    @Test
+    fun updateIntervalIsAGoDurationAndABareNumberIsHours() {
+        val cases = mapOf("24" to "24h", " 6 " to "6h", "0" to null, "" to null, "  " to null, "30m" to "30m", "1h30m" to "1h30m")
+        for ((setting, expected) in cases) {
+            assertEquals(setting, expected, remoteRuleSetUpdateInterval(setting))
         }
     }
 

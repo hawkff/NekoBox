@@ -479,7 +479,7 @@ fun StandardV2RayBean.parseDuckSoft(url: HttpUrl) {
 
     url.queryParameter("packetEncoding")?.let {
         when (it) {
-            "packet" -> packetEncoding = 1
+            "packet", "packetaddr" -> packetEncoding = 1
             "xudp" -> packetEncoding = 2
         }
     }
@@ -849,6 +849,9 @@ fun StandardV2RayBean.toUriVMessVLESSTrojan(isTrojan: Boolean): String {
                 if (type != "kcp") fragmentFinalMask()?.let { builder.addQueryParameter("fm", it) }
             }
         }
+    } else if (isTrojan) {
+        // Trojan links without security are read as TLS.
+        builder.addQueryParameter("security", "none")
     }
 
     when (packetEncoding) {

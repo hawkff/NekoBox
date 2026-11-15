@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.proxy.anytls
 
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.SingBoxOptions
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.blankAsNull
 import xyz.nekobyte.nekobox.ktx.linkBuilder
 import xyz.nekobyte.nekobox.ktx.toLink
@@ -17,7 +18,7 @@ fun buildSingBoxOutboundAnyTLSBean(bean: AnyTLSBean): SingBoxOptions.Outbound_An
     tls = SingBoxOptions.OutboundTLSOptions().apply {
         enabled = true
         server_name = bean.sni.blankAsNull()
-        if (bean.allowInsecure!!) insecure = true
+        if (bean.allowInsecure!! || DataStore.globalAllowInsecure) insecure = true
         alpn = bean.alpn.blankAsNull()?.listByLineOrComma()
         bean.certificates.blankAsNull()?.let {
             certificate = it
