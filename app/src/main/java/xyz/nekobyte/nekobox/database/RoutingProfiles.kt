@@ -118,10 +118,9 @@ object RoutingProfiles {
         )
     }
 
-    // Every mutation is a read-modify-write of the whole list. Concurrent subscription updates
-    // and a subscription delete racing one of them go through this lock; the main-thread
-    // rename/delete below are the only writers outside it and never run concurrently with each
-    // other.
+    // Every mutation is a read-modify-write of the whole list, made under this lock: subscription
+    // updates, a subscription delete racing one of them, and the screen's rename and delete run on
+    // worker threads.
     private val listLock = Any()
 
     // Serializes every capture or apply of the live state (switch, save, sync, refresh of the

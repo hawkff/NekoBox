@@ -9,9 +9,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
@@ -88,16 +93,17 @@ class RoutingProfilesActivity : ThemedActivity() {
     // Accepts export JSON, sn://routing/ links and Happ/INCY routing profiles alike. Replacing one
     // of the user's profiles (and applying it live when that profile is active), or importing a
     // provider profile with settings it cannot apply, needs a confirmation first.
-    private fun importText(text: String) {
-        val candidate = RoutingProfiles.parse(text)
+    private fun importText(text: String) = lifecycleScope.launch {
+        val (candidate, replaced) = withContext(Dispatchers.Default) {
+            RoutingProfiles.parse(text).let { it to it?.let(RoutingProfiles::replacementFor) }
+        }
         if (candidate == null) {
             snackbar(R.string.routing_profile_import_invalid).show()
-            return
+            return@launch
         }
-        val replaced = RoutingProfiles.replacementFor(candidate)
         if (replaced == null && candidate.notes.isEmpty()) {
             store(candidate)
-            return
+            return@launch
         }
         val message = listOfNotNull(
             replaced?.let {
@@ -110,7 +116,7 @@ class RoutingProfilesActivity : ThemedActivity() {
                 getString(R.string.routing_profile_not_applied, candidate.name, it.joinToString(", "))
             },
         ).joinToString("\n\n")
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this@RoutingProfilesActivity)
             .setTitle(R.string.confirm)
             .setMessage(message)
             .setPositiveButton(R.string.yes) { _, _ -> store(candidate) }
@@ -179,8 +185,10 @@ class RoutingProfilesActivity : ThemedActivity() {
                     R.id.action_switch -> switchTo(profile)
 
                     R.id.action_rename -> askName(getString(R.string.routing_profile_rename), profile.name) { name ->
-                        RoutingProfiles.rename(profile.id, name)
-                        adapter.reload()
+                        runOnDefaultDispatcher {
+                            RoutingProfiles.rename(profile.id, name)
+                            onMainDispatcher { adapter.reload() }
+                        }
                     }
 
                     R.id.action_export_clipboard -> runOnDefaultDispatcher {
@@ -199,8 +207,10 @@ class RoutingProfilesActivity : ThemedActivity() {
                         .setTitle(R.string.confirm)
                         .setMessage(getString(R.string.routing_profile_delete_message, profile.name))
                         .setPositiveButton(R.string.yes) { _, _ ->
-                            RoutingProfiles.delete(profile.id)
-                            adapter.reload()
+                            runOnDefaultDispatcher {
+                                RoutingProfiles.delete(profile.id)
+                                onMainDispatcher { adapter.reload() }
+                            }
                         }
                         .setNegativeButton(R.string.no, null)
                         .show()
@@ -213,12 +223,18 @@ class RoutingProfilesActivity : ThemedActivity() {
 
     inner class ProfileAdapter : RecyclerView.Adapter<ProfileHolder>() {
         private val profiles = ArrayList<RoutingProfiles.Profile>()
+        private var loading: Job? = null
 
+        // Stored profiles can be megabytes of JSON: they are read off the main thread, and only the latest read shows.
         fun reload() {
-            profiles.clear()
-            profiles.addAll(RoutingProfiles.list())
-            notifyDataSetChanged()
-            binding.empty.isVisible = profiles.isEmpty()
+            loading?.cancel()
+            loading = lifecycleScope.launch {
+                val fresh = withContext(Dispatchers.Default) { RoutingProfiles.list() }
+                profiles.clear()
+                profiles.addAll(fresh)
+                notifyDataSetChanged()
+                binding.empty.isVisible = profiles.isEmpty()
+            }
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ProfileHolder(LayoutTwoLineItemBinding.inflate(layoutInflater, parent, false))
