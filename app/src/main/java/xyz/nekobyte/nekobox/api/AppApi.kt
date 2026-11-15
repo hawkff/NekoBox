@@ -666,7 +666,7 @@ internal class AppApi(
             withContext(Dispatchers.Main) { NekoBox.reloadService(id) }
             JSONObject().put("accepted", true)
         }
-        command("service.traffic", "Read the latest traffic sample") { JSONObject(runtime.speed.toString()) }
+        command("service.traffic", "Read the latest traffic sample") { runtime.latestSpeed() }
         command("service.connections", "Read tracked core connections", optional = "includeClosed") { JSONArray(runtime.binder().connections(it.flag("includeClosed"))) }
         command("service.resetconnections", "Reset upstream core connections without wiping configuration", "confirm") {
             it.confirm()

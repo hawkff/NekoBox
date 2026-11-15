@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.aidl;
 
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback;
 import xyz.nekobyte.nekobox.aidl.LocalProxy;
+import xyz.nekobyte.nekobox.aidl.SpeedDisplayData;
 
 interface INekoBoxService {
   int getState();
@@ -12,6 +13,8 @@ interface INekoBoxService {
   // Another app's VPN took the place of this service's: its tunnel is no longer this app's, though
   // the service is still started while it stops.
   boolean getRevoked();
+  // The traffic sample of the last polling round; null while the service is not connected.
+  @nullable SpeedDisplayData getLatestSpeed();
 
   void registerCallback(in INekoBoxServiceCallback cb, int id);
   oneway void unregisterCallback(in INekoBoxServiceCallback cb);

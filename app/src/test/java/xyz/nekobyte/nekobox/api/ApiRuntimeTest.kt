@@ -12,6 +12,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.ProxyService
 import xyz.nekobyte.nekobox.bg.TailscaleSessionController
@@ -42,6 +43,23 @@ class ApiRuntimeTest {
             runtime.onServiceDisconnected()
             assertEquals(BaseService.State.Connected, DataStore.serviceState)
             assertEquals(BaseService.State.Idle, runtime.serviceState())
+        } finally {
+            runtime.close()
+        }
+    }
+
+    @Test
+    fun latestSpeedIsAskedFromTheServiceOnRequest() {
+        ConfigBuilderTestEnv.reset()
+        val fixture = ApiServiceFixture(RuntimeEnvironment.getApplication())
+        val runtime = ApiRuntime(fixture.context)
+        try {
+            runtime.connect()
+            assertEquals(0, runtime.latestSpeed().length())
+            fixture.latestSpeed = SpeedDisplayData(txRateProxy = 5, rxTotal = 7)
+            val sample = runtime.latestSpeed()
+            assertEquals(5L, sample.getLong("txRateProxy"))
+            assertEquals(7L, sample.getLong("rxTotal"))
         } finally {
             runtime.close()
         }

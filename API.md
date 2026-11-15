@@ -117,7 +117,7 @@ Profile and group deletion requires `confirm: true` and a stopped service. The A
 
 `service.start` accepts an optional profile `id`. `profiles.select` changes the saved selection; `apply: true` also switches a running service. `service.reload` applies saved configuration. Start, stop and reload return acceptance, not completion. Poll `app.status.serviceState`. `Idle` means the service connection is not ready; wait for a known state before starting the service or issuing operations that require it to be stopped.
 
-Use `service.test` for the running configuration, and `profiles.test` for a saved profile through the app's existing isolated probe implementation. Both return jobs. `service.traffic` reports the latest traffic sample; it remains empty before the first sample or when traffic sampling is disabled.
+Use `service.test` for the running configuration, and `profiles.test` for a saved profile through the app's existing isolated probe implementation. Both return jobs. `service.traffic` reports the latest traffic sample; it is empty before the first sample and while the service is not connected.
 
 For Tailscale, open a session with `tailscale.open` and poll `tailscale.status`. `check: true` permits a managed check of a stopped profile. Peer probes and exit-node changes return request IDs for `tailscale.result`. Exit changes require the exact `expectedSavedSelection` and `confirm: true`. Close sessions when finished. The API permits two sessions, admits at most four in-flight requests per session, and retains up to 64 requests. Peer IDs are limited to 256 UTF-16 code units and exit-selection baselines to 4096. Closing a session discards its requests. Login URLs remain data. The API does not open them.
 

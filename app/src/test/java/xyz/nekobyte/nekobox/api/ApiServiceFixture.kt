@@ -8,6 +8,7 @@ import android.content.ServiceConnection
 import android.os.Binder
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback
+import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.DataStore
 import java.lang.reflect.Proxy
@@ -18,12 +19,15 @@ internal class ApiServiceFixture(base: Context, state: () -> BaseService.State =
     val calls = mutableListOf<Pair<String, List<Any?>>>()
     val bindings = mutableListOf<ComponentName>()
     var bindImmediately = true
+    var latestSpeed: SpeedDisplayData? = null
     private val pending = mutableListOf<Pair<ComponentName, ServiceConnection>>()
     val api = Proxy.newProxyInstance(INekoBoxService::class.java.classLoader, arrayOf(INekoBoxService::class.java)) { _, method, args ->
         when (method.name) {
             "asBinder" -> binder
 
             "getState" -> state().ordinal
+
+            "getLatestSpeed" -> latestSpeed
 
             "registerCallback" -> {
                 callback = args!![0] as INekoBoxServiceCallback
