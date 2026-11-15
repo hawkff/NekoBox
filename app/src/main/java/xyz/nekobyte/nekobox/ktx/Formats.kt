@@ -207,7 +207,7 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
             }.onFailure {
                 Logs.w("SOCKS parser rejected input")
             }
-        } else if (matches("(http|https)://.*".toRegex())) {
+        } else if (startsWith("http://") || startsWith("https://")) {
             Logs.d("Trying HTTP parser")
             runCatching {
                 entities.add(parseHttp(this))
@@ -339,21 +339,8 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
     if (entities.isEmpty() && entitiesByLine.isEmpty()) {
         subscriptionCandidate?.let { throw SubscriptionFoundException(it) }
     }
-//    var isBadLink = false
-    if (entities.onEach {
-            it.initializeDefaultValues()
-        }.size == entitiesByLine.onEach { it.initializeDefaultValues() }.size
-    ) {
-        run test@{
-            entities.forEachIndexed { index, bean ->
-                val lineBean = entitiesByLine[index]
-                if (bean == lineBean && bean.displayName() != lineBean.displayName()) {
-//                isBadLink = true
-                    return@test
-                }
-            }
-        }
-    }
+    entities.forEach { it.initializeDefaultValues() }
+    entitiesByLine.forEach { it.initializeDefaultValues() }
     val byTokens = entities.size > entitiesByLine.size ||
         (entities.size == entitiesByLine.size && tokens.failed.size > lines.failed.size)
     val pass = if (byTokens) tokens else lines
