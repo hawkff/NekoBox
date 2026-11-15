@@ -1504,36 +1504,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
             R.id.action_global_mode -> {
                 item.isChecked = !item.isChecked
                 DataStore.globalMode = item.isChecked
-                if (DataStore.serviceState.canStop) {
-                    runOnDefaultDispatcher {
-                        try {
-                            // ensure the globalMode write-through has committed before offering
-                            // reload (the :bg reload re-reads globalMode from the DB)
-                            DataStore.configurationStore.awaitWrites()
-                            onMainDispatcher {
-                                if (!isAdded) return@onMainDispatcher
-                                snackbar(getString(R.string.need_reload)).setAction(R.string.apply) {
-                                    runOnDefaultDispatcher {
-                                        try {
-                                            DataStore.configurationStore.awaitWrites()
-                                            NekoBox.reloadService()
-                                        } catch (e: Exception) {
-                                            Logs.w(e)
-                                            onMainDispatcher {
-                                                if (isAdded) snackbar(getString(R.string.service_failed)).show()
-                                            }
-                                        }
-                                    }
-                                }.show()
-                            }
-                        } catch (e: Exception) {
-                            Logs.w(e)
-                            onMainDispatcher {
-                                if (isAdded) snackbar(getString(R.string.service_failed)).show()
-                            }
-                        }
-                    }
-                }
+                needReload()
                 return true
             }
         }

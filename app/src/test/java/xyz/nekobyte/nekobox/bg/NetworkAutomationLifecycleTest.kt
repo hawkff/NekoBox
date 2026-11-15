@@ -216,6 +216,8 @@ class NetworkAutomationLifecycleTest {
         BootReceiver().onReceive(app, Intent("com.example.START"))
         BootReceiver().onReceive(app, Intent())
         assertNull(shadowOf(app).nextStartedService)
+        BootReceiver().onReceive(app, Intent(Intent.ACTION_BOOT_COMPLETED))
+        assertEquals(ProxyService::class.java.name, shadowOf(app).nextStartedService?.component?.className)
     }
 
     @Test
@@ -787,6 +789,20 @@ class NetworkAutomationLifecycleTest {
             assertFalse(service.takesOverAnotherVpn(restart))
         } finally {
             manager.removeNetwork(work)
+        }
+    }
+
+    // A start enters the foreground as it begins; a stop before the start had a notice of its own takes the
+    // bare one down again, as the app or the tile may keep the service bound.
+    @Test
+    fun aStopWhileAStartPreparesLeavesNoNotice() {
+        ShadowVpnService.setPrepareResult(null)
+        withVpnService { service ->
+            service.onStartCommand(Intent().putExtra(Action.EXTRA_AUTOMATED, false), 0, 1)
+            assertEquals(ServiceNotification.notificationId, shadowOf(service).lastForegroundNotificationId)
+            service.stopRunner()
+            idle()
+            assertTrue(shadowOf(service).isForegroundStopped)
         }
     }
 

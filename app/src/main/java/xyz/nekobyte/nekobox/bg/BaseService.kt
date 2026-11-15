@@ -575,6 +575,8 @@ class BaseService {
                     }
                     data.notification?.destroy()
                     data.notification = null
+                    // Also the bare notice of a start stopped before it had its own: a bound service lives on.
+                    stopForeground(Service.STOP_FOREGROUND_REMOVE)
                 }
 
                 if (blocked) {
