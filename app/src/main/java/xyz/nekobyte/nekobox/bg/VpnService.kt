@@ -5,12 +5,10 @@ import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ServiceInfo
 import android.net.ProxyInfo
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
-import androidx.core.app.NotificationCompat
 import libcore.Libcore
 import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.database.DataStore
@@ -162,26 +160,11 @@ class VpnService :
     }
 
     /**
-     * startForegroundService demands a startForeground call even from a service that stops right
-     * away; without one Android ends the process. Without the VPN permission Android 14 and later
-     * refuse the systemExempted type, yet the attempt answers that demand, so its failure is only
-     * logged. The notice goes again at once, as the app or the tile may keep the service bound.
+     * For a service that stops right away. The notice goes again at once, as the app or the tile may keep the
+     * service bound.
      */
     internal fun answerForegroundDemand() {
-        val notification = NotificationCompat.Builder(this, "service-vpn")
-            .setSmallIcon(R.drawable.ic_service_active)
-            .setContentTitle(getText(R.string.app_name))
-            .setPriority(NotificationCompat.PRIORITY_MIN)
-            .build()
-        try {
-            if (Build.VERSION.SDK_INT >= 34) {
-                startForeground(ServiceNotification.notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
-            } else {
-                startForeground(ServiceNotification.notificationId, notification)
-            }
-        } catch (e: RuntimeException) {
-            Logs.w("VPN service stopped before reaching the foreground", e)
-        }
+        ServiceNotification.enterForeground(this, "service-vpn")
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 

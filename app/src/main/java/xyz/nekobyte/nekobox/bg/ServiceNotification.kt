@@ -52,6 +52,28 @@ class ServiceNotification(
         const val notificationId = 1
         const val flags = PendingIntent.FLAG_IMMUTABLE
 
+        /**
+         * startForegroundService demands a startForeground call even from a service that stops right away;
+         * without one Android ends the process. Without the VPN permission Android 14 and later refuse the
+         * systemExempted type, yet the attempt answers that demand, so its failure is only logged.
+         */
+        fun enterForeground(service: Service, channel: String) {
+            val notification = NotificationCompat.Builder(service, channel)
+                .setSmallIcon(R.drawable.ic_service_active)
+                .setContentTitle(service.getText(R.string.app_name))
+                .setPriority(NotificationCompat.PRIORITY_MIN)
+                .build()
+            try {
+                if (Build.VERSION.SDK_INT >= 34) {
+                    service.startForeground(notificationId, notification, if (service is VpnService) FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED else FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                } else {
+                    service.startForeground(notificationId, notification)
+                }
+            } catch (e: RuntimeException) {
+                Logs.w("service stopped before reaching the foreground", e)
+            }
+        }
+
         fun genTitle(ent: ProxyEntity): String {
             val gn = if (DataStore.showGroupInNotification) {
                 ProfileDatabase.groupDao.getById(ent.groupId)?.displayName()
