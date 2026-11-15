@@ -99,7 +99,7 @@ go test -tags="$PRODUCTION_TAGS" ./... || exit 1
 # 16 KB page alignment (issue #1125): Android 15+ may use 16 KB memory pages, which
 # requires native .so LOAD segments aligned to 16384. Force the external linker to use a
 # 16 KB max/common page size so libgojni.so is aligned regardless of the gomobile/Go default.
-# -checklinkname=0: pidfd_android.go overrides an unexported os symbol.
+# -checklinkname=0: pidfd_android.go and certs_android.go reach unexported os and crypto/x509 symbols.
 "$tool_dir/gomobile" bind -v -androidapi 21 -trimpath -ldflags='-s -w -checklinkname=0 -extldflags=-Wl,-z,max-page-size=16384,-z,common-page-size=16384' -tags="$PRODUCTION_TAGS" . || exit 1
 rm -r libcore-sources.jar
 

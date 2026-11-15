@@ -54,7 +54,7 @@ func newPacketFromBytes(packetBytes []byte) (*packet, error) {
 	pkt.transID = packetBytes[4:20]
 	pkt.attributes = make([]attribute, 0, 10)
 	packetBytes = packetBytes[20:]
-	for pos := uint16(0); pos+4 < uint16(len(packetBytes)); {
+	for pos := uint16(0); pos+4 <= uint16(len(packetBytes)); {
 		types := binary.BigEndian.Uint16(packetBytes[pos : pos+2])
 		length := binary.BigEndian.Uint16(packetBytes[pos+2 : pos+4])
 		end := pos + 4 + length

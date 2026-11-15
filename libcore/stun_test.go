@@ -57,13 +57,10 @@ func TestStunTestSurvivesAnEmptyMappedAddress(t *testing.T) {
 				continue
 			}
 			reply := binary.BigEndian.AppendUint16(nil, 0x0101) // binding response
-			reply = binary.BigEndian.AppendUint16(reply, 12)
+			reply = binary.BigEndian.AppendUint16(reply, 4)
 			reply = append(reply, request[4:20]...)              // magic cookie and transaction ID
 			reply = binary.BigEndian.AppendUint16(reply, 0x0020) // XOR-MAPPED-ADDRESS, empty
 			reply = binary.BigEndian.AppendUint16(reply, 0)
-			reply = binary.BigEndian.AppendUint16(reply, 0x8022) // SOFTWARE, so the empty one is not last
-			reply = binary.BigEndian.AppendUint16(reply, 4)
-			reply = append(reply, "test"...)
 			_, _ = server.WriteTo(reply, addr)
 		}
 	}()

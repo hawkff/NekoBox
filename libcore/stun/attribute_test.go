@@ -48,22 +48,19 @@ func TestAddrAttributesRejectShortValuesAndCapLongOnes(t *testing.T) {
 func TestPacketWithEmptyAddressAttributesHasNoAddresses(t *testing.T) {
 	packetBytes := make([]byte, 20, 40)
 	binary.BigEndian.PutUint16(packetBytes, typeBindingResponse)
-	binary.BigEndian.PutUint16(packetBytes[2:], 20)
+	binary.BigEndian.PutUint16(packetBytes[2:], 12)
 	binary.BigEndian.PutUint32(packetBytes[4:], magicCookie)
 	for _, types := range []uint16{attributeXorMappedAddress, attributeMappedAddress, attributeOtherAddress} {
 		packetBytes = binary.BigEndian.AppendUint16(packetBytes, types)
 		packetBytes = binary.BigEndian.AppendUint16(packetBytes, 0)
 	}
-	// The parser stops before an empty attribute at the very end; one with a value closes the packet.
-	packetBytes = binary.BigEndian.AppendUint16(packetBytes, attributeSoftware)
-	packetBytes = binary.BigEndian.AppendUint16(packetBytes, 4)
-	packetBytes = append(packetBytes, "test"...)
 	pkt, err := newPacketFromBytes(packetBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(pkt.attributes) != 4 {
-		t.Fatalf("parsed %d attributes, want 4", len(pkt.attributes))
+	// The last one too, though it ends the packet.
+	if len(pkt.attributes) != 3 {
+		t.Fatalf("parsed %d attributes, want 3", len(pkt.attributes))
 	}
 	if addr := pkt.getXorMappedAddr(); addr != nil {
 		t.Errorf("XOR-MAPPED-ADDRESS: %v", addr)

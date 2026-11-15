@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/oschwald/maxminddb-golang"
 	C "github.com/sagernet/sing-box/constant"
@@ -24,15 +24,8 @@ var geoipCacheDir string
 // geoipCacheFormat starts the stamp line; change it when the file layout changes.
 const geoipCacheFormat = "geoip-cidr-v1"
 
-// geoipMemo keeps the lists of this process for the database it last saw.
-var geoipMemo struct {
-	sync.Mutex
-	stamp string
-	cidrs map[string][]string
-}
-
-// geoipCIDRs returns the networks the database at dbPath gives the country code, from the memo,
-// then from cacheDir, then from a scan of the database, which refills both.
+// geoipCIDRs returns the networks the database at dbPath gives the country code, from cacheDir,
+// or from a scan of the database, which refills it.
 func geoipCIDRs(dbPath, cacheDir, code string) ([]string, error) {
 	info, err := os.Stat(dbPath)
 	if err != nil {
@@ -41,14 +34,6 @@ func geoipCIDRs(dbPath, cacheDir, code string) ([]string, error) {
 	// A new database, an asset update for one, has another size or time.
 	stamp := fmt.Sprintf("%s %d %d", geoipCacheFormat, info.Size(), info.ModTime().UnixNano())
 
-	geoipMemo.Lock()
-	defer geoipMemo.Unlock()
-	if geoipMemo.stamp != stamp {
-		geoipMemo.stamp, geoipMemo.cidrs = stamp, map[string][]string{}
-	}
-	if cidrs, ok := geoipMemo.cidrs[code]; ok {
-		return cidrs, nil
-	}
 	cacheFile := ""
 	if cacheDir != "" && code != "" && strings.Trim(code, "abcdefghijklmnopqrstuvwxyz0123456789-_") == "" {
 		cacheFile = filepath.Join(cacheDir, code+".txt")
@@ -64,7 +49,6 @@ func geoipCIDRs(dbPath, cacheDir, code string) ([]string, error) {
 			}
 		}
 	}
-	geoipMemo.cidrs[code] = cidrs
 	return cidrs, nil
 }
 
@@ -144,6 +128,20 @@ func writeGeoIPCache(path, stamp string, cidrs []string) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), path)
+}
+
+// geoipTempMaxAge is far longer than a write of a cache file takes, so an older temporary file
+// is one a crash left behind.
+const geoipTempMaxAge = time.Hour
+
+// removeStaleGeoIPTemps deletes the temporary files of writeGeoIPCache that a crash left in dir.
+func removeStaleGeoIPTemps(dir string) {
+	temps, _ := filepath.Glob(filepath.Join(dir, "*.txt.*.tmp"))
+	for _, temp := range temps {
+		if info, err := os.Stat(temp); err == nil && time.Since(info.ModTime()) > geoipTempMaxAge {
+			os.Remove(temp)
+		}
+	}
 }
 
 func init() {
