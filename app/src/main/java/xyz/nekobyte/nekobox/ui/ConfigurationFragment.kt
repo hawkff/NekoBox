@@ -690,6 +690,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
         }
 
         DataStore.profileCacheStore.registerChangeListener(this)
+        // A check that finishes while Home shows brings the banner up at once.
+        DataStore.configurationStore.registerChangeListener(this)
     }
 
     // Showing again: global mode, profiles and groups can change on other screens while this one stays hidden.
@@ -715,6 +717,10 @@ open class ConfigurationFragment @JvmOverloads constructor(
     }
 
     override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
+        if (store == DataStore.configurationStore) {
+            if (key == Key.UPDATE_AVAILABLE || key == Key.UPDATE_DISMISSED) runOnMainDispatcher { if (view != null) showUpdateBanner() }
+            return
+        }
         runOnMainDispatcher {
             if (view == null || !::adapter.isInitialized) return@runOnMainDispatcher
             // editingGroup
@@ -740,6 +746,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
     private fun releaseViewListeners() {
         DataStore.profileCacheStore.unregisterChangeListener(this)
+        DataStore.configurationStore.unregisterChangeListener(this)
         tabLayoutMediator?.detach()
         tabLayoutMediator = null
         if (::adapter.isInitialized) {

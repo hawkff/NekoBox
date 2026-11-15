@@ -22,6 +22,7 @@ internal object BackupFormatV2 {
         Key.RECENT_PICKS,
         Key.UPDATE_AVAILABLE,
         Key.UPDATE_DISMISSED,
+        Key.UPDATE_NOTIFIED,
     )
 
     fun encodeProfiles(profiles: List<ProxyEntity>): JSONArray = JSONArray().apply {

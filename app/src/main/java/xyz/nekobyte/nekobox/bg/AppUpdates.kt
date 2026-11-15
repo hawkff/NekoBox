@@ -90,10 +90,13 @@ object AppUpdates : OnPreferenceDataStoreChangeListener {
         return release
     }
 
+    // Store builds update through their store: a GitHub release cannot replace them.
+    val checksReleases = BuildConfig.FLAVOR == "oss" || isPreview
+
     /** Checks daily while the setting is on, from the main process, where WorkManager runs. */
     fun schedule(context: Context = app): Operation {
         val workManager = WorkManager.getInstance(context)
-        if (!DataStore.checkUpdates) return workManager.cancelUniqueWork(WORK_NAME)
+        if (!DataStore.checkUpdates || !checksReleases) return workManager.cancelUniqueWork(WORK_NAME)
         // Kept as scheduled: every start of the app would otherwise move the next check a day away.
         return workManager.enqueueUniquePeriodicWork(
             WORK_NAME,
@@ -119,7 +122,6 @@ object AppUpdates : OnPreferenceDataStoreChangeListener {
     class Check(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             if (!DataStore.checkUpdates) return Result.success()
-            val known = DataStore.updateAvailable
             val release = try {
                 fetchNewerRelease()
             } catch (e: Exception) {
@@ -127,7 +129,10 @@ object AppUpdates : OnPreferenceDataStoreChangeListener {
                 return Result.retry()
             }
             // Once per release: a refused notification leaves the banner and About to show it.
-            if (release != null && release.version != known) notify(release)
+            if (release != null && release.version != DataStore.updateNotified) {
+                DataStore.updateNotified = release.version
+                notify(release)
+            }
             return Result.success()
         }
 

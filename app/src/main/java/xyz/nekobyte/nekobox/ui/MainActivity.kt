@@ -166,7 +166,9 @@ class MainActivity :
         DataStore.configurationStore.registerChangeListener(this)
         GroupManager.userInterface = GroupInterfaceAdapter(this)
 
-        if (intent?.action == Intent.ACTION_VIEW || (intent?.action == AppUpdates.ACTION_OFFER && savedInstanceState == null)) {
+        // Not when Recents reopens a task the notification started: that offer was answered.
+        val fromHistory = (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (intent?.action == Intent.ACTION_VIEW || (intent?.action == AppUpdates.ACTION_OFFER && savedInstanceState == null && !fromHistory)) {
             onNewIntent(intent)
         }
 

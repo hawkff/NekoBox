@@ -376,6 +376,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var checkUpdates by configurationStore.boolean(Key.CHECK_UPDATES) { true }
     var updateAvailable by configurationStore.string(Key.UPDATE_AVAILABLE) { "" }
     var updateDismissed by configurationStore.string(Key.UPDATE_DISMISSED) { "" }
+    var updateNotified by configurationStore.string(Key.UPDATE_NOTIFIED) { "" }
     var logLevel by configurationStore.stringToInt(Key.LOG_LEVEL)
     var logBufSize by configurationStore.int(Key.LOG_BUF_SIZE) { 0 }
     var acquireWakeLock by configurationStore.boolean(Key.ACQUIRE_WAKE_LOCK) { true }

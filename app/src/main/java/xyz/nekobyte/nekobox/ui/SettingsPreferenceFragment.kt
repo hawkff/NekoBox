@@ -21,6 +21,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.bg.AppUpdates
 import xyz.nekobyte.nekobox.TrafficSniffing
 import xyz.nekobyte.nekobox.bg.LocationSpoofing
 import xyz.nekobyte.nekobox.bg.LocationTurnOffReceiver
@@ -511,6 +512,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     }
 
     private fun setupAdvanced() {
+        findPreference<SwitchPreference>(Key.CHECK_UPDATES)?.isVisible = AppUpdates.checksReleases
         // Turning reports on shows what they send first; turning them off needs no question.
         findPreference<SwitchPreference>(Key.HELP_TO_IMPROVE)?.apply {
             setOnPreferenceChangeListener { _, newValue ->

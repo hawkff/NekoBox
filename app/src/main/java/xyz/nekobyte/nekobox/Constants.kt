@@ -16,6 +16,7 @@ object Key {
     // device, kept out of backups.
     const val UPDATE_AVAILABLE = "updateAvailable"
     const val UPDATE_DISMISSED = "updateDismissed"
+    const val UPDATE_NOTIFIED = "updateNotified"
     const val FAVORITE_PROFILES = "favoriteProfiles"
 
     // Whether lists show their Recent, a preference that backups keep; and what was picked from each lately, a record of

@@ -50,4 +50,7 @@ private fun ComponentActivity.offerUpdate(release: AppRelease) {
         .show()
 }
 
-fun Context.openReleasePage(release: AppRelease) = startActivity(Intent(Intent.ACTION_VIEW, release.page.toUri()))
+fun Context.openReleasePage(release: AppRelease) {
+    runCatching { startActivity(Intent(Intent.ACTION_VIEW, release.page.toUri())) }
+        .onFailure { Toast.makeText(app, it.readableMessage, Toast.LENGTH_LONG).show() }
+}

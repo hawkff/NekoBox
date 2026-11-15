@@ -21,6 +21,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import libcore.Libcore
 import xyz.nekobyte.nekobox.BuildConfig
 import xyz.nekobyte.nekobox.R
@@ -85,7 +86,8 @@ object AppUpdateInstall {
             .setCancelable(false)
             .show()
         job = runOnIoDispatcher {
-            val file = File(app.cacheDir, "app-update.apk")
+            // A file of this attempt alone: a cancelled one may still be downloading into its own.
+            val file = File.createTempFile("app-update", ".apk", app.cacheDir)
             val failure = try {
                 Libcore.newHttpClient().apply {
                     setTimeoutMs(DOWNLOAD_TIMEOUT_MS)
@@ -93,7 +95,8 @@ object AppUpdateInstall {
                 }.newRequest().apply { setURL(apk.url) }.execute().writeToLimited(file.path, MAX_APK_BYTES)
                 ensureActive()
                 if (verified(file, apk.sha256)) {
-                    install(file)
+                    ensureActive()
+                    install(file) { isActive }
                     null
                 } else {
                     app.getString(R.string.app_update_rejected)
@@ -143,7 +146,8 @@ object AppUpdateInstall {
         (if (Build.VERSION.SDK_INT >= 28) signingInfo?.apkContentsSigners else signatures).orEmpty().map { it.toCharsString() }.toSet(),
     )
 
-    private fun install(file: File) {
+    // Cancelled before the commit, the session is abandoned and nothing is installed.
+    private fun install(file: File, active: () -> Boolean) {
         val installer = app.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(app.packageName)
@@ -160,6 +164,7 @@ object AppUpdateInstall {
                 // Mutable: the installer adds the status and the confirmation intent.
                 val mutable = if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
                 val status = Intent(app, AppUpdateStatusReceiver::class.java)
+                if (!active()) throw CancellationException("update canceled")
                 session.commit(PendingIntent.getBroadcast(app, id, status, PendingIntent.FLAG_UPDATE_CURRENT or mutable).intentSender)
             }
         } catch (e: Exception) {
