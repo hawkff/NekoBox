@@ -289,7 +289,7 @@ func effectivePort(u *url.URL) string {
 
 func (r *httpRequest) Execute() (HTTPResponse, error) {
 	defer deferPanicToError("http execute", func(err error) { log.Println(err) })
-	awaitTrustedRoots()
+	awaitTrustedRoots(r.request.Context())
 	// Only a client that goes through no proxy: the direct paths would go around one.
 	if r.tryH3Direct && !r.throughSocks5 {
 		return r.doH3Direct()

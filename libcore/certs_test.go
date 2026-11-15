@@ -1,6 +1,7 @@
 package libcore
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -142,7 +143,7 @@ func TestSetTrustedRootsKeepsGoRootsWithoutCertificates(t *testing.T) {
 func TestRequestsWaitForAnnouncedRoots(t *testing.T) {
 	// Nothing announced: no wait.
 	start := time.Now()
-	awaitTrustedRoots()
+	awaitTrustedRoots(context.Background())
 	if time.Since(start) > time.Second {
 		t.Fatal("waited without an announcement")
 	}
@@ -150,7 +151,7 @@ func TestRequestsWaitForAnnouncedRoots(t *testing.T) {
 	ExpectTrustedRoots()
 	waited := make(chan struct{})
 	go func() {
-		awaitTrustedRoots()
+		awaitTrustedRoots(context.Background())
 		close(waited)
 	}()
 	select {
@@ -165,13 +166,24 @@ func TestRequestsWaitForAnnouncedRoots(t *testing.T) {
 		t.Fatal("still waiting after the roots were set")
 	}
 
+	// A cancelled request does not wait.
+	ExpectTrustedRoots()
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	start = time.Now()
+	awaitTrustedRoots(cancelled)
+	if time.Since(start) > time.Second {
+		t.Fatal("a cancelled request waited")
+	}
+	SetTrustedRoots(nil, false)
+
 	// An announcement nobody answers ends at the bound.
 	saved := trustedRootsWait
 	trustedRootsWait = 50 * time.Millisecond
 	t.Cleanup(func() { trustedRootsWait = saved; trustedRootsReady.Store(nil) })
 	ExpectTrustedRoots()
 	start = time.Now()
-	awaitTrustedRoots()
+	awaitTrustedRoots(context.Background())
 	if elapsed := time.Since(start); elapsed < 50*time.Millisecond || elapsed > time.Second {
 		t.Fatalf("waited %v", elapsed)
 	}

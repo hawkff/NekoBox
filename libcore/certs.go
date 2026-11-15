@@ -33,10 +33,11 @@ func ExpectTrustedRoots() {
 	trustedRootsReady.Store(&ready)
 }
 
-func awaitTrustedRoots() {
+func awaitTrustedRoots(ctx context.Context) {
 	if ready := trustedRootsReady.Load(); ready != nil {
 		select {
 		case <-*ready:
+		case <-ctx.Done():
 		case <-time.After(trustedRootsWait):
 		}
 	}
