@@ -98,8 +98,8 @@ dependencies {
     compileOnly("org.eclipse.jdt:org.eclipse.jdt.annotation:2.4.100")
 
     // Minimal SDK modules; automatic capture is configured explicitly.
-    implementation("com.posthog:posthog:6.48.0")
-    implementation("io.sentry:sentry-android-core:8.62.0")
+    implementation("com.posthog:posthog:6.49.1")
+    implementation("io.sentry:sentry-android-core:8.64.0")
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.yaml:snakeyaml:2.7")
     implementation("com.jakewharton:process-phoenix:3.0.0")
@@ -111,7 +111,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("org.robolectric:robolectric:4.18")
 
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
@@ -122,7 +122,7 @@ dependencies {
         // 1.8.1 (JVM default methods). The transitive core from savedstate/lifecycle is
         // older and lands in the app APK, so the test APK's copy is dropped and the
         // migration tests die with AbstractMethodError unless the app resolves at least 1.8.1.
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.12.0")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.13.0")
     }
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
