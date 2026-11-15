@@ -34,6 +34,8 @@ Get the APK for your device's processor from the [Releases page](https://github.
 
 Do not install NekoBox from Google Play. A third party has controlled that listing since May 2024, and its builds are closed source.
 
+Once installed, the app checks GitHub for a newer release once a day, through the proxy when one is connected. When it finds one, a notification and a banner on Home offer to update. Update downloads the APK for your processor, checks it against the SHA-256 published with the release and against this app's signing key, and installs it. Android asks the first time whether NekoBox may install apps. To stop the daily check, turn off Check for updates automatically under Settings > Advanced.
+
 ## Protocols
 
 | Group | Protocols |
@@ -150,6 +152,8 @@ Settings > Leak protection has these controls:
 - Simulate location, under GPS spoofing, gives apps the approximate location of the proxy's exit IP address, or coordinates you enter. It is off by default and needs this app set as the mock location app in Developer options. All apps see the simulated location, Maps and navigation included, so turn it off from its notification before you navigate. The app looks up the exit location through the proxy, at ipapi.co unless you change the location service.
 
 These controls work in VPN mode. A running service does not prove that protection works, so run a connection test after each start or reconnect.
+
+The app's own requests, such as subscription updates, rule asset downloads and the update check, trust only the certificate authorities built into Android. A certificate authority you installed in Android Settings counts only after you turn on Trust certificates installed in Android Settings under Settings > TLS security and restart the app. Proxy connections, DNS and Tailscale follow the core's own rules.
 
 ## Automation, sharing and diagnostics
 
