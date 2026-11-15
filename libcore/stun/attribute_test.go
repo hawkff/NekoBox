@@ -19,7 +19,10 @@ func TestAddrAttributesRejectShortValuesAndCapLongOnes(t *testing.T) {
 	}{
 		{name: "empty", value: nil, absent: true},
 		{name: "family only", value: []byte{0, attributeFamilyIPv4}, absent: true},
-		{name: "header only", value: []byte{0, attributeFamilyIPv4, 0, 80}, xorIP: "0.0.0.0", rawIP: "<nil>"},
+		{name: "header only", value: []byte{0, attributeFamilyIPv4, 0, 80}, absent: true},
+		{name: "ipv4 cut short", value: []byte{0, attributeFamilyIPv4, 0, 80, 1, 2}, absent: true},
+		{name: "ipv6 cut short", value: append([]byte{0, attributeFamilyIPV6, 0, 80}, make([]byte, 8)...), absent: true},
+		{name: "unknown family", value: []byte{0, 9, 0, 80, 1, 2, 3, 4}, absent: true},
 		{name: "ipv4", value: []byte{0, attributeFamilyIPv4, 0, 80, 0x21, 0x12, 0xa4, 0x43}, xorIP: "0.0.0.1", rawIP: "33.18.164.67"},
 		{name: "ipv4 with extra bytes", value: append([]byte{0, attributeFamilyIPv4, 0, 80, 1, 2, 3, 4}, make([]byte, 40)...), xorIP: "32.16.167.70", rawIP: "1.2.3.4"},
 		{name: "ipv6 with extra bytes", value: append(append([]byte{0, attributeFamilyIPV6, 0, 80}, ipv6...), make([]byte, 40)...), xorIP: "132:8462:2020:2020:2020:2020:2020:2020", rawIP: "2020:2020:2020:2020:2020:2020:2020:2020"},

@@ -65,21 +65,14 @@ func newChangeReqAttribute(changeIP bool, changePort bool) *attribute {
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //	|                X-Address (Variable)
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
-// A value shorter than the header gives nil; the address is cut at 16 bytes.
 func (v *attribute) xorAddr(transID []byte) *Host {
-	if len(v.value) < 4 {
+	family, port, address := v.addressValue()
+	if address == nil {
 		return nil
 	}
-	xorIP := make([]byte, 16)
-	for i := 0; i < len(v.value)-4 && i < len(xorIP); i++ {
-		xorIP[i] = v.value[i+4] ^ transID[i]
-	}
-	family := uint16(v.value[1])
-	port := binary.BigEndian.Uint16(v.value[2:4])
-	// Truncate if IPv4, otherwise net.IP sometimes renders it as an IPv6 address.
-	if family == attributeFamilyIPv4 {
-		xorIP = xorIP[:4]
+	xorIP := make([]byte, len(address))
+	for i := range address {
+		xorIP[i] = address[i] ^ transID[i]
 	}
 	x := binary.BigEndian.Uint16(transID[:2])
 	return &Host{family, net.IP(xorIP).String(), port ^ x}
@@ -96,23 +89,30 @@ func (v *attribute) xorAddr(transID []byte) *Host {
 //	|                 Address (32 bits or 128 bits)                 |
 //	|                                                               |
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
-// A value shorter than the header gives nil; the address is cut at 16 bytes.
 func (v *attribute) rawAddr() *Host {
-	if len(v.value) < 4 {
+	family, port, address := v.addressValue()
+	if address == nil {
 		return nil
 	}
-	host := new(Host)
-	host.family = uint16(v.value[1])
-	host.port = binary.BigEndian.Uint16(v.value[2:4])
-	ip := v.value[4:]
-	// Truncate if IPv4, otherwise net.IP sometimes renders it as an IPv6 address.
-	if host.family == attributeFamilyIPv4 && len(ip) > 4 {
-		ip = ip[:4]
+	return &Host{family, net.IP(address).String(), port}
+}
+
+// addressValue splits an address attribute's value into family, port and an address of the family's length.
+// A value of an unknown family, or too short for its family, gives no address; bytes past it are ignored.
+func (v *attribute) addressValue() (family, port uint16, address []byte) {
+	if len(v.value) < 4 {
+		return 0, 0, nil
 	}
-	if len(ip) > 16 {
-		ip = ip[:16]
+	family = uint16(v.value[1])
+	size := 0
+	switch family {
+	case attributeFamilyIPv4:
+		size = 4
+	case attributeFamilyIPV6:
+		size = 16
 	}
-	host.ip = net.IP(ip).String()
-	return host
+	if size == 0 || len(v.value) < 4+size {
+		return 0, 0, nil
+	}
+	return family, binary.BigEndian.Uint16(v.value[2:4]), v.value[4 : 4+size]
 }
