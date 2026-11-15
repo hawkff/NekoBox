@@ -10,6 +10,13 @@ object Key {
     const val PERSIST_ACROSS_REBOOT = "isAutoConnect"
 
     const val HELP_TO_IMPROVE = "helpToImprove"
+    const val CHECK_UPDATES = "checkUpdates"
+
+    // The newest release found newer than this build, and the release Home's banner was dismissed for: records of this
+    // device, kept out of backups.
+    const val UPDATE_AVAILABLE = "updateAvailable"
+    const val UPDATE_DISMISSED = "updateDismissed"
+    const val UPDATE_NOTIFIED = "updateNotified"
     const val FAVORITE_PROFILES = "favoriteProfiles"
 
     // Whether lists show their Recent, a preference that backups keep; and what was picked from each lately, a record of

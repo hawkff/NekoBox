@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_channel">アップデート</string>
+    <string name="check_updates_automatically">アップデートを自動で確認</string>
+    <string name="check_updates_automatically_summary">1 日 1 回、接続中は実行中のプロキシ経由で確認します</string>
+    <string name="app_update_available">NekoBox %s が利用可能です</string>
+    <string name="app_update_action">アップデート</string>
+    <string name="app_update_connection_note">NekoBox のアップデート中は接続が一時的に切れます。「自動接続」がオンなら自動で再接続します。</string>
+    <string name="app_update_downloading">アップデートをダウンロード中…</string>
+    <string name="app_update_rejected">ダウンロードしたファイルはこのアプリの正しいアップデートではないため、削除しました。</string>
+</resources>

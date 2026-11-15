@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the GitHub release build installs its own updates; the other flavors hold no permission to install packages. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Android 12+: an update of this app by itself, once it installed itself, needs no prompt. -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+
+    <application>
+        <receiver
+            android:name="xyz.nekobyte.nekobox.ui.AppUpdateStatusReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

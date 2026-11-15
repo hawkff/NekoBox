@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_channel">업데이트</string>
+    <string name="check_updates_automatically">업데이트 자동 확인</string>
+    <string name="check_updates_automatically_summary">하루에 한 번, 연결되어 있으면 실행 중인 프록시를 통해 확인합니다</string>
+    <string name="app_update_available">NekoBox %s 사용 가능</string>
+    <string name="app_update_action">업데이트</string>
+    <string name="app_update_connection_note">NekoBox가 업데이트되는 동안 연결이 잠시 끊깁니다. \'자동 연결\'이 켜져 있으면 자동으로 다시 연결됩니다.</string>
+    <string name="app_update_downloading">업데이트 다운로드 중…</string>
+    <string name="app_update_rejected">다운로드한 파일이 이 앱의 올바른 업데이트가 아니어서 삭제했습니다.</string>
+</resources>

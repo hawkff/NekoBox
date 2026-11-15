@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_update_channel">به‌روزرسانی‌ها</string>
+    <string name="check_updates_automatically">بررسی خودکار به‌روزرسانی</string>
+    <string name="check_updates_automatically_summary">روزی یک بار، در صورت اتصال از طریق پروکسی در حال اجرا</string>
+    <string name="app_update_available">NekoBox %s در دسترس است</string>
+    <string name="app_update_action">به‌روزرسانی</string>
+    <string name="app_update_connection_note">هنگام به‌روزرسانی NekoBox اتصال برای لحظه‌ای قطع می‌شود. اگر «اتصال خودکار» روشن باشد، خودبه‌خود برقرار می‌شود.</string>
+    <string name="app_update_downloading">در حال دانلود به‌روزرسانی…</string>
+    <string name="app_update_rejected">فایل دانلودشده به‌روزرسانی معتبری برای این برنامه نیست و حذف شد.</string>
+</resources>

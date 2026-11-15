@@ -61,6 +61,24 @@ internal fun computeSubscriptionWorkSchedule(
     )
 }
 
+/** Posts when notifications are allowed; false when the permission or channel blocks it. */
+internal fun NotificationManagerCompat.post(id: Int, notification: Notification, tag: String? = null): Boolean {
+    if (!areNotificationsEnabled()) return false
+    if (
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(app, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    ) {
+        return false
+    }
+    return try {
+        notify(tag, id, notification)
+        true
+    } catch (e: SecurityException) {
+        Logs.w("notification skipped", e)
+        false
+    }
+}
+
 object SubscriptionUpdater {
 
     private const val WORK_NAME = "SubscriptionUpdater"
@@ -105,24 +123,6 @@ object SubscriptionUpdater {
         expiry - nowSeconds <= EXPIRY_WARNING_SECONDS -> nowSeconds - notifiedAt >= DAY_SECONDS
 
         else -> false
-    }
-
-    /** Posts when notifications are allowed; false when the permission or channel blocks it. */
-    private fun NotificationManagerCompat.post(id: Int, notification: Notification): Boolean {
-        if (!areNotificationsEnabled()) return false
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(app, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return false
-        }
-        return try {
-            notify(id, notification)
-            true
-        } catch (e: SecurityException) {
-            Logs.w("notification skipped", e)
-            false
-        }
     }
 
     suspend fun reconfigureUpdater() {

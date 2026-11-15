@@ -7,26 +7,19 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.CircularProgressIndicatorSpec
 import com.google.android.material.progressindicator.IndeterminateDrawable
 import libcore.Libcore
-import org.json.JSONObject
-import xyz.nekobyte.nekobox.BuildConfig
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
-import xyz.nekobyte.nekobox.bg.throughRunningProxy
 import xyz.nekobyte.nekobox.databinding.LayoutAboutBinding
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
-import xyz.nekobyte.nekobox.ktx.isPreview
 import xyz.nekobyte.nekobox.ktx.launchCustomTab
-import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnIoDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnMainDispatcher
 import xyz.nekobyte.nekobox.plugin.PluginManager.loadString
@@ -126,40 +119,12 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                 CircularProgressIndicatorSpec(context, null, 0, com.google.android.material.R.style.Widget_Material3_CircularProgressIndicator_ExtraSmall),
             )
         }.also { updateSpinner = it }
-        runOnIoDispatcher {
-            val found = try {
-                val client = Libcore.newHttpClient().apply {
-                    throughRunningProxy()
-                }
-                val response = client.newRequest().apply { setURL(LATEST) }.execute()
-                val release = JSONObject(response.getContentStringLimited(10L * 1024 * 1024))
-                val name = release.getString("name")
-                // A preview build is behind any release of another name; a release build, behind one without its version.
-                val newer = name.isNotBlank() && if (isPreview) name != BuildConfig.VERSION_NAME else !name.contains(BuildConfig.VERSION_NAME)
-                Result.success(if (newer) name to release.getString("html_url") else null)
-            } catch (e: Exception) {
-                Logs.w(e)
-                Result.failure(e)
-            }
-            runOnMainDispatcher {
-                stopUpdateSpinner()
-                // The check may outlive the page.
-                val binding = _binding ?: return@runOnMainDispatcher
-                binding.checkUpdates.isEnabled = true
-                binding.checkUpdates.setIconResource(R.drawable.ic_update)
-                found.onFailure { Toast.makeText(app, it.readableMessage, Toast.LENGTH_SHORT).show() }
-                found.onSuccess { update ->
-                    if (update == null) return@onSuccess Toast.makeText(app, R.string.check_update_no, Toast.LENGTH_SHORT).show()
-                    val (name, url) = update
-                    val context = requireContext()
-                    MaterialAlertDialogBuilder(context)
-                        .setTitle(R.string.update_dialog_title)
-                        .setMessage(context.getString(R.string.update_dialog_message, NekoBox.appVersionNameForDisplay, name))
-                        .setPositiveButton(R.string.yes) { _, _ -> context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
-                        .setNegativeButton(R.string.no, null)
-                        .show()
-                }
-            }
+        requireActivity().checkForUpdate {
+            stopUpdateSpinner()
+            // The check may outlive the page.
+            val binding = _binding ?: return@checkForUpdate
+            binding.checkUpdates.isEnabled = true
+            binding.checkUpdates.setIconResource(R.drawable.ic_update)
         }
     }
 
@@ -170,6 +135,5 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
 
     private companion object {
         const val SOURCE = "https://github.com/hawkff/NekoBox"
-        const val LATEST = "https://api.github.com/repos/hawkff/NekoBox/releases/latest"
     }
 }

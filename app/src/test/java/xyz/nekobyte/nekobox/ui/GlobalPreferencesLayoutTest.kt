@@ -77,7 +77,7 @@ class GlobalPreferencesLayoutTest {
 
         val EXPECTED_KEYS = setOf(
             "acquireWakeLock", "allowAccess", "allowInsecureOnRequest", "alwaysShowAddress", "appLanguage",
-            "appTLSVersion", "appTheme", "appendHttpProxy", "bypassLan", "bypassLanInCore", "clearCache",
+            "appTLSVersion", "appTheme", "appendHttpProxy", "bypassLan", "bypassLanInCore", "checkUpdates", "clearCache",
             "confirmProfileDelete", "connectionTestURL", "directDns", "dnsHosts",
             "domain_strategy_for_direct", "domain_strategy_for_remote", "domain_strategy_for_server",
             "enableDnsRouting", "enableFakeDns", "enableTLSFragment",

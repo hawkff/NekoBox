@@ -18,6 +18,7 @@ import androidx.activity.addCallback
 import androidx.annotation.IdRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.doOnPreDraw
@@ -39,6 +40,7 @@ import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.api.ApiUi
 import xyz.nekobyte.nekobox.api.LocalApiAccess
+import xyz.nekobyte.nekobox.bg.AppUpdates
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.NetworkAutomationService
@@ -164,7 +166,9 @@ class MainActivity :
         DataStore.configurationStore.registerChangeListener(this)
         GroupManager.userInterface = GroupInterfaceAdapter(this)
 
-        if (intent?.action == Intent.ACTION_VIEW) {
+        // Not when Recents reopens a task the notification started: that offer was answered.
+        val fromHistory = (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (intent?.action == Intent.ACTION_VIEW || (intent?.action == AppUpdates.ACTION_OFFER && savedInstanceState == null && !fromHistory)) {
             onNewIntent(intent)
         }
 
@@ -287,6 +291,12 @@ class MainActivity :
         super.onNewIntent(intent)
         LocalApiAccess.sync(this)
 
+        if (intent.action == AppUpdates.ACTION_OFFER) {
+            // The notification's Update action leaves it showing.
+            NotificationManagerCompat.from(this).cancel(AppUpdates.NOTIFICATION_TAG, 0)
+            checkForUpdate()
+            return
+        }
         val uri = intent.data ?: return
 
         runOnDefaultDispatcher {

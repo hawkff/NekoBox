@@ -68,6 +68,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.proto.UrlTest
+import xyz.nekobyte.nekobox.bg.updateBannerShown
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -189,6 +190,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
     lateinit var groupPager: ViewPager2
     private var tabLayoutMediator: TabLayoutMediator? = null
     private lateinit var tabBar: View
+    private lateinit var updateBanner: View
+    private lateinit var updateBannerText: TextView
 
     // Lists every group; hidden while there is only one.
     private lateinit var groupPicker: View
@@ -320,12 +323,16 @@ open class ConfigurationFragment @JvmOverloads constructor(
     // with the toolbar as a glass capsule.
     private fun styleGlassTabs() {
         tabBar.background = null
+        updateBanner.background = null
         tabLayout.background = null
         Glass.styleTabs(tabLayout, tabBar)
         searchResults.background = null
     }
 
-    override fun GlassLayout.glassPanes(bars: ViewGroup) = paneOver(bars, tabBar, 0f, 0f)
+    override fun GlassLayout.glassPanes(bars: ViewGroup) {
+        paneOver(bars, tabBar, 0f, 0f)
+        paneOver(bars, updateBanner, 0f, 0f)
+    }
 
     override fun onGlassInset(content: View, inset: Int) {
         super.onGlassInset(content, inset)
@@ -603,6 +610,17 @@ open class ConfigurationFragment @JvmOverloads constructor(
         groupPager = groupListBinding.groupPager
         tabLayout = groupListBinding.groupTab
         tabBar = groupListBinding.groupTabBar
+        updateBanner = groupListBinding.updateBanner
+        updateBannerText = groupListBinding.updateBannerText
+        groupListBinding.updateBannerUpdate.setOnClickListener { button ->
+            button.isEnabled = false
+            requireActivity().checkForUpdate { button.isEnabled = true }
+        }
+        groupListBinding.updateBannerDismiss.setOnClickListener {
+            DataStore.updateDismissed = DataStore.updateAvailable
+            updateBanner.isVisible = false
+        }
+        showUpdateBanner()
         // The tabs name the group on show, the only one too.
         toolbar.elevation = dp2px(4).toFloat()
         searchResults = groupListBinding.groupSearchResults
@@ -672,6 +690,8 @@ open class ConfigurationFragment @JvmOverloads constructor(
         }
 
         DataStore.profileCacheStore.registerChangeListener(this)
+        // A check that finishes while Home shows brings the banner up at once.
+        DataStore.configurationStore.registerChangeListener(this)
     }
 
     // Showing again: global mode, profiles and groups can change on other screens while this one stays hidden.
@@ -680,7 +700,15 @@ open class ConfigurationFragment @JvmOverloads constructor(
         // The other screen may have changed a layout, Favorites' among them.
         if (::adapter.isInitialized && view != null) followLayouts()
         if (!select && view != null) toolbar.menu.findItem(R.id.action_global_mode)?.isChecked = DataStore.globalMode
+        // A check on another screen or in the background may have found a release meanwhile.
+        if (view != null) showUpdateBanner()
         searchView?.query?.toString()?.takeIf { searchOpen && it.isNotBlank() }?.let(::searchAllGroups)
+    }
+
+    private fun showUpdateBanner() {
+        val available = DataStore.updateAvailable
+        updateBanner.isVisible = !select && !proxies && updateBannerShown(available, DataStore.updateDismissed)
+        updateBannerText.text = getString(R.string.app_update_available, available)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -689,6 +717,10 @@ open class ConfigurationFragment @JvmOverloads constructor(
     }
 
     override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
+        if (store == DataStore.configurationStore) {
+            if (key == Key.UPDATE_AVAILABLE || key == Key.UPDATE_DISMISSED) runOnMainDispatcher { if (view != null) showUpdateBanner() }
+            return
+        }
         runOnMainDispatcher {
             if (view == null || !::adapter.isInitialized) return@runOnMainDispatcher
             // editingGroup
@@ -714,6 +746,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
     private fun releaseViewListeners() {
         DataStore.profileCacheStore.unregisterChangeListener(this)
+        DataStore.configurationStore.unregisterChangeListener(this)
         tabLayoutMediator?.detach()
         tabLayoutMediator = null
         if (::adapter.isInitialized) {

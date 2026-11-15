@@ -21,6 +21,7 @@ import kotlinx.coroutines.DEBUG_PROPERTY_NAME
 import kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON
 import libcore.Libcore
 import xyz.nekobyte.nekobox.Key
+import xyz.nekobyte.nekobox.bg.AppUpdates
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.database.DataStore
@@ -43,6 +44,9 @@ const val CORE_NOTIFICATION_CHANNEL = "core"
 
 // Channel for the network automation watcher.
 const val AUTOMATION_NOTIFICATION_CHANNEL = "service-automation"
+
+// Channel for a newer release of the app.
+const val APP_UPDATE_NOTIFICATION_CHANNEL = "updates"
 
 class NekoBox :
     Application(),
@@ -131,6 +135,9 @@ class NekoBox :
                 migratePinnedProfileShortcuts(this@NekoBox)
                 // WorkManager schedules lost work again as it starts: a force stop cancels the subscription update's job.
                 WorkManager.getInstance(this@NekoBox)
+                AppUpdates.schedule(this@NekoBox)
+                // The setting changes in this process, from Settings or the local API.
+                DataStore.configurationStore.registerChangeListener(AppUpdates)
             }
         }
 
@@ -254,6 +261,11 @@ class NekoBox :
                             AUTOMATION_NOTIFICATION_CHANNEL,
                             application.getText(R.string.network_automation),
                             NotificationManager.IMPORTANCE_LOW,
+                        ),
+                        NotificationChannel(
+                            APP_UPDATE_NOTIFICATION_CHANNEL,
+                            application.getText(R.string.app_update_channel),
+                            NotificationManager.IMPORTANCE_DEFAULT,
                         ),
                     ),
                 )
