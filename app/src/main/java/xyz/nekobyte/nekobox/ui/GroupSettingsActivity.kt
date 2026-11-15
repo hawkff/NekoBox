@@ -74,6 +74,10 @@ class GroupSettingsActivity :
     // Set while the form shows the settings, so that its listeners don't write them back.
     private var filling = false
 
+    // Set once the form shows the settings; a profile picked before that waits for them, as they would overwrite it.
+    private var started = false
+    private var pendingPick: Pair<Long, Boolean>? = null
+
     fun ProxyGroup.init() {
         DataStore.groupName = name ?: ""
         DataStore.groupType = type
@@ -184,7 +188,8 @@ class GroupSettingsActivity :
             insets
         }
 
-        if (savedInstanceState != null) {
+        // A draft from a process that ended is gone: the editor starts over from the stored group.
+        if (savedInstanceState != null && savedInstanceState.getString(DRAFT_STORE) == DataStore.profileCacheStoreId) {
             // The settings store still holds the draft; the offers and the flag come back from the state.
             pendingLinkOffer = savedInstanceState.getString(LINK_OFFER).orEmpty()
             pendingBackupOffer = savedInstanceState.getString(BACKUP_OFFER).orEmpty()
@@ -225,6 +230,10 @@ class GroupSettingsActivity :
                 start(open = null)
                 DataStore.dirty = prefilled
                 DataStore.profileCacheStore.registerChangeListener(this@GroupSettingsActivity)
+                pendingPick?.let { (id, front) ->
+                    pendingPick = null
+                    pick(id, front)
+                }
             }
         }
     }
@@ -243,6 +252,7 @@ class GroupSettingsActivity :
         super.onSaveInstanceState(outState)
         outState.putString(LINK_OFFER, pendingLinkOffer)
         outState.putString(BACKUP_OFFER, pendingBackupOffer)
+        outState.putString(DRAFT_STORE, DataStore.profileCacheStoreId)
         if (::binding.isInitialized) outState.putBoolean(MORE, binding.more.isVisible)
     }
 
@@ -283,6 +293,7 @@ class GroupSettingsActivity :
         offerFormats()
         offerIntervals()
         filling = false
+        started = true
 
         fun EditText.writes(write: (String) -> Unit) = doAfterTextChanged {
             if (filling) return@doAfterTextChanged
@@ -596,7 +607,12 @@ class GroupSettingsActivity :
             setTitle(R.string.unsaved_changes_prompt)
             setPositiveButton(R.string.yes) { _, _ ->
                 val activity = requireActivity() as GroupSettingsActivity
-                if (activity.check()) runOnDefaultDispatcher { activity.saveAndExit() }
+                // A dialog restored after the process ended asks about a draft that is gone.
+                if (!activity.needSave()) {
+                    activity.finish()
+                } else if (activity.check()) {
+                    runOnDefaultDispatcher { activity.saveAndExit() }
+                }
             }
             setNegativeButton(R.string.no) { _, _ ->
                 requireActivity().finish()
@@ -711,6 +727,10 @@ class GroupSettingsActivity :
         if (resultCode != Activity.RESULT_OK) return
         val id = data?.getLongExtra(ProfileSelectActivity.EXTRA_PROFILE_ID, 0) ?: return
         if (id <= 0) return
+        if (started) pick(id, front) else pendingPick = id to front
+    }
+
+    private fun pick(id: Long, front: Boolean) {
         if (front) {
             DataStore.frontProxy = id
             DataStore.frontProxyTmp = PROXY_PROFILE
@@ -746,6 +766,7 @@ class GroupSettingsActivity :
         private const val LINK_OFFER = "linkOffer"
         private const val BACKUP_OFFER = "backupOffer"
         private const val MORE = "more"
+        private const val DRAFT_STORE = "draftStore"
 
         /** Quick picks for the update interval, in minutes: an hour, six and twelve hours, a day. */
         private val INTERVALS = listOf(60, 360, 720, 1440)

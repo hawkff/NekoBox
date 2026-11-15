@@ -87,6 +87,8 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
 
         /** The name of a first list of proxies, made when the new proxy is saved, so a canceled editor leaves none. */
         const val EXTRA_NEW_PROXY_LIST = "newProxyList"
+
+        private const val DRAFT_STORE = "draftStore"
     }
 
     abstract fun createEntity(): T
@@ -164,6 +166,9 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                         .commit()
                 }
             }
+        } else if (savedInstanceState.getString(DRAFT_STORE) != DataStore.profileCacheStoreId) {
+            // The draft ended with the process that held it, and the form would show and save defaults.
+            finish()
         } else {
             // A recreated editor keeps its fields; the stored profile and where it can move are read again.
             runOnDefaultDispatcher {
@@ -171,6 +176,11 @@ abstract class ProfileSettingsActivity<T : AbstractBean>(
                 onMainDispatcher { invalidateOptionsMenu() }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(DRAFT_STORE, DataStore.profileCacheStoreId)
     }
 
     open suspend fun saveAndExit() {

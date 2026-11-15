@@ -30,6 +30,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -71,14 +72,22 @@ class RouteSettingsActivity : ThemedActivity() {
         changed()
     }
 
+    // False when the screen was rebuilt in a new process: the settings store lost what it gave the app list or the JSON
+    // editor. What they return then counts only if the person chose it there, which writes it into the store anew.
+    private var storeSeeded = true
+
+    private fun returned(key: String) = storeSeeded || DataStore.profileCacheStore.getString(key) != null
+
     // The app list reads and writes its choice in the settings store.
     private val pickApps = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (!returned(Key.ROUTE_PACKAGES)) return@registerForActivityResult
         draft.packages = DataStore.routePackages.split('\n').filter { it.isNotBlank() }.toSet()
         showApps()
         changed()
     }
 
     private val editJson = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (!returned(Key.SERVER_CONFIG)) return@registerForActivityResult
         draft.config = DataStore.serverConfig
         showJson()
         changed()
@@ -114,6 +123,7 @@ class RouteSettingsActivity : ThemedActivity() {
         val savedDraft = savedInstanceState?.let { BundleCompat.getParcelable(it, DRAFT, RuleEntity::class.java) }
         val savedOriginal = savedInstanceState?.let { BundleCompat.getParcelable(it, ORIGINAL, RuleEntity::class.java) }
         if (savedDraft != null && savedOriginal != null) {
+            storeSeeded = savedInstanceState.getString(DRAFT_STORE) == DataStore.profileCacheStoreId
             start(stored = savedOriginal, edited = savedDraft)
             // Open or folded, the section stays as the person left it.
             if (savedInstanceState?.containsKey(MORE) == true) showMore(savedInstanceState.getBoolean(MORE), animate = false)
@@ -165,6 +175,8 @@ class RouteSettingsActivity : ThemedActivity() {
         if (!::draft.isInitialized || reading) return
         outState.putParcelable(DRAFT, draft)
         outState.putParcelable(ORIGINAL, original)
+        // Until this screen fills the store again, it stays one a new process emptied.
+        if (storeSeeded) outState.putString(DRAFT_STORE, DataStore.profileCacheStoreId)
         outState.putBoolean(MORE, binding.more.isVisible)
     }
 
@@ -246,11 +258,13 @@ class RouteSettingsActivity : ThemedActivity() {
         }
         binding.apps.setOnClickListener {
             DataStore.routePackages = draft.packages.joinToString("\n")
+            storeSeeded = true
             pickApps.launch(Intent(this, AppListActivity::class.java))
         }
         binding.customJson.setOnClickListener {
             if (reading) return@setOnClickListener showJsonToRead()
             DataStore.serverConfig = draft.config
+            storeSeeded = true
             editJson.launch(Intent(this, ConfigEditActivity::class.java))
         }
         binding.tryProbe.doAfterTextChanged { tryIt() }
@@ -492,6 +506,7 @@ class RouteSettingsActivity : ThemedActivity() {
         private const val DRAFT = "draft"
         private const val ORIGINAL = "original"
         private const val MORE = "more"
+        private const val DRAFT_STORE = "draftStore"
         private const val WORDS = 120L
         private const val TYPING = 250L
 

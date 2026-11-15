@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.delay
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.NekoBox
@@ -291,13 +290,11 @@ class GroupFragment :
             val started = onMainDispatcher { deletions }
             // Lists of proxies live on the Proxies screen.
             val groups = ProfileDatabase.groupDao.allGroups().filterTo(ArrayList()) { it.type != GroupType.PROXIES }
+            val sizes = ProfileDatabase.proxyDao.countsByGroup()
             val ungrouped = groups.find { it.ungrouped }
-            if (groups.size > 1 && ungrouped != null &&
-                ProfileDatabase.proxyDao.countByGroup(ungrouped.id) == 0L
-            ) {
+            if (groups.size > 1 && ungrouped != null && (sizes[ungrouped.id] ?: 0L) == 0L) {
                 groups.removeAll { it.ungrouped }
             }
-            val sizes = groups.associate { it.id to ProfileDatabase.proxyDao.countByGroup(it.id) }
             groupListView.post {
                 // Read before a deletion finished: read again.
                 if (started != deletions) {
@@ -439,7 +436,6 @@ class GroupFragment :
 
         override suspend fun groupAdd(group: ProxyGroup) {
             if (group.type == GroupType.PROXIES) return
-            delay(300L)
             val size = ProfileDatabase.proxyDao.countByGroup(group.id)
             onMainDispatcher {
                 undoManager.flush()

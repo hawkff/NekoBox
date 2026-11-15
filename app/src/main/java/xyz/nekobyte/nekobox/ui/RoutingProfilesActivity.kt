@@ -9,9 +9,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
@@ -26,6 +31,10 @@ import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
 class RoutingProfilesActivity : ThemedActivity() {
+    private companion object {
+        // Only between onStart and onStop, so no screen is held after it hides.
+        var shown: RoutingProfilesActivity? = null
+    }
 
     private lateinit var binding: LayoutRoutingProfilesBinding
     private val adapter = ProfileAdapter()
@@ -45,7 +54,19 @@ class RoutingProfilesActivity : ThemedActivity() {
         binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
         binding.recyclerView.adapter = adapter
         binding.emptySave.setOnClickListener { saveCurrent() }
+    }
+
+    // The list is read whenever the screen shows: a subscription update or an import begun on a screen since rebuilt
+    // can have changed it meanwhile.
+    override fun onStart() {
+        super.onStart()
+        shown = this
         adapter.reload()
+    }
+
+    override fun onStop() {
+        if (shown === this) shown = null
+        super.onStop()
     }
 
     override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(binding.coordinator, text, Snackbar.LENGTH_LONG)
@@ -58,7 +79,7 @@ class RoutingProfilesActivity : ThemedActivity() {
     private fun saveCurrent() = askName(getString(R.string.routing_profile_save_current), "") { name ->
         runOnDefaultDispatcher {
             RoutingProfiles.saveLiveAs(name)
-            onMainDispatcher { adapter.reload() }
+            onMainDispatcher { shown?.adapter?.reload() }
         }
     }
 
@@ -88,15 +109,22 @@ class RoutingProfilesActivity : ThemedActivity() {
     // Accepts export JSON, sn://routing/ links and Happ/INCY routing profiles alike. Replacing one
     // of the user's profiles (and applying it live when that profile is active), or importing a
     // provider profile with settings it cannot apply, needs a confirmation first.
-    private fun importText(text: String) {
+    // The parse runs off the main thread and outlives a rebuilt screen, so an import that needs no answer still lands.
+    private fun importText(text: String) = runOnDefaultDispatcher {
         val candidate = RoutingProfiles.parse(text)
-        if (candidate == null) {
-            snackbar(R.string.routing_profile_import_invalid).show()
+        val replaced = candidate?.let(RoutingProfiles::replacementFor)
+        onMainDispatcher { offerImport(candidate, replaced) }
+    }
+
+    private fun offerImport(candidate: RoutingProfiles.Profile?, replaced: RoutingProfiles.Profile?) {
+        if (candidate != null && replaced == null && candidate.notes.isEmpty()) {
+            store(candidate)
             return
         }
-        val replaced = RoutingProfiles.replacementFor(candidate)
-        if (replaced == null && candidate.notes.isEmpty()) {
-            store(candidate)
+        // A screen that is closing cannot show the outcome or ask.
+        if (isFinishing || isDestroyed) return
+        if (candidate == null) {
+            snackbar(R.string.routing_profile_import_invalid).show()
             return
         }
         val message = listOfNotNull(
@@ -110,7 +138,7 @@ class RoutingProfilesActivity : ThemedActivity() {
                 getString(R.string.routing_profile_not_applied, candidate.name, it.joinToString(", "))
             },
         ).joinToString("\n\n")
-        MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder(this@RoutingProfilesActivity)
             .setTitle(R.string.confirm)
             .setMessage(message)
             .setPositiveButton(R.string.yes) { _, _ -> store(candidate) }
@@ -122,9 +150,11 @@ class RoutingProfilesActivity : ThemedActivity() {
         runOnDefaultDispatcher {
             val stored = runCatching { RoutingProfiles.store(candidate) }.onFailure { Logs.w(it) }.getOrNull()
             onMainDispatcher {
-                adapter.reload()
+                // The screen showing now, which an import that outlived its own screen reaches too.
+                val screen = shown ?: return@onMainDispatcher
+                screen.adapter.reload()
                 if (stored?.id == RoutingProfiles.activeId && DataStore.serviceState.started) {
-                    snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
+                    screen.snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
                 }
             }
         }
@@ -162,9 +192,10 @@ class RoutingProfilesActivity : ThemedActivity() {
         runOnDefaultDispatcher {
             RoutingProfiles.switchTo(profile.id)
             onMainDispatcher {
-                adapter.reload()
+                val screen = shown ?: return@onMainDispatcher
+                screen.adapter.reload()
                 if (DataStore.serviceState.started) {
-                    snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
+                    screen.snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
                 }
             }
         }
@@ -179,8 +210,10 @@ class RoutingProfilesActivity : ThemedActivity() {
                     R.id.action_switch -> switchTo(profile)
 
                     R.id.action_rename -> askName(getString(R.string.routing_profile_rename), profile.name) { name ->
-                        RoutingProfiles.rename(profile.id, name)
-                        adapter.reload()
+                        runOnDefaultDispatcher {
+                            RoutingProfiles.rename(profile.id, name)
+                            onMainDispatcher { shown?.adapter?.reload() }
+                        }
                     }
 
                     R.id.action_export_clipboard -> runOnDefaultDispatcher {
@@ -199,8 +232,10 @@ class RoutingProfilesActivity : ThemedActivity() {
                         .setTitle(R.string.confirm)
                         .setMessage(getString(R.string.routing_profile_delete_message, profile.name))
                         .setPositiveButton(R.string.yes) { _, _ ->
-                            RoutingProfiles.delete(profile.id)
-                            adapter.reload()
+                            runOnDefaultDispatcher {
+                                RoutingProfiles.delete(profile.id)
+                                onMainDispatcher { shown?.adapter?.reload() }
+                            }
                         }
                         .setNegativeButton(R.string.no, null)
                         .show()
@@ -213,12 +248,18 @@ class RoutingProfilesActivity : ThemedActivity() {
 
     inner class ProfileAdapter : RecyclerView.Adapter<ProfileHolder>() {
         private val profiles = ArrayList<RoutingProfiles.Profile>()
+        private var loading: Job? = null
 
+        // Stored profiles can be megabytes of JSON: they are read off the main thread, and only the latest read shows.
         fun reload() {
-            profiles.clear()
-            profiles.addAll(RoutingProfiles.list())
-            notifyDataSetChanged()
-            binding.empty.isVisible = profiles.isEmpty()
+            loading?.cancel()
+            loading = lifecycleScope.launch {
+                val fresh = withContext(Dispatchers.Default) { RoutingProfiles.list() }
+                profiles.clear()
+                profiles.addAll(fresh)
+                notifyDataSetChanged()
+                binding.empty.isVisible = profiles.isEmpty()
+            }
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ProfileHolder(LayoutTwoLineItemBinding.inflate(layoutInflater, parent, false))
