@@ -451,7 +451,7 @@ func raceHTTPRequests(ctx context.Context, funcs []labeledRequestFunc) (*http.Re
 }
 
 func (r *httpRequest) doH3Direct() (HTTPResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), r.h1h2Client.Timeout)
 	defer cancel()
 
 	funcs := []labeledRequestFunc{
