@@ -234,6 +234,7 @@ class HysteriaFmtTest {
         assertEquals(listOf("443:443", "8443:8443"), outbound.server_ports)
         assertNull(outbound.server_port)
         assertEquals(listOf("443:443", "20000:30000"), hopPortsToSingboxList(" 443 , 20000-30000"))
+        assertEquals(listOf(":443", "20000:30000"), hopPortsToSingboxList("-443,20000-30000"))
         assertThrows(IllegalStateException::class.java) { hopPortsToSingboxList(" , abc") }
     }
 
