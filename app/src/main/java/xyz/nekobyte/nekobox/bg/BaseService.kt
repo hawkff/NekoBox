@@ -575,6 +575,8 @@ class BaseService {
                     }
                     data.notification?.destroy()
                     data.notification = null
+                    // Also the bare notice of a start stopped before it had its own: a bound service lives on.
+                    stopForeground(Service.STOP_FOREGROUND_REMOVE)
                 }
 
                 if (blocked) {
@@ -716,6 +718,9 @@ class BaseService {
             // delivered rather than lost (the receiver used to be registered only after the
             // off-main work, opening a drop window).
             registerCloseReceiver()
+            // Android ends the process of a service started this way that stops before startForeground, as a
+            // start that fails or is stopped while it prepares does; the start's own notice replaces this one.
+            if (data.notification == null) ServiceNotification.enterForeground(this as Service, if (this is VpnService) "service-vpn" else "service-proxy")
             // Read config off-main first (PublicDatabase no longer allows main-thread queries),
             // then run the existing connect logic on the main dispatcher. onStartCommand returns
             // synchronously; the null-profile short-circuit now lives inside the job.

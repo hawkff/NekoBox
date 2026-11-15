@@ -938,6 +938,24 @@ class ConfigBuilderGoldenTest {
         assertNull(local("""{"inbounds":[{"type":"mixed","tag":"$TAG_MIXED","listen":"127.0.0.1"}]}"""))
     }
 
+    // Items keep their own settings, tags included, when the global custom JSON prepends to the arrays they are in.
+    @Test
+    fun globalCustomJsonPrepends_leaveTheGeneratedOutboundsAndDnsRulesIntact() {
+        val profile = addSocks(addGroup(), "192.0.2.63", 1080, "global-prepend")
+        fun parts(): Pair<List<String>, List<String>> {
+            val config = JSONObject(build(profile).config)
+            return objects(config.getJSONArray("outbounds")).map { it.toString() } to
+                objects(config.getJSONObject("dns").getJSONArray("rules")).map { it.toString() }
+        }
+        val (outbounds, dnsRules) = parts()
+        val extraOutbound = """{"type":"direct","tag":"extra-direct"}"""
+        val extraRule = """{"domain":["extra.example"],"server":"dns-direct"}"""
+        DataStore.globalCustomConfig = """{"+outbounds":[$extraOutbound],"dns":{"+rules":[$extraRule]}}"""
+        val (prependedOutbounds, prependedDnsRules) = parts()
+        assertEquals(listOf(JSONObject(extraOutbound).toString()) + outbounds, prependedOutbounds)
+        assertEquals(listOf(JSONObject(extraRule).toString()) + dnsRules, prependedDnsRules)
+    }
+
     // A full config runs as written. One made from an exported config still has the inbound, under its tag and
     // without a login.
     @Test

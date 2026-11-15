@@ -33,6 +33,7 @@ import xyz.nekobyte.nekobox.group.GroupUpdater
 import xyz.nekobyte.nekobox.ktx.EaseOut
 import xyz.nekobyte.nekobox.ktx.FixedLinearLayoutManager
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.ktx.itemMoveIndices
 import xyz.nekobyte.nekobox.ktx.launchCustomTab
@@ -72,6 +73,19 @@ class GroupFragment :
 
     // The groups selected for removal. While there are any, a tap on a row selects it or drops it.
     private val selected = HashSet<Long>()
+
+    // The group whose profiles go to the file being picked; kept for a screen rebuilt under the file picker.
+    private var exportingGroup = 0L
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        exportingGroup = savedInstanceState?.getLong(KEY_EXPORTING_GROUP) ?: 0L
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putLong(KEY_EXPORTING_GROUP, exportingGroup)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -235,27 +249,23 @@ class GroupFragment :
 
     private fun newGroup() = showNewGroupChoices(requireContext())
 
-    private lateinit var selectedGroup: ProxyGroup
-
     private val exportProfiles =
         registerForActivityResult(ActivityResultContracts.CreateDocument()) { data ->
-            if (data != null) {
+            val groupId = exportingGroup
+            if (data != null && groupId > 0L) {
                 runOnDefaultDispatcher {
-                    val profiles = ProfileDatabase.proxyDao.getByGroup(selectedGroup.id)
-                    val links = profiles.joinToString("\n") { it.toStdLink(compact = true) }
                     try {
-                        (requireActivity() as MainActivity).contentResolver.openOutputStream(
-                            data,
-                        )!!.bufferedWriter().use {
+                        val links = ProfileDatabase.proxyDao.getByGroup(groupId).joinToString("\n") { it.toStdLink(compact = true) }
+                        app.contentResolver.openOutputStream(data)!!.bufferedWriter().use {
                             it.write(links)
                         }
                         onMainDispatcher {
-                            snackbar(getString(R.string.action_export_msg)).show()
+                            if (isAdded) snackbar(getString(R.string.action_export_msg)).show()
                         }
                     } catch (e: Exception) {
                         Logs.w(e)
                         onMainDispatcher {
-                            snackbar(e.readableMessage).show()
+                            if (isAdded) snackbar(e.readableMessage).show()
                         }
                     }
                 }
@@ -532,7 +542,6 @@ class GroupFragment :
         }
 
         private fun menu(anchor: View, menu: Int) {
-            selectedGroup = proxyGroup
             val popup = PopupMenu(requireContext(), anchor)
             popup.menuInflater.inflate(menu, popup.menu)
             val subscription = proxyGroup.subscription.takeIf { proxyGroup.type == GroupType.SUBSCRIPTION }
@@ -557,15 +566,21 @@ class GroupFragment :
 
                 R.id.action_universal_clipboard -> export(proxyGroup.toUniversalLink())
 
-                R.id.action_export_clipboard -> runOnDefaultDispatcher {
-                    val links = ProfileDatabase.proxyDao.getByGroup(selectedGroup.id).joinToString("\n") { it.toStdLink(compact = true) }
-                    onMainDispatcher {
-                        NekoBox.trySetPrimaryClip(links)
-                        snackbar(getString(R.string.copy_toast_msg)).show()
+                R.id.action_export_clipboard -> {
+                    val groupId = proxyGroup.id
+                    runOnDefaultDispatcher {
+                        val links = ProfileDatabase.proxyDao.getByGroup(groupId).joinToString("\n") { it.toStdLink(compact = true) }
+                        onMainDispatcher {
+                            NekoBox.trySetPrimaryClip(links)
+                            if (isAdded) snackbar(getString(R.string.copy_toast_msg)).show()
+                        }
                     }
                 }
 
-                R.id.action_export_file -> startFilesForResult(exportProfiles, "profiles_${proxyGroup.displayName()}.txt")
+                R.id.action_export_file -> {
+                    exportingGroup = proxyGroup.id
+                    startFilesForResult(exportProfiles, "profiles_${proxyGroup.displayName()}.txt")
+                }
 
                 R.id.action_support_url -> requireContext().launchCustomTab(proxyGroup.subscription!!.supportUrl!!)
 
@@ -712,6 +727,7 @@ class GroupFragment :
     }
 
     private companion object {
+        const val KEY_EXPORTING_GROUP = "exportingGroup"
         const val OPEN = "open"
         const val SELECT = "select"
         const val OPEN_FADE = 200L

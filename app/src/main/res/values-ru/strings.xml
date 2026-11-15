@@ -456,7 +456,7 @@
     <string name="restore_in_progress">Восстановление уже выполняется</string>
     <string name="restore_cancelled">Операция восстановления отменена</string>
     <string name="ruleset_update_interval">Интервал обновления набора правил</string>
-    <string name="ruleset_update_interval_summary">Время между обновлениями удалённых наборов правил. Примеры: 1h, 30m, 3600s. Установите 0, чтобы отключить автоматическое обновление</string>
+    <string name="ruleset_update_interval_summary">Время между обновлениями удалённых наборов правил. Примеры: 1h, 30m; число без единицы означает часы. 0 оставляет обновление по умолчанию раз в сутки</string>
     <string name="ruleset_prefix_error">Ошибка формата набора правил: должен начинаться с rsip: или rssite:</string>
     <string name="clear_cache">Очистить кэш</string>
     <string name="clear_cache_summary">Очистить файлы кэша приложения для устранения некоторых неполадок</string>

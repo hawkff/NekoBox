@@ -13,6 +13,7 @@ import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.SingBoxOptions
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.hysteria.buildSingBoxOutboundHysteriaBean
+import xyz.nekobyte.nekobox.fmt.hysteria.hopPortsToSingboxList
 import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2
 import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2Json
 import xyz.nekobyte.nekobox.fmt.hysteria.toUri
@@ -225,6 +226,16 @@ class HysteriaFmtTest {
         assertThrows(IllegalArgumentException::class.java) {
             buildSingBoxOutboundHysteriaBean(malformedBase64)
         }
+    }
+
+    @Test
+    fun hopPorts_keepSinglePortsAsRangesForTheCore() {
+        val outbound = buildHysteria2(hysteria2Bean().apply { serverPorts = "443,8443" })
+        assertEquals(listOf("443:443", "8443:8443"), outbound.server_ports)
+        assertNull(outbound.server_port)
+        assertEquals(listOf("443:443", "20000:30000"), hopPortsToSingboxList(" 443 , 20000-30000"))
+        assertEquals(listOf(":443", "20000:30000"), hopPortsToSingboxList("-443,20000-30000"))
+        assertThrows(IllegalStateException::class.java) { hopPortsToSingboxList(" , abc") }
     }
 
     @Test

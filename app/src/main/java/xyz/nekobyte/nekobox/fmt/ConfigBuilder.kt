@@ -1185,15 +1185,17 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             for (rule in extraRules) {
                 if (rule.packages.isNotEmpty()) {
                     PackageCache.awaitLoadSync()
+                    if (!isVPN) {
+                        runOnMainDispatcher {
+                            Toast.makeText(
+                                NekoBox.application,
+                                NekoBox.application.getString(R.string.route_need_vpn, rule.displayName()),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
                 }
                 val uidList = rule.packages.map {
-                    if (!isVPN) {
-                        Toast.makeText(
-                            NekoBox.application,
-                            NekoBox.application.getString(R.string.route_need_vpn, rule.displayName()),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
                     PackageCache[it]?.takeIf { uid -> uid >= 1000 }
                 }.toHashSet().filterNotNull()
                 // Dropping an unresolved app condition would turn an app rule into a broader rule.
@@ -1635,9 +1637,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         }
 
         if (endpointList.isNotEmpty()) endpoints = endpointList
-        if (!forTest) _hack_custom_config = DataStore.globalCustomConfig
     }.let {
         val configTree = SingBoxOptions.toJsonTree(it)
+        // Merged into the finished tree: on the root option it would shift arrays before their items' own settings apply.
+        if (!forTest) Util.mergeJsonElement(configTree, DataStore.globalCustomConfig)
         Util.mergeJsonElement(configTree, proxy.requireBean().customConfigJson!!)
         ConfigBuildResult(
             SingBoxOptions.treeToJson(configTree),

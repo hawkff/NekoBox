@@ -155,9 +155,21 @@ fun generateRemoteRuleSet(url: String, ruleSets: MutableList<RuleSet>, updateInt
             this.tag = tag
             format = if (url.toHttpUrlOrNull()?.pathSegments?.last()?.endsWith(".json", ignoreCase = true) == true) "source" else "binary"
             this.url = url
-            update_interval = updateInterval
+            update_interval = remoteRuleSetUpdateInterval(updateInterval)
         },
     )
 
     return tag
+}
+
+// The core reads a Go duration and updates once a day when the field is absent; a bare number is hours, as the local
+// API takes it.
+fun remoteRuleSetUpdateInterval(updateInterval: String): String? {
+    val value = updateInterval.trim()
+    val hours = value.toLongOrNull()
+    return when {
+        value.isEmpty() || hours == 0L -> null
+        hours != null && hours > 0 -> "${hours}h"
+        else -> updateInterval
+    }
 }

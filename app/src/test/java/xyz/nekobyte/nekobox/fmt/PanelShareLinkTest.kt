@@ -18,6 +18,7 @@ import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.hysteria.parseHysteria2
 import xyz.nekobyte.nekobox.fmt.shadowsocks.parseShadowsocks
+import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundTLS
 import xyz.nekobyte.nekobox.fmt.v2ray.isFragmentFinalMask
@@ -157,6 +158,22 @@ class PanelShareLinkTest {
         assertNull(dynamicEch.config)
         val inlineEch = buildSingBoxOutboundTLS(bean.applyDefaultValues())!!.ech!!
         assertEquals(listOf("-----BEGIN ECH CONFIGS-----", ECH, "-----END ECH CONFIGS-----"), inlineEch.config)
+    }
+
+    @Test
+    fun packetEncodingAndPlainTrojan_roundTripThroughLinks() = runTest {
+        val vless = parseProxies("vless://$UUID@node.example:443?type=tcp&security=none&packetEncoding=packetaddr#pe").single() as VMessBean
+        assertEquals(1, vless.packetEncoding)
+        val exported = vless.toUriVMessVLESSTrojan(false)
+        assertTrue(exported.contains("packetEncoding=packetaddr"))
+        assertEquals(1, (parseProxies(exported).single() as VMessBean).packetEncoding)
+
+        val trojan = parseProxies("trojan://secret@node.example:443?type=tcp&security=none#plain").single() as TrojanBean
+        assertEquals("none", trojan.security)
+        for (security in listOf("none", "")) {
+            trojan.security = security
+            assertEquals("none", (parseProxies(trojan.toUriVMessVLESSTrojan(true)).single() as TrojanBean).security)
+        }
     }
 
     @Test

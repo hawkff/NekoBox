@@ -431,7 +431,7 @@
     <string name="restore_in_progress">بازیابی از قبل در حال انجام است</string>
     <string name="restore_cancelled">عملیات بازیابی لغو شد</string>
     <string name="ruleset_update_interval">بازهٔ به‌روزرسانی مجموعه‌قواعد</string>
-    <string name="ruleset_update_interval_summary">فاصلهٔ زمانی بین به‌روزرسانی مجموعه‌قواعد راه دور. مثال‌ها: 1h، 30m، 3600s. برای غیرفعال‌کردن به‌روزرسانی خودکار روی 0 بگذارید</string>
+    <string name="ruleset_update_interval_summary">فاصلهٔ زمانی بین به‌روزرسانی مجموعه‌قواعد راه دور. مثال‌ها: 1h، 30m؛ عدد بدون واحد به معنای ساعت است. با 0 پیش‌فرض یک بار در روز حفظ می‌شود</string>
     <string name="ruleset_prefix_error">خطای قالب مجموعه‌قواعد: باید با rsip: یا rssite: شروع شود</string>
     <string name="clear_cache">پاک‌سازی حافظهٔ پنهان</string>
     <string name="clear_cache_summary">پاک‌سازی فایل‌های حافظهٔ پنهان برنامه برای رفع برخی مشکلات غیرعادی</string>

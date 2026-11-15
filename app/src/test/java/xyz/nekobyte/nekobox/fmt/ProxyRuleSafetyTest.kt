@@ -68,6 +68,16 @@ class ProxyRuleSafetyTest {
         Logs.sink = originalLogSink
     }
 
+    // The build runs on a thread without a Looper, where a Toast cannot be made; the notice is posted instead.
+    @Test
+    fun proxyMode_appRuleBuildsAndPostsItsNotice() {
+        DataStore.serviceMode = Key.MODE_PROXY
+        rules(RuleEntity(packages = apps, outbound = 0))
+        build()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, ShadowToast.shownToastCount())
+    }
+
     @Test
     fun missingTarget_blocksOnlyMatchingTrafficAndDnsWithoutDnsOptIn() {
         rules(

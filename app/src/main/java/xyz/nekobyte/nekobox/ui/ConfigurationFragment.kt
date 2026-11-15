@@ -1504,33 +1504,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
             R.id.action_global_mode -> {
                 item.isChecked = !item.isChecked
                 DataStore.globalMode = item.isChecked
-                if (DataStore.serviceState.canStop) {
-                    runOnDefaultDispatcher {
-                        try {
-                            // ensure the globalMode write-through has committed before offering
-                            // reload (the :bg reload re-reads globalMode from the DB)
-                            DataStore.configurationStore.awaitWrites()
-                            snackbar(getString(R.string.need_reload)).setAction(R.string.apply) {
-                                runOnDefaultDispatcher {
-                                    try {
-                                        DataStore.configurationStore.awaitWrites()
-                                        NekoBox.reloadService()
-                                    } catch (e: Exception) {
-                                        Logs.w(e)
-                                        onMainDispatcher {
-                                            snackbar(getString(R.string.service_failed)).show()
-                                        }
-                                    }
-                                }
-                            }.show()
-                        } catch (e: Exception) {
-                            Logs.w(e)
-                            onMainDispatcher {
-                                snackbar(getString(R.string.service_failed)).show()
-                            }
-                        }
-                    }
-                }
+                needReload()
                 return true
             }
         }
@@ -1718,7 +1692,7 @@ open class ConfigurationFragment @JvmOverloads constructor(
 
                                 if (icmpPing) {
                                     profile.status = 2
-                                    profile.error = getString(
+                                    profile.error = app.getString(
                                         if (message.contains("timeout")) R.string.connection_test_timeout_error else R.string.connection_test_unreachable,
                                     )
                                 } else {
@@ -1726,17 +1700,17 @@ open class ConfigurationFragment @JvmOverloads constructor(
                                     when {
                                         !message.contains("failed:") ->
                                             profile.error =
-                                                getString(R.string.connection_test_timeout_error)
+                                                app.getString(R.string.connection_test_timeout_error)
 
                                         else -> when {
                                             message.contains("ECONNREFUSED") -> {
                                                 profile.error =
-                                                    getString(R.string.connection_test_refused)
+                                                    app.getString(R.string.connection_test_refused)
                                             }
 
                                             message.contains("ENETUNREACH") -> {
                                                 profile.error =
-                                                    getString(R.string.connection_test_unreachable)
+                                                    app.getString(R.string.connection_test_unreachable)
                                             }
 
                                             else -> {

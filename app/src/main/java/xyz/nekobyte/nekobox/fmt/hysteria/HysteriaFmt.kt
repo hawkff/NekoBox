@@ -437,11 +437,10 @@ fun buildSingBoxOutboundHysteriaBean(bean: HysteriaBean): SingBoxOptions.SingBox
     else -> error("Unsupported Hysteria version: ${bean.protocolVersion}")
 }
 
+// The core takes "a:b" ranges only and does not trim them; a single port is the range from it to itself.
 fun hopPortsToSingboxList(s: String): List<String> = s.split(",").mapNotNull {
-    val pRange = it.replace("-", ":")
-    if (pRange.split(":").size == 2) {
-        pRange
-    } else {
-        null
-    }
-}
+    val item = it.trim()
+    // "-443" is a range open at its start, not a negative port.
+    val pRange = if (item.isNotEmpty() && item.all { c -> c.isDigit() }) "$item:$item" else item.replace("-", ":")
+    pRange.takeIf { pRange.split(":").size == 2 }
+}.ifEmpty { error("Hysteria server ports \"$s\" name no port or port range") }
