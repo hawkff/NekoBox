@@ -439,7 +439,12 @@ class RawUpdaterTransactionTest {
             RawUpdater.updateFromContent(group, subscription, singBoxOutbounds(listOf("Edge | 5 GB" to "198.51.100.1")))
             val tested = ProfileDatabase.proxyDao.getByGroup(group.id).single()
             assertTrue(tested.requireBean() is ConfigBean)
-            ProfileDatabase.proxyDao.updateProxy(tested.apply { status = 1; ping = 42 })
+            ProfileDatabase.proxyDao.updateProxy(
+                tested.apply {
+                    status = 1
+                    ping = 42
+                },
+            )
             DataStore.rememberProxyExits(mapOf(tested.id to "198.51.100.9"))
             RawUpdater.updateFromContent(group, subscription, singBoxOutbounds(listOf("Edge | 4 GB" to "198.51.100.1")))
             val renamed = ProfileDatabase.proxyDao.getById(tested.id)!!
