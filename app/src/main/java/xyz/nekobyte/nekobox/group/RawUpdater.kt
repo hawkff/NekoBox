@@ -562,9 +562,10 @@ object RawUpdater : GroupUpdater() {
 
         // Only the nodes the filter keeps are looked up; the filter sees host names.
         if (subscription.forceResolve!!) {
+            // A nameless node keeps the host it was given as its name, so the filter, and the next update, know it by
+            // that name and not by the address it resolved to.
+            for (proxy in proxies) if (proxy.name.isNullOrBlank()) proxy.name = proxy.displayName()
             forceResolve(proxies, proxyGroup.id)
-            // Nameless nodes are named by their address, and two hosts can resolve to one.
-            ensureUniqueNames(proxies)
         }
 
         val exists = ProfileDatabase.proxyDao.getByGroup(proxyGroup.id)

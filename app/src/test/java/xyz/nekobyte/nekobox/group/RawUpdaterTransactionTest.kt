@@ -385,7 +385,10 @@ class RawUpdaterTransactionTest {
             subscription.filterRegex = "^localhost"
             ProfileDatabase.groupDao.updateGroup(group)
             RawUpdater.updateFromContent(group, subscription, "socks://localhost:1080\nsocks://192.0.2.9:1080#other")
-            assertEquals(listOf(loopback), ProfileDatabase.proxyDao.getByGroup(group.id).map { it.requireBean().serverAddress })
+            val resolved = ProfileDatabase.proxyDao.getByGroup(group.id).single()
+            assertEquals(loopback, resolved.requireBean().serverAddress)
+            // Stored under the host it was given, so a later partial update's filter keeps it.
+            assertEquals("localhost:1080", resolved.displayName())
         }
     }
 
