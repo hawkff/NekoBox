@@ -31,6 +31,10 @@ import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
 class RoutingProfilesActivity : ThemedActivity() {
+    private companion object {
+        // Only between onStart and onStop, so no screen is held after it hides.
+        var shown: RoutingProfilesActivity? = null
+    }
 
     private lateinit var binding: LayoutRoutingProfilesBinding
     private val adapter = ProfileAdapter()
@@ -50,7 +54,19 @@ class RoutingProfilesActivity : ThemedActivity() {
         binding.recyclerView.layoutManager = FixedLinearLayoutManager(binding.recyclerView)
         binding.recyclerView.adapter = adapter
         binding.emptySave.setOnClickListener { saveCurrent() }
+    }
+
+    // The list is read whenever the screen shows: a subscription update or an import begun on a screen since rebuilt
+    // can have changed it meanwhile.
+    override fun onStart() {
+        super.onStart()
+        shown = this
         adapter.reload()
+    }
+
+    override fun onStop() {
+        if (shown === this) shown = null
+        super.onStop()
     }
 
     override fun snackbarInternal(text: CharSequence): Snackbar = Snackbar.make(binding.coordinator, text, Snackbar.LENGTH_LONG)
@@ -134,9 +150,11 @@ class RoutingProfilesActivity : ThemedActivity() {
         runOnDefaultDispatcher {
             val stored = runCatching { RoutingProfiles.store(candidate) }.onFailure { Logs.w(it) }.getOrNull()
             onMainDispatcher {
-                adapter.reload()
+                // The screen showing now, which an import that outlived its own screen reaches too.
+                val screen = shown ?: return@onMainDispatcher
+                screen.adapter.reload()
                 if (stored?.id == RoutingProfiles.activeId && DataStore.serviceState.started) {
-                    snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
+                    screen.snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
                 }
             }
         }
