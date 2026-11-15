@@ -434,6 +434,8 @@ class RawUpdaterTransactionTest {
     @Test
     fun aSingBoxOutboundWhoseTagAloneChanges_keepsItsTestResultAndExit() = runTest {
         withContext(Dispatchers.IO) {
+            // A list of sing-box outbounds only, so no stored native profile turns into a raw one.
+            ProfileDatabase.proxyDao.deleteAll(group.id)
             RawUpdater.updateFromContent(group, subscription, singBoxOutbounds(listOf("Edge | 5 GB" to "198.51.100.1")))
             val tested = ProfileDatabase.proxyDao.getByGroup(group.id).single()
             assertTrue(tested.requireBean() is ConfigBean)
