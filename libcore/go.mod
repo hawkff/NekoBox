@@ -9,9 +9,9 @@ require (
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/sagernet/gomobile v0.1.13
 	github.com/sagernet/quic-go v0.61.0-sing-box-mod.14
-	github.com/sagernet/sing v0.9.7-0.20261023115459-5dc452e537bf
+	github.com/sagernet/sing v0.9.7-0.20261108133214-88ca72637655
 	github.com/sagernet/sing-box v1.0.0 // replaced
-	github.com/sagernet/sing-tun v0.9.7-0.20261023115432-040db71fcd33
+	github.com/sagernet/sing-tun v0.9.7-0.20261109102115-27e188fc90f4
 	github.com/sagernet/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261019070639-79c1732442a9
 	github.com/slackhq/nebula v1.12.0
 	github.com/ulikunitz/xz v0.5.17
