@@ -30,6 +30,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -72,19 +73,21 @@ class RouteSettingsActivity : ThemedActivity() {
     }
 
     // False when the screen was rebuilt in a new process: the settings store lost what it gave the app list or the JSON
-    // editor, so what they return is dropped until the screen gives them the draft again.
+    // editor. What they return then counts only if the person chose it there, which writes it into the store anew.
     private var storeSeeded = true
+
+    private fun returned(key: String) = storeSeeded || DataStore.profileCacheStore.getString(key) != null
 
     // The app list reads and writes its choice in the settings store.
     private val pickApps = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        if (!storeSeeded) return@registerForActivityResult
+        if (!returned(Key.ROUTE_PACKAGES)) return@registerForActivityResult
         draft.packages = DataStore.routePackages.split('\n').filter { it.isNotBlank() }.toSet()
         showApps()
         changed()
     }
 
     private val editJson = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        if (!storeSeeded) return@registerForActivityResult
+        if (!returned(Key.SERVER_CONFIG)) return@registerForActivityResult
         draft.config = DataStore.serverConfig
         showJson()
         changed()

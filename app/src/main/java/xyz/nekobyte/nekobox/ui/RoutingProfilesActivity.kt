@@ -79,7 +79,7 @@ class RoutingProfilesActivity : ThemedActivity() {
     private fun saveCurrent() = askName(getString(R.string.routing_profile_save_current), "") { name ->
         runOnDefaultDispatcher {
             RoutingProfiles.saveLiveAs(name)
-            onMainDispatcher { adapter.reload() }
+            onMainDispatcher { shown?.adapter?.reload() }
         }
     }
 
@@ -192,9 +192,10 @@ class RoutingProfilesActivity : ThemedActivity() {
         runOnDefaultDispatcher {
             RoutingProfiles.switchTo(profile.id)
             onMainDispatcher {
-                adapter.reload()
+                val screen = shown ?: return@onMainDispatcher
+                screen.adapter.reload()
                 if (DataStore.serviceState.started) {
-                    snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
+                    screen.snackbar(R.string.need_reload).setAction(R.string.apply) { NekoBox.reloadService() }.show()
                 }
             }
         }
@@ -211,7 +212,7 @@ class RoutingProfilesActivity : ThemedActivity() {
                     R.id.action_rename -> askName(getString(R.string.routing_profile_rename), profile.name) { name ->
                         runOnDefaultDispatcher {
                             RoutingProfiles.rename(profile.id, name)
-                            onMainDispatcher { adapter.reload() }
+                            onMainDispatcher { shown?.adapter?.reload() }
                         }
                     }
 
@@ -233,7 +234,7 @@ class RoutingProfilesActivity : ThemedActivity() {
                         .setPositiveButton(R.string.yes) { _, _ ->
                             runOnDefaultDispatcher {
                                 RoutingProfiles.delete(profile.id)
-                                onMainDispatcher { adapter.reload() }
+                                onMainDispatcher { shown?.adapter?.reload() }
                             }
                         }
                         .setNegativeButton(R.string.no, null)
