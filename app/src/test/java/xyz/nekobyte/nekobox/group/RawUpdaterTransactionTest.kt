@@ -280,10 +280,28 @@ class RawUpdaterTransactionTest {
             val failure = runCatching {
                 RawUpdater.updateFromContent(group, subscription, validContent.replace("192.0.2.22", "192.0.2.23"))
             }.exceptionOrNull()
-            assertTrue(failure?.message.orEmpty().startsWith("Exist profiles:"))
+            assertEquals("Profiles of the group changed during the update", failure?.message)
             val moved = ProfileDatabase.proxyDao.getById(second.id)!!
             assertEquals(other.id, moved.groupId)
             assertEquals("192.0.2.22", moved.requireBean().serverAddress)
+        }
+    }
+
+    // Only its order would change; another profile joining keeps the group's count, which alone would not tell.
+    @Test
+    fun aReorderedProfileMovedAwayWhileAnotherJoins_failsTheUpdate() = runTest {
+        withContext(Dispatchers.IO) {
+            val first = ProfileDatabase.proxyDao.getByGroup(group.id).single { it.displayName() == "first" }
+            val other = ProxyGroup(name = "other").also { it.id = ProfileDatabase.groupDao.createGroup(it) }
+            afterTheUpdateReadTheProfiles {
+                ProfileDatabase.proxyDao.updateGroup(first.id, other.id)
+                addSocks("joined", "192.0.2.30", 40)
+            }
+            val failure = runCatching { RawUpdater.updateFromContent(group, subscription, validContent) }.exceptionOrNull()
+            assertEquals("Profiles of the group changed during the update", failure?.message)
+            val moved = ProfileDatabase.proxyDao.getById(first.id)!!
+            assertEquals(other.id, moved.groupId)
+            assertEquals(first.userOrder, moved.userOrder)
         }
     }
 

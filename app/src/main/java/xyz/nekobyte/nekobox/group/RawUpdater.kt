@@ -61,6 +61,8 @@ import java.nio.ByteBuffer
 @Suppress("EXPERIMENTAL_API_USAGE")
 object RawUpdater : GroupUpdater() {
 
+    private const val PROFILES_CHANGED = "Profiles of the group changed during the update"
+
     internal data class ReconciliationResult(
         val contentChanged: Boolean,
         val orderChanged: Boolean,
@@ -793,11 +795,10 @@ object RawUpdater : GroupUpdater() {
             }
             if (toUpdate.isNotEmpty()) {
                 // The planned changes go onto the rows as stored now: traffic, test results and local settings saved
-                // while the update ran stay. A row moved to another group meanwhile is left there; the count below
-                // then fails the update.
+                // while the update ran stay. A row moved to another group meanwhile is left there and fails the update.
                 val saved = ProfileDatabase.proxyDao.getEntities(toUpdate.map { it.id }).associateBy { it.id }
                 for (planned in toUpdate) {
-                    val now = saved[planned.id]?.takeIf { it.groupId == proxyGroup.id } ?: continue
+                    val now = checkNotNull(saved[planned.id]?.takeIf { it.groupId == proxyGroup.id }) { PROFILES_CHANGED }
                     val bean = planned.requireBean()
                     refreshBean(now.requireBean(), bean)
                     now.putBean(bean)
@@ -810,7 +811,10 @@ object RawUpdater : GroupUpdater() {
             }
             // Retained rows and rows whose order alone changed need only an order update; keep their serialized payloads
             // byte-for-byte.
-            for ((id, order) in keptOrderChanges) updatedCount += ProfileDatabase.proxyDao.updateOrder(id, order)
+            for ((id, order) in keptOrderChanges) {
+                check(ProfileDatabase.proxyDao.updateOrderInGroup(proxyGroup.id, id, order) == 1) { PROFILES_CHANGED }
+                updatedCount++
+            }
 
             val existCount = ProfileDatabase.proxyDao.countByGroup(proxyGroup.id).toInt()
             if (existCount != proxies.size + kept.size) {
