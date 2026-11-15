@@ -70,13 +70,8 @@ class NekoBox :
             updateNotificationChannels()
             externalAssets.mkdirs()
             Seq.setContext(this)
-            // Read alongside the settings prime below: the store's roots take time to load, and the setting
-            // that picks among them is known only after the prime.
-            val androidCertificates = arrayOfNulls<Map<String, ByteArray>>(1)
-            val certificateReader = Thread { androidCertificates[0] = AndroidTrustStore.read() }.apply {
-                isDaemon = true
-                start()
-            }
+            // The app's own Go requests wait for the roots read below, which stays off the main thread.
+            Libcore.expectTrustedRoots()
             // Prime the cached configurationStore off the main thread before the first
             // synchronous read below (logBufSize/logLevel). PublicDatabase no longer allows
             // main-thread queries, so the bulk-SELECT prime must run on PrefSnapshotExecutor;
@@ -111,12 +106,15 @@ class NekoBox :
                 DataStore.logLevel > 0,
                 nativeInterface, nativeInterface, LocalResolverImpl,
             )
-            // Before anything in this process can make a request through Go.
-            certificateReader.join()
-            Libcore.setTrustedRoots(
-                AndroidTrustStore.trustedDer(androidCertificates[0] ?: emptyMap(), DataStore.trustUserCertificates),
-                AndroidTrustStore.useMozilla,
-            )
+            Thread {
+                val der = runCatching { AndroidTrustStore.trustedDer(AndroidTrustStore.read(), DataStore.trustUserCertificates) }
+                    .onFailure { Logs.w("trusted roots", it) }.getOrDefault(ByteArray(0))
+                // Called in any case: the requests waiting for it go on, with Go's default roots if none were read.
+                Libcore.setTrustedRoots(der, AndroidTrustStore.useMozilla)
+            }.apply {
+                isDaemon = true
+                start()
+            }
 
             runOnDefaultDispatcher {
                 PackageCache.register()

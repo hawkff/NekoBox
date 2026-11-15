@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/x509"
 	"log"
+	"sync/atomic"
+	"time"
 	_ "unsafe" // for go:linkname
 
 	"github.com/sagernet/sing-box/common/certificate"
@@ -17,12 +19,37 @@ import (
 //go:linkname systemRoots crypto/x509.systemRoots
 var systemRoots *x509.CertPool
 
+// trustedRootsReady is closed by SetTrustedRoots once ExpectTrustedRoots announced it; nil when nothing is awaited.
+var trustedRootsReady atomic.Pointer[chan struct{}]
+
+// trustedRootsWait bounds how long a request waits for the roots.
+var trustedRootsWait = 5 * time.Second
+
+// ExpectTrustedRoots makes the app's own requests wait, a few seconds at most, for SetTrustedRoots, which the
+// app calls off its main thread at start. Until then Go's default roots are Android's built-in ones only.
+func ExpectTrustedRoots() {
+	ready := make(chan struct{})
+	trustedRootsReady.Store(&ready)
+}
+
+func awaitTrustedRoots() {
+	if ready := trustedRootsReady.Load(); ready != nil {
+		select {
+		case <-*ready:
+		case <-time.After(trustedRootsWait):
+		}
+	}
+}
+
 // SetTrustedRoots makes Go's system roots, which the app's own requests use, the DER certificates in
 // der, one after another, on top of the core's copy of Mozilla's list when mozilla is set. With
 // nothing to trust, Go keeps its default roots.
 func SetTrustedRoots(der []byte, mozilla bool) {
 	if roots := trustedRoots(der, mozilla); roots != nil {
 		setSystemRoots(roots)
+	}
+	if ready := trustedRootsReady.Swap(nil); ready != nil {
+		close(*ready)
 	}
 }
 
