@@ -166,8 +166,12 @@ abstract class GroupUpdater {
                     return@coroutineScope false
                 }
                 // The group as stored now: the caller's copy may predate edits saved since it was read.
-                val proxyGroup = ProfileDatabase.groupDao.getById(queuedGroup.id)
-                    ?.takeIf { it.type == GroupType.SUBSCRIPTION && it.subscription != null }
+                val proxyGroup = try {
+                    ProfileDatabase.groupDao.getById(queuedGroup.id)?.takeIf { it.type == GroupType.SUBSCRIPTION && it.subscription != null }
+                } catch (e: Throwable) {
+                    updating.remove(queuedGroup.id)
+                    throw e
+                }
                 if (proxyGroup == null) {
                     updating.remove(queuedGroup.id)
                     return@coroutineScope false
