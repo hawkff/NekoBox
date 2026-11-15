@@ -382,7 +382,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     }
     var rulesUpdateInterval by configurationStore.string(Key.RULES_UPDATE_INTERVAL) {
         "0"
-    } // defaults to 0, no automatic update
+    } // 0 keeps the core's default of one update a day
 
     // hopefully hashCode = mHandle doesn't change, currently this is true from KitKat to Nougat
     private val userIndex by lazy { Binder.getCallingUserHandle().hashCode() }

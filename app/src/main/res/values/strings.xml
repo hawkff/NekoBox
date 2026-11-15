@@ -825,7 +825,7 @@
     <string name="restore_in_progress">Restore is already in progress</string>
     <string name="restore_cancelled">Restore operation canceled</string>
     <string name="ruleset_update_interval">Rule set update interval</string>
-    <string name="ruleset_update_interval_summary">How often remote rule sets update, for example 1h or 30m. 0 turns updates off.</string>
+    <string name="ruleset_update_interval_summary">How often remote rule sets update, for example 1h or 30m; a bare number is hours. 0 keeps the default of once a day.</string>
     <string name="ruleset_prefix_error">Ruleset format error: must start with rsip: or rssite:</string>
     <string name="clear_cache">Clear cache</string>
     <string name="clear_cache_summary">Delete cached files. This can fix odd behavior.</string>

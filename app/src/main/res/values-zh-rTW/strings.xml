@@ -398,7 +398,7 @@
     <string name="restore_in_progress">恢復正在進行中</string>
     <string name="restore_cancelled">恢復操作已取消</string>
     <string name="ruleset_update_interval">RuleSet 更新間隔</string>
-    <string name="ruleset_update_interval_summary">遠端 RuleSet 自動更新的時間間隔。例如：1h、30m、3600s。設為 0 表示禁用自動更新</string>
+    <string name="ruleset_update_interval_summary">遠端 RuleSet 自動更新的時間間隔。例如：1h、30m；不帶單位的數字表示小時。設為 0 則保持預設的每天更新一次</string>
     <string name="ruleset_prefix_error">Ruleset格式錯誤: 必須以rsip:或rssite:開頭</string>
     <string name="clear_cache">清理快取</string>
     <string name="clear_cache_summary">清理應用快取檔案，解決一些異常問題</string>
