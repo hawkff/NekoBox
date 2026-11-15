@@ -7,7 +7,6 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
-import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.TailscaleSessionController
@@ -28,9 +27,6 @@ internal class ApiRuntime(private val context: Context) :
     private val connection = NekoBoxConnection(NekoBoxConnection.CONNECTION_ID_LOCAL_API, true)
 
     @Volatile private var connected: INekoBoxService? = null
-
-    @Volatile var speed = JSONObject()
-        private set
 
     @Volatile var lastError: String? = null
         private set
@@ -115,9 +111,8 @@ internal class ApiRuntime(private val context: Context) :
         lastError = if (msg == null) null else "service_failed"
     }
 
-    override fun cbSpeedUpdate(stats: SpeedDisplayData) {
-        speed = JSONObject(JavaUtil.gson.toJson(stats))
-    }
+    fun latestSpeed() = currentService()?.let { service -> runCatching { service.latestSpeed }.getOrNull() }
+        ?.let { JSONObject(JavaUtil.gson.toJson(it)) } ?: JSONObject()
 
     override fun cbSelectorUpdate(id: Long) {
         DataStore.selectedProxy = id

@@ -50,6 +50,8 @@ internal class AppApi(
     private companion object {
         // Listener replacement must not let a new token overlap an accepted command.
         val commandGate = Mutex()
+        const val KEPT_RECOVERY_BACKUPS = 3
+        private const val BASELINE_RECOVERY = "baseline"
     }
 
     private class Command(
@@ -268,11 +270,28 @@ internal class AppApi(
                 output.fd.sync()
             }
             check(recovery.readBytes().contentEquals(bytes))
+            // Each copy holds credentials, so only the newest ones stay. Their times only count up, whatever the clock does
+            // (restores run one at a time), so the order of the copies is the order of the restores.
+            val older = directory.listFiles().orEmpty().filter { it.isFile && it.extension == "json" && it != recovery }
+            older.maxOfOrNull { it.lastModified() }?.let { last ->
+                if (recovery.lastModified() <= last) check(recovery.setLastModified(last + 1000))
+            }
+            // A failed restore leaves a mix of old and new sections. The copy taken before the first of a run of failed
+            // restores is the last one of the data as it was: it stays until a restore finishes. Of the others, the newest
+            // ones stay.
+            val baseline = File(directory, BASELINE_RECOVERY)
+            val baselineCopy = baseline.takeIf { it.isFile }?.readText()?.let { File(directory, "$it.json") }
+            fun prune(keep: File?) = older.filter { it != keep }.sortedByDescending { it.lastModified() }
+                .drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
             try {
                 restoreBackup(content, profiles, rules, settings, DatabaseBackupRestoreOperations)
             } catch (_: Exception) {
+                if (baselineCopy?.isFile != true) baseline.writeText(recoveryId)
+                prune(keep = baselineCopy)
                 reject("restore_failed", "Restore did not finish; read backup.recovery with id=$recoveryId before retrying")
             }
+            baseline.delete()
+            prune(keep = null)
             ProfileManager.ruleIterator { onCleared() }
             ProfileDatabase.groupDao.allGroups().forEach { group -> GroupManager.postReload(group.id) }
             JSONObject().put("restored", true).put("recoveryId", recoveryId).put("restartRequired", true)
@@ -662,7 +681,7 @@ internal class AppApi(
             withContext(Dispatchers.Main) { NekoBox.reloadService(id) }
             JSONObject().put("accepted", true)
         }
-        command("service.traffic", "Read the latest traffic sample") { JSONObject(runtime.speed.toString()) }
+        command("service.traffic", "Read the latest traffic sample") { runtime.latestSpeed() }
         command("service.connections", "Read tracked core connections", optional = "includeClosed") { JSONArray(runtime.binder().connections(it.flag("includeClosed"))) }
         command("service.resetconnections", "Reset upstream core connections without wiping configuration", "confirm") {
             it.confirm()

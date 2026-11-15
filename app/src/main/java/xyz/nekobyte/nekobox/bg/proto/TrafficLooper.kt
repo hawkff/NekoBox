@@ -39,6 +39,10 @@ class TrafficLooper(
     // The last totals are stored. Read and set under data.traffic.
     private var stopped = false
 
+    // Read on request by the local API through the service binder.
+    @Volatile var latestSpeed: SpeedDisplayData? = null
+        private set
+
     suspend fun stop() {
         // cancelAndJoin (not cancel): wait for the loop coroutine to actually finish before the
         // final flush.
@@ -211,12 +215,9 @@ class TrafficLooper(
                 delay(delayMs)
                 continue
             }
-            // Visible UI and the enabled local API consume live traffic samples.
+            // Visible UI consumes live traffic samples.
             val listening = data.state == BaseService.State.Connected &&
-                (
-                    data.binder.callbackIdMap.containsValue(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND) ||
-                        data.binder.callbackIdMap.containsValue(NekoBoxConnection.CONNECTION_ID_LOCAL_API)
-                    )
+                data.binder.callbackIdMap.containsValue(NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND)
 
             // One round of counting. A clear from a screen and a store at shutdown wait for it, and it for them. The
             // lists are told within the round, so its totals never reach them after the zeros of a later clear.
@@ -267,7 +268,7 @@ class TrafficLooper(
                     }
                     data.binder.broadcast { b ->
                         val id = data.binder.callbackIdMap[b.asBinder()]
-                        if (id == NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND || id == NekoBoxConnection.CONNECTION_ID_LOCAL_API) {
+                        if (id == NekoBoxConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND) {
                             b.cbSpeedUpdate(speed)
                             if (batch.isNotEmpty()) b.cbTrafficUpdateList(batch)
                         }
@@ -275,6 +276,7 @@ class TrafficLooper(
                 }
                 speed
             }
+            latestSpeed = speed
 
             // ServiceNotification
             data.notification?.apply {

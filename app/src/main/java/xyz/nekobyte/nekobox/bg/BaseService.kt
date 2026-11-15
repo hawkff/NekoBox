@@ -20,6 +20,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.aidl.INekoBoxServiceCallback
 import xyz.nekobyte.nekobox.aidl.LocalProxy
+import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.proto.ProxyInstance
 import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
@@ -211,6 +212,7 @@ class BaseService {
         override fun getState(): Int = (data?.state ?: State.Idle).ordinal
         override fun getProfileName(): String = data?.proxy?.displayProfileName ?: "Idle"
         override fun getRevoked() = data?.revoked == true
+        override fun getLatestSpeed(): SpeedDisplayData? = data?.takeIf { it.state == State.Connected }?.proxy?.looper?.latestSpeed
 
         // The local port of the config the service is connected with. Connected: the core has started with that
         // config, which it does not with a port another app holds, so the port is this app's. And it has stayed
