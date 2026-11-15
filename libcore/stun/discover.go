@@ -185,6 +185,10 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 	if err != nil {
 		return nil, err
 	}
+	// Mapping is told from the addresses the server saw; a reply without one tells nothing.
+	if resp1.mappedAddr == nil || resp2.mappedAddr == nil {
+		return nil, ErrNoMappedAddress
+	}
 	if sameHost(resp2.mappedAddr, resp1.mappedAddr) {
 		natBehavior.MappingType = BehaviorTypeEndpoint
 	}
@@ -197,6 +201,9 @@ func (c *Client) behaviorTest(conn net.PacketConn, addr *net.UDPAddr) (*NATBehav
 		resp3, err := c.test(conn, tmpAddr)
 		if err != nil {
 			return nil, err
+		}
+		if resp3.mappedAddr == nil {
+			return nil, ErrNoMappedAddress
 		}
 		if sameHost(resp3.mappedAddr, resp2.mappedAddr) {
 			natBehavior.MappingType = BehaviorTypeAddr

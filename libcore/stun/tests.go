@@ -25,6 +25,8 @@ var (
 	ErrNoAnswer = errors.New("NAT blocked.")
 	// ErrNoOtherAddress: the server names no alternate address, which testing NAT behavior needs (RFC 5780).
 	ErrNoOtherAddress = errors.New("Server error: no other address and changed address.")
+	// ErrNoMappedAddress: a reply of the behavior test names no address the server saw.
+	ErrNoMappedAddress = errors.New("Server error: no mapped address.")
 	// ErrNotBehindNAT: the server saw the address the request came from.
 	ErrNotBehindNAT = errors.New("Not behind a NAT.")
 )

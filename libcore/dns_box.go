@@ -59,7 +59,8 @@ func (p *platformLocalDNSTransport) Exchange(ctx context.Context, message *mDNS.
 	if p.raw && rawQueryFunc != nil {
 		// Raw - only available on Android 10 and above
 
-		messageBytes, err := message.Pack()
+		// Packing writes into the message, which the router may hand to other transports at the same time.
+		messageBytes, err := message.Copy().Pack()
 		if err != nil {
 			return nil, err
 		}
