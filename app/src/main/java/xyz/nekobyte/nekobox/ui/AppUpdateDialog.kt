@@ -28,6 +28,7 @@ fun ComponentActivity.checkForUpdate(done: () -> Unit = {}) = runOnIoDispatcher 
         found.onSuccess { release ->
             when {
                 release == null -> Toast.makeText(app, R.string.check_update_no, Toast.LENGTH_SHORT).show()
+
                 // The check may outlive the screen.
                 !isFinishing && !isDestroyed -> offerUpdate(release)
             }

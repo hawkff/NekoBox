@@ -67,8 +67,8 @@ import xyz.nekobyte.nekobox.Protocols.getProtocolColor
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.BaseService
-import xyz.nekobyte.nekobox.bg.updateBannerShown
 import xyz.nekobyte.nekobox.bg.proto.UrlTest
+import xyz.nekobyte.nekobox.bg.updateBannerShown
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase

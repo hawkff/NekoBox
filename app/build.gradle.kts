@@ -48,7 +48,7 @@ android {
     }
     sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")
     // Only the oss flavor, the GitHub release, installs its updates (src/oss); the others open the release page.
-    for (flavor in listOf("fdroid", "play", "preview")) sourceSets.getByName(flavor).java.directories.add("src/releasePage/java")
+    for (flavor in listOf("fdroid", "play", "preview")) sourceSets.getByName(flavor).kotlin.directories.add("src/releasePage/java")
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

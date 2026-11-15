@@ -49,8 +49,7 @@ internal fun isNewerVersion(release: String, current: String): Boolean {
 }
 
 /** A preview build is behind any release of another name; a release build, behind a later version. */
-internal fun releaseIsNewer(version: String, current: String = BuildConfig.VERSION_NAME, preview: Boolean = isPreview) =
-    if (preview) version.isNotBlank() && version != current else isNewerVersion(version, current)
+internal fun releaseIsNewer(version: String, current: String = BuildConfig.VERSION_NAME, preview: Boolean = isPreview) = if (preview) version.isNotBlank() && version != current else isNewerVersion(version, current)
 
 /** The hex SHA-256 of a GitHub asset's "digest", or null when it names none. */
 internal fun sha256OfDigest(digest: String?): String? = digest?.let { SHA256_DIGEST.matchEntire(it) }?.groupValues?.get(1)?.lowercase()
@@ -69,8 +68,7 @@ internal fun parseRelease(json: JSONObject, abis: List<String>): AppRelease {
 }
 
 /** Home's banner shows the release found newer than this build until it is dismissed for that release. */
-internal fun updateBannerShown(available: String, dismissed: String, current: String = BuildConfig.VERSION_NAME, preview: Boolean = isPreview) =
-    available.isNotEmpty() && available != dismissed && releaseIsNewer(available, current, preview)
+internal fun updateBannerShown(available: String, dismissed: String, current: String = BuildConfig.VERSION_NAME, preview: Boolean = isPreview) = available.isNotEmpty() && available != dismissed && releaseIsNewer(available, current, preview)
 
 object AppUpdates : OnPreferenceDataStoreChangeListener {
     const val ACTION_OFFER = "xyz.nekobyte.nekobox.OFFER_UPDATE"

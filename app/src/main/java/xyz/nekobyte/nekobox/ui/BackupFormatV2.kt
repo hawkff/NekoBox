@@ -16,7 +16,12 @@ internal object BackupFormatV2 {
     // What this device approved, measured or did: plugin signers, the addresses server names resolved to, where proxies left
     // from, what was picked lately, the release it found and the one its banner was dismissed for.
     private val DEVICE_ONLY = setOf(
-        Key.PLUGIN_SIGNER_APPROVALS, Key.SERVER_ADDRESSES, Key.PROXY_EXITS, Key.RECENT_PICKS, Key.UPDATE_AVAILABLE, Key.UPDATE_DISMISSED,
+        Key.PLUGIN_SIGNER_APPROVALS,
+        Key.SERVER_ADDRESSES,
+        Key.PROXY_EXITS,
+        Key.RECENT_PICKS,
+        Key.UPDATE_AVAILABLE,
+        Key.UPDATE_DISMISSED,
     )
 
     fun encodeProfiles(profiles: List<ProxyEntity>): JSONArray = JSONArray().apply {

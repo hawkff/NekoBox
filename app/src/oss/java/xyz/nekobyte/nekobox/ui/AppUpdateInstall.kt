@@ -75,7 +75,12 @@ object AppUpdateInstall {
         lateinit var job: Job
         val progress = MaterialAlertDialogBuilder(activity)
             .setTitle(R.string.app_update_downloading)
-            .setView(LinearProgressIndicator(activity).apply { isIndeterminate = true; setPadding(dp2px(24), dp2px(16), dp2px(24), 0) })
+            .setView(
+                LinearProgressIndicator(activity).apply {
+                    isIndeterminate = true
+                    setPadding(dp2px(24), dp2px(16), dp2px(24), 0)
+                },
+            )
             .setNegativeButton(android.R.string.cancel) { _, _ -> job.cancel() }
             .setCancelable(false)
             .show()
@@ -121,7 +126,12 @@ object AppUpdateInstall {
         }
         if (digest.digest().joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') } != sha256) return false
         val packageManager = app.packageManager
-        val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
+        val flags = if (Build.VERSION.SDK_INT >= 28) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            @Suppress("DEPRECATION")
+            PackageManager.GET_SIGNATURES
+        }
         val archive = packageManager.getPackageArchiveInfo(file.path, flags) ?: return false
         return isUpdateOf(archive.identity(), packageManager.getPackageInfo(app.packageName, flags).identity())
     }
