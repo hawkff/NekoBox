@@ -466,4 +466,6 @@
     <plurals name="config_lines">
         <item quantity="other">%d خط</item>
     </plurals>
+    <string name="trust_user_certificates">اعتماد به گواهی‌هایی که در تنظیمات Android نصب شده‌اند</string>
+    <string name="trust_user_certificates_summary">برای اشتراک‌ها، فایل‌های قوانین و بررسی به‌روزرسانی. اتصال‌های پراکسی و Tailscale از قوانین خود هسته پیروی می‌کنند. مرجع‌های صدور گواهی که در تنظیمات Android نصب شده‌اند می‌توانند این اتصال‌ها را بخوانند.</string>
 </resources>

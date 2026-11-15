@@ -217,6 +217,7 @@ object Key {
     const val APP_TLS_VERSION = "appTLSVersion"
 
     const val ENABLE_TLS_FRAGMENT = "enableTLSFragment"
+    const val TRUST_USER_CERTIFICATES = "trustUserCertificates"
 
     const val WEBDAV_SERVER = "webdavServer"
     const val WEBDAV_USERNAME = "webdavUsername"

@@ -70,6 +70,13 @@ class NekoBox :
             updateNotificationChannels()
             externalAssets.mkdirs()
             Seq.setContext(this)
+            // Read alongside the settings prime below: the store's roots take time to load, and the setting
+            // that picks among them is known only after the prime.
+            val androidCertificates = arrayOfNulls<Map<String, ByteArray>>(1)
+            val certificateReader = Thread { androidCertificates[0] = AndroidTrustStore.read() }.apply {
+                isDaemon = true
+                start()
+            }
             // Prime the cached configurationStore off the main thread before the first
             // synchronous read below (logBufSize/logLevel). PublicDatabase no longer allows
             // main-thread queries, so the bulk-SELECT prime must run on PrefSnapshotExecutor;
@@ -103,6 +110,12 @@ class NekoBox :
                 DataStore.logBufSize,
                 DataStore.logLevel > 0,
                 nativeInterface, nativeInterface, LocalResolverImpl,
+            )
+            // Before anything in this process can make a request through Go.
+            certificateReader.join()
+            Libcore.setTrustedRoots(
+                AndroidTrustStore.trustedDer(androidCertificates[0] ?: emptyMap(), DataStore.trustUserCertificates),
+                AndroidTrustStore.useMozilla,
             )
 
             runOnDefaultDispatcher {

@@ -488,6 +488,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var enableTLSFragment by configurationStore.boolean(Key.ENABLE_TLS_FRAGMENT) { false }
 
+    // Read once at start, by NekoBox.onCreate.
+    var trustUserCertificates by configurationStore.boolean(Key.TRUST_USER_CERTIFICATES) { false }
+
     // old cache, DO NOT ADD
 
     var dirty by profileCacheStore.boolean(Key.PROFILE_DIRTY)

@@ -17,6 +17,10 @@
         app:key="appTLSVersion"
         app:title="@string/app_tls_version"
         app:useSimpleSummaryProvider="true" />
+    <SwitchPreference
+        app:key="trustUserCertificates"
+        app:summary="@string/trust_user_certificates_summary"
+        app:title="@string/trust_user_certificates" />
     <PreferenceCategory app:title="@string/fragment_settings">
         <SwitchPreference
             app:key="enableTLSFragment"

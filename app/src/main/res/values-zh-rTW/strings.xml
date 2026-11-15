@@ -438,4 +438,6 @@
     <plurals name="config_lines">
         <item quantity="other">%d 行</item>
     </plurals>
+    <string name="trust_user_certificates">信任在 Android 設定中安裝的憑證</string>
+    <string name="trust_user_certificates_summary">用於訂閱、規則資源和更新檢查。代理連線和 Tailscale 遵循核心自身的規則。在 Android 設定中安裝的憑證授權單位可以讀取這些連線。</string>
 </resources>

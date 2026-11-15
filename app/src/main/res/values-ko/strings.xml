@@ -412,4 +412,6 @@
     <plurals name="config_lines">
         <item quantity="other">%d줄</item>
     </plurals>
+    <string name="trust_user_certificates">Android 설정에서 설치한 인증서 신뢰</string>
+    <string name="trust_user_certificates_summary">구독, 규칙 에셋, 업데이트 확인에 사용됩니다. 프록시 연결과 Tailscale은 코어 자체 규칙을 따릅니다. Android 설정에서 설치한 인증 기관은 이 연결을 읽을 수 있습니다.</string>
 </resources>
