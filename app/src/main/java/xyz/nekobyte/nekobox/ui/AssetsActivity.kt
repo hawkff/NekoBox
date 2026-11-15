@@ -329,7 +329,6 @@ class AssetsActivity : ThemedActivity() {
         val repo = rulesProviders[DataStore.rulesProvider].repoByFileName[fileName]
 
         val client = Libcore.newHttpClient().apply {
-            modernTLS()
             keepAlive()
             throughRunningProxy()
         }
@@ -407,7 +406,6 @@ class AssetsActivity : ThemedActivity() {
             return
         }
         val client = Libcore.newHttpClient().apply {
-            modernTLS()
             keepAlive()
             throughRunningProxy()
         }

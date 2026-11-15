@@ -764,3 +764,27 @@ func TestCheckRedirectKeepsCustomHeadersOnlyOnTheSameHTTPSHost(t *testing.T) {
 		t.Fatal("ten redirects did not stop the chain")
 	}
 }
+
+func TestAllowInsecureSkipsVerificationOnlyForItsClient(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer server.Close()
+	get := func(client HTTPClient) error {
+		defer client.Close()
+		request := client.NewRequest()
+		if err := request.SetURL(server.URL); err != nil {
+			t.Fatal(err)
+		}
+		_, err := request.Execute()
+		return err
+	}
+	insecure := NewHttpClient()
+	insecure.AllowInsecure()
+	if err := get(insecure); err != nil {
+		t.Fatalf("insecure client: %v", err)
+	}
+	if err := get(NewHttpClient()); err == nil {
+		t.Fatal("a client without AllowInsecure accepted an untrusted certificate")
+	}
+}
