@@ -50,6 +50,7 @@ internal class AppApi(
     private companion object {
         // Listener replacement must not let a new token overlap an accepted command.
         val commandGate = Mutex()
+        const val KEPT_RECOVERY_BACKUPS = 3
     }
 
     private class Command(
@@ -268,6 +269,9 @@ internal class AppApi(
                 output.fd.sync()
             }
             check(recovery.readBytes().contentEquals(bytes))
+            // Each copy holds credentials, so only the newest ones stay; the one just written is always among them.
+            directory.listFiles().orEmpty().filter { it.isFile && it.extension == "json" && it != recovery }
+                .sortedByDescending { it.lastModified() }.drop(KEPT_RECOVERY_BACKUPS - 1).forEach { it.delete() }
             try {
                 restoreBackup(content, profiles, rules, settings, DatabaseBackupRestoreOperations)
             } catch (_: Exception) {

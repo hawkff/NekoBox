@@ -445,6 +445,18 @@ class AppApiTest {
     }
 
     @Test
+    fun backupRestoreKeepsOnlyTheNewestRecoveryCopies() {
+        profile(group())
+        val content = objectResult("backup.export", params("includeSecrets" to true))
+        val restore = params("content" to content, "profiles" to true, "rules" to false, "settings" to false, "confirm" to true)
+        val ids = (1..4).map { objectResult("backup.restore", restore).getString("recoveryId") }
+        val kept = result("backup.recoveries") as JSONArray
+        assertEquals(3, kept.length())
+        assertTrue((0 until kept.length()).any { kept.getJSONObject(it).getString("id") == ids.last() })
+        objectResult("backup.recovery", params("id" to ids.last(), "includeSecrets" to true))
+    }
+
+    @Test
     fun chainValidationLoadsSharedDescendantsOnceAndStillRejectsCycles() {
         val graph = mutableMapOf<Long, ProxyEntity>()
         graph[1L] = ProxyEntity(id = 1).putBean(SOCKSBean().apply { initializeDefaultValues() })
