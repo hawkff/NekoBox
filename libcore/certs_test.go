@@ -7,9 +7,32 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"math/big"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
+
+// certs_android.go links to crypto/x509's unexported root lock. A renamed or retyped lock still links (the
+// declaration here then defines a lock of its own), so the toolchain's x509 source is checked instead.
+func TestX509StillReadsSystemRootsUnderSystemRootsMu(t *testing.T) {
+	root, err := exec.Command("go", "env", "GOROOT").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := os.ReadFile(filepath.Join(strings.TrimSpace(string(root)), "src", "crypto", "x509", "root.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pattern := range []string{`(?m)^\s*systemRootsMu\s+sync\.RWMutex\s*$`, `systemRootsMu\.RLock\(\)`, `(?m)^\s*systemRoots\s+\*CertPool\s*$`} {
+		if !regexp.MustCompile(pattern).Match(source) {
+			t.Errorf("crypto/x509/root.go no longer matches %s: recheck certs_android.go", pattern)
+		}
+	}
+}
 
 func TestSetSystemRootsReplacesGoRoots(t *testing.T) {
 	saved, err := x509.SystemCertPool()
