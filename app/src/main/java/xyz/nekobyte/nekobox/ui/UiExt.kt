@@ -90,7 +90,9 @@ fun Fragment.needRestart() {
     }.show()
 }
 
-fun triggerFullRestart(ctx: Context) {
+fun triggerFullRestart(context: Context) {
+    // The screen that asked may be gone before the restart: dark mode can rebuild it while a restore writes.
+    val ctx = context.applicationContext
     runOnDefaultDispatcher {
         // Drain async preference write-through before tearing down + rebirthing, so same-gesture
         // restart-required settings (e.g. logLevel/logBufSize, read by NekoBox.onCreate in both
