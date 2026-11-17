@@ -24,6 +24,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -50,7 +51,7 @@ class ScannerActivity : ThemedActivity() {
     private var torchOn = false
 
     // Bundled ML Kit barcode scanner restricted to QR for speed; works fully offline.
-    private val barcodeScanner: BarcodeScanner by lazy {
+    private val barcodeScanner = CloseOnceHolder<BarcodeScanner> {
         BarcodeScanning.getClient(
             BarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -155,11 +156,13 @@ class ScannerActivity : ThemedActivity() {
             imageProxy.close()
             return
         }
+        val scanner = barcodeScanner.get() ?: return imageProxy.close()
         val input = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        barcodeScanner.process(input)
+        scanner.process(input)
             .addOnSuccessListener { barcodes ->
                 val text = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }?.rawValue
-                if (text != null && !finished.getAndSet(true)) {
+                // A result that lands after onStop (closed or recreated scanner) must not import unseen.
+                if (text != null && lifecycle.currentState >= Lifecycle.State.STARTED && !finished.getAndSet(true)) {
                     // First successful scan wins. Import first, then finish on the main
                     // thread, so importedN is populated before onDestroy() reads it for
                     // the "N profile(s)" toast (finishing first raced the background import).
@@ -210,8 +213,10 @@ class ScannerActivity : ThemedActivity() {
                 uris.forEachTry { uri ->
                     val bitmap = decodeBoundedBitmap(uri)
                     val barcodes = try {
+                        // Null once the screen is destroyed: stop without creating a client nobody closes.
+                        val scanner = barcodeScanner.get() ?: return@runOnDefaultDispatcher
                         com.google.android.gms.tasks.Tasks.await(
-                            barcodeScanner.process(InputImage.fromBitmap(bitmap, 0)),
+                            scanner.process(InputImage.fromBitmap(bitmap, 0)),
                         )
                     } finally {
                         bitmap.recycle()
@@ -336,5 +341,22 @@ class ScannerActivity : ThemedActivity() {
         // Bound for decoding imported images; large enough for ML Kit to read dense QR
         // codes, small enough to avoid OOM on arbitrary full-resolution gallery photos.
         private const val MAX_IMPORT_DIMEN = 2048
+    }
+}
+
+/** Creates the value on first [get] and closes it once; after [close], [get] returns null and creates nothing. */
+internal class CloseOnceHolder<T : java.io.Closeable>(private val create: () -> T) {
+    private var value: T? = null
+    private var closed = false
+
+    @Synchronized
+    fun get(): T? = if (closed) null else value ?: create().also { value = it }
+
+    @Synchronized
+    fun close() {
+        if (closed) return
+        closed = true
+        value?.close()
+        value = null
     }
 }
