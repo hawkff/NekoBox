@@ -25,6 +25,8 @@ github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRF
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa h1:LHTHcTQiSGT7VVbI0o4wBRNQIgn917usHWOd6VAffYI=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa/go.mod h1:cEWa1LVoE5KvSD9ONXsZrj0z6KqySlCCNKHlLzbqAt4=
+github.com/amnezia-vpn/amneziawg-go/v3 v3.1.20261116 h1:/LZYudfChLgd1qmfKR9gaNg1z4xBW9hyS+Ij0MJNVzo=
+github.com/amnezia-vpn/amneziawg-go/v3 v3.1.20261116/go.mod h1:YoPc6qcOZqD7TXZ1xpedD8Sx3aSKsxN05ZqEFmXDNHk=
 github.com/andybalholm/brotli v1.3.0 h1:IdkhjSe/+34U+fP7FSR2Q6Poj1hnHUa2GoWmzXJd6qY=
 github.com/andybalholm/brotli v1.3.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
@@ -221,8 +223,6 @@ github.com/nbrownus/go-metrics-prometheus v0.0.0-20210712211119-974a6260965f h1:
 github.com/nbrownus/go-metrics-prometheus v0.0.0-20210712211119-974a6260965f/go.mod h1:nwPd6pDNId/Xi16qtKrFHrauSwMNuvk+zcjk89wrnlA=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
-github.com/nyaakuza/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604 h1:M3N0kLU1dz6WG9Cdhyd0kyfMAv6QtyVP0q25Xyv/38c=
-github.com/nyaakuza/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604/go.mod h1:YoPc6qcOZqD7TXZ1xpedD8Sx3aSKsxN05ZqEFmXDNHk=
 github.com/nyaakuza/sing-vmess v0.2.8-mod.4 h1:d5RNDwgSvkir8Ti4lGghd6hTtQN3PW4/MCDxOULF62g=
 github.com/nyaakuza/sing-vmess v0.2.8-mod.4/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
 github.com/nyaakuza/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b h1:CGe8CQkl3PvmPVolZ58RYp7/qEUdVP04q0cCDn03Ao0=

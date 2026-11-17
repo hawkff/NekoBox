@@ -102,7 +102,7 @@ dependencies {
 
     // Minimal SDK modules; automatic capture is configured explicitly.
     implementation("com.posthog:posthog:6.49.1")
-    implementation("io.sentry:sentry-android-core:8.64.0")
+    implementation("io.sentry:sentry-android-core:8.65.0")
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.yaml:snakeyaml:2.7")
     implementation("com.jakewharton:process-phoenix:3.0.0")
