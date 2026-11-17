@@ -80,6 +80,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("androidx.work:work-runtime:2.12.0")
     implementation("androidx.work:work-multiprocess:2.12.0")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     implementation("com.google.android.material:material:1.14.0")
     implementation("com.google.code.gson:gson:2.15.0")
