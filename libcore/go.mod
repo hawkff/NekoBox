@@ -30,7 +30,7 @@ require (
 	github.com/ajg/form v1.7.1 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa // indirect
-	github.com/amnezia-vpn/amneziawg-go/v3 v3.1.20260828 // indirect
+	github.com/amnezia-vpn/amneziawg-go/v3 v3.1.20261116 // indirect
 	github.com/andybalholm/brotli v1.3.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/anytls/sing-anytls v0.0.13 // indirect
@@ -168,8 +168,5 @@ replace github.com/reF1nd/sing-snell => github.com/reF1nd/sing-snell-reF1nd v0.0
 replace github.com/sagernet/wireguard-go => github.com/nyaakuza/wireguard-go v0.0.8-0.20261028195059-3c5a73645a5b
 
 replace github.com/sagernet/tailscale => github.com/nyaakuza/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b
-
-// The AmneziaWG device with the timer race fix of amnezia-vpn/amneziawg-go#205, until upstream merges it.
-replace github.com/amnezia-vpn/amneziawg-go/v3 => github.com/nyaakuza/amneziawg-go/v3 v3.1.20260829-0.20261009183831-0421ab3db604
 
 tool github.com/sagernet/gomobile/cmd/gobind
