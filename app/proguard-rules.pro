@@ -18,6 +18,10 @@
     static void throwUninitializedPropertyAccessException(java.lang.String);
 }
 
+# ML Kit finds its registrars by reflection; firebase-components 16.1.0 (via barcode-scanning) lacks these rules.
+-keep class * implements com.google.firebase.components.ComponentRegistrar { void <init>(); }
+-keep,allowshrinking interface com.google.firebase.components.ComponentRegistrar
+
 # SnakeYaml
 -keep class org.yaml.snakeyaml.** { *; }
 

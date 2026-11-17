@@ -15,10 +15,12 @@ import android.os.StrictMode
 import android.os.UserManager
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
+import androidx.profileinstaller.ProfileInstaller
 import androidx.work.WorkManager
 import go.Seq
 import kotlinx.coroutines.DEBUG_PROPERTY_NAME
 import kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON
+import kotlinx.coroutines.delay
 import libcore.Libcore
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.bg.AppUpdates
@@ -138,6 +140,10 @@ class NekoBox :
                 AppUpdates.schedule(this@NekoBox)
                 // The setting changes in this process, from Settings or the local API.
                 DataStore.configurationStore.registerChangeListener(AppUpdates)
+                // The manifest drops the androidx-startup provider whose initializer would write the baseline profile;
+                // wait out start-up as that initializer does. A no-op once written for this APK.
+                delay(5_000)
+                ProfileInstaller.writeProfile(this@NekoBox)
             }
         }
 
