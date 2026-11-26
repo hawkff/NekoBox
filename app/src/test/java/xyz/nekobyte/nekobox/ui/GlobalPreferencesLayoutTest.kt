@@ -83,7 +83,7 @@ class GlobalPreferencesLayoutTest {
             "enableDnsRouting", "enableFakeDns", "enableTLSFragment",
             "globalAllowInsecure", "globalCustomConfig", "gpsCoordinates", "gpsLookupUrl",
             "gpsSpoofing", "gpsSpoofingNotice", "gpsSpoofingRemove", "helpToImprove", "hideFromRecentApps",
-            "httpProxyBypass", "ipv6Mode", "isAutoConnect", "killSwitch", "liquidGlass", "logBufSize", "logLevel", "meteredNetwork", "mixedPort", "mtu",
+            "httpProxyBypass", "ipv6Mode", "isAutoConnect", "killSwitch", "launcherIcon", "liquidGlass", "logBufSize", "logLevel", "meteredNetwork", "mixedPort", "mtu",
             "networkAutomation", "networkAutomationRules", "networkChangeResetConnections", "nightTheme", "profileTrafficStatistics", "protectionAlwaysOn",
             "protectionBattery", "protectionLockdown", "protectionNotes", "proxyApps", "proxyModeInboundAuth", "remoteDns", "requireProxyInVPN", "resetSettings", "resolveDestination",
             "rulesGeoipUrl", "rulesGeositeUrl", "rulesProvider", "rulesUpdateInterval", "serviceMode",

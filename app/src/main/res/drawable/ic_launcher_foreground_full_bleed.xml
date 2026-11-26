@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Full-bleed launcher icon's art: 1.15 times the classic art, 6 dp lower (half the top inset), so the box
+     runs off the bottom edge while the ears stay inside a circle mask. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="124.2dp"
+        android:height="124.2dp"
+        android:drawable="@mipmap/ic_launcher_foreground"
+        android:gravity="center"
+        android:top="12dp" />
+</layer-list>

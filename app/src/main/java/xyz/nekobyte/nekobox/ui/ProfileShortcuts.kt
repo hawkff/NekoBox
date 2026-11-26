@@ -14,13 +14,14 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
-// Pinned profile shortcuts retain explicit component names across app updates.
+// Pinned profile shortcuts retain explicit component names across app updates, and the launcher entry they
+// belong to across launcher icon changes.
 internal fun migratePinnedProfileShortcuts(context: Context) {
     if (Build.VERSION.SDK_INT < 26 || context.getSystemService<UserManager>()?.isUserUnlocked != true) return
     try {
         val manager = context.getSystemService<ShortcutManager>() ?: return
         val target = ComponentName(context, QuickToggleShortcut::class.java)
-        val activity = ComponentName(context, MainActivity::class.java)
+        val activity = LauncherIcon.current(context).component(context)
         val enable = mutableListOf<String>()
         val updates = manager.pinnedShortcuts.mapNotNull { shortcut ->
             if (shortcut.isImmutable || !shortcut.id.startsWith("shortcut-profile-")) return@mapNotNull null

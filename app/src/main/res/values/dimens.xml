@@ -30,4 +30,5 @@
     <dimen name="relay_level_indent">24dp</dimen>
     <dimen name="relay_header_edge">12dp</dimen>
     <dimen name="relay_row_indent">36dp</dimen>
+    <dimen name="choice_icon_size">48dp</dimen>
 </resources>

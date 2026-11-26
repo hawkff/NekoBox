@@ -18,6 +18,9 @@
         app:defaultValue="false"
         app:key="liquidGlass"
         app:title="@string/liquid_glass" />
+    <xyz.nekobyte.nekobox.ui.LauncherIconPreference
+        app:key="launcherIcon"
+        app:title="@string/launcher_icon" />
     <xyz.nekobyte.nekobox.ui.ChoicePreference
         app:defaultValue=""
         app:entries="@array/language_entries"

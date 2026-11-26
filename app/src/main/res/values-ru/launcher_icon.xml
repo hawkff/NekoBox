@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="launcher_icon">Значок приложения</string>
+    <string name="launcher_icon_classic">Классический</string>
+    <string name="launcher_icon_black">Чёрный</string>
+    <string name="launcher_icon_full_bleed">Во весь значок</string>
+    <string name="launcher_icon_full_bleed_sum">Рисунок заполняет значок</string>
+    <string name="launcher_icon_no_plate">Без подложки</string>
+    <string name="launcher_icon_no_plate_sum">Только рисунок, на прозрачном фоне</string>
+    <string name="launcher_icon_change_title">Сменить значок приложения?</string>
+    <string name="launcher_icon_change_message">Некоторые рабочие столы при смене значка убирают значок приложения и закреплённые ярлыки. Их можно снова добавить из списка приложений.</string>
+    <string name="launcher_icon_change">Сменить значок</string>
+</resources>

@@ -67,7 +67,7 @@ class ProfileShortcutsTest {
         assertEquals("Saved server", migrated.shortLabel)
         assertEquals("Saved server connection", migrated.longLabel)
         assertEquals(ComponentName(context, QuickToggleShortcut::class.java), migrated.intent!!.component)
-        assertEquals(ComponentName(context, MainActivity::class.java), migrated.activity)
+        assertEquals(LauncherIcon.CLASSIC.component(context), migrated.activity)
         assertEquals(17L, migrated.intent!!.getLongExtra("profile", -1))
         assertEquals("value", migrated.intent!!.getStringExtra("preserved"))
         ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }

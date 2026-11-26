@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -16,6 +17,7 @@ import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.widget.NestedScrollView
+import androidx.core.widget.TextViewCompat
 import androidx.preference.ListPreference
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xyz.nekobyte.nekobox.R
@@ -55,6 +57,7 @@ open class ChoicePreference @JvmOverloads constructor(context: Context, attrs: A
 /**
  * A choice in a dialog: one radio row per entry, with a smaller line under the entries that have
  * one, and Cancel. Picking a row closes the dialog and hands [onPick] its index; [checked] opens in view.
+ * [icons], when given, end each row at 48 dp.
  */
 // The rows sit in a plain scrolling column: a dialog's list view sizes itself before its rows wrap, which
 // cut off rows with a second line.
@@ -63,6 +66,7 @@ internal fun showChoiceDialog(
     title: CharSequence?,
     rows: List<Pair<CharSequence, CharSequence?>>,
     checked: Int,
+    icons: List<Drawable>? = null,
     onPick: (Int) -> Unit,
 ) {
     val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -77,6 +81,11 @@ internal fun showChoiceDialog(
         val row = inflater.inflate(R.layout.item_choice, column, false) as CheckedTextView
         row.text = choiceRow(dialog.context, name, summary)
         row.isChecked = index == checked
+        icons?.get(index)?.let { icon ->
+            val size = context.resources.getDimensionPixelSize(R.dimen.choice_icon_size)
+            icon.setBounds(0, 0, size, size)
+            TextViewCompat.setCompoundDrawablesRelative(row, TextViewCompat.getCompoundDrawablesRelative(row)[0], null, icon, null)
+        }
         row.setOnClickListener {
             dialog.dismiss()
             onPick(index)
