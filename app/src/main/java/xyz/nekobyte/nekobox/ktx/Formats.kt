@@ -144,32 +144,36 @@ internal fun linkNodeScheme(link: String): String? {
 /**
  * Lists copied from web pages carry HTML-escaped query separators. Inside a link's query a raw "&amp;"
  * can only be one (a literal '&' in a value is %26), so it becomes "&" there; user names, passwords,
- * hosts, paths and remarks keep it, as they may hold it literally.
+ * hosts, paths and remarks keep it, as they may hold it literally. A link's query and remark go on
+ * across spaces up to the next link ([LINK_SEPARATOR]), as the parser reads them.
  */
 internal fun decodeEscapedQuerySeparators(line: String): String {
     val out = StringBuilder(line.length)
-    var tokenStart = 0
+    var start = 0
+    for (separator in LINK_SEPARATOR.findAll(line)) {
+        out.append(decodeLinkQuery(line.substring(start, separator.range.first))).append(separator.value)
+        start = separator.range.last + 1
+    }
+    return out.append(decodeLinkQuery(line.substring(start))).toString()
+}
+
+private fun decodeLinkQuery(link: String): String {
+    val out = StringBuilder(link.length)
     var inQuery = false
     var inFragment = false
     var index = 0
-    while (index < line.length) {
-        val char = line[index]
+    while (index < link.length) {
+        val char = link[index]
         when {
-            char.isWhitespace() -> {
-                inQuery = false
-                inFragment = false
-                tokenStart = index + 1
-            }
-
             char == '#' && !inFragment -> {
                 inQuery = false
                 inFragment = true
             }
 
-            // A '?' starts a query only in a link, not in a remark that went on after a space.
-            char == '?' && !inQuery && !inFragment -> inQuery = line.substring(tokenStart, index).contains("://")
+            // Text before the first link of a line has no query.
+            char == '?' && !inQuery && !inFragment -> inQuery = link.substring(0, index).contains("://")
 
-            inQuery && line.startsWith("&amp;", index) -> {
+            inQuery && link.startsWith("&amp;", index) -> {
                 out.append('&')
                 index += "&amp;".length
                 continue

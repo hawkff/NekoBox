@@ -766,13 +766,28 @@ class RawUpdaterParseTest {
         assertEquals(listOf<String?>("vless"), report.failed)
         assertTrue(parseProxies(mask).isEmpty())
         // A link with certificate checks is never cut at the space, so no part of it imports without them.
-        for (option in listOf("pcs=${"0f".repeat(32)}", "vcn=verify.example")) {
-            val malformed = "vless://$uuid@192.0.2.1:443?security=tls&allowInsecure=1 &$option#checked"
-            val beans = parseProxies("$malformed\n$valid")
-            assertEquals(listOf("first", "second"), beans.filter { it !is StandardV2RayBean }.map { it.displayName() })
-            val checked = beans.filterIsInstance<StandardV2RayBean>()
-            assertTrue(checked.all { !it.pinnedPeerCertSha256.isNullOrBlank() || !it.verifyPeerCertByName.isNullOrBlank() })
+        // An escaped separator after the space too: the query goes on across it, so the checks stay with the link.
+        for (separator in listOf("&", "&amp;")) {
+            for (option in listOf("pcs=${"0f".repeat(32)}", "vcn=verify.example")) {
+                for (malformed in listOf(
+                    "vless://$uuid@192.0.2.1:443?security=tls&allowInsecure=1 $separator$option#checked",
+                    "vless://$uuid@192.0.2.1:443?security=tls&allowInsecure=1&x= $separator$option#checked",
+                )) {
+                    val beans = parseProxies("$malformed\n$valid")
+                    assertEquals(malformed, listOf("first", "second"), beans.filter { it !is StandardV2RayBean }.map { it.displayName() })
+                    val checked = beans.filterIsInstance<StandardV2RayBean>()
+                    assertTrue(malformed, checked.all { !it.pinnedPeerCertSha256.isNullOrBlank() || !it.verifyPeerCertByName.isNullOrBlank() })
+                }
+            }
+            // A mask that cannot apply refuses the whole link.
+            val masked = "vless://$uuid@192.0.2.1:443?security=tls&x= ${separator}fm=%7B%7D#refused"
+            assertEquals(masked, listOf("first", "second"), parseProxies("$masked\n$valid").map { it.displayName() })
         }
+        // A list of pins with a space keeps the options after it.
+        val pin = "0f".repeat(32)
+        val listed = parseProxies("vless://$uuid@192.0.2.1:443?security=tls&pcs=$pin, ${"ab".repeat(32)}&amp;vcn=verify.example#listed").single() as StandardV2RayBean
+        assertEquals("$pin,${"ab".repeat(32)}", listed.pinnedPeerCertSha256)
+        assertEquals("verify.example", listed.verifyPeerCertByName)
     }
 
     @Test
