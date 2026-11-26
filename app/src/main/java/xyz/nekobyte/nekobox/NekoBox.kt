@@ -146,6 +146,8 @@ class NekoBox :
                 DataStore.configurationStore.registerChangeListener(AppUpdates)
                 // The widgets show the selection, the quick-switch lists and the look, which change in this process.
                 DataStore.configurationStore.registerChangeListener(ConnectWidgets)
+                // They may show a service whose process ended while this one was gone.
+                ConnectWidgets.refresh(this@NekoBox)
                 // The manifest drops the androidx-startup provider whose initializer would write the baseline profile;
                 // wait out start-up as that initializer does. A no-op once written for this APK.
                 delay(5_000)

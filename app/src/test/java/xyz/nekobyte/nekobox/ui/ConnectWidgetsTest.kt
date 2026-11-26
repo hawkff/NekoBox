@@ -3,6 +3,8 @@ package xyz.nekobyte.nekobox.ui
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.os.Binder
+import android.os.Looper
 import android.widget.TextView
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
@@ -11,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +57,9 @@ class ConnectWidgetsTest {
     @After
     fun tearDown() {
         drawn()
+        // Lets go of a watched service: the watch outlives a test.
+        ConnectWidgets.askService = { null }
+        runBlocking { ConnectWidgets.refresh(context).join() }
         ConnectWidgets.askService = ask
         Logs.sink = logSink
     }
@@ -111,5 +117,23 @@ class ConnectWidgetsTest {
         ConnectWidgets.askService = { null }
         runBlocking { ConnectWidgets.refresh(context).join() }
         assertEquals("Tokyo 004", text(id, R.id.widget_profile))
+    }
+
+    @Test
+    fun aServiceWhoseProcessEndsUnseenIsShownOff() {
+        val id = place()
+        shadowOf(context).setComponentNameAndServiceForBindService(service, Binder())
+        ConnectWidgets.askService = { answer(State.Connected) }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("Connected", text(id, R.id.widget_state))
+        assertTrue(ConnectWidgets.watch in shadowOf(context).boundServiceConnections)
+        // The service's process dies: no state change reaches this process, only the lost connection.
+        ConnectWidgets.askService = { null }
+        ConnectWidgets.watch.onServiceDisconnected(service)
+        drawn()
+        assertEquals("Not connected", text(id, R.id.widget_state))
+        // Nothing runs any more: the watch lets go.
+        assertFalse(ConnectWidgets.watch in shadowOf(context).boundServiceConnections)
     }
 }

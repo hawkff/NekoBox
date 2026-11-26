@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Bitmap
@@ -15,6 +16,7 @@ import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.os.SystemClock
 import android.text.format.Formatter
 import android.util.SizeF
@@ -24,6 +26,11 @@ import android.widget.RemoteViews
 import androidx.annotation.VisibleForTesting
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.google.android.material.color.DynamicColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -33,6 +40,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import xyz.nekobyte.nekobox.Action
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
@@ -46,6 +54,7 @@ import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.widget.OrbRing
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /** The home-screen widget: the connect button's orb, the profile, its group, the state, live speed and quick-switch chips. */
@@ -61,6 +70,14 @@ class ConnectWidget : AppWidgetProvider() {
     // A new size can take another layout.
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
         ConnectWidgets.refresh(context, goAsync())
+    }
+}
+
+/** Draws the widgets again while they show the service running, in case its process ended unseen. */
+class ConnectWidgetCheck(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        ConnectWidgets.refresh(applicationContext).join()
+        return Result.success()
     }
 }
 
@@ -104,6 +121,62 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     @VisibleForTesting
     @Volatile
     internal var lastRender: Job? = null
+
+    // The running service, watched from this process while the widgets show it running: its process can end without a
+    // state change (killed, crashed), and the widgets would go on showing it. Bound without creating it, so the
+    // binding neither starts nor keeps a service.
+    @VisibleForTesting
+    internal val watch = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) = Unit
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            watchedBy?.let { refresh(it) }
+        }
+    }
+
+    @Volatile private var watched: ComponentName? = null
+
+    @Volatile private var watchedBy: Context? = null
+
+    // Under the render lock.
+    private fun watch(app: Context, service: ComponentName?) {
+        if (service == watched) return
+        if (watched != null) {
+            try {
+                app.unbindService(watch)
+            } catch (_: IllegalArgumentException) {
+            }
+            watched = null
+        }
+        if (service == null) return
+        watchedBy = app
+        watched = service
+        if (!app.bindService(Intent(Action.SERVICE).setComponent(service), watch, 0)) watch(app, null)
+    }
+
+    // Both processes can end, Android ending a cached app process first: then nothing is left to watch. While the
+    // widgets show the service running, a check every 15 minutes draws them again, from a new process if need be.
+    private var checking: Boolean? = null
+
+    // Under the render lock.
+    private fun check(app: Context, running: Boolean) {
+        if (running == checking) return
+        try {
+            val work = WorkManager.getInstance(app)
+            if (running) {
+                work.enqueueUniquePeriodicWork(
+                    CHECK_WORK,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    PeriodicWorkRequest.Builder(ConnectWidgetCheck::class.java, 15, TimeUnit.MINUTES).build(),
+                )
+            } else {
+                work.cancelUniqueWork(CHECK_WORK)
+            }
+            checking = running
+        } catch (e: IllegalStateException) {
+            Logs.w("widget check", e)
+        }
+    }
 
     private fun component(context: Context) = ComponentName(context, ConnectWidget::class.java)
 
@@ -279,9 +352,15 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     private suspend fun render(app: Context) {
         val manager = AppWidgetManager.getInstance(app)
         val ids = manager.getAppWidgetIds(component(app))
-        if (ids.isEmpty()) return
+        if (ids.isEmpty()) {
+            watch(app, null)
+            check(app, false)
+            return
+        }
         val answer = askService(app)
         val state = answer?.state ?: BaseService.State.Stopped
+        watch(app, answer?.service?.takeIf { state.started })
+        check(app, state.started)
         // Running, the profile the service runs, also a server its group picked on its own; else the selected one. Its
         // own name and group, not the notification's title.
         val runningId = answer?.runningProfileId?.takeIf { state.started && it > 0L }
@@ -402,5 +481,6 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     }
 
     private const val ORB_DP = 72
+    private const val CHECK_WORK = "connect-widget-check"
     private const val PLACED_CHECK_MS = 30_000L
 }
