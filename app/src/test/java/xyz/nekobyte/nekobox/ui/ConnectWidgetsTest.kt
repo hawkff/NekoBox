@@ -454,4 +454,31 @@ class ConnectWidgetsTest {
             ConnectWidgets.afterProfilesRead = hook
         }
     }
+
+    @Test
+    fun aServiceThatNeverAnswersIsAskedAgainEveryTime_upToTheLimit() {
+        val retryMs = ConnectWidgets.retryMs
+        val asks = java.util.concurrent.atomic.AtomicInteger()
+        val fifth = CompletableDeferred<Unit>()
+        try {
+            ConnectWidgets.retryMs = 20
+            val id = place()
+            // Each retry's drawing finds the service still silent, at once: the next retry is due all the same.
+            ConnectWidgets.askService = {
+                if (asks.incrementAndGet() == 5) fifth.complete(Unit)
+                ServiceAnswer(service, null, -1L, null)
+            }
+            runBlocking {
+                ConnectWidgets.refresh(context).join()
+                withTimeout(5_000) { fifth.await() }
+                // Four retries after the first ask, then no more.
+                delay(1_000)
+            }
+            drawn()
+            assertEquals(5, asks.get())
+            assertEquals("Connecting…", text(id, R.id.widget_state))
+        } finally {
+            ConnectWidgets.retryMs = retryMs
+        }
+    }
 }

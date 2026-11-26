@@ -144,6 +144,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     private var unanswered = 0
     private var retry: Job? = null
 
+    @Volatile private var retryFired = false
+
     @VisibleForTesting
     internal var retryMs = 2_000L
 
@@ -553,10 +555,14 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     // Under the render lock.
     @OptIn(DelicateCoroutinesApi::class)
     private fun retryUnanswered(app: Context) {
-        if (unanswered >= RETRIES || retry?.isActive == true) return
+        // A retry still waiting covers this drawing; one whose wait is over may be what asked for it, and the next one
+        // is due.
+        if (unanswered >= RETRIES || (retry?.isActive == true && !retryFired)) return
         val wait = retryMs shl unanswered++
+        retryFired = false
         retry = GlobalScope.launch(Dispatchers.Default) {
             delay(wait)
+            retryFired = true
             refresh(app)
         }
     }
