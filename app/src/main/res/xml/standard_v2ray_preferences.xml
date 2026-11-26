@@ -173,6 +173,18 @@
             app:key="certificates"
             app:title="@string/certificates"
             app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/pinned_peer_cert_sha256_hint"
+            app:icon="@drawable/ic_fingerprint"
+            app:key="pinnedPeerCertSha256"
+            app:title="@string/pinned_peer_cert_sha256"
+            app:useSimpleSummaryProvider="true" />
+        <EditTextPreference
+            app:dialogMessage="@string/verify_peer_cert_by_name_hint"
+            app:icon="@drawable/ic_domain"
+            app:key="verifyPeerCertByName"
+            app:title="@string/verify_peer_cert_by_name"
+            app:useSimpleSummaryProvider="true" />
         <SwitchPreference
             app:icon="@drawable/ic_enhanced_encryption"
             app:key="allowInsecure"

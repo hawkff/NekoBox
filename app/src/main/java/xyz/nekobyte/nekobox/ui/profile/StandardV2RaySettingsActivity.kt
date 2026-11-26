@@ -40,6 +40,8 @@ abstract class StandardV2RaySettingsActivity : ProfileSettingsActivity<StandardV
     private val sni = pbm.add(PreferenceBinding(Type.Text, "sni"))
     private val alpn = pbm.add(PreferenceBinding(Type.Text, "alpn"))
     private val certificates = pbm.add(PreferenceBinding(Type.Text, "certificates"))
+    private val pinnedPeerCertSha256 = pbm.add(PreferenceBinding(Type.Text, "pinnedPeerCertSha256"))
+    private val verifyPeerCertByName = pbm.add(PreferenceBinding(Type.Text, "verifyPeerCertByName"))
     private val allowInsecure = pbm.add(PreferenceBinding(Type.Bool, "allowInsecure"))
     private val tlsFragment = pbm.add(PreferenceBinding(Type.Bool, "tlsFragment"))
     private val utlsFingerprint = pbm.add(PreferenceBinding(Type.Text, "utlsFingerprint"))

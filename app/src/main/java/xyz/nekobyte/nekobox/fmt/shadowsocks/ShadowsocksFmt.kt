@@ -42,26 +42,35 @@ private fun ShadowsocksBean.applyTransportParams(link: HttpUrl) {
     }
 }
 
+private val CIPHER_NAME = Regex("[A-Za-z0-9_-]+")
+
+/** The user info of user@host:port..., or null when no '@' separates one from the host. */
+private fun userInfoOf(authority: String): String? = authority.substringBefore('?').let { head ->
+    head.lastIndexOf('@').takeIf { it >= 0 }?.let { head.substring(0, it) }
+}
+
+/** method:password with a cipher name as the method; the password may be empty, as in "none:". */
+private fun isMethodAndPassword(userInfo: String?) = userInfo != null && ':' in userInfo && CIPHER_NAME.matches(userInfo.substringBefore(':'))
+
 fun parseShadowsocks(url: String): ShadowsocksBean {
     if (url.substringBefore("#").contains("@")) {
         var link = url.replace("ss://", "https://").toHttpUrlOrNull() ?: error(
             "invalid ss-android link $url",
         )
 
+        var authority = url.substringAfter("ss://").substringBefore("#")
         if (link.username.isBlank()) { // fix justmysocks's shit link
-            link = (
-                (
-                    "https://" + url.substringAfter("ss://")
-                        .substringBefore("#")
-                        .decodeBase64UrlSafe()
-                    ).toHttpUrlOrNull()
-                    ?: error("invalid jms link $url")
-                ).newBuilder().fragment(url.substringAfter("#")).build()
+            authority = authority.decodeBase64UrlSafe()
+            link = ("https://$authority").toHttpUrlOrNull()?.newBuilder()?.fragment(url.substringAfter("#"))?.build()
+                ?: error("invalid jms link $url")
         }
 
-        // ss-android style
-
-        if (link.password.isNotBlank()) {
+        // ss-android style: method:password in plain text. Base64 has no ':', so one in the user info marks this
+        // form, and "none:" keeps its explicitly empty password. A port's ':' is not one: without an '@' there is
+        // no user info.
+        val userInfo = userInfoOf(authority) ?: error("invalid shadowsocks link: no user info")
+        if (':' in userInfo) {
+            require(isMethodAndPassword(userInfo)) { "invalid shadowsocks method" }
             return ShadowsocksBean().apply {
                 serverAddress = link.host
                 serverPort = link.port
@@ -75,6 +84,9 @@ fun parseShadowsocks(url: String): ShadowsocksBean {
         }
 
         val methodAndPswd = link.username.decodeBase64UrlSafe()
+        // A userinfo that is not base64 of method:password, such as a VLESS UUID or a cipher name alone, has no
+        // cipher name before a ':'.
+        require(':' in methodAndPswd && CIPHER_NAME.matches(methodAndPswd.substringBefore(":"))) { "invalid shadowsocks method" }
 
         return ShadowsocksBean().apply {
             serverAddress = link.host
@@ -92,10 +104,11 @@ fun parseShadowsocks(url: String): ShadowsocksBean {
 
         if (v2Url.contains("#")) v2Url = v2Url.substringBefore("#")
 
-        val link = (
-            "https://" + v2Url.substringAfter("ss://")
-                .decodeBase64UrlSafe()
-            ).toHttpUrlOrNull() ?: error("invalid v2rayN link $url")
+        val decoded = v2Url.substringAfter("ss://").decodeBase64UrlSafe()
+        // method:password@host:port; without the '@' and the ':' before it, the host's port or the method would stand
+        // in for the credentials.
+        require(isMethodAndPassword(userInfoOf(decoded))) { "invalid shadowsocks method" }
+        val link = ("https://$decoded").toHttpUrlOrNull() ?: error("invalid v2rayN link $url")
 
         return ShadowsocksBean().apply {
             serverAddress = link.host

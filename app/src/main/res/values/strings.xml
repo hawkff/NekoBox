@@ -160,6 +160,10 @@
     <string name="sni">Server name indication</string>
     <string name="alpn">Application-layer protocol negotiation</string>
     <string name="certificates">Certificates</string>
+    <string name="pinned_peer_cert_sha256">Pinned certificate fingerprints</string>
+    <string name="pinned_peer_cert_sha256_hint">SHA-256 fingerprints of the server certificate or of the certificate authority that signed it, comma-separated. A matching server certificate is trusted even when it is self-signed; with a matching authority the certificate must also fit the server name. Allow insecure does not turn this check off, and the Certificates field above is not used while fingerprints are set.</string>
+    <string name="verify_peer_cert_by_name">Names to check the certificate against</string>
+    <string name="verify_peer_cert_by_name_hint">Comma-separated. The certificate must be valid for one of these names; the server name is still sent but no longer checked.</string>
     <string name="early_data_header_name">Early data header name</string>
     <string name="encryption">Encryption</string>
     <string name="extra_headers">Extra headers</string>

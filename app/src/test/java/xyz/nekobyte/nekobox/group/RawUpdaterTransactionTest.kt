@@ -44,6 +44,7 @@ import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.KryoConverters
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.applyDefaultValues
@@ -522,26 +523,20 @@ class RawUpdaterTransactionTest {
     }
 
     @Test
-    fun aNodeThatGainsACertificatePin_isRefusedAndItsStoredProfileKept() = runTest {
+    fun aNodeThatGainsACertificatePin_keepsItsProfileWithThePin() = runTest {
         withContext(Dispatchers.IO) {
             val node = "vless://00000000-0000-4000-8000-000000000001@192.0.2.5:443?type=tcp&security=tls&sni=a.example"
             val socks = "socks://192.0.2.1:1080#first\nsocks://192.0.2.2:1080#second"
             RawUpdater.updateFromContent(group, subscription, "$socks\n$node#pinned")
             val pinned = ProfileDatabase.proxyDao.getByGroup(group.id).single { it.displayName() == "pinned" }
 
-            // The provider now pins the certificate (synthetic value); the link is refused, not imported without it.
-            RawUpdater.updateFromContent(group, subscription, "$socks\n$node&pcs=${"0f".repeat(32)}#pinned")
+            // The provider now pins the certificate (synthetic value); the profile keeps its place and gains the pin.
+            RawUpdater.updateFromContent(group, subscription, "$socks\n$node&pcs=${"0F".repeat(32)}#pinned")
             val after = ProfileDatabase.proxyDao.getByGroup(group.id)
             assertEquals(listOf("first", "second", "pinned"), after.map { it.displayName() })
             assertEquals(pinned.id, after.last().id)
-            assertEquals(pinned.requireBean(), after.last().requireBean())
-            assertEquals(
-                listOf(
-                    app.getString(R.string.subscription_import_failed, 2, 1, "vless 1") + " " + app.getString(R.string.subscription_import_reasons, "unsupported pcs"),
-                    app.getString(R.string.subscription_kept_partial, 1),
-                ).joinToString("\n"),
-                subscription.importWarning,
-            )
+            assertEquals("0f".repeat(32), (after.last().requireBean() as StandardV2RayBean).pinnedPeerCertSha256)
+            assertEquals("", subscription.importWarning.orEmpty())
         }
     }
 

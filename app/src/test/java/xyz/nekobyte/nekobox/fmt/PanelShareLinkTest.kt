@@ -337,6 +337,99 @@ class PanelShareLinkTest {
     }
 
     @Test
+    fun certificateCheckLinks_roundTripAndKeepStoredBytes() = runTest {
+        val pin = "ab".repeat(32)
+        // Xray writes hex in any case and openssl with ':' between bytes; the profile keeps lowercase hex.
+        val written = pin.uppercase().chunked(2).joinToString(":")
+        val vcn = "a.example,b.example"
+        val links = listOf(
+            "vless://$UUID@192.0.2.1:443?type=ws&security=tls&sni=front.example&pcs=${encode("$written,$pin")}&vcn=${encode("a.example, b.example")}#vless",
+            "trojan://secret@192.0.2.2:443?type=tcp&security=tls&sni=front.example&pcs=$pin&vcn=$vcn#trojan",
+        )
+        for (link in links) {
+            val bean = parseProxies(link).single() as xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
+            bean.applyDefaultValues()
+            val pins = if (bean is TrojanBean) pin else "$pin,$pin"
+            assertEquals(link, pins, bean.pinnedPeerCertSha256)
+            assertEquals(link, vcn, bean.verifyPeerCertByName)
+            val exported = bean.toUriVMessVLESSTrojan(bean is TrojanBean)
+            val copy = parseProxies(exported).single() as xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
+            assertEquals(exported, pins, copy.pinnedPeerCertSha256)
+            assertEquals(exported, vcn, copy.verifyPeerCertByName)
+            val tls = buildSingBoxOutboundTLS(bean)!!
+            assertEquals(pins.split(','), tls.certificate_sha256)
+            assertEquals(vcn.split(','), tls.verify_certificate_by_name)
+            // Version 13 only for a profile with checks; without them it keeps its previous bytes.
+            val stored = KryoConverters.serialize(bean)
+            // Trojan writes its own version before the shared fields.
+            val versionAt = if (bean is TrojanBean) 4 else 0
+            assertEquals(13, stored[versionAt].toInt())
+            val restored = KryoConverters.deserialize(bean.javaClass.getDeclaredConstructor().newInstance(), stored)
+            assertEquals(pins, restored.pinnedPeerCertSha256)
+            assertEquals(vcn, restored.verifyPeerCertByName)
+            restored.pinnedPeerCertSha256 = ""
+            restored.verifyPeerCertByName = ""
+            assertEquals(10, KryoConverters.serialize(restored)[versionAt].toInt())
+        }
+
+        // The VMess JSON form carries them as pcs and vcn too.
+        val vmess = VMessBean().apply {
+            serverAddress = "192.0.2.3"
+            serverPort = 443
+            uuid = UUID
+            alterId = 0
+            security = "tls"
+            sni = "front.example"
+            pinnedPeerCertSha256 = pin
+            verifyPeerCertByName = vcn
+            name = "vmess"
+        }.applyDefaultValues()
+        val json = vmess.toUriVMessVLESSTrojan(false)
+        val decoded = JSONObject(xyz.nekobyte.nekobox.utils.NGUtil.decode(json.removePrefix("vmess://")))
+        assertEquals(listOf(pin, vcn), listOf(decoded.getString("pcs"), decoded.getString("vcn")))
+        val parsed = parseV2RayN(json)
+        assertEquals(listOf(pin, vcn), listOf(parsed.pinnedPeerCertSha256, parsed.verifyPeerCertByName))
+        // Without checks the JSON has no such keys.
+        val plain = JSONObject(
+            xyz.nekobyte.nekobox.utils.NGUtil.decode(
+                vmess.apply {
+                    pinnedPeerCertSha256 = ""
+                    verifyPeerCertByName = ""
+                }.toUriVMessVLESSTrojan(false).removePrefix("vmess://"),
+            ),
+        )
+        assertFalse(plain.has("pcs") || plain.has("vcn"))
+    }
+
+    @Test
+    fun httpsProfileWithCertificateChecks_sharesALinkThatKeepsThem() = runTest {
+        val pin = "ab".repeat(32)
+        val bean = xyz.nekobyte.nekobox.fmt.http.HttpBean().apply {
+            serverAddress = "192.0.2.5"
+            serverPort = 443
+            username = "user"
+            password = "pass"
+            security = "tls"
+            sni = "a.example"
+            pinnedPeerCertSha256 = pin
+            verifyPeerCertByName = "b.example"
+            name = "https"
+        }.applyDefaultValues()
+        // The HTTPS share link has no place for the checks, so the universal link carries the whole profile.
+        val link = xyz.nekobyte.nekobox.database.ProxyEntity().apply { putBean(bean) }.toStdLink()
+        assertTrue(link, link.startsWith("sn://"))
+        val copy = parseProxies(link).single() as xyz.nekobyte.nekobox.fmt.http.HttpBean
+        assertEquals(listOf(pin, "b.example", "a.example", "user"), listOf(copy.pinnedPeerCertSha256, copy.verifyPeerCertByName, copy.sni, copy.username))
+        // Without checks it keeps its own link.
+        val plain = KryoConverters.deserialize(xyz.nekobyte.nekobox.fmt.http.HttpBean(), KryoConverters.serialize(bean)).apply {
+            pinnedPeerCertSha256 = ""
+            verifyPeerCertByName = ""
+        }
+        val plainLink = xyz.nekobyte.nekobox.database.ProxyEntity().apply { putBean(plain) }.toStdLink()
+        assertFalse(plainLink, plainLink.startsWith("sn://"))
+    }
+
+    @Test
     fun fragmentMaskLink_becomesTlsFragmentationAndBack() {
         val fm = encode("""{"tcp":[{"type":"fragment","settings":{"packets":"tlshello","length":"10-20","delay":"0"}}]}""")
         val reality = "security=reality&sni=www.example.com&pbk=$REALITY_KEY&sid=ab&fp=firefox&flow=xtls-rprx-vision"

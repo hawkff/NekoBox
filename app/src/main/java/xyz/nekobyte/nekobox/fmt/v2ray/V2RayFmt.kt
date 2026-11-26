@@ -49,6 +49,8 @@ data class VmessQRCode(
     var mode: String? = null,
     var extra: JsonElement? = null,
     var fm: String? = null,
+    var pcs: String? = null,
+    var vcn: String? = null,
 )
 
 // Xray `echConfigList`: a base64 ECH config list, or a DoH URL (optionally `domain+url`) the
@@ -60,6 +62,37 @@ private fun StandardV2RayBean.applyECHParam(value: String) {
     echConfig = value
 }
 
+/**
+ * Xray's pinnedPeerCertSha256 (pcs) as stored: comma-separated SHA-256 hashes in lowercase hex. Links write them in
+ * any case, with or without ':' between bytes. Xray refuses a config with a hash of another length, so the link is
+ * refused too. An absent or empty value asks for no pin; any other value must hold at least one hash.
+ */
+internal fun normalizedCertificatePins(value: String?): String {
+    if (value.isNullOrEmpty()) return ""
+    // Only tokens blank as written are skipped; one that normalizes to nothing, such as ":", is no hash.
+    val pins = value.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { it.replace(":", "").lowercase() }
+    if (pins.isEmpty() || pins.any { pin -> pin.length != 64 || pin.any { it !in "0123456789abcdef" } }) throw UnsupportedEntryException("invalid pcs")
+    return pins.joinToString(",")
+}
+
+/**
+ * Xray's verifyPeerCertByName (vcn) as stored: comma-separated names. An absent or empty value asks for no names;
+ * any other value must hold at least one.
+ */
+internal fun normalizedCertificateNames(value: String?): String {
+    if (value.isNullOrEmpty()) return ""
+    val names = value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    if (names.isEmpty()) throw UnsupportedEntryException("invalid vcn")
+    return names.joinToString(",")
+}
+
+/** The certificate checks of a TLS link; REALITY authenticates the server itself and Xray ignores them there. */
+private fun StandardV2RayBean.applyCertificateChecks(pcs: String?, vcn: String?) {
+    if (!realityPubKey.isNullOrBlank()) return
+    pinnedPeerCertSha256 = normalizedCertificatePins(pcs)
+    verifyPeerCertByName = normalizedCertificateNames(vcn)
+}
+
 /** True for Xray's dynamic form, a DoH URL instead of an inline config list. */
 private fun StandardV2RayBean.echConfigIsURL() = echConfig!!.contains("://")
 
@@ -67,6 +100,9 @@ private fun StandardV2RayBean.echConfigIsURL() = echConfig!!.contains("://")
 private fun StandardV2RayBean.echParam() = echConfig!!.lines().filterNot { it.startsWith("-----") }.joinToString("").trim()
 
 fun StandardV2RayBean.isTLS(): Boolean = security == "tls"
+
+/** True when the profile pins certificates or checks them against other names. */
+fun StandardV2RayBean.hasCertificateChecks(): Boolean = !pinnedPeerCertSha256.isNullOrBlank() || !verifyPeerCertByName.isNullOrBlank()
 
 fun StandardV2RayBean.setTLS(boolean: Boolean) {
     security = if (boolean) "tls" else ""
@@ -76,10 +112,11 @@ fun StandardV2RayBean.setTLS(boolean: Boolean) {
 private val SHARE_LINK_TRANSPORTS = setOf("tcp", "http", "kcp", "ws", "grpc", "httpupgrade", "xhttp", "quic")
 
 /**
- * Xray share-link options this app cannot honor that change which servers a connection accepts:
- * a pinned certificate (pcs), the names a certificate is checked against (vcn) and Finalmask
- * traffic masking (fm), apart from mKCP's masks and TCP fragment masks. Without them a link would
- * trust certificates its provider meant to refuse, or would not reach a server that expects masked
+ * Xray share-link options that change which servers a connection accepts: a pinned certificate
+ * (pcs), the names a certificate is checked against (vcn) and Finalmask traffic masking (fm).
+ * VLESS, VMess and Trojan links carry pcs and vcn to the profile; other links cannot, and Finalmask
+ * is honored only for mKCP's masks and TCP fragment masks. Without them a link would trust
+ * certificates its provider meant to refuse, or would not reach a server that expects masked
  * traffic. Each may be empty.
  */
 private val UNSUPPORTED_LINK_OPTIONS = listOf("pcs", "vcn", "fm")
@@ -95,10 +132,11 @@ internal fun requireSupportedLinkOptions(link: String) {
     val query = link.substringBefore('#').substringAfter('?', "")
     val parameters = query.split('&').map { decodeLinkComponent(it.substringBefore('=')) to decodeLinkComponent(it.substringAfter('=', "")) }
     val kcp = parameters.any { (name, value) -> name == "type" && value == "kcp" }
-    // Only these links set a profile's TLS fragmentation from it.
+    // Only these links set a profile's TLS fragmentation and certificate checks from it.
     val fragments = link.substringBefore("://").lowercase() in setOf("vless", "vmess", "trojan")
     for ((name, value) in parameters) {
-        if (name !in UNSUPPORTED_LINK_OPTIONS || value.isBlank()) continue
+        if (name !in UNSUPPORTED_LINK_OPTIONS || (if (name == "fm") value.isBlank() else value.isEmpty())) continue
+        if (fragments && name != "fm") continue
         // mKCP's own packet masks are the one Finalmask part the transport carries; TCP fragment masks
         // become the profile's TLS fragmentation.
         if (name == "fm" && if (kcp) parseKcpFinalMask(value) != null else fragments && isFragmentFinalMask(value)) continue
@@ -164,12 +202,12 @@ internal fun StandardV2RayBean.kcpFinalMask(): String? {
  */
 internal fun dropsFragmentMask(link: String, bean: AbstractBean): Boolean {
     if (bean !is StandardV2RayBean || bean.tlsFragment == true || bean.type == "kcp") return false
-    val fm = if ('?' in link) {
+    val fm = if ('?' in link.substringBefore('#')) {
         link.substringBefore('#').substringAfter('?').split('&').firstOrNull { decodeLinkComponent(it.substringBefore('=')) == "fm" }
             ?.let { decodeLinkComponent(it.substringAfter('=', "")) }
     } else {
         // The VMess JSON form carries its options in the encoded object.
-        runCatching { JSONObject(link.substringAfter("vmess://").decodeBase64UrlSafe()) }.getOrNull()?.takeUnless { it.isNull("fm") }?.optString("fm")
+        runCatching { JSONObject(link.substringAfter("vmess://").substringBefore('#').decodeBase64UrlSafe()) }.getOrNull()?.takeUnless { it.isNull("fm") }?.optString("fm")
     }
     return fm?.let(::isFragmentFinalMask) == true
 }
@@ -208,10 +246,38 @@ private fun StandardV2RayBean.applyKcpFinalMask(fm: String?) {
 
 fun parseV2Ray(link: String): StandardV2RayBean {
     requireSupportedLinkOptions(link)
+    return parseV2RayForms(link).also { it.requireCertificateChecksKept(link) }
+}
 
+/**
+ * Refuses a TLS link whose pcs or vcn query option its format did not keep (the Kitsunebi and v2fly
+ * forms have no place for them), so the node would trust certificates its provider meant to refuse.
+ */
+private fun StandardV2RayBean.requireCertificateChecksKept(link: String) {
+    if (security != "tls" || !realityPubKey.isNullOrBlank()) return
+    val query = link.substringBefore('#').substringAfter('?', "")
+    for (parameter in query.split('&')) {
+        val name = decodeLinkComponent(parameter.substringBefore('='))
+        val kept = when (name) {
+            "pcs" -> pinnedPeerCertSha256
+            "vcn" -> verifyPeerCertByName
+            else -> continue
+        }
+        if (decodeLinkComponent(parameter.substringAfter('=', "")).isNotEmpty() && kept.isNullOrBlank()) {
+            throw UnsupportedEntryException("unsupported $name")
+        }
+    }
+}
+
+/** True for a link whose query carries a certificate pin or names; splitting it at spaces would drop them. */
+internal fun carriesCertificateChecks(link: String): Boolean = link.substringBefore('#').substringAfter('?', "").split('&').any {
+    decodeLinkComponent(it.substringBefore('=')) in setOf("pcs", "vcn") && decodeLinkComponent(it.substringAfter('=', "")).isNotEmpty()
+}
+
+private fun parseV2RayForms(link: String): StandardV2RayBean {
     // Try parse stupid formats first
 
-    if (!link.contains("?")) {
+    if ('?' !in link.substringBefore('#')) {
         try {
             return parseV2RayN(link)
         } catch (e: UnsupportedEntryException) {
@@ -386,6 +452,7 @@ fun StandardV2RayBean.parseDuckSoft(url: HttpUrl) {
             url.queryParameterPreservingPlus("ech")?.let {
                 applyECHParam(it)
             }
+            applyCertificateChecks(url.queryParameter("pcs"), url.queryParameter("vcn"))
         }
 
         else -> error("unsupported security")
@@ -557,18 +624,18 @@ private fun tryResolveVmess4Kitsunebi(server: String): VMessBean {
 
 // Throws on V2RayN link variants the core cannot run.
 fun parseV2RayN(link: String): VMessBean {
-    val result = link.substringAfter("vmess://").decodeBase64UrlSafe()
+    // Lists append a remark as a URI fragment; '#' is not a base64 character.
+    val result = link.substringAfter("vmess://").substringBefore('#').decodeBase64UrlSafe()
     if (result.contains("= vmess")) {
         return parseCsvVMess(result)
     }
     val bean = VMessBean()
     // The JSON form carries the same options as the query of the other forms.
     val options = runCatching { JSONObject(result) }.getOrNull()
-    for (name in UNSUPPORTED_LINK_OPTIONS) {
-        val value = options?.takeUnless { it.isNull(name) }?.opt(name)?.toString()
-        if (value.isNullOrBlank()) continue
-        if (name == "fm" && if (options.optString("net") == "kcp") parseKcpFinalMask(value) != null else isFragmentFinalMask(value)) continue
-        throw UnsupportedEntryException("unsupported $name")
+    fun option(name: String) = options?.takeUnless { it.isNull(name) }?.opt(name)?.toString()
+    val fm = option("fm")
+    if (!fm.isNullOrBlank() && !(if (options?.optString("net") == "kcp") parseKcpFinalMask(fm) != null else isFragmentFinalMask(fm))) {
+        throw UnsupportedEntryException("unsupported fm")
     }
     val vmessQRCode = Gson().fromJson(result, VmessQRCode::class.java)
 
@@ -636,6 +703,7 @@ fun parseV2RayN(link: String): VMessBean {
             bean.utlsFingerprint = vmessQRCode.fp
             bean.applyECHParam(vmessQRCode.ech)
             bean.applyFragmentMask(options?.takeUnless { it.isNull("fm") }?.optString("fm"))
+            bean.applyCertificateChecks(option("pcs"), option("vcn"))
         }
 
         else -> throw UnsupportedEntryException("unsupported security")
@@ -724,6 +792,10 @@ fun VMessBean.toV2rayN(): String {
         alpn = bean.alpn!!.replace("\n", ",")
         fp = bean.utlsFingerprint!!
         if (bean.enableECH!!) ech = bean.echParam()
+        if (isTLS() && bean.realityPubKey!!.isBlank()) {
+            pcs = bean.pinnedPeerCertSha256!!.ifBlank { null }
+            vcn = bean.verifyPeerCertByName!!.ifBlank { null }
+        }
     }.let {
         NGUtil.encode(Gson().toJson(it))
     }
@@ -839,6 +911,10 @@ fun StandardV2RayBean.toUriVMessVLESSTrojan(isTrojan: Boolean): String {
                 }
                 if (enableECH!!) {
                     echParam().takeIf { it.isNotBlank() }?.let { builder.addQueryParameter("ech", it) }
+                }
+                if (realityPubKey!!.isBlank()) {
+                    if (pinnedPeerCertSha256!!.isNotBlank()) builder.addQueryParameter("pcs", pinnedPeerCertSha256)
+                    if (verifyPeerCertByName!!.isNotBlank()) builder.addQueryParameter("vcn", verifyPeerCertByName)
                 }
                 if (realityPubKey!!.isNotBlank()) {
                     builder.setQueryParameter("security", "reality")
@@ -999,7 +1075,13 @@ fun buildSingBoxOutboundTLS(bean: StandardV2RayBean): OutboundTLSOptions? {
                 alpn = alpnList
             }
         }
-        if (bean.certificates!!.isNotBlank()) certificate = bean.certificates
+        if (bean.realityPubKey!!.isBlank()) {
+            // Xray semantics in the core: a pinned leaf is trusted as it is, a pinned CA becomes the only root.
+            bean.pinnedPeerCertSha256!!.listByLineOrComma().takeIf { it.isNotEmpty() }?.let { certificate_sha256 = it }
+            bean.verifyPeerCertByName!!.listByLineOrComma().takeIf { it.isNotEmpty() }?.let { verify_certificate_by_name = it }
+        }
+        // The pins decide trust; the core refuses a custom CA beside them.
+        if (bean.certificates!!.isNotBlank() && certificate_sha256 == null) certificate = bean.certificates
         // The core splits the ClientHello into TCP segments, REALITY's too.
         if (bean.tlsFragment == true) fragment = true
         var fp = bean.utlsFingerprint

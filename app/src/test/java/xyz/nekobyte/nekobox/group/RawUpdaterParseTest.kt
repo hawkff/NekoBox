@@ -19,6 +19,7 @@ import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
@@ -26,6 +27,7 @@ import xyz.nekobyte.nekobox.ktx.ImportTooLargeException
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.MAX_IMPORT_BYTES
 import xyz.nekobyte.nekobox.ktx.SubscriptionFoundException
+import xyz.nekobyte.nekobox.ktx.decodeEscapedQuerySeparators
 import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 import java.net.URLEncoder
@@ -567,7 +569,9 @@ class RawUpdaterParseTest {
         val refused = mutableListOf<String>()
         for (security in listOf("security=tls&sni=a.example", "security=reality&pbk=key&sid=01&sni=a.example")) {
             for (insecure in listOf("", "&allowInsecure=0", "&allowInsecure=1")) {
-                for (option in listOf("pcs=$pin", "vcn=a.example", "fm=$mask", "pcs=$pin%2C$pin")) {
+                for (option in listOf("fm=$mask", "pcs=${pin.dropLast(2)}", "pcs=$pin%2Cnot-a-hash")) {
+                    // REALITY ignores pins, as Xray does, so only an unusable mask refuses those links.
+                    if (security.startsWith("security=reality") && option.startsWith("pcs")) continue
                     refused += "vless://$uuid@192.0.2.1:443?type=tcp&$security$insecure&$option#vless"
                     refused += "trojan://secret@192.0.2.2:443?type=ws&$security$insecure&$option#trojan"
                     refused += "vmess://$uuid@192.0.2.3:443?type=tcp&encryption=auto&$security$insecure&$option#vmess"
@@ -579,10 +583,14 @@ class RawUpdaterParseTest {
         )
         val legacy = "vmess://tcp+tls:$uuid-0@192.0.2.4:443?tlsServerName=a.example"
         val kitsunebi = "vmess://" + encode("auto:$uuid@192.0.2.5:443") + "?remarks=kitsunebi&tls=1"
+        // These forms have no place for the checks, so they would drop them.
         refused += "$legacy&pcs=$pin#legacy"
         refused += "$kitsunebi&vcn=a.example"
-        refused += vmessJson("pcs" to pin)
-        refused += vmessJson("vcn" to "a.example")
+        refused += vmessJson("pcs" to "abcd")
+        // A pin that is only separators is no hash; it must not import as "no pin".
+        refused += vmessJson("pcs" to ":")
+        refused += vmessJson("pcs" to "$pin,::")
+        refused += "vless://$uuid@192.0.2.1:443?type=tcp&security=tls&sni=a.example&pcs=%3A#colon"
         refused += vmessJson("fm" to """{"udp":[]}""")
         for ((index, link) in refused.withIndex()) {
             val report = ImportReport()
@@ -602,6 +610,22 @@ class RawUpdaterParseTest {
             "vmess://" + encode("""{"v":"2","ps":"null-pin","add":"192.0.2.7","port":"443","id":"$uuid","aid":"0","net":"tcp","tls":"tls","vcn":null}"""),
         )
         for ((index, link) in accepted.withIndex()) assertEquals("link $index", 1, parseProxies(link).size)
+
+        // VLESS, VMess and Trojan links over TLS keep the checks, with or without allowInsecure.
+        for (insecure in listOf("", "&allowInsecure=1")) {
+            for (link in listOf(
+                "vless://$uuid@192.0.2.1:443?type=tcp&security=tls&sni=a.example$insecure&pcs=$pin%2C$pin&vcn=a.example#vless",
+                "trojan://secret@192.0.2.2:443?type=ws&security=tls&sni=a.example$insecure&pcs=$pin%2C$pin&vcn=a.example#trojan",
+                "vmess://$uuid@192.0.2.3:443?type=tcp&encryption=auto&security=tls$insecure&pcs=$pin%2C$pin&vcn=a.example#vmess",
+                vmessJson("pcs" to "$pin,$pin", "vcn" to "a.example"),
+            )) {
+                val bean = parseProxies(link).single() as StandardV2RayBean
+                assertEquals(link, "$pin,$pin", bean.pinnedPeerCertSha256)
+                assertEquals(link, "a.example", bean.verifyPeerCertByName)
+            }
+        }
+        val reality = parseProxies("vless://$uuid@192.0.2.1:443?type=tcp&security=reality&pbk=key&sid=01&sni=a.example&pcs=$pin#r").single() as StandardV2RayBean
+        assertEquals("", reality.pinnedPeerCertSha256.orEmpty())
     }
 
     @Test
@@ -629,6 +653,11 @@ class RawUpdaterParseTest {
             // Each link imports as it is, so a refusal below comes from the option alone.
             assertEquals(scheme, 1, parseProxies(link).size)
             for (option in listOf("pcs=${"0f".repeat(32)}", "vcn=a.example", "fm=%7B%7D")) {
+                // VLESS, VMess and Trojan carry certificate checks to the profile.
+                if (scheme in setOf("vless", "vmess", "trojan") && option.substringBefore('=') != "fm") {
+                    assertEquals("$scheme with $option", 1, parseProxies(with(link, option)).size)
+                    continue
+                }
                 val report = ImportReport()
                 assertTrue("$scheme with ${option.substringBefore('=')}", parseProxies(with(link, option), report).isEmpty())
                 assertEquals("$scheme with ${option.substringBefore('=')}", listOf<String?>(scheme), report.failed)
@@ -641,11 +670,181 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun htmlEscapedQuerySeparatorsAreReadAsSeparators() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val key = "A".repeat(43)
+        val link = "vless://$uuid@192.0.2.1:443?security=reality&amp;type=grpc&amp;serviceName=svc&amp;pbk=$key&amp;sid=01&amp;sni=a.example&amp;fp=chrome#a&amp;b"
+        val bean = parseProxies(link).single() as VMessBean
+        assertEquals("grpc", bean.type)
+        assertEquals("svc", bean.path)
+        assertEquals(key, bean.realityPubKey)
+        assertEquals("01", bean.realityShortId)
+        assertEquals("a.example", bean.sni)
+        // The remark is not part of the query: it keeps the characters as written.
+        assertEquals("a&amp;b", bean.name)
+        // An escaped pin is a pin.
+        val pinned = parseProxies("vless://$uuid@192.0.2.1:443?security=tls&amp;pcs=${"0f".repeat(32)}").single() as StandardV2RayBean
+        assertEquals("0f".repeat(32), pinned.pinnedPeerCertSha256)
+    }
+
+    @Test
+    fun certificateCheckValuesThatHoldNothingAreRefusedAtEveryEntryPoint() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val pin = "0f".repeat(32)
+        fun query(value: String) = URLEncoder.encode(value, "UTF-8")
+        // Every way a check can be named that holds no pin or name: the link imports with none.
+        val entryPoints: List<Pair<String, (String, String) -> String>> = listOf(
+            "vless" to { name, value -> "vless://$uuid@192.0.2.1:443?type=tcp&security=tls&sni=a.example&$name=${query(value)}#v" },
+            "trojan" to { name, value -> "trojan://secret@192.0.2.2:443?type=tcp&security=tls&sni=a.example&$name=${query(value)}#t" },
+            "vmess" to { name, value -> "vmess://$uuid@192.0.2.3:443?type=tcp&encryption=auto&security=tls&$name=${query(value)}#m" },
+            "vmess json" to { name, value ->
+                "vmess://" + encode(
+                    JSONObject(mapOf("v" to "2", "ps" to "j", "add" to "192.0.2.4", "port" to "443", "id" to uuid, "aid" to "0", "net" to "tcp", "tls" to "tls", name to value)).toString(),
+                )
+            },
+            "xray json" to { name, value ->
+                val key = if (name == "pcs") "pinnedPeerCertSha256" else "verifyPeerCertByName"
+                JSONObject().put(
+                    "outbounds",
+                    JSONArray().put(
+                        JSONObject().put("protocol", "vless").put("tag", "proxy")
+                            .put("settings", JSONObject().put("vnext", JSONArray().put(JSONObject().put("address", "192.0.2.5").put("port", 443).put("users", JSONArray().put(JSONObject().put("id", uuid).put("encryption", "none"))))))
+                            .put("streamSettings", JSONObject().put("network", "tcp").put("security", "tls").put("tlsSettings", JSONObject().put("serverName", "a.example").put(key, value))),
+                    ),
+                ).toString()
+            },
+        )
+        suspend fun imported(text: String) = runCatching { RawUpdater.parseImport(text)?.proxies.orEmpty() }.getOrDefault(emptyList())
+        val empty = listOf(",", " , ", ",,", " ", "  ", "\n", "\t", " \t, \n", ",\t,")
+        val emptyPins = empty + listOf(":", "::", ",:", ": ,", " : ", ":,:")
+        for ((entry, build) in entryPoints) {
+            for ((name, values) in listOf("pcs" to emptyPins, "vcn" to empty)) {
+                for (value in values) {
+                    assertTrue("$entry $name=${JSONObject.quote(value)} imported", imported(build(name, value)).isEmpty())
+                }
+            }
+            // Absent, empty and real checks still import, with what they hold.
+            for ((name, value, stored) in listOf(
+                Triple("pcs", "", ""),
+                Triple("pcs", pin, pin),
+                Triple("pcs", " ${pin.uppercase().chunked(2).joinToString(":")} , $pin ", "$pin,$pin"),
+                Triple("vcn", "", ""),
+                Triple("vcn", "a.example", "a.example"),
+                Triple("vcn", " a.example , b.example ", "a.example,b.example"),
+            )) {
+                val bean = imported(build(name, value)).single() as StandardV2RayBean
+                assertEquals("$entry $name=$value", stored, if (name == "pcs") bean.pinnedPeerCertSha256.orEmpty() else bean.verifyPeerCertByName.orEmpty())
+            }
+        }
+        // Links that cannot carry checks refuse any value but an empty one.
+        for (value in listOf(" ", ",", ":")) {
+            assertTrue(value, imported("hy2://secret@192.0.2.6:443?sni=a.example&pcs=${query(value)}#h").isEmpty())
+        }
+        assertEquals(1, imported("hy2://secret@192.0.2.6:443?sni=a.example&pcs=#h").size)
+    }
+
+    @Test
+    fun literalAmpEntitiesOutsideTheQueryAreKept() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        // '&' and ';' are valid in user info and paths, so "&amp;" there is data.
+        val trojan = parseProxies("trojan://p&amp;q@192.0.2.1:443?security=tls&amp;sni=a.example#r&amp;s").single() as TrojanBean
+        assertEquals("p&amp;q", trojan.password)
+        assertEquals("a.example", trojan.sni)
+        assertEquals("r&amp;s", trojan.name)
+        val path = parseProxies("vless://$uuid@192.0.2.2:443/x&amp;y?type=tcp&amp;security=tls#p").single() as VMessBean
+        assertEquals("x&amp;y", path.path)
+        assertEquals("tls", path.security)
+        // Each link of a line gets its own query; a remark that goes on after a space and contains '?' stays a remark.
+        assertEquals(
+            "trojan://p&amp;q@h:1?a=1&b=2#r&amp;s now? x&amp;y ss://x&amp;y@h:2?plugin=p&q=1",
+            decodeEscapedQuerySeparators("trojan://p&amp;q@h:1?a=1&amp;b=2#r&amp;s now? x&amp;y ss://x&amp;y@h:2?plugin=p&amp;q=1"),
+        )
+    }
+
+    @Test
+    fun vmessJsonLinksMayCarryARemarkFragment() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val json = """{"v":"2","ps":"json","add":"192.0.2.6","port":"443","id":"$uuid","aid":"0","net":"ws","path":"/ws","tls":"tls"}"""
+        for (fragment in listOf("#@channel", "#what?", "#")) {
+            val bean = parseProxies("vmess://" + encode(json) + fragment).single() as VMessBean
+            assertEquals(fragment, "192.0.2.6", bean.serverAddress)
+            assertEquals(fragment, "ws", bean.type)
+            assertEquals(fragment, "json", bean.name)
+        }
+    }
+
+    @Test
+    fun shadowsocksUserinfoThatDecodesToNoCipherIsRefused() = runTest {
+        // Lists relabel VLESS links as ss://, which leaves a UUID where base64 of method:password belongs.
+        val report = ImportReport()
+        assertTrue(parseProxies("ss://00000000-0000-4000-8000-000000000001@192.0.2.1:443?type=ws&security=tls#mislabeled", report).isEmpty())
+        assertEquals(listOf<String?>("ss"), report.failed)
+        val userinfo = Base64.getUrlEncoder().withoutPadding().encodeToString("2022-blake3-aes-128-gcm:secret".toByteArray())
+        val bean = parseProxies("ss://$userinfo@192.0.2.1:8388#b64").single() as ShadowsocksBean
+        assertEquals("2022-blake3-aes-128-gcm", bean.method)
+        assertEquals("secret", bean.password)
+    }
+
+    @Test
+    fun shadowsocksUserinfoNeedsTheDelimiterBetweenMethodAndPassword() = runTest {
+        fun b64(text: String) = Base64.getUrlEncoder().withoutPadding().encodeToString(text.toByteArray())
+        fun padded(text: String) = Base64.getEncoder().encodeToString(text.toByteArray())
+        // Without ':' the method would also become the password.
+        for (link in listOf(
+            "ss://${b64("aes-128-gcm")}@192.0.2.1:8388#sip002",
+            "ss://${padded("aes-128-gcm")}@192.0.2.1:8388#sip002-padded",
+            "ss://aes-128-gcm@192.0.2.1:8388#plain",
+            "ss://${b64("aes-128-gcm@192.0.2.1:8388")}#legacy",
+            "ss://${padded("chacha20-ietf-poly1305@192.0.2.1:8388")}#legacy-padded",
+            // No '@': the port's ':' is no delimiter, there are no credentials at all.
+            "ss://ZXhhbXBsZS5jb206ODM4OA==",
+            "ss://ZXhhbXBsZS5jb206ODM4OA==#no-at",
+            "ss://${b64("example.com:8388")}#no-at-url-safe",
+            "ss://[2001:db8::1]:8388#ipv6-no-userinfo",
+            "ss://${b64("[2001:db8::1]:8388")}#legacy-ipv6-no-userinfo",
+            // An '@' with no user info, or with no method before the ':'.
+            "ss://@192.0.2.1:8388#empty-userinfo",
+            "ss://${b64("@192.0.2.1:8388")}#legacy-empty-userinfo",
+            "ss://:secret@192.0.2.1:8388#plain-no-method",
+            "ss://${b64(":secret@192.0.2.1:8388")}#legacy-no-method",
+            "ss://${b64(":secret")}@192.0.2.1:8388#sip002-no-method",
+        )) {
+            val report = ImportReport()
+            assertTrue(link, parseProxies(link, report).isEmpty())
+            assertEquals(link, listOf<String?>("ss"), report.failed)
+        }
+        // With it, an explicitly empty password stays empty in every form.
+        for ((link, methodAndPassword) in listOf(
+            "ss://none:@192.0.2.1:8388#plain-empty" to ("none" to ""),
+            "ss://${b64("none:")}@192.0.2.1:8388#sip002-empty" to ("none" to ""),
+            "ss://${b64("none:@192.0.2.1:8388")}#legacy-empty" to ("none" to ""),
+            "ss://2022-blake3-aes-128-gcm:a2V5@192.0.2.1:8388#plain" to ("2022-blake3-aes-128-gcm" to "a2V5"),
+            "ss://${b64("aes-128-gcm:secret")}@192.0.2.1:8388#sip002" to ("aes-128-gcm" to "secret"),
+            "ss://${padded("aes-128-gcm:secret@192.0.2.1:8388")}#legacy" to ("aes-128-gcm" to "secret"),
+        )) {
+            val bean = parseProxies(link).single() as ShadowsocksBean
+            assertEquals(link, methodAndPassword, bean.method to bean.password)
+            assertEquals(link, "192.0.2.1", bean.serverAddress)
+        }
+        // An IPv6 host has ':' of its own after the '@'.
+        for (link in listOf(
+            "ss://${b64("aes-128-gcm:secret")}@[2001:db8::1]:8388#sip002-ipv6",
+            "ss://none:@[2001:db8::1]:8388#plain-ipv6",
+            "ss://${b64("aes-128-gcm:secret@[2001:db8::1]:8388")}#legacy-ipv6",
+        )) {
+            val bean = parseProxies(link).single() as ShadowsocksBean
+            assertEquals(link, 8388, bean.serverPort)
+            assertTrue(link, bean.serverAddress!!.contains("2001:db8::1"))
+            assertTrue(link, bean.method!!.isNotEmpty())
+        }
+    }
+
+    @Test
     fun aRefusedCompleteLinkDoesNotDiscardItsValidNeighbors() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val firsts = listOf("socks5://192.0.2.1:1080", "socks5://192.0.2.1:1080#first${" ".repeat(2048)}server")
         val last = "socks5://192.0.2.3:1080"
-        for (option in listOf("pcs=pin", "vcn=verify.example", "fm=%7B%7D")) {
+        for (option in listOf("pcs=pin", "pcs=${"0f".repeat(31)}", "fm=%7B%7D")) {
             for (query in listOf("security=tls&$option", "security=tls &$option")) {
                 val refused = "vless://$uuid@192.0.2.2:443?$query"
                 for (separator in listOf(" ", "  ", "\t")) {
@@ -664,7 +863,7 @@ class RawUpdaterParseTest {
     fun equallySizedParsesKeepTheReportedFailure() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val valid = "vless://$uuid@192.0.2.1:443?x=1"
-        val refused = "vless://$uuid@192.0.2.2:443?pcs=unsupported"
+        val refused = "vless://$uuid@192.0.2.2:443?fm=%7B%7D"
         val report = ImportReport()
         val beans = parseProxies("$valid $refused", report)
         assertEquals("192.0.2.1", beans.single().serverAddress)
@@ -675,14 +874,34 @@ class RawUpdaterParseTest {
     fun splittingMalformedLinesCannotDiscardVerificationOptions() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val valid = "socks5://192.0.2.2:1080#first socks5://192.0.2.3:1080#second"
-        for (option in listOf("pcs=${"0f".repeat(32)}", "vcn=verify.example", "fm=%7B%7D")) {
-            val malformed = "vless://$uuid@192.0.2.1:443?security=tls&sni=a b&$option#refused"
-            val report = ImportReport()
-            val beans = parseProxies("$malformed\n$valid", report)
-            assertEquals(listOf("first", "second"), beans.map { it.displayName() })
-            assertEquals(listOf<String?>("vless"), report.failed)
-            assertTrue(parseProxies(malformed).isEmpty())
+        val mask = "vless://$uuid@192.0.2.1:443?security=tls&sni=a b&fm=%7B%7D#refused"
+        val report = ImportReport()
+        assertEquals(listOf("first", "second"), parseProxies("$mask\n$valid", report).map { it.displayName() })
+        assertEquals(listOf<String?>("vless"), report.failed)
+        assertTrue(parseProxies(mask).isEmpty())
+        // A link with certificate checks is never cut at the space, so no part of it imports without them.
+        // An escaped separator after the space too: the query goes on across it, so the checks stay with the link.
+        for (separator in listOf("&", "&amp;")) {
+            for (option in listOf("pcs=${"0f".repeat(32)}", "vcn=verify.example")) {
+                for (malformed in listOf(
+                    "vless://$uuid@192.0.2.1:443?security=tls&allowInsecure=1 $separator$option#checked",
+                    "vless://$uuid@192.0.2.1:443?security=tls&allowInsecure=1&x= $separator$option#checked",
+                )) {
+                    val beans = parseProxies("$malformed\n$valid")
+                    assertEquals(malformed, listOf("first", "second"), beans.filter { it !is StandardV2RayBean }.map { it.displayName() })
+                    val checked = beans.filterIsInstance<StandardV2RayBean>()
+                    assertTrue(malformed, checked.all { !it.pinnedPeerCertSha256.isNullOrBlank() || !it.verifyPeerCertByName.isNullOrBlank() })
+                }
+            }
+            // A mask that cannot apply refuses the whole link.
+            val masked = "vless://$uuid@192.0.2.1:443?security=tls&x= ${separator}fm=%7B%7D#refused"
+            assertEquals(masked, listOf("first", "second"), parseProxies("$masked\n$valid").map { it.displayName() })
         }
+        // A list of pins with a space keeps the options after it.
+        val pin = "0f".repeat(32)
+        val listed = parseProxies("vless://$uuid@192.0.2.1:443?security=tls&pcs=$pin, ${"ab".repeat(32)}&amp;vcn=verify.example#listed").single() as StandardV2RayBean
+        assertEquals("$pin,${"ab".repeat(32)}", listed.pinnedPeerCertSha256)
+        assertEquals("verify.example", listed.verifyPeerCertByName)
     }
 
     @Test

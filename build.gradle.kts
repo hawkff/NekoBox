@@ -2,7 +2,7 @@
 // settings.gradle.kts; app configuration lives in app/build.gradle.kts and buildSrc/Helpers.kt.
 plugins {
     id("com.google.devtools.ksp") version "2.3.14" apply false
-    id("com.diffplug.spotless") version "8.11.0"
+    id("com.diffplug.spotless") version "8.12.0"
 }
 
 // Spotless applies a base plugin that already provides a `clean` task, so only register ours

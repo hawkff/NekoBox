@@ -86,10 +86,10 @@ dependencies {
     implementation("com.google.code.gson:gson:2.15.0")
 
     // Bundle the scanner model for offline use without Google Play Services.
-    implementation("androidx.camera:camera-core:1.6.2")
-    implementation("androidx.camera:camera-camera2:1.6.2")
-    implementation("androidx.camera:camera-lifecycle:1.6.2")
-    implementation("androidx.camera:camera-view:1.6.2")
+    implementation("androidx.camera:camera-core:1.7.0")
+    implementation("androidx.camera:camera-camera2:1.7.0")
+    implementation("androidx.camera:camera-lifecycle:1.7.0")
+    implementation("androidx.camera:camera-view:1.7.0")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     // ZXing generates QR codes; ML Kit only scans them.
     implementation("com.google.zxing:core:3.5.4")
@@ -102,7 +102,7 @@ dependencies {
 
     // Minimal SDK modules; automatic capture is configured explicitly.
     implementation("com.posthog:posthog:6.49.1")
-    implementation("io.sentry:sentry-android-core:8.65.0")
+    implementation("io.sentry:sentry-android-core:8.66.0")
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.yaml:snakeyaml:2.7")
     implementation("com.jakewharton:process-phoenix:3.0.0")
@@ -114,7 +114,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("org.robolectric:robolectric:4.18")
+    testImplementation("org.robolectric:robolectric:4.18.1")
 
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")

@@ -294,7 +294,9 @@
       "customOutboundJson": null,
       "customConfigJson": null,
       "kcpLegacy": null,
-      "tlsFragment": null
+      "tlsFragment": null,
+      "pinnedPeerCertSha256": null,
+      "verifyPeerCertByName": null
     },
     "defaults": {
       "username": "",
@@ -341,7 +343,9 @@
       "customOutboundJson": "",
       "customConfigJson": "",
       "kcpLegacy": false,
-      "tlsFragment": false
+      "tlsFragment": false,
+      "pinnedPeerCertSha256": "",
+      "verifyPeerCertByName": ""
     },
     "fields": {
       "username": "java.lang.String",
@@ -390,7 +394,9 @@
       "finalAddress": "java.lang.String",
       "finalPort": "int",
       "kcpLegacy": "java.lang.Boolean",
-      "tlsFragment": "java.lang.Boolean"
+      "tlsFragment": "java.lang.Boolean",
+      "pinnedPeerCertSha256": "java.lang.String",
+      "verifyPeerCertByName": "java.lang.String"
     }
   },
   {
@@ -1063,7 +1069,9 @@
       "customOutboundJson": null,
       "customConfigJson": null,
       "kcpLegacy": null,
-      "tlsFragment": null
+      "tlsFragment": null,
+      "pinnedPeerCertSha256": null,
+      "verifyPeerCertByName": null
     },
     "defaults": {
       "password": "",
@@ -1109,7 +1117,9 @@
       "customOutboundJson": "",
       "customConfigJson": "",
       "kcpLegacy": false,
-      "tlsFragment": false
+      "tlsFragment": false,
+      "pinnedPeerCertSha256": "",
+      "verifyPeerCertByName": ""
     },
     "fields": {
       "password": "java.lang.String",
@@ -1157,7 +1167,9 @@
       "finalAddress": "java.lang.String",
       "finalPort": "int",
       "kcpLegacy": "java.lang.Boolean",
-      "tlsFragment": "java.lang.Boolean"
+      "tlsFragment": "java.lang.Boolean",
+      "pinnedPeerCertSha256": "java.lang.String",
+      "verifyPeerCertByName": "java.lang.String"
     }
   },
   {
@@ -1324,7 +1336,9 @@
       "customOutboundJson": null,
       "customConfigJson": null,
       "kcpLegacy": null,
-      "tlsFragment": null
+      "tlsFragment": null,
+      "pinnedPeerCertSha256": null,
+      "verifyPeerCertByName": null
     },
     "defaults": {
       "alterId": 0,
@@ -1370,7 +1384,9 @@
       "customOutboundJson": "",
       "customConfigJson": "",
       "kcpLegacy": false,
-      "tlsFragment": false
+      "tlsFragment": false,
+      "pinnedPeerCertSha256": "",
+      "verifyPeerCertByName": ""
     },
     "fields": {
       "alterId": "java.lang.Integer",
@@ -1418,7 +1434,9 @@
       "finalAddress": "java.lang.String",
       "finalPort": "int",
       "kcpLegacy": "java.lang.Boolean",
-      "tlsFragment": "java.lang.Boolean"
+      "tlsFragment": "java.lang.Boolean",
+      "pinnedPeerCertSha256": "java.lang.String",
+      "verifyPeerCertByName": "java.lang.String"
     }
   },
   {
@@ -1624,7 +1642,9 @@
       "customOutboundJson": null,
       "customConfigJson": null,
       "kcpLegacy": null,
-      "tlsFragment": null
+      "tlsFragment": null,
+      "pinnedPeerCertSha256": null,
+      "verifyPeerCertByName": null
     },
     "defaults": {
       "version": 3,
@@ -1671,7 +1691,9 @@
       "customOutboundJson": "",
       "customConfigJson": "",
       "kcpLegacy": false,
-      "tlsFragment": false
+      "tlsFragment": false,
+      "pinnedPeerCertSha256": "",
+      "verifyPeerCertByName": ""
     },
     "fields": {
       "version": "java.lang.Integer",
@@ -1720,7 +1742,9 @@
       "finalAddress": "java.lang.String",
       "finalPort": "int",
       "kcpLegacy": "java.lang.Boolean",
-      "tlsFragment": "java.lang.Boolean"
+      "tlsFragment": "java.lang.Boolean",
+      "pinnedPeerCertSha256": "java.lang.String",
+      "verifyPeerCertByName": "java.lang.String"
     }
   }
 ]

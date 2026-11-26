@@ -21,6 +21,7 @@ import xyz.nekobyte.nekobox.fmt.snell.parseSnell
 import xyz.nekobyte.nekobox.fmt.socks.parseSOCKS
 import xyz.nekobyte.nekobox.fmt.trojan.parseTrojan
 import xyz.nekobyte.nekobox.fmt.tuic.parseTuic
+import xyz.nekobyte.nekobox.fmt.v2ray.carriesCertificateChecks
 import xyz.nekobyte.nekobox.fmt.v2ray.dropsFragmentMask
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.v2ray.requireSupportedLinkOptions
@@ -141,11 +142,55 @@ internal fun linkNodeScheme(link: String): String? {
 }
 
 /**
+ * Lists copied from web pages carry HTML-escaped query separators. Inside a link's query a raw "&amp;"
+ * can only be one (a literal '&' in a value is %26), so it becomes "&" there; user names, passwords,
+ * hosts, paths and remarks keep it, as they may hold it literally. A link's query and remark go on
+ * across spaces up to the next link ([LINK_SEPARATOR]), as the parser reads them.
+ */
+internal fun decodeEscapedQuerySeparators(line: String): String {
+    val out = StringBuilder(line.length)
+    var start = 0
+    for (separator in LINK_SEPARATOR.findAll(line)) {
+        out.append(decodeLinkQuery(line.substring(start, separator.range.first))).append(separator.value)
+        start = separator.range.last + 1
+    }
+    return out.append(decodeLinkQuery(line.substring(start))).toString()
+}
+
+private fun decodeLinkQuery(link: String): String {
+    val out = StringBuilder(link.length)
+    var inQuery = false
+    var inFragment = false
+    var index = 0
+    while (index < link.length) {
+        val char = link[index]
+        when {
+            char == '#' && !inFragment -> {
+                inQuery = false
+                inFragment = true
+            }
+
+            // Text before the first link of a line has no query.
+            char == '?' && !inQuery && !inFragment -> inQuery = link.substring(0, index).contains("://")
+
+            inQuery && link.startsWith("&amp;", index) -> {
+                out.append('&')
+                index += "&amp;".length
+                continue
+            }
+        }
+        out.append(char)
+        index++
+    }
+    return out.toString()
+}
+
+/**
  * Parses share links, one per line or separated by spaces. Links that describe nodes but do not
  * import are added to [report] by scheme.
  */
 suspend fun parseProxies(text: String, report: ImportReport? = null): List<AbstractBean> {
-    val linksByLine = text.linesNoComments()
+    val linksByLine = text.linesNoComments().map(::decodeEscapedQuerySeparators)
 
     // Why a link's options refuse it before any parser runs, or null.
     fun String.unsupportedOption(): String? {
@@ -156,7 +201,7 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
     }
     // Keep a rejected link's query intact without discarding neighboring links.
     val links = linksByLine.flatMap { line ->
-        line.split(LINK_SEPARATOR).flatMap { if (it.unsupportedOption() != null) listOf(it) else it.split(' ') }
+        line.split(LINK_SEPARATOR).flatMap { if (it.unsupportedOption() != null || carriesCertificateChecks(it)) listOf(it) else it.split(' ') }
     }
 
     val entities = ArrayList<AbstractBean>()
@@ -330,8 +375,11 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
     for (link in links) {
         link.parseLink(entities, tokens)
     }
-    for (link in linksByLine) {
-        link.parseLink(entitiesByLine, lines)
+    // When no line splits, the line pass would repeat the token pass.
+    if (links != linksByLine) {
+        for (link in linksByLine) {
+            link.parseLink(entitiesByLine, lines)
+        }
     }
     // No profile links parsed but we saw an unparsable http(s) URL: treat the whole
     // input as a subscription link (single-URL paste / file). When profiles WERE found,

@@ -403,6 +403,10 @@ class SingBoxOptions {
 
         @JvmField var certificate_path: String? = null
 
+        @JvmField var certificate_sha256: List<String>? = null
+
+        @JvmField var verify_certificate_by_name: List<String>? = null
+
         @JvmField var ech: OutboundECHOptions? = null
 
         @JvmField var utls: OutboundUTLSOptions? = null
