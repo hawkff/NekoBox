@@ -6,6 +6,7 @@ import org.junit.Test
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService.State
 import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.fmt.ArchivedBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 
 class ConnectWidgetModelTest {
@@ -39,6 +40,12 @@ class ConnectWidgetModelTest {
     }
 
     @Test
+    fun archivedProfilesAreNotOffered() {
+        val archived = ProxyEntity(id = 7).putBean(ArchivedBean(7, byteArrayOf()))
+        assertEquals(listOf(5L), widgetChipProfiles(listOf(7L, 5L), listOf(archived, socks(5))).map { it.id })
+    }
+
+    @Test
     fun sizesPickTheOrbAlone_theLines_orRowsOfChips() {
         assertEquals(WidgetSpec(orbOnly = true), widgetSpec(70f, 90f))
         assertEquals(WidgetSpec(orbOnly = true), widgetSpec(150f, 300f))
@@ -59,7 +66,7 @@ class ConnectWidgetModelTest {
         assertEquals(WidgetSpec(orbOnly = false), widgetFitSize(emptyList(), 0, 0).let { (width, height) -> widgetSpec(width, height) })
     }
 
-    private fun orb(state: State, selectedExists: Boolean = true) = widgetAction(state, -1L, false, 1L, selectedExists, false)
+    private fun orb(state: State, selectedUsable: Boolean = true) = widgetAction(state, -1L, false, 1L, selectedUsable, false)
 
     @Test
     fun theOrbConnectsAndDisconnects() {
@@ -70,10 +77,10 @@ class ConnectWidgetModelTest {
         assertEquals(WidgetAction.START, orb(State.Idle))
         assertEquals(WidgetAction.NONE, orb(State.Stopping))
         // Nothing to connect to: the app says why.
-        assertEquals(WidgetAction.OPEN_APP, orb(State.Stopped, selectedExists = false))
+        assertEquals(WidgetAction.OPEN_APP, orb(State.Stopped, selectedUsable = false))
     }
 
-    private fun chip(state: State, id: Long = 2L, exists: Boolean = true, autoSelecting: Boolean = false) = widgetAction(state, id, exists, 1L, true, autoSelecting)
+    private fun chip(state: State, id: Long = 2L, usable: Boolean = true, autoSelecting: Boolean = false) = widgetAction(state, id, usable, 1L, true, autoSelecting)
 
     @Test
     fun aChipSwitchesARunningConnection_orSelectsAndConnects() {
@@ -88,8 +95,8 @@ class ConnectWidgetModelTest {
 
     @Test
     fun aChipOfAProfileGone_orOfAGroupPickingItsOwnServer_opensTheApp() {
-        assertEquals(WidgetAction.OPEN_APP, chip(State.Connected, exists = false))
-        assertEquals(WidgetAction.OPEN_APP, chip(State.Stopped, exists = false))
+        assertEquals(WidgetAction.OPEN_APP, chip(State.Connected, usable = false))
+        assertEquals(WidgetAction.OPEN_APP, chip(State.Stopped, usable = false))
         assertEquals(WidgetAction.OPEN_APP, chip(State.Connected, autoSelecting = true))
     }
 

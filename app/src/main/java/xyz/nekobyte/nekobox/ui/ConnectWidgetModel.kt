@@ -50,37 +50,41 @@ internal fun widgetChipOrder(favorites: List<Long>, recentPicks: Map<Long, List<
     return (favorites + recent).filter { it > 0L }.distinct()
 }
 
-/** The chips' profiles: those of [order] that exist, in its order, at most [WIDGET_MAX_CHIPS]. */
+/**
+ * The chips' profiles: those of [order] that exist and that this version can connect with (not archived), in its
+ * order, at most [WIDGET_MAX_CHIPS].
+ */
 internal fun widgetChipProfiles(order: List<Long>, profiles: List<ProxyEntity>): List<ProxyEntity> {
     val byId = profiles.associateBy { it.id }
-    return order.mapNotNull(byId::get).take(WIDGET_MAX_CHIPS)
+    return order.mapNotNull(byId::get).filter { it.canBuild() }.take(WIDGET_MAX_CHIPS)
 }
 
 /** What a tap on the widget does. */
 internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, NONE }
 
 /**
- * A tap on the orb ([chipId] < 0) or on the chip of profile [chipId], which exists when [chipExists]. A chip switches
- * a running connection to its profile, or selects it and connects. Where the app has more to say (no profile to
- * connect, a group that picks its own server, a profile gone since), the app opens.
+ * A tap on the orb ([chipId] < 0) or on the chip of profile [chipId], which can connect when [chipUsable] (it exists
+ * and is not archived), as can the selected profile when [selectedUsable]. A chip switches a running connection to its
+ * profile, or selects it and connects. Where the app has more to say (no profile to connect, a group that picks its
+ * own server, a profile gone or archived since), the app opens.
  */
 internal fun widgetAction(
     state: BaseService.State,
     chipId: Long,
-    chipExists: Boolean,
+    chipUsable: Boolean,
     selectedId: Long,
-    selectedExists: Boolean,
+    selectedUsable: Boolean,
     autoSelecting: Boolean,
 ): WidgetAction {
     if (chipId < 0L) {
         return when {
             state.canStop -> WidgetAction.STOP
             state == BaseService.State.Stopping -> WidgetAction.NONE
-            selectedExists -> WidgetAction.START
+            selectedUsable -> WidgetAction.START
             else -> WidgetAction.OPEN_APP
         }
     }
-    if (!chipExists) return WidgetAction.OPEN_APP
+    if (!chipUsable) return WidgetAction.OPEN_APP
     return when {
         state == BaseService.State.Stopping -> WidgetAction.SELECT
         !state.canStop -> WidgetAction.SELECT_AND_START

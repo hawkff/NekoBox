@@ -32,15 +32,16 @@ class ConnectWidgetActivity : ComponentActivity() {
         lifecycleScope.launch {
             val action = withContext(Dispatchers.Default) {
                 val state = NekoBoxConnection.ask(applicationContext) { it.state }?.let { BaseService.State.entries.getOrNull(it) } ?: BaseService.State.Stopped
-                // The id comes from an intent: it acts only once it names a profile in the database.
-                val chip = chipId.takeIf { it > 0L }?.let { ProfileDatabase.proxyDao.getById(it) }
+                // The id comes from an intent: it acts only once it names a profile in the database this version can
+                // connect with. A chip drawn before its profile was archived or deleted opens the app instead.
+                val chip = chipId.takeIf { it > 0L }?.let { ProfileDatabase.proxyDao.getById(it) }?.takeIf { it.canBuild() }
                 val selectedId = DataStore.selectedProxy
                 val action = widgetAction(
                     state = state,
                     chipId = chipId,
-                    chipExists = chip != null,
+                    chipUsable = chip != null,
                     selectedId = selectedId,
-                    selectedExists = ProfileDatabase.proxyDao.getById(selectedId) != null,
+                    selectedUsable = ProfileDatabase.proxyDao.getById(selectedId)?.canBuild() == true,
                     autoSelecting = chip != null && state.canStop && runningGroupSelectsAutomatically(chip.groupId),
                 )
                 if (chip != null && action in setOf(WidgetAction.SWITCH, WidgetAction.SELECT_AND_START, WidgetAction.SELECT)) {
