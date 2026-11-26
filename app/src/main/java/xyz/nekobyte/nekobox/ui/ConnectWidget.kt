@@ -292,8 +292,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     // The service's process: the speed lines it posted last.
     private val speedPosts = SpeedPosts()
 
-    // The widgets placed, as the service's process last asked Android: each state change asks again, the speed rounds
-    // at most every PLACED_CHECK_MS. A widget placed while connected gets the live speed within that time.
+    // The widgets placed, as the service's process last asked Android: each state change and each redraw asks again,
+    // the speed rounds at most every PLACED_CHECK_MS.
     @Volatile private var placedIds = IntArray(0)
 
     @Volatile private var placedAt = 0L
@@ -307,24 +307,45 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         return placedIds
     }
 
+    // The service's process: the redraws the app's process reported, and up to which of them a speed post has gone out
+    // since. A redraw shows the speed the app's process read; until a post follows it, unchanged or not and to every
+    // widget placed by then, the widgets may show an older speed.
+    private val redraws = AtomicLong()
+
+    @Volatile private var correctedUpTo = 0L
+
     /**
-     * From the service's process, each speed round while connected with the screen on: the speed lines of the widgets.
-     * [force] posts an unchanged speed too, after a redraw that may have shown an older one.
+     * From the service's process: the app's process drew the widgets again. [now] when a speed may go out at once
+     * (connected, screen on); otherwise the next speed round after the screen comes on posts it.
      */
-    fun postSpeed(speed: SpeedDisplayData, force: Boolean = false) {
+    fun redrawn(context: Context, speed: SpeedDisplayData?, now: Boolean) {
+        redraws.incrementAndGet()
+        if (now && speed != null) postSpeed(context, speed)
+    }
+
+    /** From the service's process, each speed round while connected with the screen on: the speed lines of the widgets. */
+    fun postSpeed(context: Context, speed: SpeedDisplayData): Unit = synchronized(speedPosts) {
         try {
-            val context = NekoBox.application
-            val ids = placed(context)
+            val redrawn = redraws.get()
+            val correcting = redrawn > correctedUpTo
+            // A redraw can come with a widget placed since the ids were last asked for.
+            val ids = placed(context, now = correcting)
             if (ids.isEmpty()) return
-            val (tx, rx) = speedTexts(context, speed)
-            if (!speedPosts.shouldPost(tx to rx, force)) return
-            val views = RemoteViews(context.packageName, R.layout.widget_connect)
-            setSpeed(context, views, tx, rx)
-            AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(ids, views)
-            speedPosts.posted(tx to rx)
+            val lines = speedTexts(context, speed)
+            if (!speedPosts.shouldPost(lines, correcting)) return
+            publishSpeed(context, ids, lines)
+            speedPosts.posted(lines)
+            correctedUpTo = redrawn
         } catch (e: RuntimeException) {
             Logs.w("widget speed", e)
         }
+    }
+
+    @VisibleForTesting
+    internal var publishSpeed: (Context, IntArray, Pair<String, String>) -> Unit = { context, ids, (tx, rx) ->
+        val views = RemoteViews(context.packageName, R.layout.widget_connect)
+        setSpeed(context, views, tx, rx)
+        AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(ids, views)
     }
 
     private fun speedTexts(context: Context, speed: SpeedDisplayData?) = (speed?.txRateProxy ?: 0L).let { context.getString(R.string.speed, Formatter.formatFileSize(context, it)) } to

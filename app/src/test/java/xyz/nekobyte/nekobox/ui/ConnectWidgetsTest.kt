@@ -21,6 +21,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.BaseService.State
 import xyz.nekobyte.nekobox.database.DataStore
@@ -186,6 +187,42 @@ class ConnectWidgetsTest {
             assertFalse(before === ConnectWidgets.lastRender)
             drawn()
             assertEquals("Tokyo 004 bis", text(id, R.id.widget_profile))
+        }
+    }
+
+    @Test
+    fun aRedrawIsFollowedByTheLatestSpeed_onceTheScreenIsOn_onEveryPlacedWidget() {
+        val publish = ConnectWidgets.publishSpeed
+        val posted = mutableListOf<Pair<List<Int>, Pair<String, String>>>()
+        try {
+            ConnectWidgets.publishSpeed = { _, ids, lines -> posted += ids.toList() to lines }
+            val first = place()
+            val a = SpeedDisplayData(txRateProxy = 1_000, rxRateProxy = 2_000)
+            val b = SpeedDisplayData()
+            ConnectWidgets.redrawn(context, a, now = true)
+            ConnectWidgets.postSpeed(context, b)
+            assertEquals(2, posted.size)
+            // Screen off: a redraw showed an older speed, and nothing may go out now.
+            ConnectWidgets.redrawn(context, b, now = false)
+            assertEquals(2, posted.size)
+            // Screen on: the unchanged speed goes out once, then not again.
+            ConnectWidgets.postSpeed(context, b)
+            ConnectWidgets.postSpeed(context, b)
+            assertEquals(3, posted.size)
+            assertEquals(posted[1].second, posted[2].second)
+            // A widget placed since: the redraw for it reaches both widgets with the unchanged speed.
+            val second = place()
+            ConnectWidgets.redrawn(context, b, now = true)
+            assertEquals(4, posted.size)
+            assertEquals(setOf(first, second), posted.last().first.toSet())
+            // A post Android refused is made again at the next round.
+            ConnectWidgets.publishSpeed = { _, _, _ -> throw IllegalStateException("refused") }
+            ConnectWidgets.redrawn(context, b, now = true)
+            ConnectWidgets.publishSpeed = { _, ids, lines -> posted += ids.toList() to lines }
+            ConnectWidgets.postSpeed(context, b)
+            assertEquals(5, posted.size)
+        } finally {
+            ConnectWidgets.publishSpeed = publish
         }
     }
 }

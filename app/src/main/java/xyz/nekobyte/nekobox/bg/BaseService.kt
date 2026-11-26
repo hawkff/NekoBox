@@ -123,9 +123,8 @@ class BaseService {
                 // A redraw shows the speed the app's process read, which may be older than the one posted since.
                 Action.WIDGET_REDRAWN -> {
                     val speed = proxy?.looper?.latestSpeed
-                    if (state == State.Connected && speed != null && notification?.listenPostSpeed == true) {
-                        runOnDefaultDispatcher { ConnectWidgets.postSpeed(speed, force = true) }
-                    }
+                    val now = state == State.Connected && notification?.listenPostSpeed == true
+                    runOnDefaultDispatcher { ConnectWidgets.redrawn(NekoBox.application, speed, now) }
                 }
 
                 Action.RESET_UPSTREAM_CONNECTIONS -> runOnDefaultDispatcher {

@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.bg.proto
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.withLock
+import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.BaseService
@@ -285,7 +286,7 @@ class TrafficLooper(
             data.notification?.apply {
                 if (notificationInterval > 0 && listenPostSpeed) {
                     postNotificationSpeedUpdate(speed)
-                    if (data.state == BaseService.State.Connected) ConnectWidgets.postSpeed(speed)
+                    if (data.state == BaseService.State.Connected) ConnectWidgets.postSpeed(NekoBox.application, speed)
                 }
             }
 
