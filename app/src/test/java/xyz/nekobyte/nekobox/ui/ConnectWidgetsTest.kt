@@ -125,14 +125,36 @@ class ConnectWidgetsTest {
     @Test
     fun aTapCarriesTheStateItsWidgetShows() {
         val id = place()
-        fun tapped(): Int {
+        fun tapped(): String? {
             manager.getViewFor(id).findViewById<View>(R.id.widget_orb).performClick()
-            return shadowOf(context).nextStartedActivity.getIntExtra(ConnectWidgetActivity.EXTRA_DRAWN_STATE, -1)
+            return shadowOf(context).nextStartedActivity.action
         }
-        assertEquals(State.Stopped.ordinal, tapped())
+        assertEquals(ConnectWidgetActivity.ACTION_TAP + State.Stopped.name, tapped())
         ConnectWidgets.askService = { answer(State.Connected) }
         runBlocking { ConnectWidgets.refresh(context).join() }
-        assertEquals(State.Connected.ordinal, tapped())
+        assertEquals(ConnectWidgetActivity.ACTION_TAP + State.Connected.name, tapped())
+    }
+
+    // The home screen can show a drawing after a newer one was made, until it applies that one: a tap on it must still
+    // carry the state it shows, or a Connected orb tapped once the service stopped would start it again.
+    @Test
+    fun aDrawingStillOnScreenKeepsTheStateItShows() {
+        ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
+        DataStore.favoriteProfiles = listOf(18L)
+        val id = place()
+        val sizes = arrayListOf(SizeF(300f, 200f))
+        AppWidgetManager.getInstance(context).updateAppWidgetOptions(id, Bundle().apply { putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes) })
+        ConnectWidgets.askService = { answer(State.Connected) }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        val shown = manager.getViewFor(id)
+        val taps = listOf(R.id.widget_orb, R.id.widget_chip).map { shown.findViewById<View>(it) }.map { it to shadowOf(it).onClickListener }
+        // A Stopped drawing is made; the Connected one's tap targets are still the ones on screen.
+        ConnectWidgets.askService = { null }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        for ((view, tap) in taps) {
+            tap.onClick(view)
+            assertEquals(ConnectWidgetActivity.ACTION_TAP + State.Connected.name, shadowOf(context).nextStartedActivity.action)
+        }
     }
 
     @Test

@@ -597,8 +597,9 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val toggle: PendingIntent = action(null)
 
         fun action(profileId: Long?): PendingIntent {
-            // Every widget shows this drawing's state, so the one intent per tap target can carry it (FLAG_UPDATE_CURRENT).
-            val intent = Intent(app, ConnectWidgetActivity::class.java).putExtra(ConnectWidgetActivity.EXTRA_DRAWN_STATE, state.ordinal)
+            // The drawn state is the action, part of the PendingIntent's identity: FLAG_UPDATE_CURRENT would otherwise
+            // rewrite the state of a drawing still on screen while a newer one is being applied.
+            val intent = Intent(app, ConnectWidgetActivity::class.java).setAction(ConnectWidgetActivity.ACTION_TAP + state.name)
             // A chip's intent differs by its data: intents that differ only by extras would share one PendingIntent.
             if (profileId != null) intent.setData(Uri.fromParts("profile", profileId.toString(), null)).putExtra(ConnectWidgetActivity.EXTRA_PROFILE, profileId)
             return PendingIntent.getActivity(app, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

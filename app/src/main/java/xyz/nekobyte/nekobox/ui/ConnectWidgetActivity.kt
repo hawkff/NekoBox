@@ -26,14 +26,14 @@ class ConnectWidgetActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PROFILE = "xyz.nekobyte.nekobox.EXTRA_WIDGET_PROFILE"
 
-        // The state the widget showed when tapped (BaseService.State's ordinal).
-        const val EXTRA_DRAWN_STATE = "xyz.nekobyte.nekobox.EXTRA_WIDGET_DRAWN_STATE"
+        // Followed by the name of the BaseService.State the tapped drawing showed.
+        const val ACTION_TAP = "xyz.nekobyte.nekobox.WIDGET_TAP."
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val chipId = intent.getLongExtra(EXTRA_PROFILE, -1L)
-        val drawn = BaseService.State.entries.getOrNull(intent.getIntExtra(EXTRA_DRAWN_STATE, -1))
+        val drawn = intent.action?.removePrefix(ACTION_TAP)?.let { name -> BaseService.State.entries.firstOrNull { it.name == name } }
         lifecycleScope.launch {
             val action = withContext(Dispatchers.Default) {
                 val tap = tapState(NekoBoxConnection.startedServices()) { ConnectWidgets.ask(applicationContext, it) }
