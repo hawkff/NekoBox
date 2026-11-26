@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The themed icon: a filled stencil of the launcher art; inner ears, eyes and the box's folds are cut out.
+     Scaled about the center so the box corners stay inside the 66 dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.88"
+        android:scaleY="0.88">
+        <path
+            android:fillColor="#FF000000"
+            android:fillType="evenOdd"
+            android:pathData="M38.2,54 L38,46 C37.9,41 38.4,37.3 39.3,34.5 L38.6,24.2 C41.8,25.2 45.2,26.5 48.5,27.5 C52.3,26.1 57.6,26.3 62.5,29.7 C66,30.9 69.8,31 73.4,31.4 C71.7,34.3 70,37.6 68.6,40.3 C71.5,42 72.2,47 70.6,50.5 L70.7,54 Z M40.7,27.0 L44.6,28.3 L41.0,31.0 Z M65.9,32.3 L70.0,32.8 L68.3,36.4 Z M44.3,44.5 A1.6,2.7 0,1 1,44.3,49.9 A1.6,2.7 0,1 1,44.3,44.5 Z M55.6,46.3 A1.6,2.7 0,1 1,55.6,51.7 A1.6,2.7 0,1 1,55.6,46.3 Z" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M33,55.3 L56.8,55.3 L56.1,83.45 L33.2,82 L32.9,67 L27.8,67.3 Z M58.1,59.4 L60.8,67.7 L75,67.6 L75,82.7 L57.45,83.5 Z M58.2,55.3 L74,55.2 L79.3,66.1 L61.8,66.3 Z" />
+    </group>
+</vector>
