@@ -225,25 +225,27 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     // Both processes can end, Android ending a cached app process first: then nothing is left to watch. While the
     // widgets show the service running, a check every 15 minutes draws them again, from a new process if need be.
-    private var checking: Boolean? = null
-
-    // Under the render lock.
+    // Asked of WorkManager at every drawing (KEEP leaves a scheduled check as it is), so a request it did not take is
+    // made again with the next one. Under the render lock.
     private fun check(app: Context, running: Boolean) {
-        if (running == checking) return
         try {
-            val work = WorkManager.getInstance(app)
-            if (running) {
-                work.enqueueUniquePeriodicWork(
-                    CHECK_WORK,
-                    ExistingPeriodicWorkPolicy.KEEP,
-                    PeriodicWorkRequest.Builder(ConnectWidgetCheck::class.java, 15, TimeUnit.MINUTES).build(),
-                )
-            } else {
-                work.cancelUniqueWork(CHECK_WORK)
-            }
-            checking = running
+            setCheck(app, running)
         } catch (e: IllegalStateException) {
             Logs.w("widget check", e)
+        }
+    }
+
+    @VisibleForTesting
+    internal var setCheck: (Context, Boolean) -> Unit = { app, running ->
+        val work = WorkManager.getInstance(app)
+        if (running) {
+            work.enqueueUniquePeriodicWork(
+                CHECK_WORK,
+                ExistingPeriodicWorkPolicy.KEEP,
+                PeriodicWorkRequest.Builder(ConnectWidgetCheck::class.java, 15, TimeUnit.MINUTES).build(),
+            )
+        } else {
+            work.cancelUniqueWork(CHECK_WORK)
         }
     }
 

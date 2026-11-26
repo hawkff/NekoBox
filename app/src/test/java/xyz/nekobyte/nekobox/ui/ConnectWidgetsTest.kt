@@ -239,4 +239,23 @@ class ConnectWidgetsTest {
         drawn()
         assertEquals(setOf(17L), ConnectWidgets.shownProfiles)
     }
+
+    @Test
+    fun theCheckIsAskedForAtEveryDrawingWhileRunning_andCancelledOff() {
+        val setCheck = ConnectWidgets.setCheck
+        val checks = mutableListOf<Boolean>()
+        try {
+            ConnectWidgets.setCheck = { _, running -> checks += running }
+            place()
+            ConnectWidgets.askService = { answer(State.Connected) }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            ConnectWidgets.askService = { null }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            // No answer kept from an earlier request: each drawing asks again.
+            assertEquals(listOf(false, true, true, false), checks)
+        } finally {
+            ConnectWidgets.setCheck = setCheck
+        }
+    }
 }
