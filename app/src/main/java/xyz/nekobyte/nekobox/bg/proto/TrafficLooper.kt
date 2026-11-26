@@ -15,6 +15,7 @@ import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.TAG_BYPASS
 import xyz.nekobyte.nekobox.fmt.TAG_PROXY
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ui.ConnectWidgets
 
 internal fun trafficPollingInterval(notificationInterval: Int) = notificationInterval.takeIf { it > 0 }?.toLong() ?: 1_000L
 
@@ -199,6 +200,7 @@ class TrafficLooper(
         proxy.displayProfileName = ServiceNotification.genTitle(ent)
         data.notification?.postNotificationTitle(proxy.displayProfileName)
         data.binder.broadcast { it.cbSelectorUpdate(id) }
+        ConnectWidgets.requestRefresh()
     }
 
     private suspend fun loop() {
@@ -280,7 +282,10 @@ class TrafficLooper(
 
             // ServiceNotification
             data.notification?.apply {
-                if (notificationInterval > 0 && listenPostSpeed) postNotificationSpeedUpdate(speed)
+                if (notificationInterval > 0 && listenPostSpeed) {
+                    postNotificationSpeedUpdate(speed)
+                    if (data.state == BaseService.State.Connected) ConnectWidgets.postSpeed(speed)
+                }
             }
 
             delay(delayMs)

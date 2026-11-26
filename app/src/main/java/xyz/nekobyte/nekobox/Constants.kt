@@ -47,6 +47,9 @@ object Key {
     const val NIGHT_THEME = "nightTheme"
     const val LIQUID_GLASS = "liquidGlass"
 
+    // Android 12 and later: the widgets take the wallpaper's colors instead of the app's palette.
+    const val WIDGET_MATERIAL_YOU = "widgetMaterialYou"
+
     // Remembers the user's night-mode setting before a dark-only theme (Dracula
     // or Dark High Contrast) forced it on, so it can be restored when switching
     // to another theme. Storage key kept as "nightThemeBeforeDracula" for

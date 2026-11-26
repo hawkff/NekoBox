@@ -168,6 +168,8 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
                 true
             }
         }
+        // Wallpaper colors come with Android 12.
+        findPreference<Preference>(Key.WIDGET_MATERIAL_YOU)?.let { if (Build.VERSION.SDK_INT < 31) it.remove() }
         findPreference<ChoicePreference>(Key.APP_LANGUAGE)?.setOnPreferenceChangeListener { _, newValue ->
             AppLocale.apply(newValue as String)
             true

@@ -33,6 +33,7 @@ import xyz.nekobyte.nekobox.ktx.isOss
 import xyz.nekobyte.nekobox.ktx.isPreview
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
+import xyz.nekobyte.nekobox.ui.ConnectWidgets
 import xyz.nekobyte.nekobox.ui.MainActivity
 import xyz.nekobyte.nekobox.ui.migratePinnedProfileShortcuts
 import xyz.nekobyte.nekobox.utils.*
@@ -140,6 +141,8 @@ class NekoBox :
                 AppUpdates.schedule(this@NekoBox)
                 // The setting changes in this process, from Settings or the local API.
                 DataStore.configurationStore.registerChangeListener(AppUpdates)
+                // The widgets show the selection, the quick-switch lists and the look, which change in this process.
+                DataStore.configurationStore.registerChangeListener(ConnectWidgets)
                 // The manifest drops the androidx-startup provider whose initializer would write the baseline profile;
                 // wait out start-up as that initializer does. A no-op once written for this APK.
                 delay(5_000)
@@ -173,6 +176,8 @@ class NekoBox :
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateNotificationChannels()
+        // The night mode and the wallpaper's colors reach the widgets' colors through here.
+        if (isMainProcess) ConnectWidgets.refresh(this)
     }
 
     // The default process is the one that schedules work again after a reboot or a force stop: the main process, where

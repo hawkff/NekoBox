@@ -1825,13 +1825,6 @@ class ConfigurationGroupFragment : Fragment() {
             }
         }
 
-        // While urltest drives the running group, a manual pick inside it has nothing to act on.
-        private fun runningGroupSelectsAutomatically(groupId: Long): Boolean {
-            val running = ProfileDatabase.proxyDao.getById(DataStore.currentProfile) ?: return false
-            val group = ProfileDatabase.groupDao.getById(groupId) ?: return false
-            return running.groupId == groupId && group.isSelector && group.autoSelect
-        }
-
         private fun statusTarget(): TouchDelegate {
             val bounds = Rect()
             profileStatus.getDrawingRect(bounds)
@@ -2019,4 +2012,11 @@ private fun slot(picking: Boolean, has: Boolean) = when {
     picking -> View.GONE
     has -> View.VISIBLE
     else -> View.INVISIBLE
+}
+
+// While urltest drives the running group, a manual pick inside it has nothing to act on. Reads the profiles.
+internal fun runningGroupSelectsAutomatically(groupId: Long): Boolean {
+    val running = ProfileDatabase.proxyDao.getById(DataStore.currentProfile) ?: return false
+    val group = ProfileDatabase.groupDao.getById(groupId) ?: return false
+    return running.groupId == groupId && group.isSelector && group.autoSelect
 }

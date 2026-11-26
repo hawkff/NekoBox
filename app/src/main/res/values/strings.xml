@@ -1134,5 +1134,14 @@
     <string name="rules_provider_custom_summary">Your own GeoSite and GeoIP URLs</string>
     <string name="log_buffer_size">Log buffer size</string>
     <string name="log_buffer_size_summary">%d KB</string>
+    <string name="widget_name">Connection</string>
+    <string name="widget_description">Connect with one tap, watch the speed and switch between your favorite and recent servers</string>
     <string name="service_connected">Connected</string>
+    <string name="widget_no_profile">No profile selected</string>
+    <string name="widget_orb_description" translatable="false">%1$s. %2$s. %3$s</string>
+    <string name="widget_chip_switch">Switch to %s</string>
+    <string name="widget_chip_connect">Connect to %s</string>
+    <string name="widget_chip_selected">%s, selected</string>
+    <string name="widget_material_you">Material You colors for widgets</string>
+    <string name="widget_material_you_summary">Widgets take their colors from your wallpaper</string>
 </resources>

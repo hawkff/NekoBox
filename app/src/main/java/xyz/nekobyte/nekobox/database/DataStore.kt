@@ -336,6 +336,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var appTheme by configurationStore.int(Key.APP_THEME)
     var nightTheme by configurationStore.stringToInt(Key.NIGHT_THEME)
     var liquidGlass by configurationStore.boolean(Key.LIQUID_GLASS)
+    var widgetMaterialYou by configurationStore.boolean(Key.WIDGET_MATERIAL_YOU)
 
     // -1 = not set (no dark-only-theme override active). Otherwise holds the
     // night-mode value to restore when leaving a dark-only theme (Dracula or

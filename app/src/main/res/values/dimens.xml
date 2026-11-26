@@ -31,4 +31,11 @@
     <dimen name="relay_header_edge">12dp</dimen>
     <dimen name="relay_row_indent">36dp</dimen>
     <dimen name="choice_icon_size">48dp</dimen>
+    <!-- The connect widget: its corners (the system's from Android 12), its padding and its orb. -->
+    <dimen name="widget_radius">16dp</dimen>
+    <dimen name="widget_chip_radius">8dp</dimen>
+    <dimen name="widget_padding">12dp</dimen>
+    <dimen name="widget_chip_margin">4dp</dimen>
+    <dimen name="widget_chip_row_padding">8dp</dimen>
+    <dimen name="widget_orb_size">56dp</dimen>
 </resources>

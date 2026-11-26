@@ -346,6 +346,13 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
+            android:name="xyz.nekobyte.nekobox.ui.ConnectWidgetActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
             android:name="xyz.nekobyte.nekobox.ui.AppManagerActivity"
             android:configChanges="uiMode"
             android:excludeFromRecents="true"
@@ -495,6 +502,19 @@
             android:name="xyz.nekobyte.nekobox.bg.LocationTurnOffReceiver"
             android:exported="false"
             android:process=":bg" />
+
+        <!-- Exported for the home screen's widget host; it only draws, from what the app holds. -->
+        <receiver
+            android:name="xyz.nekobyte.nekobox.ui.ConnectWidget"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_connect_info" />
+        </receiver>
 
         <receiver
             android:name="xyz.nekobyte.nekobox.ui.ProfileShortcutMigrationReceiver"

@@ -32,6 +32,7 @@ import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.plugin.PluginManager
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import xyz.nekobyte.nekobox.ui.ConnectWidgets
 import xyz.nekobyte.nekobox.utils.ConnectionAttempt
 import xyz.nekobyte.nekobox.utils.ConnectionOutcome
 import xyz.nekobyte.nekobox.utils.DefaultNetworkListener
@@ -189,6 +190,7 @@ class BaseService {
             if (s == State.Connected || s == State.Stopped) TailscaleSessionController.resumeAllAdmission()
             DataStore.serviceState = s
             binder.stateChanged(s, msg)
+            ConnectWidgets.requestRefresh()
             // Network automation decides only on a settled service: not during a teardown, nor once
             // stopped while a restart is on its way. A kill switch block ends a teardown in Connecting.
             NetworkAutomation.onServiceState(settled = s != State.Stopping && !(s == State.Stopped && restarting))
