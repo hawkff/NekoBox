@@ -36,11 +36,14 @@ class ConnectWidgetActivity : ComponentActivity() {
                 // connect with. A chip drawn before its profile was archived or deleted opens the app instead.
                 val chip = chipId.takeIf { it > 0L }?.let { ProfileDatabase.proxyDao.getById(it) }?.takeIf { it.canBuild() }
                 val selectedId = DataStore.selectedProxy
+                val activeId = widgetActiveId(tap, selectedId)
                 val action = widgetAction(
                     state = state,
                     chipId = chipId,
                     chipUsable = chip != null,
-                    selectedId = selectedId,
+                    // Running, the chip of the profile the service runs has nothing to switch to, also when its group
+                    // picked it; this process's selection can be older.
+                    activeId = activeId,
                     selectedUsable = ProfileDatabase.proxyDao.getById(selectedId)?.canBuild() == true,
                     autoSelecting = chip != null && state?.canStop == true &&
                         runningGroupSelectsAutomatically(chip.groupId, tap.runningProfileId.takeIf { it > 0L } ?: DataStore.currentProfile),

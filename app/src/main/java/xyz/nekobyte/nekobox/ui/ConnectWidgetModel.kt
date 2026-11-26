@@ -79,17 +79,20 @@ internal suspend fun tapState(started: List<ComponentName>, ask: suspend (Compon
     return TapState(null)
 }
 
+/** The profile a running service runs, as the service said; else the selected one. */
+internal fun widgetActiveId(tap: TapState, selectedId: Long) = tap.runningProfileId.takeIf { tap.state?.started == true && it > 0L } ?: selectedId
+
 /**
  * A tap on the orb ([chipId] < 0) or on the chip of profile [chipId], which can connect when [chipUsable] (it exists
  * and is not archived), as can the selected profile when [selectedUsable]. A chip switches a running connection to its
- * profile, or selects it and connects. Where the app has more to say (no profile to connect, a group that picks its
+ * profile (none to do when it is [activeId], the one the service runs), or selects it and connects. Where the app has more to say (no profile to connect, a group that picks its
  * own server, a profile gone or archived since, a service whose state is unknown), the app opens.
  */
 internal fun widgetAction(
     state: BaseService.State?,
     chipId: Long,
     chipUsable: Boolean,
-    selectedId: Long,
+    activeId: Long,
     selectedUsable: Boolean,
     autoSelecting: Boolean,
 ): WidgetAction {
@@ -106,7 +109,7 @@ internal fun widgetAction(
     return when {
         state == BaseService.State.Stopping -> WidgetAction.SELECT
         !state.canStop -> WidgetAction.SELECT_AND_START
-        chipId == selectedId -> WidgetAction.NONE
+        chipId == activeId -> WidgetAction.NONE
         autoSelecting -> WidgetAction.OPEN_APP
         else -> WidgetAction.SWITCH
     }

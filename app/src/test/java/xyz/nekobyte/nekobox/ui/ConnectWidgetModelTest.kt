@@ -90,7 +90,7 @@ class ConnectWidgetModelTest {
         assertEquals(WidgetAction.SELECT_AND_START, chip(State.Stopped))
         assertEquals(WidgetAction.SELECT_AND_START, chip(State.Idle))
         assertEquals(WidgetAction.SELECT, chip(State.Stopping))
-        // The profile already running stays as it is.
+        // The profile already running stays as it is (activeId is the service's, not this process's selection).
         assertEquals(WidgetAction.NONE, chip(State.Connected, id = 1L))
     }
 
@@ -133,5 +133,17 @@ class ConnectWidgetModelTest {
         assertTrue(posts.shouldPost(a, force = false))
         posts.posted(a)
         assertFalse(posts.shouldPost(a, force = false))
+    }
+
+    @Test
+    fun theActiveChipIsTheProfileTheServiceRuns() {
+        // Running 30 (its group picked it) while this process still has 17 selected.
+        val running = TapState(State.Connected, runningProfileId = 30L)
+        assertEquals(30L, widgetActiveId(running, selectedId = 17L))
+        assertEquals(WidgetAction.NONE, widgetAction(State.Connected, 30L, true, widgetActiveId(running, 17L), true, false))
+        assertEquals(WidgetAction.SWITCH, widgetAction(State.Connected, 17L, true, widgetActiveId(running, 17L), true, false))
+        // Off, or the service names none yet: the selection.
+        assertEquals(17L, widgetActiveId(TapState(State.Stopped), 17L))
+        assertEquals(17L, widgetActiveId(TapState(State.Connecting, -1L), 17L))
     }
 }
