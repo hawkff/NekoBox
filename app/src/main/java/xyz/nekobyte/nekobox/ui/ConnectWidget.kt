@@ -45,10 +45,15 @@ import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
+import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProfileManager
+import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.preference.OnPreferenceDataStoreChangeListener
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.getColorAttr
@@ -152,6 +157,49 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         watchedBy = app
         watched = service
         if (!app.bindService(Intent(Action.SERVICE).setComponent(service), watch, 0)) watch(app, null)
+    }
+
+    // The profiles and the group the widgets show, as last drawn: edits and removals of them draw again.
+    @Volatile private var shownProfiles: Set<Long> = emptySet()
+
+    @Volatile private var shownGroup = 0L
+
+    /**
+     * Follows the profiles and groups in this process: a rename or a removal of what the widgets show, and lists
+     * reloaded or removed (their profiles may be gone), draw them again. Traffic counts do not.
+     */
+    val modelListener = ModelListener()
+
+    class ModelListener :
+        ProfileManager.Listener,
+        GroupManager.Listener {
+        override suspend fun onAdd(profile: ProxyEntity) = Unit
+
+        override suspend fun onUpdated(data: TrafficData) = Unit
+
+        override suspend fun onUpdated(data: List<TrafficData>) = Unit
+
+        override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) {
+            if (profile.id in shownProfiles) refresh(NekoBox.application)
+        }
+
+        override suspend fun onRemoved(groupId: Long, profileId: Long) {
+            if (profileId in shownProfiles) refresh(NekoBox.application)
+        }
+
+        override suspend fun groupAdd(group: ProxyGroup) = Unit
+
+        override suspend fun groupUpdated(group: ProxyGroup) {
+            if (group.id == shownGroup) refresh(NekoBox.application)
+        }
+
+        override suspend fun groupRemoved(groupId: Long) {
+            refresh(NekoBox.application)
+        }
+
+        override suspend fun groupUpdated(groupId: Long) {
+            refresh(NekoBox.application)
+        }
     }
 
     // Both processes can end, Android ending a cached app process first: then nothing is left to watch. While the
@@ -370,6 +418,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         // Pins of deleted profiles stay until the lists reload: every candidate is looked up before the chips are counted.
         val order = widgetChipOrder(DataStore.favoriteProfiles, DataStore.recentPicks, selected?.groupId ?: DataStore.selectedGroup)
         val chips = widgetChipProfiles(order, ProfileDatabase.proxyDao.getEntities(order)).map { Chip(it.id, it.displayName()) }
+        shownProfiles = chips.map { it.id }.toSet() + listOfNotNull(selected?.id)
+        shownGroup = group?.id ?: 0L
         // shortcut: a speed the service posts while this drawing is under way can be drawn over with the one read here,
         // and stays until the speed changes again; post the speed with every drawing if that shows.
         val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null

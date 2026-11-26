@@ -27,7 +27,9 @@ import xyz.nekobyte.nekobox.bg.AppUpdates
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.isOss
 import xyz.nekobyte.nekobox.ktx.isPreview
@@ -146,6 +148,8 @@ class NekoBox :
                 DataStore.configurationStore.registerChangeListener(AppUpdates)
                 // The widgets show the selection, the quick-switch lists and the look, which change in this process.
                 DataStore.configurationStore.registerChangeListener(ConnectWidgets)
+                ProfileManager.addListener(ConnectWidgets.modelListener)
+                GroupManager.addListener(ConnectWidgets.modelListener)
                 // They may show a service whose process ended while this one was gone.
                 ConnectWidgets.refresh(this@NekoBox)
                 // The manifest drops the androidx-startup provider whose initializer would write the baseline profile;

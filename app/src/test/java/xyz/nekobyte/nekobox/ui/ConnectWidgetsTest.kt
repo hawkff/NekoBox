@@ -23,9 +23,12 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.BaseService.State
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
@@ -52,6 +55,8 @@ class ConnectWidgetsTest {
         group = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "Mullvad")) }
         ConfigBuilderTestEnv.io { profile(17, "Tokyo 004") }
         DataStore.selectedProxy = 17L
+        ProfileManager.addListener(ConnectWidgets.modelListener)
+        GroupManager.addListener(ConnectWidgets.modelListener)
     }
 
     @After
@@ -61,6 +66,8 @@ class ConnectWidgetsTest {
         ConnectWidgets.askService = { null }
         runBlocking { ConnectWidgets.refresh(context).join() }
         ConnectWidgets.askService = ask
+        ProfileManager.removeListener(ConnectWidgets.modelListener)
+        GroupManager.removeListener(ConnectWidgets.modelListener)
         Logs.sink = logSink
     }
 
@@ -135,5 +142,43 @@ class ConnectWidgetsTest {
         assertEquals("Not connected", text(id, R.id.widget_state))
         // Nothing runs any more: the watch lets go.
         assertFalse(ConnectWidgets.watch in shadowOf(context).boundServiceConnections)
+    }
+
+    @Test
+    fun renamesAndRemovalsOfWhatShowsDrawAgain_trafficDoesNot() {
+        ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
+        ConfigBuilderTestEnv.io { profile(19, "Kyoto 006") }
+        DataStore.favoriteProfiles = listOf(18L)
+        val id = place()
+        runBlocking {
+            // The selected profile renamed in its editor: no selection or state change.
+            val renamed = ConfigBuilderTestEnv.io {
+                ProfileDatabase.proxyDao.updateBean(
+                    17L,
+                    SOCKSBean().apply {
+                        initializeDefaultValues()
+                        name = "Tokyo 004 bis"
+                    },
+                )
+            }!!
+            ProfileManager.postUpdate(renamed)
+            drawn()
+            assertEquals("Tokyo 004 bis", text(id, R.id.widget_profile))
+            // Its group renamed.
+            val renamedGroup = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.getById(group) }!!.apply { name = "Mullvad 2" }
+            ConfigBuilderTestEnv.io { runBlocking { GroupManager.updateGroup(renamedGroup) } }
+            drawn()
+            assertEquals(" · Mullvad 2", text(id, R.id.widget_group))
+            // Traffic counts and profiles that do not show leave the widget alone.
+            val before = ConnectWidgets.lastRender
+            ProfileManager.postUpdate(TrafficData(id = 17L, rx = 1L, tx = 1L))
+            ConfigBuilderTestEnv.io { runBlocking { ProfileManager.deleteProfile(group, 19L) } }
+            assertTrue(before === ConnectWidgets.lastRender)
+            // A favorite on a chip removed, the selection as it was: drawn again.
+            ConfigBuilderTestEnv.io { runBlocking { ProfileManager.deleteProfile(group, 18L) } }
+            assertFalse(before === ConnectWidgets.lastRender)
+            drawn()
+            assertEquals("Tokyo 004 bis", text(id, R.id.widget_profile))
+        }
     }
 }
