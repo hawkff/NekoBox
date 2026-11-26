@@ -42,6 +42,8 @@ private fun ShadowsocksBean.applyTransportParams(link: HttpUrl) {
     }
 }
 
+private val CIPHER_NAME = Regex("[A-Za-z0-9_-]+")
+
 fun parseShadowsocks(url: String): ShadowsocksBean {
     if (url.substringBefore("#").contains("@")) {
         var link = url.replace("ss://", "https://").toHttpUrlOrNull() ?: error(
@@ -75,6 +77,8 @@ fun parseShadowsocks(url: String): ShadowsocksBean {
         }
 
         val methodAndPswd = link.username.decodeBase64UrlSafe()
+        // A userinfo that is not base64 of method:password, such as a VLESS UUID, decodes to no cipher name.
+        require(CIPHER_NAME.matches(methodAndPswd.substringBefore(":"))) { "invalid shadowsocks method" }
 
         return ShadowsocksBean().apply {
             serverAddress = link.host

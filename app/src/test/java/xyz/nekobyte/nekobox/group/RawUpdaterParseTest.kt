@@ -671,6 +671,18 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun shadowsocksUserinfoThatDecodesToNoCipherIsRefused() = runTest {
+        // Lists relabel VLESS links as ss://, which leaves a UUID where base64 of method:password belongs.
+        val report = ImportReport()
+        assertTrue(parseProxies("ss://00000000-0000-4000-8000-000000000001@192.0.2.1:443?type=ws&security=tls#mislabeled", report).isEmpty())
+        assertEquals(listOf<String?>("ss"), report.failed)
+        val userinfo = Base64.getUrlEncoder().withoutPadding().encodeToString("2022-blake3-aes-128-gcm:secret".toByteArray())
+        val bean = parseProxies("ss://$userinfo@192.0.2.1:8388#b64").single() as ShadowsocksBean
+        assertEquals("2022-blake3-aes-128-gcm", bean.method)
+        assertEquals("secret", bean.password)
+    }
+
+    @Test
     fun aRefusedCompleteLinkDoesNotDiscardItsValidNeighbors() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val firsts = listOf("socks5://192.0.2.1:1080", "socks5://192.0.2.1:1080#first${" ".repeat(2048)}server")
