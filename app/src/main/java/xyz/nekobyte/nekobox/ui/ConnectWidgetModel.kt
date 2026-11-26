@@ -115,6 +115,16 @@ internal fun widgetAction(
     }
 }
 
+/**
+ * What TalkBack says for a chip, with its profile's name: what a tap does. The chip of the profile running says it is
+ * selected, as a tap leaves it; off, every chip connects, the selected one too.
+ */
+internal fun widgetChipDescription(state: BaseService.State, selected: Boolean) = when {
+    selected && state.canStop -> R.string.widget_chip_selected
+    state.canStop -> R.string.widget_chip_switch
+    else -> R.string.widget_chip_connect
+}
+
 /** The widget's words for [state]; Idle is how a service that is going away answers, so it reads as off. */
 internal fun widgetStateText(state: BaseService.State) = when (state) {
     BaseService.State.Connecting -> R.string.connecting

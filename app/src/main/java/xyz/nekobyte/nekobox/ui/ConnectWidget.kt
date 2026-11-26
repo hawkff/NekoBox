@@ -577,14 +577,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             }
             val selected = chip.id == selectedId
             views.setTextViewText(R.id.widget_chip_text, chip.name)
-            views.setContentDescription(
-                R.id.widget_chip,
-                when {
-                    selected -> app.getString(R.string.widget_chip_selected, chip.name)
-                    state.canStop -> app.getString(R.string.widget_chip_switch, chip.name)
-                    else -> app.getString(R.string.widget_chip_connect, chip.name)
-                },
-            )
+            views.setContentDescription(R.id.widget_chip, app.getString(widgetChipDescription(state, selected), chip.name))
             views.tint(R.id.widget_chip_text, "setTextColor", looks.pair { it.text })
             views.tint(R.id.widget_chip_fill, "setColorFilter", looks.pair { if (selected) it.selectedChip else it.surface })
             if (selected) views.setImageViewResource(R.id.widget_chip_outline, R.drawable.widget_chip_outline_selected)

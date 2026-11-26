@@ -146,4 +146,13 @@ class ConnectWidgetModelTest {
         assertEquals(17L, widgetActiveId(TapState(State.Stopped), 17L))
         assertEquals(17L, widgetActiveId(TapState(State.Connecting, -1L), 17L))
     }
+
+    @Test
+    fun chipsSayWhatATapDoes() {
+        assertEquals(R.string.widget_chip_selected, widgetChipDescription(State.Connected, selected = true))
+        assertEquals(R.string.widget_chip_switch, widgetChipDescription(State.Connected, selected = false))
+        // Off, a tap on the selected chip connects it.
+        assertEquals(R.string.widget_chip_connect, widgetChipDescription(State.Stopped, selected = true))
+        assertEquals(R.string.widget_chip_connect, widgetChipDescription(State.Stopped, selected = false))
+    }
 }
