@@ -225,4 +225,18 @@ class ConnectWidgetsTest {
             ConnectWidgets.publishSpeed = publish
         }
     }
+
+    @Test
+    fun aFavoriteRemovedWithOthersLeavesTheChips() {
+        ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
+        ConfigBuilderTestEnv.io { profile(19, "Kyoto 006") }
+        DataStore.favoriteProfiles = listOf(18L, 19L)
+        place()
+        assertTrue(18L in ConnectWidgets.shownProfiles && 19L in ConnectWidgets.shownProfiles)
+        // Removed together from the list, as the list's selection mode removes them; the selection stays.
+        val removed = ConfigBuilderTestEnv.io { ProfileDatabase.proxyDao.getEntities(listOf(18L, 19L)) }
+        runBlocking { ConfigBuilderTestEnv.io { runBlocking { ProfileManager.deleteProfiles(removed) } } }
+        drawn()
+        assertEquals(setOf(17L), ConnectWidgets.shownProfiles)
+    }
 }

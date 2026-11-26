@@ -177,7 +177,9 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     internal var unbindWatch: (Context) -> Unit = { it.unbindService(watch) }
 
     // The profiles and the group the widgets show, as last drawn, and where: edits and removals of them draw again.
-    @Volatile private var shownProfiles: Set<Long> = emptySet()
+    @VisibleForTesting
+    @Volatile
+    internal var shownProfiles: Set<Long> = emptySet()
 
     @Volatile private var shownIn: Context? = null
 

@@ -232,6 +232,8 @@ object ProfileManager {
             DataStore.selectedProxy = 0L
         }
         pruneTailscaleState()
+        // One reload a list rather than a removal a profile: the lists' counts, Favorites and the widget follow.
+        if (deleted > 0) for (groupId in profiles.map { it.groupId }.distinct()) GroupManager.postReload(groupId)
     }
 
     suspend fun deleteProfile(groupId: Long, profileId: Long) {
