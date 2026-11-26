@@ -75,6 +75,21 @@ class ProfileShortcutsTest {
     }
 
     @Test
+    fun aPinnedProfileFollowsTheLauncherIconToEachAlias() {
+        pin("shortcut-profile-17")
+        ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
+        for (icon in listOf(LauncherIcon.BLACK, LauncherIcon.FULL_BLEED, LauncherIcon.CLASSIC)) {
+            icon.select(context)
+            ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
+            val migrated = manager.pinnedShortcuts.single()
+            assertEquals(icon.component(context), migrated.activity)
+            assertEquals(ComponentName(context, QuickToggleShortcut::class.java), migrated.intent!!.component)
+            assertEquals(17L, migrated.intent!!.getLongExtra("profile", -1))
+            assertEquals("Saved server", migrated.shortLabel)
+        }
+    }
+
+    @Test
     fun retriesEnablingAShortcutWhoseTargetsWereAlreadyUpdated() {
         pin("shortcut-profile-17")
         ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
