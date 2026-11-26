@@ -796,6 +796,18 @@ class RawUpdaterParseTest {
             "ss://aes-128-gcm@192.0.2.1:8388#plain",
             "ss://${b64("aes-128-gcm@192.0.2.1:8388")}#legacy",
             "ss://${padded("chacha20-ietf-poly1305@192.0.2.1:8388")}#legacy-padded",
+            // No '@': the port's ':' is no delimiter, there are no credentials at all.
+            "ss://ZXhhbXBsZS5jb206ODM4OA==",
+            "ss://ZXhhbXBsZS5jb206ODM4OA==#no-at",
+            "ss://${b64("example.com:8388")}#no-at-url-safe",
+            "ss://[2001:db8::1]:8388#ipv6-no-userinfo",
+            "ss://${b64("[2001:db8::1]:8388")}#legacy-ipv6-no-userinfo",
+            // An '@' with no user info, or with no method before the ':'.
+            "ss://@192.0.2.1:8388#empty-userinfo",
+            "ss://${b64("@192.0.2.1:8388")}#legacy-empty-userinfo",
+            "ss://:secret@192.0.2.1:8388#plain-no-method",
+            "ss://${b64(":secret@192.0.2.1:8388")}#legacy-no-method",
+            "ss://${b64(":secret")}@192.0.2.1:8388#sip002-no-method",
         )) {
             val report = ImportReport()
             assertTrue(link, parseProxies(link, report).isEmpty())
@@ -813,6 +825,17 @@ class RawUpdaterParseTest {
             val bean = parseProxies(link).single() as ShadowsocksBean
             assertEquals(link, methodAndPassword, bean.method to bean.password)
             assertEquals(link, "192.0.2.1", bean.serverAddress)
+        }
+        // An IPv6 host has ':' of its own after the '@'.
+        for (link in listOf(
+            "ss://${b64("aes-128-gcm:secret")}@[2001:db8::1]:8388#sip002-ipv6",
+            "ss://none:@[2001:db8::1]:8388#plain-ipv6",
+            "ss://${b64("aes-128-gcm:secret@[2001:db8::1]:8388")}#legacy-ipv6",
+        )) {
+            val bean = parseProxies(link).single() as ShadowsocksBean
+            assertEquals(link, 8388, bean.serverPort)
+            assertTrue(link, bean.serverAddress!!.contains("2001:db8::1"))
+            assertTrue(link, bean.method!!.isNotEmpty())
         }
     }
 
