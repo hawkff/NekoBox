@@ -209,7 +209,7 @@
     <string name="mux_brutal_up_mbps">Upload (Mbps)</string>
     <string name="mux_brutal_down_mbps">Download (Mbps)</string>
     <string name="proxied_apps">Proxied apps</string>
-    <string name="proxied_apps_summary">Choose which apps use the VPN</string>
+    <string name="proxied_apps_summary">Split tunneling: choose which apps use the VPN</string>
     <string name="off">Off</string>
     <string name="search_apps">Search…</string>
     <string name="invert_selections">Invert selections</string>
