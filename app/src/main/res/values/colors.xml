@@ -114,8 +114,13 @@
     <!-- Representative swatch for the Dynamic (Material You) theme option (wallpaper-based on
          Android 12+); a neutral system-accent stand-in since it has no fixed color. -->
     <color name="color_dynamic_swatch">#5E6472</color>
-    <color name="color_ng_black_accent">#9E9E9E</color>
+    <!-- Black's accent (category titles, outlines): 6.2:1 on the light surface; the night value is lighter. -->
+    <color name="color_ng_black_accent">#616161</color>
     <color name="color_ng_black_primary">#2B2B2B</color>
+    <!-- Black's colorPrimary (selection outline, switches, check boxes, buttons): the bars' dark gray on a light
+         canvas; on a dark one that gray vanishes, so the night value is light gray with black on it. -->
+    <color name="color_ng_black_action">@color/color_ng_black_primary</color>
+    <color name="color_ng_black_on_action">@color/white</color>
     <!-- Black's checked drawer item: the bars' dark gray on a light drawer, the accent's light gray on a dark one. -->
     <color name="nav_selected_black">@color/color_ng_black_primary</color>
 

@@ -47,6 +47,9 @@ object Key {
     const val NIGHT_THEME = "nightTheme"
     const val LIQUID_GLASS = "liquidGlass"
 
+    // Android 12 and later: the widgets take the wallpaper's colors instead of the app's palette.
+    const val WIDGET_MATERIAL_YOU = "widgetMaterialYou"
+
     // Remembers the user's night-mode setting before a dark-only theme (Dracula
     // or Dark High Contrast) forced it on, so it can be restored when switching
     // to another theme. Storage key kept as "nightThemeBeforeDracula" for
@@ -308,4 +311,7 @@ object Action {
     // its own and stores them when it stops, so it counts that group's profiles from zero again.
     const val CLEAR_TRAFFIC = "xyz.nekobyte.nekobox.CLEAR_TRAFFIC"
     const val EXTRA_GROUP_ID = "xyz.nekobyte.nekobox.EXTRA_GROUP_ID"
+
+    // The app's process drew the widgets again: the service posts its latest speed to them, even unchanged.
+    const val WIDGET_REDRAWN = "xyz.nekobyte.nekobox.WIDGET_REDRAWN"
 }

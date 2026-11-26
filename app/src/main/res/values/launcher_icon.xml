@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="launcher_icon">App icon</string>
+    <string name="launcher_icon_classic">Classic</string>
+    <string name="launcher_icon_black">Black</string>
+    <string name="launcher_icon_full_bleed">Full-bleed</string>
+    <string name="launcher_icon_full_bleed_sum">The art fills the icon</string>
+    <string name="launcher_icon_no_plate">No plate</string>
+    <string name="launcher_icon_no_plate_sum">Only the art, where your home screen allows a clear background</string>
+    <string name="launcher_icon_change_title">Change the app icon?</string>
+    <string name="launcher_icon_change_message">Some home screens remove the app\'s icon and its pinned shortcuts when the icon changes. You can add them again from the app list.</string>
+    <string name="launcher_icon_change">Change icon</string>
+    <string name="launcher_icon_change_failed">Android did not change the icon. The app finishes the change the next time it starts.</string>
+</resources>

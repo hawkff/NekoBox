@@ -32,6 +32,7 @@ import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.plugin.PluginManager
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import xyz.nekobyte.nekobox.ui.ConnectWidgets
 import xyz.nekobyte.nekobox.utils.ConnectionAttempt
 import xyz.nekobyte.nekobox.utils.ConnectionOutcome
 import xyz.nekobyte.nekobox.utils.DefaultNetworkListener
@@ -119,6 +120,13 @@ class BaseService {
 
                 Action.CLEAR_TRAFFIC -> runOnDefaultDispatcher { clearTraffic(intent.getLongExtra(Action.EXTRA_GROUP_ID, 0L)) }
 
+                // A redraw shows the speed the app's process read, which may be older than the one posted since.
+                Action.WIDGET_REDRAWN -> {
+                    val speed = proxy?.looper?.latestSpeed
+                    val now = state == State.Connected && notification?.listenPostSpeed == true
+                    runOnDefaultDispatcher { ConnectWidgets.redrawn(NekoBox.application, speed, now) }
+                }
+
                 Action.RESET_UPSTREAM_CONNECTIONS -> runOnDefaultDispatcher {
                     Libcore.resetAllConnections(true)
                     runOnMainDispatcher {
@@ -189,6 +197,7 @@ class BaseService {
             if (s == State.Connected || s == State.Stopped) TailscaleSessionController.resumeAllAdmission()
             DataStore.serviceState = s
             binder.stateChanged(s, msg)
+            ConnectWidgets.requestRefresh()
             // Network automation decides only on a settled service: not during a teardown, nor once
             // stopped while a restart is on its way. A kill switch block ends a teardown in Connecting.
             NetworkAutomation.onServiceState(settled = s != State.Stopping && !(s == State.Stopped && restarting))
@@ -211,6 +220,10 @@ class BaseService {
 
         override fun getState(): Int = (data?.state ?: State.Idle).ordinal
         override fun getProfileName(): String = data?.proxy?.displayProfileName ?: "Idle"
+        override fun getRunningProfileId(): Long {
+            val proxy = data?.proxy ?: return -1L
+            return proxy.looper?.selectorNowId?.takeIf { it > 0L } ?: proxy.profile.id
+        }
         override fun getRevoked() = data?.revoked == true
         override fun getLatestSpeed(): SpeedDisplayData? = data?.takeIf { it.state == State.Connected }?.proxy?.looper?.latestSpeed
 
@@ -780,6 +793,7 @@ class BaseService {
                 addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
                 addAction(Action.RESET_UPSTREAM_CONNECTIONS)
                 addAction(Action.CLEAR_TRAFFIC)
+                addAction(Action.WIDGET_REDRAWN)
                 addAction(NetworkAutomationService.ACTION_RECHECK)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The connect widget's outline, as a card's, white so that a color filter paints it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- A clear fill: without one, a color filter paints the whole shape. -->
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="@dimen/card_stroke_width"
+        android:color="@android:color/white" />
+    <corners android:radius="@dimen/widget_radius" />
+</shape>

@@ -14,38 +14,44 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 
-// Pinned profile shortcuts retain explicit component names across app updates.
+// Pinned profile shortcuts retain explicit component names across app updates, and the launcher entry they
+// belong to across launcher icon changes.
 internal fun migratePinnedProfileShortcuts(context: Context) {
     if (Build.VERSION.SDK_INT < 26 || context.getSystemService<UserManager>()?.isUserUnlocked != true) return
     try {
         val manager = context.getSystemService<ShortcutManager>() ?: return
         val target = ComponentName(context, QuickToggleShortcut::class.java)
-        val activity = ComponentName(context, MainActivity::class.java)
-        val enable = mutableListOf<String>()
-        val updates = manager.pinnedShortcuts.mapNotNull { shortcut ->
-            if (shortcut.isImmutable || !shortcut.id.startsWith("shortcut-profile-")) return@mapNotNull null
-            val profileId = shortcut.id.removePrefix("shortcut-profile-").toLongOrNull()?.takeIf { it > 0 }
-                ?: return@mapNotNull null
-            val intent = shortcut.intents?.singleOrNull() ?: return@mapNotNull null
-            if (intent.component?.packageName != context.packageName || intent.getLongExtra("profile", -1) != profileId) return@mapNotNull null
-            val currentTarget = intent.component == target && shortcut.activity == activity
-            if (currentTarget && shortcut.isEnabled) return@mapNotNull null
-            if (ProfileDatabase.proxyDao.getById(profileId)?.canBuild() != true) return@mapNotNull null
-            if (currentTarget) {
-                // Enabling has no update quota, even if an earlier migration exhausted it.
-                enable += shortcut.id
-                return@mapNotNull null
+        // A switch waits until the shortcuts carry the alias read here, so an older batch never lands after a newer one.
+        LauncherIcon.notSwitching {
+            // The alias the launcher shows, not a pick still noted: until a switch is finished (by the reconciliation at
+            // start, which migrates after it) the shortcuts stay where they are.
+            val activity = LauncherIcon.shownAlias(context)?.component(context) ?: return
+            val enable = mutableListOf<String>()
+            val updates = manager.pinnedShortcuts.mapNotNull { shortcut ->
+                if (shortcut.isImmutable || !shortcut.id.startsWith("shortcut-profile-")) return@mapNotNull null
+                val profileId = shortcut.id.removePrefix("shortcut-profile-").toLongOrNull()?.takeIf { it > 0 }
+                    ?: return@mapNotNull null
+                val intent = shortcut.intents?.singleOrNull() ?: return@mapNotNull null
+                if (intent.component?.packageName != context.packageName || intent.getLongExtra("profile", -1) != profileId) return@mapNotNull null
+                val currentTarget = intent.component == target && shortcut.activity == activity
+                if (currentTarget && shortcut.isEnabled) return@mapNotNull null
+                if (ProfileDatabase.proxyDao.getById(profileId)?.canBuild() != true) return@mapNotNull null
+                if (currentTarget) {
+                    // Enabling has no update quota, even if an earlier migration exhausted it.
+                    enable += shortcut.id
+                    return@mapNotNull null
+                }
+                val label = shortcut.shortLabel ?: return@mapNotNull null
+                ShortcutInfo.Builder(context, shortcut.id)
+                    .setShortLabel(label)
+                    .apply { shortcut.longLabel?.let { setLongLabel(it) } }
+                    .setActivity(activity)
+                    .setIntent(Intent(intent).setComponent(target))
+                    .build()
             }
-            val label = shortcut.shortLabel ?: return@mapNotNull null
-            ShortcutInfo.Builder(context, shortcut.id)
-                .setShortLabel(label)
-                .apply { shortcut.longLabel?.let { setLongLabel(it) } }
-                .setActivity(activity)
-                .setIntent(Intent(intent).setComponent(target))
-                .build()
+            if (updates.isNotEmpty() && manager.updateShortcuts(updates)) enable += updates.map { it.id }
+            if (enable.isNotEmpty()) manager.enableShortcuts(enable)
         }
-        if (updates.isNotEmpty() && manager.updateShortcuts(updates)) enable += updates.map { it.id }
-        if (enable.isNotEmpty()) manager.enableShortcuts(enable)
     } catch (e: Exception) {
         // Retry on the next UI launch if Android has locked or rate-limited shortcut updates.
         Logs.w("Could not update pinned profile shortcuts", e)

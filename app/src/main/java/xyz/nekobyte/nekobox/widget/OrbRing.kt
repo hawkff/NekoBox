@@ -125,6 +125,16 @@ internal class OrbRing(private val view: View) {
         updateClock()
     }
 
+    /**
+     * Shows [state] standing still, for a picture of the orb drawn off the main thread: nothing is animated, and
+     * stopping shows the disk halfway back to orange.
+     */
+    fun still(state: BaseService.State) {
+        pause()
+        show(state, animate = false)
+        if (state == BaseService.State.Stopping) set(STOPPING)
+    }
+
     // A connected orb sparkles for a while, then comes to rest.
     private fun sparkle() {
         calm?.cancel()
@@ -295,6 +305,7 @@ internal class OrbRing(private val view: View) {
         private val OFF = floatArrayOf(0f, 0f, 0f, 0f, 0f)
         private val CONNECTING = floatArrayOf(1f, 0.35f, 0f, 0f, 1f)
         private val CONNECTED = floatArrayOf(1f, 1f, 1f, 1f, 0.15f)
+        private val STOPPING = floatArrayOf(0.5f, 0.15f, 0f, 0f, 0f)
 
         private const val SPIN_UP = 1200L
         private const val SETTLE = 1400L

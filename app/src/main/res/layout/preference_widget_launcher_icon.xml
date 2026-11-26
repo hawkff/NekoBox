@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The App icon row's preview of the icon in use; the row's summary names it. -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/launcher_icon_preview"
+    android:layout_width="@dimen/choice_icon_size"
+    android:layout_height="@dimen/choice_icon_size"
+    android:importantForAccessibility="no" />

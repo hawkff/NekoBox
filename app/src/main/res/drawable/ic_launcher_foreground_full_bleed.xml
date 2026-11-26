@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Full-bleed launcher icon's art: 1.15 times the classic art, 6 of 108 dp lower, so the box runs off the bottom
+     edge while the ears stay inside a circle mask. The insets are fractions of the layer, so the art keeps these
+     proportions at every size the launcher draws it: 7.5% out on each side is 1.15 times as wide and as high, and
+     6/108 (5.556%) moves it down: -7.5% + 5.556% at the top, -7.5% - 5.556% at the bottom. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@mipmap/ic_launcher_foreground"
+    android:insetBottom="-13.056%"
+    android:insetLeft="-7.5%"
+    android:insetRight="-7.5%"
+    android:insetTop="-1.944%" />

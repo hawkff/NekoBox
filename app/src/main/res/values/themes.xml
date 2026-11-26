@@ -66,6 +66,9 @@
         <item name="appBarBackgroundColor">@color/material_pink_500</item>
         <item name="colorPrimaryDark">@color/material_pink_700</item>
         <item name="colorAccent">@color/material_pink_accent_200</item>
+        <!-- Checked switch thumbs, radio buttons and focused fields: AppCompat's default, stated so a palette may
+             change it. -->
+        <item name="colorControlActivated">?attr/colorAccent</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_pink</item>
 
@@ -301,12 +304,14 @@
     <style name="ThemeOverlay.NekoBox.Palette.Dynamic" parent="ThemeOverlay.NekoBox.Palette.Pink" />
     <!-- Black: neutral chrome; accents fall back to the text colors. -->
     <style name="ThemeOverlay.NekoBox.Palette.Black" parent="">
-        <item name="colorPrimary">@color/color_ng_black_primary</item>
+        <item name="colorPrimary">@color/color_ng_black_action</item>
+        <item name="colorOnPrimary">@color/color_ng_black_on_action</item>
         <item name="appBarBackgroundColor">@color/color_ng_black_primary</item>
         <item name="colorPrimaryDark">@color/color_ng_black_primary</item>
         <item name="colorAccent">@color/color_ng_black_accent</item>
+        <!-- At night the accent gray is darker than an unchecked switch thumb; checked controls take the primary. -->
+        <item name="colorControlActivated">@color/color_ng_black_action</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_black</item>
-        <item name="fabColorBackground">@color/color_ng_black_primary</item>
         <item name="navSelectedColor">@color/nav_selected_black</item>
         <item name="colorPrimaryContainer">@color/color_ng_black_container</item>
         <item name="colorSecondaryContainer">@color/color_ng_black_container</item>
@@ -816,11 +821,14 @@
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Input</item>
     </style>
 
-    <!-- DayNight-aware popup overlay for the MaterialToolbar overflow menu. The
-         toolbar itself uses a Dark ActionBar overlay (icons/title on the colored
-         primary bar); the overflow dropdown should follow day/night surfaces
-         instead, the M3 replacement for the old ThemeOverlay.AppCompat.DayNight. -->
-    <style name="ThemeOverlay.NekoBox.Toolbar.Popup" parent="ThemeOverlay.Material3" />
+    <!-- Popup overlay for the MaterialToolbar's menus. The toolbar uses a Dark ActionBar overlay (white on the
+         colored bar), but its menus open on the day/night surface: without the colors below they keep the bar's
+         white text and icons, which vanish on a light surface. -->
+    <style name="ThemeOverlay.NekoBox.Toolbar.Popup" parent="ThemeOverlay.Material3">
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">@color/popup_text_secondary</item>
+        <item name="colorControlNormal">@color/popup_text_secondary</item>
+    </style>
 
     <style name="PopupMenuAnimation">
         <item name="android:windowEnterAnimation">@anim/popup_enter</item>

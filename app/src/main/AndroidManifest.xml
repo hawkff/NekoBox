@@ -84,10 +84,6 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Start">
-        <meta-data
-            android:name="android.app.shortcuts"
-            android:resource="@xml/shortcuts" />
-
         <activity
             android:name="xyz.nekobyte.nekobox.ui.BlankActivity"
             android:configChanges="uiMode" />
@@ -97,17 +93,7 @@
             android:configChanges="uiMode|orientation|screenSize|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+            <!-- The launcher entries are the LauncherIcon aliases below. -->
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
@@ -165,11 +151,77 @@
                 <data android:scheme="vpn" />
 
             </intent-filter>
+        </activity>
+        <!-- One launcher entry per icon in Settings > Appearance > App icon (ui/LauncherIcon), exactly one enabled.
+             Static shortcuts attach to launcher activities, so every alias carries them. -->
+        <activity-alias
+            android:name="xyz.nekobyte.nekobox.ui.LauncherIconClassic"
+            android:banner="@mipmap/ic_launcher"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:targetActivity="xyz.nekobyte.nekobox.ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name="xyz.nekobyte.nekobox.ui.LauncherIconBlack"
+            android:banner="@mipmap/ic_launcher_black"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_black"
+            android:targetActivity="xyz.nekobyte.nekobox.ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name="xyz.nekobyte.nekobox.ui.LauncherIconFullBleed"
+            android:banner="@mipmap/ic_launcher_full_bleed"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_full_bleed"
+            android:targetActivity="xyz.nekobyte.nekobox.ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
+        <activity-alias
+            android:name="xyz.nekobyte.nekobox.ui.LauncherIconNoPlate"
+            android:banner="@mipmap/ic_launcher_no_plate"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_no_plate"
+            android:targetActivity="xyz.nekobyte.nekobox.ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity-alias>
         <activity
             android:name="xyz.nekobyte.nekobox.ui.VpnRequestActivity"
             android:excludeFromRecents="true"
@@ -291,6 +343,13 @@
             android:label="@string/quick_disable"
             android:launchMode="singleTask"
             android:process=":bg"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="xyz.nekobyte.nekobox.ui.ConnectWidgetActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
@@ -443,6 +502,19 @@
             android:name="xyz.nekobyte.nekobox.bg.LocationTurnOffReceiver"
             android:exported="false"
             android:process=":bg" />
+
+        <!-- Exported for the home screen's widget host; it only draws, from what the app holds. -->
+        <receiver
+            android:name="xyz.nekobyte.nekobox.ui.ConnectWidget"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_connect_info" />
+        </receiver>
 
         <receiver
             android:name="xyz.nekobyte.nekobox.ui.ProfileShortcutMigrationReceiver"

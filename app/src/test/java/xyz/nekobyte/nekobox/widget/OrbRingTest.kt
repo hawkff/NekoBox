@@ -61,6 +61,18 @@ class OrbRingTest {
     }
 
     @Test
+    fun aStillOrbStartsNoAnimation_andStoppingShowsTheDiskHalfwayBack() {
+        // A connected orb shown still does not sparkle: no animator may start off the main thread.
+        orb.still(State.Connected)
+        shows(1f, 1f, 1f, 1f, 0.15f)
+        assertEquals(-1f, orb.burst, 0f)
+        orb.still(State.Stopping)
+        shows(0.5f, 0.15f, 0f, 0f, 0f)
+        orb.still(State.Stopped)
+        shows(0f, 0f, 0f, 0f, 0f)
+    }
+
+    @Test
     fun everyStateDraws_onDarkAndLightThemes() {
         val canvas = Canvas(Bitmap.createBitmap(216, 216, Bitmap.Config.ARGB_8888))
         for (dark in listOf(true, false)) {

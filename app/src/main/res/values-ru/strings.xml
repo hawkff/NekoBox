@@ -264,7 +264,7 @@
 <string name="protocol_param">Параметры протокола</string>
 <string name="protocol_version">Версия протокола</string>
 <string name="proxied_apps">Режим VPN для приложений</string>
-<string name="proxied_apps_summary">Настроить режим VPN для выбранных приложений</string>
+<string name="proxied_apps_summary">Раздельное туннелирование: выберите, какие приложения используют VPN</string>
 <string name="proxy_cat">Настройки сервера</string>
 <string name="proxy_chain">Прокси-цепочка</string>
 <string name="quick_toggle">Переключить</string>
@@ -1089,4 +1089,13 @@
     <string name="rules_provider_custom_summary">Ваши ссылки на GeoSite и GeoIP</string>
     <string name="log_buffer_size">Размер буфера журнала</string>
     <string name="log_buffer_size_summary">%d КБ</string>
+    <string name="widget_name">Подключение</string>
+    <string name="widget_description">Подключение одним касанием, скорость и быстрый выбор из избранных и недавних серверов</string>
+    <string name="service_connected">Подключено</string>
+    <string name="widget_no_profile">Профиль не выбран</string>
+    <string name="widget_chip_switch">Переключиться на %s</string>
+    <string name="widget_chip_connect">Подключиться к %s</string>
+    <string name="widget_chip_selected">%s, выбран</string>
+    <string name="widget_material_you">Цвета Material You для виджетов</string>
+    <string name="widget_material_you_summary">Виджеты берут цвета из обоев</string>
 </resources>

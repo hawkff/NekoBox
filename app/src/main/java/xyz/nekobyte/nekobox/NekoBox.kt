@@ -27,12 +27,16 @@ import xyz.nekobyte.nekobox.bg.AppUpdates
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
 import xyz.nekobyte.nekobox.database.DataStore
+import xyz.nekobyte.nekobox.database.GroupManager
 import xyz.nekobyte.nekobox.database.ProfileDatabase
+import xyz.nekobyte.nekobox.database.ProfileManager
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.isOss
 import xyz.nekobyte.nekobox.ktx.isPreview
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
+import xyz.nekobyte.nekobox.ui.ConnectWidgets
+import xyz.nekobyte.nekobox.ui.LauncherIcon
 import xyz.nekobyte.nekobox.ui.MainActivity
 import xyz.nekobyte.nekobox.ui.migratePinnedProfileShortcuts
 import xyz.nekobyte.nekobox.utils.*
@@ -134,12 +138,20 @@ class NekoBox :
             AppLocale.apply()
             runOnDefaultDispatcher {
                 DefaultNetworkListener.start(this) { underlyingNetwork = it }
+                // A switch of the launcher icon cut short leaves two launcher entries, or none of the app's.
+                LauncherIcon.reconcile(this@NekoBox)
                 migratePinnedProfileShortcuts(this@NekoBox)
                 // WorkManager schedules lost work again as it starts: a force stop cancels the subscription update's job.
                 WorkManager.getInstance(this@NekoBox)
                 AppUpdates.schedule(this@NekoBox)
                 // The setting changes in this process, from Settings or the local API.
                 DataStore.configurationStore.registerChangeListener(AppUpdates)
+                // The widgets show the selection, the quick-switch lists and the look, which change in this process.
+                DataStore.configurationStore.registerChangeListener(ConnectWidgets)
+                ProfileManager.addListener(ConnectWidgets.modelListener)
+                GroupManager.addListener(ConnectWidgets.modelListener)
+                // They may show a service whose process ended while this one was gone.
+                ConnectWidgets.refresh(this@NekoBox)
                 // The manifest drops the androidx-startup provider whose initializer would write the baseline profile;
                 // wait out start-up as that initializer does. A no-op once written for this APK.
                 delay(5_000)
@@ -173,6 +185,8 @@ class NekoBox :
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateNotificationChannels()
+        // The night mode and the wallpaper's colors reach the widgets' colors through here.
+        if (isMainProcess) ConnectWidgets.refresh(this)
     }
 
     // The default process is the one that schedules work again after a reboot or a force stop: the main process, where
