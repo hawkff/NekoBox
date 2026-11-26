@@ -328,4 +328,67 @@ class ConnectWidgetsTest {
             assertFalse(runningGroupSelectsAutomatically(group, runningProfileId = 30L))
         }
     }
+
+    // The service frozen or busy: its answer comes after the wait for it ends.
+    private suspend fun late(answer: ServiceAnswer) = withTimeoutOrNull(50) {
+        delay(1_000)
+        answer
+    } ?: ServiceAnswer(service, null, -1L, null)
+
+    @Test
+    fun aServiceSlowToAnswerStaysAsItLastAnswered_watched_checked_andAskedAgain() {
+        val retryMs = ConnectWidgets.retryMs
+        val setCheck = ConnectWidgets.setCheck
+        val checks = mutableListOf<Boolean>()
+        val bound = mutableListOf<ComponentName?>()
+        try {
+            ConnectWidgets.retryMs = 100
+            ConnectWidgets.setCheck = { _, running -> checks += running }
+            val id = place()
+            ConnectWidgets.bindWatch = { _, intent ->
+                bound += intent.component
+                true
+            }
+            ConnectWidgets.unbindWatch = { bound += null }
+            ConnectWidgets.askService = { answer(State.Connected, running = 17L) }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            assertEquals("Connected", text(id, R.id.widget_state))
+            var asks = 0
+            ConnectWidgets.askService = {
+                asks++
+                late(answer(State.Connected))
+            }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            // Not taken for stopped: still Connected, still watched and checked.
+            assertEquals("Connected", text(id, R.id.widget_state))
+            assertEquals(listOf(service), bound)
+            assertEquals(true, checks.last())
+            // Asked again shortly; this time the service is gone, and the widget follows.
+            ConnectWidgets.askService = {
+                asks++
+                null
+            }
+            runBlocking { withTimeout(5_000) { while (asks < 2) delay(20) } }
+            drawn()
+            assertEquals("Not connected", text(id, R.id.widget_state))
+            assertEquals(listOf(service, null), bound)
+        } finally {
+            ConnectWidgets.retryMs = retryMs
+            ConnectWidgets.setCheck = setCheck
+        }
+    }
+
+    @Test
+    fun aServiceThatNeverAnsweredIsShownConnecting() {
+        val retryMs = ConnectWidgets.retryMs
+        try {
+            ConnectWidgets.retryMs = 60_000
+            val id = place()
+            ConnectWidgets.askService = { late(answer(State.Connected)) }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            assertEquals("Connecting…", text(id, R.id.widget_state))
+        } finally {
+            ConnectWidgets.retryMs = retryMs
+        }
+    }
 }

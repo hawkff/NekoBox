@@ -75,7 +75,7 @@ internal class TapState(val state: BaseService.State?, val runningProfileId: Lon
  */
 internal suspend fun tapState(started: List<ComponentName>, ask: suspend (ComponentName) -> ConnectWidgets.ServiceAnswer?): TapState {
     if (started.isEmpty()) return TapState(BaseService.State.Stopped)
-    for (service in started) ask(service)?.let { return TapState(it.state, it.runningProfileId) }
+    for (service in started) ask(service)?.takeIf { it.state != null }?.let { return TapState(it.state, it.runningProfileId) }
     return TapState(null)
 }
 

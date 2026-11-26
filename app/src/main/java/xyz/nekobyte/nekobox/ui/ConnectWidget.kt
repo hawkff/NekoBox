@@ -38,6 +38,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -114,19 +115,36 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         Key.SPEED_INTERVAL,
     )
 
-    /** What the running [service] answers: its state, the profile it runs (-1 none yet) and its latest speed. */
-    internal class ServiceAnswer(val service: ComponentName, val state: BaseService.State, val runningProfileId: Long, val speed: SpeedDisplayData?)
+    /**
+     * What the running [service] answers: its state, the profile it runs (-1 none yet) and its latest speed. A null
+     * [state]: the service was started but did not answer in time, which says nothing about whether it still runs.
+     */
+    internal class ServiceAnswer(val service: ComponentName, val state: BaseService.State?, val runningProfileId: Long, val speed: SpeedDisplayData?)
 
     /** Asks [service], started, without starting it; null when it does not answer in time. */
     suspend fun ask(app: Context, service: ComponentName) = NekoBoxConnection.ask(app, service) {
         ServiceAnswer(service, BaseService.State.entries.getOrNull(it.state) ?: BaseService.State.Idle, it.runningProfileId, it.latestSpeed)
     }
 
-    /** Asks the service that runs, without starting one; null when none runs or none answers in time. */
+    /**
+     * Asks the service that runs, without starting one: null when none was started, an answer without a state when
+     * one was but none answered in time.
+     */
     @VisibleForTesting
     internal var askService: suspend (Context) -> ServiceAnswer? = { app ->
-        NekoBoxConnection.startedServices().firstNotNullOfOrNull { ask(app, it) }
+        val started = NekoBoxConnection.startedServices()
+        started.firstNotNullOfOrNull { ask(app, it) } ?: started.firstOrNull()?.let { ServiceAnswer(it, null, -1L, null) }
     }
+
+    // The last answer a drawing got from a running service. A service that does not answer in time is drawn as it last
+    // answered (connecting, when it never did), and asked again after RETRY_MS, twice that, and so on, at most
+    // RETRIES times; the watch and the check stay meanwhile. Under the render lock.
+    private var lastAnswer: ServiceAnswer? = null
+    private var unanswered = 0
+    private var retry: Job? = null
+
+    @VisibleForTesting
+    internal var retryMs = 2_000L
 
     // One drawing at a time, across its waits for the service: an older drawing never lands after a newer one. A
     // request that a drawing begun after it covers is dropped.
@@ -462,12 +480,23 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         if (ids.isEmpty()) {
             watch(app, null)
             check(app, false)
+            lastAnswer = null
+            answered()
             shownProfiles = emptySet()
             shownGroup = 0L
             shownIn = null
             return
         }
-        val answer = askService(app)
+        val asked = askService(app)
+        val answer = if (asked != null && asked.state == null) {
+            retryUnanswered(app)
+            lastAnswer?.takeIf { it.service == asked.service }?.let { ServiceAnswer(it.service, it.state, it.runningProfileId, null) }
+                ?: ServiceAnswer(asked.service, BaseService.State.Connecting, -1L, null)
+        } else {
+            answered()
+            lastAnswer = asked
+            asked
+        }
         val state = answer?.state ?: BaseService.State.Stopped
         watch(app, answer?.service?.takeIf { state.started })
         check(app, state.started)
@@ -506,6 +535,24 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             manager.updateAppWidget(id, content.views(widgetSpec(width, height)))
         }
         if (speed != null) app.sendBroadcast(Intent(Action.WIDGET_REDRAWN).setPackage(app.packageName))
+    }
+
+    // Under the render lock.
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun retryUnanswered(app: Context) {
+        if (unanswered >= RETRIES || retry?.isActive == true) return
+        val wait = retryMs shl unanswered++
+        retry = GlobalScope.launch(Dispatchers.Default) {
+            delay(wait)
+            refresh(app)
+        }
+    }
+
+    // Under the render lock: an answer, or no widget left, ends the retries.
+    private fun answered() {
+        retry?.cancel()
+        retry = null
+        unanswered = 0
     }
 
     private class Content(
@@ -589,5 +636,6 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     private const val ORB_DP = 72
     private const val CHECK_WORK = "connect-widget-check"
+    private const val RETRIES = 4
     private const val PLACED_CHECK_MS = 30_000L
 }
