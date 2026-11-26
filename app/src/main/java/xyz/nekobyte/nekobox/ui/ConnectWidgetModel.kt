@@ -8,10 +8,13 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 /** What one size of the connect widget shows: the orb alone, or the orb with the connection's lines and [chipColumns] by [chipRows] quick-switch chips. */
 internal data class WidgetSpec(val orbOnly: Boolean, val chipColumns: Int = 0, val chipRows: Int = 0)
 
-// Narrower than this, the lines would not fit beside the orb; lower than this, a row of chips would not fit under them.
-internal const val WIDGET_LINES_MIN_WIDTH = 160f
-private const val WIDGET_CHIPS_MIN_HEIGHT = 120f
-private const val WIDGET_TWO_ROWS_MIN_HEIGHT = 190f
+// What widget_connect needs, measured with real fonts at font scale 1.3 (ConnectWidgetLayoutTest): beside the orb,
+// 92 dp of padding, orb and margins plus the widest state line (113 dp, Russian "Connecting"); under the lines (94 dp
+// high: 24 dp of padding and the three text lines, taller than the 56 dp orb), a row of chips takes 4 + 48 dp and a
+// second one 48 dp more. Narrower, the orb shows alone; lower, fewer chip rows show. The speed line ellipsizes.
+internal const val WIDGET_LINES_MIN_WIDTH = 206f
+internal const val WIDGET_CHIPS_MIN_HEIGHT = 146f
+internal const val WIDGET_TWO_ROWS_MIN_HEIGHT = 194f
 private const val CHIP_MIN_WIDTH = 120f
 private const val CHIP_ROW_PADDING = 16f
 private const val MAX_CHIP_COLUMNS = 4

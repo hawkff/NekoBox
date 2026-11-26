@@ -47,11 +47,22 @@ class ConnectWidgetModelTest {
     }
 
     @Test
+    fun theThresholdsAreTheBoundaries() {
+        val wide = 400f
+        assertEquals(WidgetSpec(orbOnly = true), widgetSpec(WIDGET_LINES_MIN_WIDTH - 1f, 300f))
+        assertEquals(false, widgetSpec(WIDGET_LINES_MIN_WIDTH, 100f).orbOnly)
+        assertEquals(0, widgetSpec(wide, WIDGET_CHIPS_MIN_HEIGHT - 1f).chipRows)
+        assertEquals(1, widgetSpec(wide, WIDGET_CHIPS_MIN_HEIGHT).chipRows)
+        assertEquals(1, widgetSpec(wide, WIDGET_TWO_ROWS_MIN_HEIGHT - 1f).chipRows)
+        assertEquals(2, widgetSpec(wide, WIDGET_TWO_ROWS_MIN_HEIGHT).chipRows)
+    }
+
+    @Test
     fun sizesPickTheOrbAlone_theLines_orRowsOfChips() {
         assertEquals(WidgetSpec(orbOnly = true), widgetSpec(70f, 90f))
         assertEquals(WidgetSpec(orbOnly = true), widgetSpec(150f, 300f))
         assertEquals(WidgetSpec(orbOnly = false), widgetSpec(250f, 90f))
-        assertEquals(WidgetSpec(false, chipColumns = 1, chipRows = 1), widgetSpec(160f, 120f))
+        assertEquals(WidgetSpec(false, chipColumns = 1, chipRows = 1), widgetSpec(210f, 150f))
         assertEquals(WidgetSpec(false, chipColumns = 2, chipRows = 1), widgetSpec(360f, 150f))
         assertEquals(WidgetSpec(false, chipColumns = 3, chipRows = 1), widgetSpec(400f, 150f))
         assertEquals(WidgetSpec(false, chipColumns = 4, chipRows = 2), widgetSpec(900f, 400f))
