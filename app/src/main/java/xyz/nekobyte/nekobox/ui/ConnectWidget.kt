@@ -496,8 +496,10 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             asked
         }
         val state = answer?.state ?: BaseService.State.Stopped
-        watch(app, answer?.service?.takeIf { state.started })
-        check(app, state.started)
+        // Stopping, the service is still there to watch: its process can end before it reports Stopped.
+        val running = state.started || state == BaseService.State.Stopping
+        watch(app, answer?.service?.takeIf { running })
+        check(app, running)
         // Running, the profile the service runs, also a server its group picked on its own; else the selected one. Its
         // own name and group, not the notification's title.
         val runningId = answer?.runningProfileId?.takeIf { state.started && it > 0L }

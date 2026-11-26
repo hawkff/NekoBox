@@ -391,4 +391,34 @@ class ConnectWidgetsTest {
             ConnectWidgets.retryMs = retryMs
         }
     }
+
+    @Test
+    fun aServiceStoppingStaysWatchedAndChecked_untilItIsGone() {
+        val setCheck = ConnectWidgets.setCheck
+        val checks = mutableListOf<Boolean>()
+        val bound = mutableListOf<ComponentName?>()
+        try {
+            ConnectWidgets.setCheck = { _, running -> checks += running }
+            val id = place()
+            ConnectWidgets.bindWatch = { _, intent ->
+                bound += intent.component
+                true
+            }
+            ConnectWidgets.unbindWatch = { bound += null }
+            ConnectWidgets.askService = { answer(State.Stopping) }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            assertEquals("Shutting down…", text(id, R.id.widget_state))
+            assertEquals(listOf(service), bound)
+            assertEquals(true, checks.last())
+            // Its process dies during the cleanup: the lost connection draws the widget off.
+            ConnectWidgets.askService = { null }
+            ConnectWidgets.watch.onServiceDisconnected(service)
+            drawn()
+            assertEquals("Not connected", text(id, R.id.widget_state))
+            assertEquals(listOf(service, null), bound)
+            assertEquals(false, checks.last())
+        } finally {
+            ConnectWidgets.setCheck = setCheck
+        }
+    }
 }
