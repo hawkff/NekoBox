@@ -109,6 +109,8 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 	)
 	ctx = service.ContextWithDefaultRegistry(ctx)
 	ctx = service.ContextWith[adapter.PlatformInterface](ctx, newBoxPlatformInterfaceWrapper())
+	ctx = pause.WithDefaultManager(ctx)
+	ctx = service.ContextWith[pause.Manager](ctx, networkAwakePauseManager{service.FromContext[pause.Manager](ctx)})
 
 	// parse options
 	var options option.Options
@@ -184,11 +186,6 @@ func (b *BoxInstance) Start() (err error) {
 		registerTailscaleInterfaces()
 		err = b.Box.Start()
 		b.running = err == nil
-		if b.running && b.pauseManager != nil {
-			// The stub interface monitor reports no default interface, so the network manager pauses the
-			// network at startup and nothing wakes it: WireGuard devices stay down, URL tests stay idle.
-			b.pauseManager.NetworkWake()
-		}
 		return err
 	}
 	return errors.New("already started")
@@ -270,6 +267,15 @@ func ownCacheFile(options *option.Options) (string, error) {
 	options.Experimental.CacheFile.Path = filepath.Join(dir, "cache.db")
 	return dir, nil
 }
+
+// networkAwakePauseManager never pauses the network. The platform's interface monitor is a stub that
+// reports no default interface, so the network manager's only pause is the one at every start. A
+// WireGuard device goes down on it and comes back on a new socket with a new handshake: the server
+// answers the first handshake on the closed socket and drops the second, sent in the same timestamp
+// tick, as a replay, so the device waits for its retry five seconds later.
+type networkAwakePauseManager struct{ pause.Manager }
+
+func (networkAwakePauseManager) NetworkPause() {}
 
 func (b *BoxInstance) Sleep() {
 	if b.pauseManager != nil {
