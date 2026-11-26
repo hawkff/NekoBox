@@ -66,6 +66,9 @@
         <item name="appBarBackgroundColor">@color/material_pink_500</item>
         <item name="colorPrimaryDark">@color/material_pink_700</item>
         <item name="colorAccent">@color/material_pink_accent_200</item>
+        <!-- Checked switch thumbs, radio buttons and focused fields: AppCompat's default, stated so a palette may
+             change it. -->
+        <item name="colorControlActivated">?attr/colorAccent</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_pink</item>
 
@@ -306,6 +309,8 @@
         <item name="appBarBackgroundColor">@color/color_ng_black_primary</item>
         <item name="colorPrimaryDark">@color/color_ng_black_primary</item>
         <item name="colorAccent">@color/color_ng_black_accent</item>
+        <!-- At night the accent gray is darker than an unchecked switch thumb; checked controls take the primary. -->
+        <item name="colorControlActivated">@color/color_ng_black_action</item>
         <item name="cardElevatedSurfaceColor">@color/card_elevated_black</item>
         <item name="fabColorBackground">@color/color_ng_black_primary</item>
         <item name="navSelectedColor">@color/nav_selected_black</item>
