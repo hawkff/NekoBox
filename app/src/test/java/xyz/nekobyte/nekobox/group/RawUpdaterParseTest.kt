@@ -641,6 +641,24 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun htmlEscapedQuerySeparatorsAreReadAsSeparators() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val key = "A".repeat(43)
+        val link = "vless://$uuid@192.0.2.1:443?security=reality&amp;type=grpc&amp;serviceName=svc&amp;pbk=$key&amp;sid=01&amp;sni=a.example&amp;fp=chrome#a&amp;b"
+        val bean = parseProxies(link).single() as VMessBean
+        assertEquals("grpc", bean.type)
+        assertEquals("svc", bean.path)
+        assertEquals(key, bean.realityPubKey)
+        assertEquals("01", bean.realityShortId)
+        assertEquals("a.example", bean.sni)
+        assertEquals("a&b", bean.name)
+        // An escaped pin is a pin.
+        val report = ImportReport()
+        assertTrue(parseProxies("vless://$uuid@192.0.2.1:443?security=tls&amp;pcs=${"0f".repeat(32)}", report).isEmpty())
+        assertEquals(listOf<String?>("vless"), report.failed)
+    }
+
+    @Test
     fun aRefusedCompleteLinkDoesNotDiscardItsValidNeighbors() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val firsts = listOf("socks5://192.0.2.1:1080", "socks5://192.0.2.1:1080#first${" ".repeat(2048)}server")

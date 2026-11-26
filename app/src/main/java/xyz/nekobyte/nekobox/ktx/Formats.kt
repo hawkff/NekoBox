@@ -145,7 +145,8 @@ internal fun linkNodeScheme(link: String): String? {
  * import are added to [report] by scheme.
  */
 suspend fun parseProxies(text: String, report: ImportReport? = null): List<AbstractBean> {
-    val linksByLine = text.linesNoComments()
+    // Lists copied from web pages carry HTML-escaped query separators; a raw "&amp;" is never part of a value.
+    val linksByLine = text.linesNoComments().map { it.replace("&amp;", "&") }
 
     // Why a link's options refuse it before any parser runs, or null.
     fun String.unsupportedOption(): String? {
