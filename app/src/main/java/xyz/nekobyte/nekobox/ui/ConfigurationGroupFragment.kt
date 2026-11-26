@@ -2015,8 +2015,10 @@ private fun slot(picking: Boolean, has: Boolean) = when {
 }
 
 // While urltest drives the running group, a manual pick inside it has nothing to act on. Reads the profiles.
-internal fun runningGroupSelectsAutomatically(groupId: Long): Boolean {
-    val running = ProfileDatabase.proxyDao.getById(DataStore.currentProfile) ?: return false
+// [runningProfileId] is the profile the service runs; a process started since the connection has no current profile
+// of its own, so the widget passes the service's answer.
+internal fun runningGroupSelectsAutomatically(groupId: Long, runningProfileId: Long = DataStore.currentProfile): Boolean {
+    val running = ProfileDatabase.proxyDao.getById(runningProfileId) ?: return false
     val group = ProfileDatabase.groupDao.getById(groupId) ?: return false
     return running.groupId == groupId && group.isSelector && group.autoSelect
 }

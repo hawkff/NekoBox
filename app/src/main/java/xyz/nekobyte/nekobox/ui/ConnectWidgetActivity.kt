@@ -42,7 +42,8 @@ class ConnectWidgetActivity : ComponentActivity() {
                     chipUsable = chip != null,
                     selectedId = selectedId,
                     selectedUsable = ProfileDatabase.proxyDao.getById(selectedId)?.canBuild() == true,
-                    autoSelecting = chip != null && state?.canStop == true && runningGroupSelectsAutomatically(chip.groupId),
+                    autoSelecting = chip != null && state?.canStop == true &&
+                        runningGroupSelectsAutomatically(chip.groupId, tap.runningProfileId.takeIf { it > 0L } ?: DataStore.currentProfile),
                 )
                 if (chip != null && action in setOf(WidgetAction.SWITCH, WidgetAction.SELECT_AND_START, WidgetAction.SELECT)) {
                     // As a pick in the app's lists: it leads its list's Recent, and the lists show the new selection.

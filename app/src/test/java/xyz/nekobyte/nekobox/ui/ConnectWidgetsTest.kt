@@ -309,4 +309,19 @@ class ConnectWidgetsTest {
         assertEquals(WidgetAction.OPEN_APP, widgetAction(late.state, -1L, false, 1L, true, false))
         assertEquals(WidgetAction.OPEN_APP, widgetAction(late.state, 2L, true, 1L, true, false))
     }
+
+    @Test
+    fun theAutoSelectGuardFollowsTheProfileTheServiceRuns() {
+        // A group whose server urltest picks, running; this process has no current profile of its own.
+        val auto = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "Auto", isSelector = true, autoSelect = true)) }
+        ConfigBuilderTestEnv.io {
+            ProfileDatabase.proxyDao.addProxy(ProxyEntity(id = 30, groupId = auto).putBean(SOCKSBean().apply { initializeDefaultValues() }))
+        }
+        DataStore.currentProfile = 0L
+        ConfigBuilderTestEnv.io {
+            assertFalse(runningGroupSelectsAutomatically(auto))
+            assertTrue(runningGroupSelectsAutomatically(auto, runningProfileId = 30L))
+            assertFalse(runningGroupSelectsAutomatically(group, runningProfileId = 30L))
+        }
+    }
 }
