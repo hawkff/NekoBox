@@ -54,6 +54,10 @@ func NewOutbound(ctx context.Context, router adapter.Router, logger log.ContextL
 	if options.TLS == nil || !options.TLS.Enabled {
 		return nil, C.ErrTLSRequired
 	}
+	// The legacy pin replaces the TLS verifier, which would drop the TLS options' own certificate checks.
+	if options.PinCertSha256 != "" && (len(options.TLS.CertificateSHA256) > 0 || len(options.TLS.VerifyCertificateByName) > 0 || len(options.TLS.CertificatePublicKeySHA256) > 0) {
+		return nil, E.New("pin_cert_sha256 is conflict with tls certificate_sha256, verify_certificate_by_name and certificate_public_key_sha256")
+	}
 	outboundDialer, err := dialer.NewWithOptions(dialer.Options{
 		Context:        ctx,
 		Options:        options.DialerOptions,
