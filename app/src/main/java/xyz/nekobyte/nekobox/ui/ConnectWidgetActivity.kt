@@ -31,7 +31,7 @@ class ConnectWidgetActivity : ComponentActivity() {
         val chipId = intent.getLongExtra(EXTRA_PROFILE, -1L)
         lifecycleScope.launch {
             val action = withContext(Dispatchers.Default) {
-                val state = NekoBoxConnection.ask(this@ConnectWidgetActivity) { it.state }?.let { BaseService.State.entries.getOrNull(it) } ?: BaseService.State.Stopped
+                val state = NekoBoxConnection.ask(applicationContext) { it.state }?.let { BaseService.State.entries.getOrNull(it) } ?: BaseService.State.Stopped
                 // The id comes from an intent: it acts only once it names a profile in the database.
                 val chip = chipId.takeIf { it > 0L }?.let { ProfileDatabase.proxyDao.getById(it) }
                 val selectedId = DataStore.selectedProxy

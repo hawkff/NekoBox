@@ -15,6 +15,7 @@ import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.format.Formatter
 import android.util.SizeF
 import android.view.ContextThemeWrapper
@@ -92,7 +93,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         GlobalScope.launch(Dispatchers.Default) {
             try {
                 val context = NekoBox.application
-                if (ids(context).isNotEmpty()) context.sendBroadcast(Intent(ACTION_REFRESH).setComponent(component(context)))
+                if (placed(context, now = true).isNotEmpty()) context.sendBroadcast(Intent(ACTION_REFRESH).setComponent(component(context)))
             } catch (e: RuntimeException) {
                 Logs.w("widget refresh", e)
             }
@@ -119,11 +120,26 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     // The live speed this process last posted, the service's, so an unchanged speed is not posted again.
     @Volatile private var postedSpeed: Pair<String, String>? = null
 
+    // The widgets placed, as the service's process last asked Android: each state change asks again, the speed rounds
+    // at most every PLACED_CHECK_MS. A widget placed while connected gets the live speed within that time.
+    @Volatile private var placedIds = IntArray(0)
+
+    @Volatile private var placedAt = 0L
+
+    private fun placed(context: Context, now: Boolean = false): IntArray {
+        val time = SystemClock.elapsedRealtime()
+        if (now || time - placedAt >= PLACED_CHECK_MS) {
+            placedIds = ids(context)
+            placedAt = time
+        }
+        return placedIds
+    }
+
     /** From the service's process, each speed round while connected with the screen on: the speed lines of the widgets. */
     fun postSpeed(speed: SpeedDisplayData) {
         try {
             val context = NekoBox.application
-            val ids = ids(context)
+            val ids = placed(context)
             if (ids.isEmpty()) return
             val (tx, rx) = speedTexts(context, speed)
             if (postedSpeed == tx to rx) return
@@ -297,8 +313,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             val orbAction = app.getString(if (state.canStop) R.string.stop else R.string.connect)
             views.setContentDescription(R.id.widget_orb, app.getString(R.string.widget_orb_description, orbAction, stateText, name))
             views.setOnClickPendingIntent(R.id.widget_orb, toggle)
-            if (spec.orbOnly) return views
             views.setOnClickPendingIntent(R.id.widget_root, openApp)
+            if (spec.orbOnly) return views
             views.tint(android.R.id.background, "setColorFilter", looks.pair { it.canvas })
             views.tint(R.id.widget_outline, "setColorFilter", looks.pair { it.outline })
             views.setTextViewText(R.id.widget_profile, name)
@@ -307,21 +323,18 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             views.tint(R.id.widget_state, "setTextColor", looks.pair { if (state == BaseService.State.Connected) it.connected else it.secondary })
             views.setTextViewText(R.id.widget_group, group?.let { " · $it" }.orEmpty())
             views.tint(R.id.widget_group, "setTextColor", looks.pair { it.secondary })
+            // Every view is set each time: the home screen applies a new drawing over the views it shows.
+            views.setViewVisibility(R.id.widget_speed, if (speed != null) View.VISIBLE else View.GONE)
             if (speed != null) {
-                views.setViewVisibility(R.id.widget_speed, View.VISIBLE)
                 setSpeed(app, views, speed.first, speed.second)
                 views.tint(R.id.widget_tx, "setTextColor", looks.pair { it.secondary })
                 views.tint(R.id.widget_rx, "setTextColor", looks.pair { it.secondary })
             }
-            val rows = listOf(R.id.widget_chips_1, R.id.widget_chips_2)
-            // The home screen applies a new drawing over the views it shows: rows start empty again.
-            rows.forEach { views.removeAllViews(it) }
-            if (chips.isEmpty()) return views
-            rows.take(spec.chipRows).forEachIndexed { row, rowId ->
-                val slots = chips.drop(row * spec.chipColumns).take(spec.chipColumns)
-                if (slots.isEmpty()) return@forEachIndexed
-                views.setViewVisibility(rowId, View.VISIBLE)
-                for (column in 0 until spec.chipColumns) views.addView(rowId, chip(slots.getOrNull(column)))
+            listOf(R.id.widget_chips_1, R.id.widget_chips_2).forEachIndexed { row, rowId ->
+                views.removeAllViews(rowId)
+                val slots = if (row < spec.chipRows) chips.drop(row * spec.chipColumns).take(spec.chipColumns) else emptyList()
+                views.setViewVisibility(rowId, if (slots.isEmpty()) View.GONE else View.VISIBLE)
+                if (slots.isNotEmpty()) for (column in 0 until spec.chipColumns) views.addView(rowId, chip(slots.getOrNull(column)))
             }
             return views
         }
@@ -353,5 +366,6 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     }
 
     private const val ORB_DP = 72
+    private const val PLACED_CHECK_MS = 30_000L
     private const val MAX_CHIPS = 8
 }
