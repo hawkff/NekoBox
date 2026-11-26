@@ -146,6 +146,20 @@ class ConfigBuilderGoldenTest {
 
         val plain = tls(vless("plain") {}, "plain")
         assertFalse(plain.has("certificate_sha256") || plain.has("verify_certificate_by_name"))
+
+        // Empty or separator-only checks are no checks: no empty lists, and a custom CA stays. Not handed to the
+        // core's config check, whose loader would parse the placeholder certificate.
+        val customCA = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----"
+        for ((pins, names) in listOf("" to "", " , " to ",\n")) {
+            val profile = vless("custom-ca") {
+                certificates = customCA
+                pinnedPeerCertSha256 = pins
+                verifyPeerCertByName = names
+            }
+            val withCA = outbound(JSONObject(build(profile).config), "vless").getJSONObject("tls")
+            assertFalse(withCA.has("certificate_sha256") || withCA.has("verify_certificate_by_name"))
+            assertEquals(customCA, withCA.getString("certificate"))
+        }
     }
 
     @Test
