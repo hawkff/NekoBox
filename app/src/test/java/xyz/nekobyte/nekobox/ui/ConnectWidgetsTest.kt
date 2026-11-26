@@ -3,6 +3,7 @@ package xyz.nekobyte.nekobox.ui
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.view.View
 import android.widget.TextView
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
@@ -116,6 +117,20 @@ class ConnectWidgetsTest {
             newer.join()
         }
         assertEquals("Not connected", text(id, R.id.widget_state))
+    }
+
+    // ConnectWidgetActivity compares it with the service's state: a widget left on another one only redraws.
+    @Test
+    fun aTapCarriesTheStateItsWidgetShows() {
+        val id = place()
+        fun tapped(): Int {
+            manager.getViewFor(id).findViewById<View>(R.id.widget_orb).performClick()
+            return shadowOf(context).nextStartedActivity.getIntExtra(ConnectWidgetActivity.EXTRA_DRAWN_STATE, -1)
+        }
+        assertEquals(State.Stopped.ordinal, tapped())
+        ConnectWidgets.askService = { answer(State.Connected) }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        assertEquals(State.Connected.ordinal, tapped())
     }
 
     @Test

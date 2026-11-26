@@ -161,6 +161,23 @@ class ConnectWidgetModelTest {
     }
 
     @Test
+    fun aTapOnAWidgetShowingAnotherStateOnlyRedraws() {
+        // Both processes ended with the widget on Connected: no service is found, and the tap must not start one.
+        assertTrue(widgetTapStale(drawn = State.Connected, live = State.Stopped))
+        assertTrue(widgetTapStale(drawn = State.Stopped, live = State.Connected))
+        assertTrue(widgetTapStale(drawn = State.Connecting, live = State.Connected))
+        // An intent without the drawn state comes from no drawing of this version.
+        assertTrue(widgetTapStale(drawn = null, live = State.Stopped))
+        // As shown, it acts; Idle shows as off.
+        assertFalse(widgetTapStale(drawn = State.Connected, live = State.Connected))
+        assertFalse(widgetTapStale(drawn = State.Stopped, live = State.Idle))
+        assertFalse(widgetTapStale(drawn = State.Idle, live = State.Stopped))
+        // A service slow to answer stays unknown: widgetAction opens the app.
+        assertFalse(widgetTapStale(drawn = State.Connected, live = null))
+        assertEquals(WidgetAction.OPEN_APP, widgetAction(null, -1L, false, 1L, true, false))
+    }
+
+    @Test
     fun chipsSayWhatATapDoes() {
         assertEquals(R.string.widget_chip_selected, widgetChipDescription(State.Connected, selected = true))
         assertEquals(R.string.widget_chip_switch, widgetChipDescription(State.Connected, selected = false))

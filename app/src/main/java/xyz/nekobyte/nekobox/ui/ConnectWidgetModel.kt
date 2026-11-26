@@ -68,7 +68,18 @@ internal fun widgetChipProfiles(order: List<Long>, profiles: List<ProxyEntity>):
 internal fun widgetSpeedLine(tx: String, rx: String) = "▲ $tx   ▼ $rx"
 
 /** What a tap on the widget does. */
-internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, NONE }
+internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, REDRAW, NONE }
+
+/**
+ * Whether a tap found the service in a state other than the one the widget showed ([drawn], null when the tap did not
+ * say): then the widget is stale, both processes having ended unseen for one, and the tap only redraws it, as acting
+ * on it could do the opposite of what was meant (start a connection the widget showed as running). An unknown [live]
+ * state is not stale: [widgetAction] opens the app. Idle shows as off.
+ */
+internal fun widgetTapStale(drawn: BaseService.State?, live: BaseService.State?): Boolean {
+    fun shown(state: BaseService.State?) = if (state == BaseService.State.Idle) BaseService.State.Stopped else state
+    return live != null && shown(drawn) != shown(live)
+}
 
 /**
  * What a tap acts on: the service's [state], null when a service was started but did not answer in time, and the
