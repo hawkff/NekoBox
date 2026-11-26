@@ -90,8 +90,13 @@ enum class LauncherIcon(
     }
 
     companion object {
-        // One lock for every switch and reconciliation, in the app's process (the only one that switches).
-        private val switching = Any()
+        // One lock for every switch and reconciliation, in the app's process (the only one that switches), and for the
+        // migration of pinned shortcuts, which reads the alias shown and writes it into them.
+        @PublishedApi
+        internal val switching = Any()
+
+        /** Runs [block] with no switch under way and none starting until it ends. Not on the main thread. */
+        internal inline fun <T> notSwitching(block: () -> T): T = synchronized(switching, block)
 
         // The icon a switch under way goes to; device-local, so a backup restored elsewhere does not carry it.
         internal fun pendingFile(context: Context) = File(context.noBackupFilesDir, "launcher_icon_pending")
