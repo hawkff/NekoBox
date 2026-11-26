@@ -35,7 +35,10 @@ internal class WireGuardPeerState(
 
 internal class WireGuardInstanceState(val ownerProfileId: Long, val peers: List<WireGuardPeerState>, val error: String?)
 
-internal class WireGuardServiceState(val running: Boolean, val instances: List<WireGuardInstanceState>)
+internal class WireGuardServiceState(val running: Boolean, val instances: List<WireGuardInstanceState>) {
+    /** Whether a peer of an outbound has not completed a handshake yet. */
+    val awaitsHandshake get() = instances.any { instance -> instance.peers.any { it.lastHandshake == 0L } }
+}
 
 internal fun parseWireGuardServiceStatus(json: String): WireGuardServiceState {
     val root = JSONObject(json)

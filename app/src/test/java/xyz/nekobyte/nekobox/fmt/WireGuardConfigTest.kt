@@ -387,6 +387,9 @@ class WireGuardConfigTest {
         assertNull(status.instances[0].error)
         assertTrue(status.instances[1].peers.isEmpty())
         assertTrue(status.instances[1].error!!.contains("unavailable"))
+        assertTrue(status.awaitsHandshake)
+        val answered = peers.replace("\"lastHandshake\":0", "\"lastHandshake\":1795700000000")
+        assertFalse(parseWireGuardServiceStatus(wireGuardServiceStatus(true, instances) { answered }).awaitsHandshake)
         assertFalse(parseWireGuardServiceStatus(wireGuardServiceStatus(false, emptyList()) { "" }).running)
     }
 

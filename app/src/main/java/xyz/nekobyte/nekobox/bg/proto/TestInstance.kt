@@ -6,12 +6,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import libcore.Libcore
 import xyz.nekobyte.nekobox.BuildConfig
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
+import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
+import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
+import java.io.IOException
 
 // Login over DERP plus exit node selection; a phone on a slow network needs several seconds.
 const val TAILSCALE_READY_TIMEOUT_MS = 20_000
@@ -32,6 +37,9 @@ internal suspend fun awaitTailscaleReady(box: libcore.BoxInstance, tag: String, 
     }
 }
 
+/** A connection test failed while a WireGuard or AmneziaWG server had not answered the handshake. */
+class NoHandshakeException(timeoutMs: Int, cause: Throwable) : IOException(app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
+
 class TestInstance(
     profile: ProxyEntity,
     val link: String,
@@ -50,12 +58,19 @@ class TestInstance(
             awaitTailscaleReady(box, endpoint.tag, endpoint.waitForExitNode)
         }
         currentCoroutineContext().ensureActive()
-        Libcore.urlTest(box, link, timeout).also {
-            // The test's connection resolved the server name, so the answer comes from the core's cache.
-            lookUpServer()
-            // A page that cannot be read leaves the answer unknown; the test itself passed.
-            answerUrl?.let { url -> answer = runCatching { Libcore.fetchText(box, url, timeout) }.getOrNull() }
+        val latency = try {
+            Libcore.urlTest(box, link, timeout)
+        } catch (e: Exception) {
+            // A request that timed out says nothing of why; a WireGuard server that never answered does.
+            val status = wireGuardServiceStatus(true, config.wireguardInstances.values.flatten()) { Libcore.wireGuardStatus(box, it) }
+            if (parseWireGuardServiceStatus(status).awaitsHandshake) throw NoHandshakeException(timeout, e)
+            throw e
         }
+        // The test's connection resolved the server name, so the answer comes from the core's cache.
+        lookUpServer()
+        // A page that cannot be read leaves the answer unknown; the test itself passed.
+        answerUrl?.let { url -> answer = runCatching { Libcore.fetchText(box, url, timeout) }.getOrNull() }
+        latency
     }
 
     // A lookup alone starts the core without the sidecar processes a URL test needs.
