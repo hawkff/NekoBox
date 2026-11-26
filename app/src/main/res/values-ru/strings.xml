@@ -1089,4 +1089,5 @@
     <string name="rules_provider_custom_summary">Ваши ссылки на GeoSite и GeoIP</string>
     <string name="log_buffer_size">Размер буфера журнала</string>
     <string name="log_buffer_size_summary">%d КБ</string>
+    <string name="service_connected">Подключено</string>
 </resources>

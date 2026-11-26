@@ -1134,4 +1134,5 @@
     <string name="rules_provider_custom_summary">Your own GeoSite and GeoIP URLs</string>
     <string name="log_buffer_size">Log buffer size</string>
     <string name="log_buffer_size_summary">%d KB</string>
+    <string name="service_connected">Connected</string>
 </resources>
