@@ -68,7 +68,8 @@ private fun StandardV2RayBean.applyECHParam(value: String) {
  * refused too.
  */
 internal fun normalizedCertificatePins(value: String?): String {
-    val pins = value.orEmpty().split(',').map { it.trim().replace(":", "").lowercase() }.filter { it.isNotEmpty() }
+    // Only tokens blank as written are skipped; one that normalizes to nothing, such as ":", is no hash.
+    val pins = value.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { it.replace(":", "").lowercase() }
     if (pins.any { pin -> pin.length != 64 || pin.any { it !in "0123456789abcdef" } }) throw UnsupportedEntryException("invalid pcs")
     return pins.joinToString(",")
 }

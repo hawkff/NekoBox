@@ -587,6 +587,10 @@ class RawUpdaterParseTest {
         refused += "$legacy&pcs=$pin#legacy"
         refused += "$kitsunebi&vcn=a.example"
         refused += vmessJson("pcs" to "abcd")
+        // A pin that is only separators is no hash; it must not import as "no pin".
+        refused += vmessJson("pcs" to ":")
+        refused += vmessJson("pcs" to "$pin,::")
+        refused += "vless://$uuid@192.0.2.1:443?type=tcp&security=tls&sni=a.example&pcs=%3A#colon"
         refused += vmessJson("fm" to """{"udp":[]}""")
         for ((index, link) in refused.withIndex()) {
             val report = ImportReport()
