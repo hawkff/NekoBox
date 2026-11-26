@@ -33,7 +33,7 @@ class ConnectWidgetActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val chipId = intent.getLongExtra(EXTRA_PROFILE, -1L)
-        val drawn = intent.action?.removePrefix(ACTION_TAP)?.let { name -> BaseService.State.entries.firstOrNull { it.name == name } }
+        val drawn = intent.action?.takeIf { it.startsWith(ACTION_TAP) }?.removePrefix(ACTION_TAP)?.let { name -> BaseService.State.entries.firstOrNull { it.name == name } }
         lifecycleScope.launch {
             val action = withContext(Dispatchers.Default) {
                 val tap = tapState(NekoBoxConnection.startedServices()) { ConnectWidgets.ask(applicationContext, it) }
