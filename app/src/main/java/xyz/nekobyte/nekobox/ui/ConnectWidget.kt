@@ -77,6 +77,11 @@ class ConnectWidget : AppWidgetProvider() {
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
         ConnectWidgets.refresh(context, goAsync())
     }
+
+    // The last widget removed: a drawing that finds none lets go of the watch and the check.
+    override fun onDisabled(context: Context) {
+        ConnectWidgets.refresh(context, goAsync())
+    }
 }
 
 /** Draws the widgets again while they show the service running, in case its process ended unseen. */
@@ -252,6 +257,10 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     private fun component(context: Context) = ComponentName(context, ConnectWidget::class.java)
 
     private fun ids(context: Context): IntArray = AppWidgetManager.getInstance(context).getAppWidgetIds(component(context))
+
+    // The widgets a drawing draws.
+    @VisibleForTesting
+    internal var widgetIds: (Context) -> IntArray = { ids(it) }
 
     override fun onPreferenceDataStoreChanged(store: androidx.preference.PreferenceDataStore, key: String) {
         if (key in keys) refresh(NekoBox.application)
@@ -446,10 +455,13 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     private suspend fun render(app: Context) {
         val manager = AppWidgetManager.getInstance(app)
-        val ids = manager.getAppWidgetIds(component(app))
+        val ids = widgetIds(app)
         if (ids.isEmpty()) {
             watch(app, null)
             check(app, false)
+            shownProfiles = emptySet()
+            shownGroup = 0L
+            shownIn = null
             return
         }
         val answer = askService(app)

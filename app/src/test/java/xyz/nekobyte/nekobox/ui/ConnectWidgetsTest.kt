@@ -258,4 +258,35 @@ class ConnectWidgetsTest {
             ConnectWidgets.setCheck = setCheck
         }
     }
+
+    @Test
+    fun theLastWidgetRemovedLetsGoOfTheWatchAndTheCheck() {
+        val setCheck = ConnectWidgets.setCheck
+        val widgetIds = ConnectWidgets.widgetIds
+        val checks = mutableListOf<Boolean>()
+        val bound = mutableListOf<ComponentName?>()
+        try {
+            ConnectWidgets.setCheck = { _, running -> checks += running }
+            place()
+            ConnectWidgets.bindWatch = { _, intent ->
+                bound += intent.component
+                true
+            }
+            ConnectWidgets.unbindWatch = { bound += null }
+            ConnectWidgets.askService = { answer(State.Connected) }
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            assertEquals(listOf(service), bound)
+            assertTrue(17L in ConnectWidgets.shownProfiles)
+            // The home screen removes the last widget and tells the provider.
+            ConnectWidgets.widgetIds = { IntArray(0) }
+            ConnectWidget().onDisabled(context)
+            drawn()
+            assertEquals(listOf(service, null), bound)
+            assertEquals(false, checks.last())
+            assertTrue(ConnectWidgets.shownProfiles.isEmpty())
+        } finally {
+            ConnectWidgets.setCheck = setCheck
+            ConnectWidgets.widgetIds = widgetIds
+        }
+    }
 }
