@@ -8,6 +8,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceViewHolder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.onMainDispatcher
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.ktx.unwrap
 
@@ -46,13 +47,17 @@ class LauncherIconPreference @JvmOverloads constructor(context: Context, attrs: 
             .show()
     }
 
+    // Off the main thread: a switch waits for the one under way, or for the reconciliation at start.
     private fun apply(picked: LauncherIcon) {
-        if (!picked.trySelect(context)) {
-            context.unwrap<ThemedActivity>().snackbar(R.string.launcher_icon_change_failed).show()
-        }
-        notifyChanged()
-        // Pinned profile shortcuts name the launcher entry they belong to.
         val app = context.applicationContext
-        runOnDefaultDispatcher { migratePinnedProfileShortcuts(app) }
+        runOnDefaultDispatcher {
+            val switched = picked.trySelect(app)
+            onMainDispatcher {
+                if (!switched) context.unwrap<ThemedActivity>().snackbar(R.string.launcher_icon_change_failed).show()
+                notifyChanged()
+            }
+            // Pinned profile shortcuts name the launcher entry they belong to.
+            migratePinnedProfileShortcuts(app)
+        }
     }
 }

@@ -19,6 +19,10 @@ import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowApplicationPackageManager
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.Logs
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class, shadows = [RefusingPackageManagerShadow::class])
@@ -30,12 +34,15 @@ class LauncherIconTest {
     @Before
     fun setUp() {
         RefusingPackageManagerShadow.refuse = false
+        RefusingPackageManagerShadow.beforeSet = null
         Logs.sink = {}
     }
 
     @After
     fun tearDown() {
         RefusingPackageManagerShadow.refuse = false
+        RefusingPackageManagerShadow.beforeSet = null
+        LauncherIcon.pendingFile(context).deleteRecursively()
         Logs.sink = logSink
     }
 
@@ -114,6 +121,32 @@ class LauncherIconTest {
     }
 
     @Test
+    @Config(sdk = [30])
+    fun aSwitchAndTheStartReconciliationTakeTurns_andLeaveOneEntry() {
+        // Before Android 13 a switch takes a call per alias. The picker stops right before enabling Black, after noting
+        // it; the reconciliation at start must wait instead of switching the aliases in between.
+        val paused = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val calls = Collections.synchronizedList(mutableListOf<String>())
+        RefusingPackageManagerShadow.beforeSet = {
+            calls += Thread.currentThread().name
+            if (Thread.currentThread().name == "picker" && paused.count > 0) {
+                paused.countDown()
+                release.await(5, TimeUnit.SECONDS)
+            }
+        }
+        val picker = thread(name = "picker") { LauncherIcon.BLACK.trySelect(context) }
+        assertTrue(paused.await(5, TimeUnit.SECONDS))
+        val start = thread(name = "start") { LauncherIcon.reconcile(context) }
+        Thread.sleep(300)
+        assertTrue(calls.none { it == "start" })
+        release.countDown()
+        picker.join(5_000)
+        start.join(5_000)
+        only(LauncherIcon.BLACK)
+    }
+
+    @Test
     fun everyAliasOpensMainActivityWithItsIconAndTheStaticShortcuts() {
         for (icon in LauncherIcon.entries) {
             val info = context.packageManager.getActivityInfo(
@@ -127,11 +160,12 @@ class LauncherIconTest {
     }
 }
 
-// Android refusing a component switch, as a call that fails part way does.
+// Android refusing a component switch, as a call that fails part way does; and a hook into each single switch.
 @Implements(className = "android.app.ApplicationPackageManager", isInAndroidSdk = false)
 class RefusingPackageManagerShadow : ShadowApplicationPackageManager() {
     @Implementation
     override fun setComponentEnabledSetting(componentName: ComponentName, newState: Int, flags: Int) {
+        beforeSet?.invoke()
         if (refuse) throw SecurityException("refused")
         super.setComponentEnabledSetting(componentName, newState, flags)
     }
@@ -143,6 +177,9 @@ class RefusingPackageManagerShadow : ShadowApplicationPackageManager() {
     }
 
     companion object {
-        var refuse = false
+        @Volatile var refuse = false
+
+        // Runs before each single switch, on the thread that makes it.
+        @Volatile var beforeSet: (() -> Unit)? = null
     }
 }

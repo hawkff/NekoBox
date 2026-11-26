@@ -39,9 +39,10 @@ enum class LauncherIcon(
     /**
      * Enables this icon's alias and disables the others: in one step from Android 13, before that the target first,
      * so the app keeps a launcher entry throughout. The pick is noted first, so a switch cut short (the process
-     * killed, a call refused) is finished by [reconcile].
+     * killed, a call refused) is finished by [reconcile]. Switches and reconciling take turns: two of them interleaved
+     * before Android 13 could disable every alias. Not on the main thread.
      */
-    fun select(context: Context) {
+    fun select(context: Context) = synchronized(switching) {
         val pending = pendingFile(context)
         pending.writeText(name)
         val packageManager = context.packageManager
@@ -57,6 +58,8 @@ enum class LauncherIcon(
             )
         } else {
             packageManager.setComponentEnabledSetting(component(context), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            // The others go only once this one shows.
+            check(shown(context)) { "$name was not enabled" }
             for (other in entries) {
                 if (other != this) {
                     packageManager.setComponentEnabledSetting(other.component(context), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
@@ -76,16 +79,23 @@ enum class LauncherIcon(
     }
 
     companion object {
+        // One lock for every switch and reconciliation, in the app's process (the only one that switches).
+        private val switching = Any()
+
         // The icon a switch under way goes to; device-local, so a backup restored elsewhere does not carry it.
         internal fun pendingFile(context: Context) = File(context.noBackupFilesDir, "launcher_icon_pending")
 
         private fun pending(context: Context) = runCatching { valueOf(pendingFile(context).readText()) }.getOrNull()
 
-        /** The icon the launcher should show: a pick still under way, else the one alias shown, else Classic. */
+        /**
+         * The icon the launcher should show: a pick still under way, else the one alias shown, else Classic. Changes
+         * nothing, so the picker reads it on the main thread without waiting for a switch; [reconcile] reads it under
+         * the lock.
+         */
         fun current(context: Context): LauncherIcon = pending(context) ?: entries.filter { it.shown(context) }.singleOrNull() ?: CLASSIC
 
         /** Leaves exactly the alias of [current] shown, as after a switch cut short; run off the main thread at start. */
-        fun reconcile(context: Context) {
+        fun reconcile(context: Context) = synchronized(switching) {
             val kept = current(context)
             if (entries.filter { it.shown(context) } == listOf(kept)) {
                 pendingFile(context).delete()
