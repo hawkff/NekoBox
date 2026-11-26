@@ -63,16 +63,20 @@ class ConnectWidgetsTest {
 
     @After
     fun tearDown() {
-        drawn()
-        // Lets go of a watched service: the watch outlives a test.
-        ConnectWidgets.askService = { null }
-        runBlocking { ConnectWidgets.refresh(context).join() }
-        ConnectWidgets.bindWatch = bindWatch
-        ConnectWidgets.unbindWatch = unbindWatch
-        ConnectWidgets.askService = ask
-        ProfileManager.removeListener(ConnectWidgets.modelListener)
-        GroupManager.removeListener(ConnectWidgets.modelListener)
-        Logs.sink = logSink
+        try {
+            drawn()
+            // Lets go of a watched service: the watch outlives a test.
+            ConnectWidgets.askService = { null }
+            runBlocking { withTimeout(10_000) { ConnectWidgets.refresh(context).join() } }
+        } finally {
+            // The hooks and listeners are global: they go back even when a drawing above fails.
+            ConnectWidgets.bindWatch = bindWatch
+            ConnectWidgets.unbindWatch = unbindWatch
+            ConnectWidgets.askService = ask
+            ProfileManager.removeListener(ConnectWidgets.modelListener)
+            GroupManager.removeListener(ConnectWidgets.modelListener)
+            Logs.sink = logSink
+        }
     }
 
     private fun profile(id: Long, name: String) = ProfileDatabase.proxyDao.addProxy(
