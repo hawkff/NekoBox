@@ -301,7 +301,8 @@
     <style name="ThemeOverlay.NekoBox.Palette.Dynamic" parent="ThemeOverlay.NekoBox.Palette.Pink" />
     <!-- Black: neutral chrome; accents fall back to the text colors. -->
     <style name="ThemeOverlay.NekoBox.Palette.Black" parent="">
-        <item name="colorPrimary">@color/color_ng_black_primary</item>
+        <item name="colorPrimary">@color/color_ng_black_action</item>
+        <item name="colorOnPrimary">@color/color_ng_black_on_action</item>
         <item name="appBarBackgroundColor">@color/color_ng_black_primary</item>
         <item name="colorPrimaryDark">@color/color_ng_black_primary</item>
         <item name="colorAccent">@color/color_ng_black_accent</item>

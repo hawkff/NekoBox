@@ -40,5 +40,8 @@
     <color name="card_elevated_yellow">#2C2A17</color>
     <color name="card_elevated_black">#151515</color>
     <color name="card_elevated_verdant_mint">#10241C</color>
+    <color name="color_ng_black_accent">#9E9E9E</color>
+    <color name="color_ng_black_action">#E0E0E0</color>
+    <color name="color_ng_black_on_action">@color/black</color>
     <color name="nav_selected_black">@color/color_ng_black_accent</color>
 </resources>
