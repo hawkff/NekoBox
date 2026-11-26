@@ -186,6 +186,18 @@ class ConnectWidgetModelTest {
     }
 
     @Test
+    fun onlyTheTapActionCarriesADrawnState() {
+        assertEquals(State.Connected, widgetDrawnState(ConnectWidgetActivity.ACTION_TAP + "Connected"))
+        assertEquals(State.Idle, widgetDrawnState(ConnectWidgetActivity.ACTION_TAP + "Idle"))
+        // A bare state name, a foreign action, an unknown name or none: no drawn state, so the tap only redraws.
+        for (action in listOf("Stopped", "Connected", "android.intent.action.MAIN", ConnectWidgetActivity.ACTION_TAP + "Bogus", ConnectWidgetActivity.ACTION_TAP, null)) {
+            assertEquals(null, widgetDrawnState(action))
+            assertTrue(widgetTapStale(widgetDrawnState(action), State.Stopped))
+            assertTrue(widgetTapStale(widgetDrawnState(action), State.Connected))
+        }
+    }
+
+    @Test
     fun chipsSayWhatATapDoes() {
         assertEquals(R.string.widget_chip_selected, widgetChipDescription(State.Connected, selected = true))
         assertEquals(R.string.widget_chip_switch, widgetChipDescription(State.Connected, selected = false))

@@ -77,6 +77,10 @@ internal fun widgetSpeedLine(tx: String, rx: String) = "▲ $tx   ▼ $rx"
 /** What a tap on the widget does. */
 internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, REDRAW, NONE }
 
+/** The state a tap's [action] says its drawing showed: null unless it is ConnectWidgetActivity.ACTION_TAP and a state's name. */
+internal fun widgetDrawnState(action: String?): BaseService.State? = action?.takeIf { it.startsWith(ConnectWidgetActivity.ACTION_TAP) }?.removePrefix(ConnectWidgetActivity.ACTION_TAP)
+    ?.let { name -> BaseService.State.entries.firstOrNull { it.name == name } }
+
 /**
  * Whether a tap found the service in a state other than the one the widget showed ([drawn], null when the tap did not
  * say): then the widget is stale, both processes having ended unseen for one, and the tap only redraws it, as acting
