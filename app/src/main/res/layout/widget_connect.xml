@@ -82,31 +82,16 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <LinearLayout
+                <!-- Upload and download in one line, which ends in "…" where the widget is narrow. -->
+                <TextView
                     android:id="@+id/widget_speed"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:id="@+id/widget_tx"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:singleLine="true"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/widget_rx"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:ellipsize="end"
-                        android:fontFamily="sans-serif-medium"
-                        android:singleLine="true"
-                        android:textSize="12sp" />
-                </LinearLayout>
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:singleLine="true"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
 

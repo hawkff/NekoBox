@@ -386,10 +386,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         (speed?.rxRateProxy ?: 0L).let { context.getString(R.string.speed, Formatter.formatFileSize(context, it)) }
 
     private fun setSpeed(context: Context, views: RemoteViews, tx: String, rx: String) {
-        views.setTextViewText(R.id.widget_tx, "▲ $tx")
-        views.setContentDescription(R.id.widget_tx, context.getString(R.string.speed_upload, tx))
-        views.setTextViewText(R.id.widget_rx, "▼ $rx")
-        views.setContentDescription(R.id.widget_rx, context.getString(R.string.speed_download, rx))
+        views.setTextViewText(R.id.widget_speed, widgetSpeedLine(tx, rx))
+        views.setContentDescription(R.id.widget_speed, context.getString(R.string.speed_upload, tx) + ", " + context.getString(R.string.speed_download, rx))
     }
 
     // The colors of one night mode, from the app's palette (or the wallpaper's), as the app's screens show them.
@@ -603,8 +601,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             views.setViewVisibility(R.id.widget_speed, if (speed != null) View.VISIBLE else View.GONE)
             if (speed != null) {
                 setSpeed(app, views, speed.first, speed.second)
-                views.tint(R.id.widget_tx, "setTextColor", looks.pair { it.secondary })
-                views.tint(R.id.widget_rx, "setTextColor", looks.pair { it.secondary })
+                views.tint(R.id.widget_speed, "setTextColor", looks.pair { it.secondary })
             }
             listOf(R.id.widget_chips_1, R.id.widget_chips_2).forEachIndexed { row, rowId ->
                 views.removeAllViews(rowId)

@@ -51,6 +51,8 @@ class ConnectWidgetModelTest {
         val wide = 400f
         assertEquals(WidgetSpec(orbOnly = true), widgetSpec(WIDGET_LINES_MIN_WIDTH - 1f, 300f))
         assertEquals(false, widgetSpec(WIDGET_LINES_MIN_WIDTH, 100f).orbOnly)
+        // A three-cell widget of a five-column home screen keeps its lines.
+        assertEquals(WidgetSpec(orbOnly = false), widgetSpec(203f, 90f))
         assertEquals(0, widgetSpec(wide, WIDGET_CHIPS_MIN_HEIGHT - 1f).chipRows)
         assertEquals(1, widgetSpec(wide, WIDGET_CHIPS_MIN_HEIGHT).chipRows)
         assertEquals(1, widgetSpec(wide, WIDGET_TWO_ROWS_MIN_HEIGHT - 1f).chipRows)

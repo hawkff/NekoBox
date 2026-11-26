@@ -8,11 +8,12 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 /** What one size of the connect widget shows: the orb alone, or the orb with the connection's lines and [chipColumns] by [chipRows] quick-switch chips. */
 internal data class WidgetSpec(val orbOnly: Boolean, val chipColumns: Int = 0, val chipRows: Int = 0)
 
-// What widget_connect needs, measured with real fonts at font scale 1.3 (ConnectWidgetLayoutTest): beside the orb,
-// 92 dp of padding, orb and margins plus the widest state line (113 dp, Russian "Connecting"); under the lines (94 dp
-// high: 24 dp of padding and the three text lines, taller than the 56 dp orb), a row of chips takes 4 + 48 dp and a
-// second one 48 dp more. Narrower, the orb shows alone; lower, fewer chip rows show. The speed line ellipsizes.
-internal const val WIDGET_LINES_MIN_WIDTH = 206f
+// What widget_connect needs, measured with real fonts at font scale 1.3 (ConnectWidgetLayoutTest). Under the lines
+// (94 dp high: 24 dp of padding and the three text lines, taller than the 56 dp orb), a row of chips takes 4 + 48 dp
+// and a second one 48 dp more; lower, fewer chip rows show. Beside the orb, 92 dp go to padding, orb and margins: from
+// 180 dp wide the lines show, which keeps them on a three-cell widget of a five-column home screen (about 203 dp);
+// there the profile, the state and the speed end in "…" where they do not fit. Narrower, the orb shows alone.
+internal const val WIDGET_LINES_MIN_WIDTH = 180f
 internal const val WIDGET_CHIPS_MIN_HEIGHT = 146f
 internal const val WIDGET_TWO_ROWS_MIN_HEIGHT = 194f
 private const val CHIP_MIN_WIDTH = 120f
@@ -62,6 +63,9 @@ internal fun widgetChipProfiles(order: List<Long>, profiles: List<ProxyEntity>):
     val byId = profiles.associateBy { it.id }
     return order.mapNotNull(byId::get).filter { it.canBuild() }.take(WIDGET_MAX_CHIPS)
 }
+
+/** The live speed's line: upload first, as the end of a narrow line is what "…" takes. */
+internal fun widgetSpeedLine(tx: String, rx: String) = "▲ $tx   ▼ $rx"
 
 /** What a tap on the widget does. */
 internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, NONE }
