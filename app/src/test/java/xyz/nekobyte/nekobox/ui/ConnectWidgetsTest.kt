@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -288,5 +289,24 @@ class ConnectWidgetsTest {
             ConnectWidgets.setCheck = setCheck
             ConnectWidgets.widgetIds = widgetIds
         }
+    }
+
+    @Test
+    fun aServiceThatDoesNotAnswerInTimeIsNotTakenForStopped() = runBlocking {
+        val connected = answer(State.Connected, running = 17L)
+        // None started: off.
+        assertEquals(State.Stopped, tapState(emptyList()) { connected }.state)
+        // Started and answering.
+        assertEquals(State.Connected, tapState(listOf(service)) { connected }.state)
+        // Started, but the answer comes after the wait for it ends: unknown, and a tap opens the app instead of starting.
+        val late = tapState(listOf(service)) {
+            withTimeoutOrNull(100) {
+                delay(1_000)
+                connected
+            }
+        }
+        assertEquals(null, late.state)
+        assertEquals(WidgetAction.OPEN_APP, widgetAction(late.state, -1L, false, 1L, true, false))
+        assertEquals(WidgetAction.OPEN_APP, widgetAction(late.state, 2L, true, 1L, true, false))
     }
 }

@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
-import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.NekoBoxConnection
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -31,7 +30,8 @@ class ConnectWidgetActivity : ComponentActivity() {
         val chipId = intent.getLongExtra(EXTRA_PROFILE, -1L)
         lifecycleScope.launch {
             val action = withContext(Dispatchers.Default) {
-                val state = NekoBoxConnection.ask(applicationContext) { it.state }?.let { BaseService.State.entries.getOrNull(it) } ?: BaseService.State.Stopped
+                val tap = tapState(NekoBoxConnection.startedServices()) { ConnectWidgets.ask(applicationContext, it) }
+                val state = tap.state
                 // The id comes from an intent: it acts only once it names a profile in the database this version can
                 // connect with. A chip drawn before its profile was archived or deleted opens the app instead.
                 val chip = chipId.takeIf { it > 0L }?.let { ProfileDatabase.proxyDao.getById(it) }?.takeIf { it.canBuild() }
@@ -42,7 +42,7 @@ class ConnectWidgetActivity : ComponentActivity() {
                     chipUsable = chip != null,
                     selectedId = selectedId,
                     selectedUsable = ProfileDatabase.proxyDao.getById(selectedId)?.canBuild() == true,
-                    autoSelecting = chip != null && state.canStop && runningGroupSelectsAutomatically(chip.groupId),
+                    autoSelecting = chip != null && state?.canStop == true && runningGroupSelectsAutomatically(chip.groupId),
                 )
                 if (chip != null && action in setOf(WidgetAction.SWITCH, WidgetAction.SELECT_AND_START, WidgetAction.SELECT)) {
                     // As a pick in the app's lists: it leads its list's Recent, and the lists show the new selection.

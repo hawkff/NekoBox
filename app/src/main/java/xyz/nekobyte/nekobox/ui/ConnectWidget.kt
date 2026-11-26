@@ -117,12 +117,15 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     /** What the running [service] answers: its state, the profile it runs (-1 none yet) and its latest speed. */
     internal class ServiceAnswer(val service: ComponentName, val state: BaseService.State, val runningProfileId: Long, val speed: SpeedDisplayData?)
 
+    /** Asks [service], started, without starting it; null when it does not answer in time. */
+    suspend fun ask(app: Context, service: ComponentName) = NekoBoxConnection.ask(app, service) {
+        ServiceAnswer(service, BaseService.State.entries.getOrNull(it.state) ?: BaseService.State.Idle, it.runningProfileId, it.latestSpeed)
+    }
+
     /** Asks the service that runs, without starting one; null when none runs or none answers in time. */
     @VisibleForTesting
     internal var askService: suspend (Context) -> ServiceAnswer? = { app ->
-        NekoBoxConnection.startedServices().firstNotNullOfOrNull { service ->
-            NekoBoxConnection.ask(app, service) { ServiceAnswer(service, BaseService.State.entries.getOrNull(it.state) ?: BaseService.State.Idle, it.runningProfileId, it.latestSpeed) }
-        }
+        NekoBoxConnection.startedServices().firstNotNullOfOrNull { ask(app, it) }
     }
 
     // One drawing at a time, across its waits for the service: an older drawing never lands after a newer one. A

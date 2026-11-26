@@ -1,5 +1,6 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.content.ComponentName
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.database.ProxyEntity
@@ -63,19 +64,36 @@ internal fun widgetChipProfiles(order: List<Long>, profiles: List<ProxyEntity>):
 internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, NONE }
 
 /**
+ * What a tap acts on: the service's [state], null when a service was started but did not answer in time, and the
+ * profile it runs (-1 none or unknown).
+ */
+internal class TapState(val state: BaseService.State?, val runningProfileId: Long = -1L)
+
+/**
+ * The state for a tap: Stopped when no service was [started], the first answer of those that were, and unknown when
+ * none answered: a live VPN that was slow to answer must not be taken for a stopped one.
+ */
+internal suspend fun tapState(started: List<ComponentName>, ask: suspend (ComponentName) -> ConnectWidgets.ServiceAnswer?): TapState {
+    if (started.isEmpty()) return TapState(BaseService.State.Stopped)
+    for (service in started) ask(service)?.let { return TapState(it.state, it.runningProfileId) }
+    return TapState(null)
+}
+
+/**
  * A tap on the orb ([chipId] < 0) or on the chip of profile [chipId], which can connect when [chipUsable] (it exists
  * and is not archived), as can the selected profile when [selectedUsable]. A chip switches a running connection to its
  * profile, or selects it and connects. Where the app has more to say (no profile to connect, a group that picks its
- * own server, a profile gone or archived since), the app opens.
+ * own server, a profile gone or archived since, a service whose state is unknown), the app opens.
  */
 internal fun widgetAction(
-    state: BaseService.State,
+    state: BaseService.State?,
     chipId: Long,
     chipUsable: Boolean,
     selectedId: Long,
     selectedUsable: Boolean,
     autoSelecting: Boolean,
 ): WidgetAction {
+    if (state == null) return WidgetAction.OPEN_APP
     if (chipId < 0L) {
         return when {
             state.canStop -> WidgetAction.STOP
