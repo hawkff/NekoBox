@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.BitmapDrawable
+import androidx.appcompat.content.res.AppCompatResources
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -169,6 +171,13 @@ class LauncherIconTest {
         } finally {
             written.deleteRecursively()
         }
+    }
+
+    @Test
+    @Config(sdk = [24])
+    fun everyPreviewResolvesBeforeAdaptiveIcons() {
+        // The picker's previews on Android 7: each icon has its own PNGs beside the adaptive one.
+        for (icon in LauncherIcon.entries) assertTrue(icon.name, AppCompatResources.getDrawable(context, icon.icon) is BitmapDrawable)
     }
 
     @Test
