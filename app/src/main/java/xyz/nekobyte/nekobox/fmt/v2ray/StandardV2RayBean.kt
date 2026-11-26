@@ -39,6 +39,12 @@ abstract class StandardV2RayBean : AbstractBean() {
 
     @JvmField var certificates: String? = null
 
+    // Xray's pinnedPeerCertSha256 (pcs): comma-separated SHA-256 hashes of the server certificate or a CA above it.
+    @JvmField var pinnedPeerCertSha256: String? = null
+
+    // Xray's verifyPeerCertByName (vcn): comma-separated names the certificate is checked against instead of the SNI.
+    @JvmField var verifyPeerCertByName: String? = null
+
     @JvmField var xhttpMode: String? = null
 
     @JvmField var xhttpExtra: String? = null
@@ -99,6 +105,8 @@ abstract class StandardV2RayBean : AbstractBean() {
         sni = sni?.takeIf { it.isNotBlank() } ?: ""
         alpn = alpn?.takeIf { it.isNotBlank() } ?: ""
         certificates = certificates?.takeIf { it.isNotBlank() } ?: ""
+        pinnedPeerCertSha256 = pinnedPeerCertSha256?.takeIf { it.isNotBlank() } ?: ""
+        verifyPeerCertByName = verifyPeerCertByName?.takeIf { it.isNotBlank() } ?: ""
         earlyDataHeaderName = earlyDataHeaderName?.takeIf { it.isNotBlank() } ?: ""
         utlsFingerprint = utlsFingerprint?.takeIf { it.isNotBlank() } ?: ""
         wsMaxEarlyData = wsMaxEarlyData ?: 0
@@ -127,9 +135,10 @@ abstract class StandardV2RayBean : AbstractBean() {
     }
 
     override fun serialize(output: ByteBufferOutput) {
-        // Version 11 only for the legacy mKCP flag and 12 only for TLS fragmentation, so other stored
-        // profiles keep their bytes.
+        // Version 11 only for the legacy mKCP flag, 12 only for TLS fragmentation and 13 only for
+        // certificate pins or names, so other stored profiles keep their bytes.
         val version = when {
+            !pinnedPeerCertSha256.isNullOrBlank() || !verifyPeerCertByName.isNullOrBlank() -> 13
             tlsFragment == true -> 12
             type == "kcp" && kcpLegacy == true -> 11
             else -> 10
@@ -195,7 +204,11 @@ abstract class StandardV2RayBean : AbstractBean() {
         output.writeBoolean(muxBrutal!!)
         output.writeInt(muxBrutalUpMbps!!)
         output.writeInt(muxBrutalDownMbps!!)
-        if (version >= 12) output.writeBoolean(true)
+        if (version >= 12) output.writeBoolean(tlsFragment == true)
+        if (version >= 13) {
+            output.writeString(pinnedPeerCertSha256)
+            output.writeString(verifyPeerCertByName)
+        }
     }
 
     override fun deserialize(input: ByteBufferInput) {
@@ -296,6 +309,10 @@ abstract class StandardV2RayBean : AbstractBean() {
             muxBrutalDownMbps = input.readInt()
         }
         if (version >= 12) tlsFragment = input.readBoolean()
+        if (version >= 13) {
+            pinnedPeerCertSha256 = input.readString()
+            verifyPeerCertByName = input.readString()
+        }
     }
 
     val isVLESS: Boolean get() = this is VMessBean && alterId == -1

@@ -45,11 +45,13 @@ internal object XrayOutbound {
             freedom
         }
         if (security(stream) == "tls") {
-            // The core has no counterpart to a pinned certificate, checked names or a private CA,
-            // so the node would trust certificates its provider meant to refuse.
+            // VLESS, VMess and Trojan profiles keep a pinned certificate and checked names (applyStream);
+            // other profiles and a private CA have no counterpart, so the node would trust certificates its
+            // provider meant to refuse.
             val tls = stream.optJSONObject("tlsSettings") ?: JSONObject()
-            requireSupported(tls.strings("pinnedPeerCertSha256").isEmpty()) { "unsupported pinned certificate" }
-            requireSupported(tls.strings("verifyPeerCertInNames").isEmpty()) { "unsupported checked names" }
+            val pinnable = outbound.optString("protocol") in setOf("vless", "vmess", "trojan")
+            requireSupported(pinnable || tls.strings("pinnedPeerCertSha256").isEmpty()) { "unsupported pinned certificate" }
+            requireSupported(pinnable || certificateNames(tls).isEmpty()) { "unsupported checked names" }
             requireSupported((tls.optJSONArray("certificates")?.length() ?: 0) == 0) { "unsupported TLS certificates" }
         }
         return parseProtocol(outbound, settings, stream, name).also { bean ->
@@ -227,6 +229,8 @@ internal object XrayOutbound {
                 link.param("fp", tls.optString("fingerprint"))
                 if (tls.optBoolean("allowInsecure")) link.param("allowInsecure", "1")
                 link.param("ech", tls.optString("echConfigList"))
+                link.param("pcs", tls.strings("pinnedPeerCertSha256").joinToString(","))
+                link.param("vcn", certificateNames(tls).joinToString(","))
             }
 
             "reality" -> {
@@ -393,6 +397,9 @@ internal object XrayOutbound {
     /** A value for one line of a wg-quick config; a line break would add settings of its own. */
     private fun String.line() = also { requireSupported('\n' !in it && '\r' !in it) { "invalid WireGuard value" } }
 }
+
+/** Xray's verifyPeerCertByName, and verifyPeerCertInNames as older Xray versions named it. */
+private fun certificateNames(tls: JSONObject) = tls.strings("verifyPeerCertByName") + tls.strings("verifyPeerCertInNames")
 
 /** A string or a list of strings, as Xray accepts for several fields. */
 internal fun JSONObject.strings(key: String): List<String> = when (val value = opt(key)) {

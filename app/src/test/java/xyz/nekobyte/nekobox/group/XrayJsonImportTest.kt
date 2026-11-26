@@ -137,6 +137,20 @@ class XrayJsonImportTest {
     }
 
     @Test
+    fun certificateChecksImportWithTheirNode() = runTest {
+        val pin = "0f".repeat(32)
+        for (names in listOf("verifyPeerCertByName", "verifyPeerCertInNames")) {
+            val stream = JSONObject().put("network", "tcp").put("security", "tls").put(
+                "tlsSettings",
+                JSONObject().put("serverName", "a.example").put("pinnedPeerCertSha256", pin.uppercase()).put(names, JSONArray().put("b.example").put("c.example")),
+            )
+            val bean = RawUpdater.parseImport(config(vless(stream)))!!.proxies.single() as VMessBean
+            assertEquals(names, pin, bean.pinnedPeerCertSha256)
+            assertEquals(names, "b.example,c.example", bean.verifyPeerCertByName)
+        }
+    }
+
+    @Test
     fun settingsTheCoreCannotApplyRefuseTheNode() = runTest {
         val reality = JSONObject().put("network", "tcp").put("security", "reality").put(
             "realitySettings",
@@ -310,7 +324,7 @@ class XrayJsonImportTest {
         assertEquals(listOf("unsupported proxySettings"), ImportPreview.of(parsed).reasons)
         // Share links report their refused options the same way.
         val links = RawUpdater.parseImport("vless://$UUID@192.0.2.1:443?type=tcp&security=tls&pcs=abcd#pinned\nvless://$UUID@192.0.2.2:443?type=tcp#plain")!!
-        assertEquals(listOf("unsupported pcs"), links.report.reasons.toList())
+        assertEquals(listOf("invalid pcs"), links.report.reasons.toList())
     }
 
     private companion object {

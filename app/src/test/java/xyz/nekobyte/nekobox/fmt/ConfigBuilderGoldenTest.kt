@@ -90,6 +90,65 @@ class ConfigBuilderGoldenTest {
     }
 
     @Test
+    fun certificateChecks_reachTheCoreWithXraysMeaning() {
+        // The core loads these in libcore's generated-config check, which parses the hashes.
+        val directory = File("build/generated-core-configs/certificate-checks").apply { mkdirs() }
+        val pin = "0f".repeat(32)
+        val group = addGroup()
+        fun vless(name: String, edit: VMessBean.() -> Unit) = addProfile(
+            group,
+            VMessBean().apply {
+                alterId = -1
+                serverAddress = "192.0.2.15"
+                serverPort = 443
+                uuid = "d342d11e-d424-4583-b36e-524ab1f0afa4"
+                security = "tls"
+                sni = "node.example"
+                this.name = name
+                edit()
+                initializeDefaultValues()
+            },
+        )
+        fun tls(profile: ProxyEntity, name: String) = JSONObject(build(profile).config)
+            .also { directory.resolve("$name.json").writeText(it.toString()) }
+            .let { outbound(it, "vless").getJSONObject("tls") }
+
+        val pinned = tls(
+            vless("pinned") {
+                pinnedPeerCertSha256 = "$pin,${pin.uppercase()}"
+                verifyPeerCertByName = "a.example, b.example"
+                allowInsecure = true
+                certificates = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----"
+            },
+            "pinned",
+        )
+        assertEquals(listOf(pin, pin.uppercase()), strings(pinned.getJSONArray("certificate_sha256")))
+        assertEquals(listOf("a.example", "b.example"), strings(pinned.getJSONArray("verify_certificate_by_name")))
+        assertEquals("node.example", pinned.getString("server_name"))
+        // The pins decide trust; the core refuses a custom CA beside them.
+        assertFalse(pinned.has("certificate"))
+
+        val namesOnly = tls(vless("names") { verifyPeerCertByName = "a.example" }, "names")
+        assertFalse(namesOnly.has("certificate_sha256"))
+        assertEquals(listOf("a.example"), strings(namesOnly.getJSONArray("verify_certificate_by_name")))
+
+        // REALITY authenticates the server itself.
+        val reality = tls(
+            vless("reality") {
+                pinnedPeerCertSha256 = pin
+                realityPubKey = "yAnz5TF-lXXJte14tji3zlMNq-hd2rYUIgJBgB3fBmk"
+                realityShortId = "01"
+            },
+            "reality",
+        )
+        assertFalse(reality.has("certificate_sha256"))
+        assertTrue(reality.has("reality"))
+
+        val plain = tls(vless("plain") {}, "plain")
+        assertFalse(plain.has("certificate_sha256") || plain.has("verify_certificate_by_name"))
+    }
+
+    @Test
     fun tlsFragment_splitsTheFirstHopHandshakeInTheCore() {
         val previousTlsFragment = DataStore.enableTLSFragment
         // The core loads each of these in libcore's generated-config check.

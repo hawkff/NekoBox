@@ -21,6 +21,7 @@ import xyz.nekobyte.nekobox.fmt.snell.parseSnell
 import xyz.nekobyte.nekobox.fmt.socks.parseSOCKS
 import xyz.nekobyte.nekobox.fmt.trojan.parseTrojan
 import xyz.nekobyte.nekobox.fmt.tuic.parseTuic
+import xyz.nekobyte.nekobox.fmt.v2ray.carriesCertificateChecks
 import xyz.nekobyte.nekobox.fmt.v2ray.dropsFragmentMask
 import xyz.nekobyte.nekobox.fmt.v2ray.parseV2Ray
 import xyz.nekobyte.nekobox.fmt.v2ray.requireSupportedLinkOptions
@@ -157,7 +158,7 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
     }
     // Keep a rejected link's query intact without discarding neighboring links.
     val links = linksByLine.flatMap { line ->
-        line.split(LINK_SEPARATOR).flatMap { if (it.unsupportedOption() != null) listOf(it) else it.split(' ') }
+        line.split(LINK_SEPARATOR).flatMap { if (it.unsupportedOption() != null || carriesCertificateChecks(it)) listOf(it) else it.split(' ') }
     }
 
     val entities = ArrayList<AbstractBean>()
