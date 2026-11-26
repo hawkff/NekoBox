@@ -164,12 +164,12 @@ internal fun StandardV2RayBean.kcpFinalMask(): String? {
  */
 internal fun dropsFragmentMask(link: String, bean: AbstractBean): Boolean {
     if (bean !is StandardV2RayBean || bean.tlsFragment == true || bean.type == "kcp") return false
-    val fm = if ('?' in link) {
+    val fm = if ('?' in link.substringBefore('#')) {
         link.substringBefore('#').substringAfter('?').split('&').firstOrNull { decodeLinkComponent(it.substringBefore('=')) == "fm" }
             ?.let { decodeLinkComponent(it.substringAfter('=', "")) }
     } else {
         // The VMess JSON form carries its options in the encoded object.
-        runCatching { JSONObject(link.substringAfter("vmess://").decodeBase64UrlSafe()) }.getOrNull()?.takeUnless { it.isNull("fm") }?.optString("fm")
+        runCatching { JSONObject(link.substringAfter("vmess://").substringBefore('#').decodeBase64UrlSafe()) }.getOrNull()?.takeUnless { it.isNull("fm") }?.optString("fm")
     }
     return fm?.let(::isFragmentFinalMask) == true
 }
@@ -211,7 +211,7 @@ fun parseV2Ray(link: String): StandardV2RayBean {
 
     // Try parse stupid formats first
 
-    if (!link.contains("?")) {
+    if ('?' !in link.substringBefore('#')) {
         try {
             return parseV2RayN(link)
         } catch (e: UnsupportedEntryException) {
@@ -557,7 +557,8 @@ private fun tryResolveVmess4Kitsunebi(server: String): VMessBean {
 
 // Throws on V2RayN link variants the core cannot run.
 fun parseV2RayN(link: String): VMessBean {
-    val result = link.substringAfter("vmess://").decodeBase64UrlSafe()
+    // Lists append a remark as a URI fragment; '#' is not a base64 character.
+    val result = link.substringAfter("vmess://").substringBefore('#').decodeBase64UrlSafe()
     if (result.contains("= vmess")) {
         return parseCsvVMess(result)
     }

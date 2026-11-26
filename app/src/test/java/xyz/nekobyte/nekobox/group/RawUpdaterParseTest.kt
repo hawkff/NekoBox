@@ -659,6 +659,18 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun vmessJsonLinksMayCarryARemarkFragment() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val json = """{"v":"2","ps":"json","add":"192.0.2.6","port":"443","id":"$uuid","aid":"0","net":"ws","path":"/ws","tls":"tls"}"""
+        for (fragment in listOf("#@channel", "#what?", "#")) {
+            val bean = parseProxies("vmess://" + encode(json) + fragment).single() as VMessBean
+            assertEquals(fragment, "192.0.2.6", bean.serverAddress)
+            assertEquals(fragment, "ws", bean.type)
+            assertEquals(fragment, "json", bean.name)
+        }
+    }
+
+    @Test
     fun aRefusedCompleteLinkDoesNotDiscardItsValidNeighbors() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val firsts = listOf("socks5://192.0.2.1:1080", "socks5://192.0.2.1:1080#first${" ".repeat(2048)}server")
