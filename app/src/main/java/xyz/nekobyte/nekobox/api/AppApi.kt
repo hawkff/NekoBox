@@ -768,7 +768,7 @@ internal class AppApi(
             Libcore.nekoLogClear()
             JSONObject().put("cleared", true)
         }
-        command("profiles.test", "Test a saved profile with the existing isolated probe lifecycle", "id") {
+        command("profiles.test", "Test a saved profile in an isolated probe; a WireGuard profile the connected service runs goes through its core", "id") {
             val profile = profile(it.positiveId())
             requireApi(profile.canBuild(), "Archived profiles cannot run")
             runtime.job {
