@@ -353,22 +353,20 @@ class ConnectWidgetsTest {
             ConnectWidgets.askService = { answer(State.Connected, running = 17L) }
             runBlocking { ConnectWidgets.refresh(context).join() }
             assertEquals("Connected", text(id, R.id.widget_state))
-            var asks = 0
-            ConnectWidgets.askService = {
-                asks++
-                late(answer(State.Connected))
-            }
+            ConnectWidgets.askService = { late(answer(State.Connected)) }
             runBlocking { ConnectWidgets.refresh(context).join() }
             // Not taken for stopped: still Connected, still watched and checked.
             assertEquals("Connected", text(id, R.id.widget_state))
             assertEquals(listOf(service), bound)
             assertEquals(true, checks.last())
-            // Asked again shortly; this time the service is gone, and the widget follows.
+            // Asked again shortly; this time the service is gone, and the widget follows. The retry's drawing says when
+            // it asks, and the test then waits for that drawing.
+            val retried = CompletableDeferred<Unit>()
             ConnectWidgets.askService = {
-                asks++
+                retried.complete(Unit)
                 null
             }
-            runBlocking { withTimeout(5_000) { while (asks < 2) delay(20) } }
+            runBlocking { withTimeout(5_000) { retried.await() } }
             drawn()
             assertEquals("Not connected", text(id, R.id.widget_state))
             assertEquals(listOf(service, null), bound)
