@@ -142,12 +142,51 @@ internal fun linkNodeScheme(link: String): String? {
 }
 
 /**
+ * Lists copied from web pages carry HTML-escaped query separators. Inside a link's query a raw "&amp;"
+ * can only be one (a literal '&' in a value is %26), so it becomes "&" there; user names, passwords,
+ * hosts, paths and remarks keep it, as they may hold it literally.
+ */
+internal fun decodeEscapedQuerySeparators(line: String): String {
+    val out = StringBuilder(line.length)
+    var tokenStart = 0
+    var inQuery = false
+    var inFragment = false
+    var index = 0
+    while (index < line.length) {
+        val char = line[index]
+        when {
+            char.isWhitespace() -> {
+                inQuery = false
+                inFragment = false
+                tokenStart = index + 1
+            }
+
+            char == '#' && !inFragment -> {
+                inQuery = false
+                inFragment = true
+            }
+
+            // A '?' starts a query only in a link, not in a remark that went on after a space.
+            char == '?' && !inQuery && !inFragment -> inQuery = line.substring(tokenStart, index).contains("://")
+
+            inQuery && line.startsWith("&amp;", index) -> {
+                out.append('&')
+                index += "&amp;".length
+                continue
+            }
+        }
+        out.append(char)
+        index++
+    }
+    return out.toString()
+}
+
+/**
  * Parses share links, one per line or separated by spaces. Links that describe nodes but do not
  * import are added to [report] by scheme.
  */
 suspend fun parseProxies(text: String, report: ImportReport? = null): List<AbstractBean> {
-    // Lists copied from web pages carry HTML-escaped query separators; a raw "&amp;" is never part of a value.
-    val linksByLine = text.linesNoComments().map { it.replace("&amp;", "&") }
+    val linksByLine = text.linesNoComments().map(::decodeEscapedQuerySeparators)
 
     // Why a link's options refuse it before any parser runs, or null.
     fun String.unsupportedOption(): String? {

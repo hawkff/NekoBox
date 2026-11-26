@@ -19,6 +19,7 @@ import xyz.nekobyte.nekobox.fmt.amneziawg.AmneziaWGBean
 import xyz.nekobyte.nekobox.fmt.hysteria.HysteriaBean
 import xyz.nekobyte.nekobox.fmt.shadowsocks.ShadowsocksBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
+import xyz.nekobyte.nekobox.fmt.trojan.TrojanBean
 import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.VMessBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
@@ -26,6 +27,7 @@ import xyz.nekobyte.nekobox.ktx.ImportTooLargeException
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.MAX_IMPORT_BYTES
 import xyz.nekobyte.nekobox.ktx.SubscriptionFoundException
+import xyz.nekobyte.nekobox.ktx.decodeEscapedQuerySeparators
 import xyz.nekobyte.nekobox.ktx.parseProxies
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 import java.net.URLEncoder
@@ -674,10 +676,29 @@ class RawUpdaterParseTest {
         assertEquals(key, bean.realityPubKey)
         assertEquals("01", bean.realityShortId)
         assertEquals("a.example", bean.sni)
-        assertEquals("a&b", bean.name)
+        // The remark is not part of the query: it keeps the characters as written.
+        assertEquals("a&amp;b", bean.name)
         // An escaped pin is a pin.
         val pinned = parseProxies("vless://$uuid@192.0.2.1:443?security=tls&amp;pcs=${"0f".repeat(32)}").single() as StandardV2RayBean
         assertEquals("0f".repeat(32), pinned.pinnedPeerCertSha256)
+    }
+
+    @Test
+    fun literalAmpEntitiesOutsideTheQueryAreKept() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        // '&' and ';' are valid in user info and paths, so "&amp;" there is data.
+        val trojan = parseProxies("trojan://p&amp;q@192.0.2.1:443?security=tls&amp;sni=a.example#r&amp;s").single() as TrojanBean
+        assertEquals("p&amp;q", trojan.password)
+        assertEquals("a.example", trojan.sni)
+        assertEquals("r&amp;s", trojan.name)
+        val path = parseProxies("vless://$uuid@192.0.2.2:443/x&amp;y?type=tcp&amp;security=tls#p").single() as VMessBean
+        assertEquals("x&amp;y", path.path)
+        assertEquals("tls", path.security)
+        // Each link of a line gets its own query; a remark that goes on after a space and contains '?' stays a remark.
+        assertEquals(
+            "trojan://p&amp;q@h:1?a=1&b=2#r&amp;s now? x&amp;y ss://x&amp;y@h:2?plugin=p&q=1",
+            decodeEscapedQuerySeparators("trojan://p&amp;q@h:1?a=1&amp;b=2#r&amp;s now? x&amp;y ss://x&amp;y@h:2?plugin=p&amp;q=1"),
+        )
     }
 
     @Test
