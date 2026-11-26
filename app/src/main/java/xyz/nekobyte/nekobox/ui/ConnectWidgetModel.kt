@@ -104,15 +104,16 @@ internal fun widgetStateText(state: BaseService.State) = when (state) {
 
 /**
  * The speed lines the service's process posted last: an unchanged pair is not posted again, unless forced after a
- * redraw of the widgets, which may have shown an older one.
+ * redraw of the widgets, which may have shown an older one. A pair counts as posted once Android took it.
  */
 internal class SpeedPosts {
     private var posted: Pair<String, String>? = null
 
     @Synchronized
-    fun shouldPost(lines: Pair<String, String>, force: Boolean): Boolean {
-        if (!force && lines == posted) return false
+    fun shouldPost(lines: Pair<String, String>, force: Boolean) = force || lines != posted
+
+    @Synchronized
+    fun posted(lines: Pair<String, String>) {
         posted = lines
-        return true
     }
 }

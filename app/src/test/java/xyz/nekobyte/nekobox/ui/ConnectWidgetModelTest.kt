@@ -115,11 +115,23 @@ class ConnectWidgetModelTest {
         val posts = SpeedPosts()
         val a = "1 kB/s" to "2 kB/s"
         val b = "0 B/s" to "0 B/s"
-        assertTrue(posts.shouldPost(a, force = false))
-        assertTrue(posts.shouldPost(b, force = false))
+        fun post(lines: Pair<String, String>, force: Boolean = false) = posts.shouldPost(lines, force).also { if (it) posts.posted(lines) }
+        assertTrue(post(a))
+        assertTrue(post(b))
         // A redraw drew the older A over B: the service posts B again, unchanged as it is.
-        assertTrue(posts.shouldPost(b, force = true))
+        assertTrue(post(b, force = true))
         // Then B as long as it stays is not posted again.
-        assertFalse(posts.shouldPost(b, force = false))
+        assertFalse(post(b))
+    }
+
+    @Test
+    fun aSpeedAndroidDidNotTakeIsPostedAgain() {
+        val posts = SpeedPosts()
+        val a = "1 kB/s" to "2 kB/s"
+        // The update failed before posted(): the same pair still goes out next round.
+        assertTrue(posts.shouldPost(a, force = false))
+        assertTrue(posts.shouldPost(a, force = false))
+        posts.posted(a)
+        assertFalse(posts.shouldPost(a, force = false))
     }
 }

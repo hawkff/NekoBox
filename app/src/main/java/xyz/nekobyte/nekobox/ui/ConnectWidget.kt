@@ -321,6 +321,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             val views = RemoteViews(context.packageName, R.layout.widget_connect)
             setSpeed(context, views, tx, rx)
             AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(ids, views)
+            speedPosts.posted(tx to rx)
         } catch (e: RuntimeException) {
             Logs.w("widget speed", e)
         }
