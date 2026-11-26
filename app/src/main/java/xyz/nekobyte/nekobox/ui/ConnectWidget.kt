@@ -187,7 +187,9 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val selectedChip = ColorUtils.compositeColors(ColorUtils.setAlphaComponent(primary, 26), surface)
         val text = color(android.R.attr.textColorPrimary)
         val secondary = color(android.R.attr.textColorSecondary)
-        val connected = color(R.attr.primaryOrTextPrimary)
+
+        // "Connected" is small text: an accent too light for the canvas (Pink or Blue by day) gives way to the text color.
+        val connected = color(R.attr.primaryOrTextPrimary).takeIf { ColorUtils.calculateContrast(it, canvas) >= 4.5 } ?: text
         val plate = color(com.google.android.material.R.attr.colorSurfaceContainerHigh)
         val key = listOf(canvas, surface, outline, primary, text, secondary, connected, plate).joinToString()
     }
