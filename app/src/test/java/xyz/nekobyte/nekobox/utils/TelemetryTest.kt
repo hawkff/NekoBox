@@ -204,6 +204,11 @@ class TelemetryTest {
             assertNull(key, filter.run(PostHogEvent("subscription_import", "session", (listed + (key to value)).toMutableMap())))
         }
         assertEquals(listOf("0", "1-9", "1-9", "10-99", "100+"), listOf(0, 1, 9, 10, 100).map(::countBucket))
+        // Refused share links report their scheme, which some protocols spell differently.
+        assertEquals(
+            listOf("shadowsocks", "hysteria2", "socks", "vless", "unknown", "unknown"),
+            listOf("ss", "HY2", "socks5", "vless", "provider-secret", null).map(::reportedRefusedProtocol),
+        )
     }
 
     @Test

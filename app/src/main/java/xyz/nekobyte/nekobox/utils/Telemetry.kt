@@ -80,6 +80,15 @@ private val PROTOCOL_NAMES = mapOf(
     ProxyEntity.TYPE_AWG to "amneziawg", ProxyEntity.TYPE_TAILSCALE to "tailscale",
 )
 internal val REPORTED_PROTOCOLS = PROTOCOL_NAMES.values.toSet() + setOf("vless", "other")
+
+// Share-link schemes that name a protocol differently.
+private val LINK_SCHEME_PROTOCOLS = mapOf(
+    "ss" to "shadowsocks", "ssr" to "shadowsocksr", "hy2" to "hysteria2", "wg" to "wireguard",
+    "socks4" to "socks", "socks4a" to "socks", "socks5" to "socks", "naive+https" to "naive", "naive+quic" to "naive",
+)
+
+/** A refused entry's protocol or link scheme as a reported name; names come from the subscription, so others are "unknown". */
+internal fun reportedRefusedProtocol(name: String?): String = name?.lowercase()?.let { LINK_SCHEME_PROTOCOLS[it] ?: it }?.takeIf { it in REPORTED_PROTOCOLS } ?: "unknown"
 internal val REPORTED_TRANSPORTS = setOf("tcp", "ws", "grpc", "http", "httpupgrade", "xhttp", "splithttp", "kcp", "quic")
 internal val REPORTED_SECURITIES = setOf("none", "tls", "reality")
 internal val COUNT_BUCKETS = listOf("0", "1-9", "10-99", "100+")
@@ -262,8 +271,7 @@ object Telemetry : OnPreferenceDataStoreChangeListener {
                 put("format", format?.name?.lowercase() ?: "unknown")
                 put("accepted", countBucket(preview.acceptedCount))
                 put("refused", countBucket(preview.unparsedCount))
-                // Protocol names come from the subscription; anything not on the list is "unknown".
-                val refused = preview.failed.map { it?.lowercase()?.takeIf { name -> name in REPORTED_PROTOCOLS } ?: "unknown" }.toSortedSet()
+                val refused = preview.failed.map(::reportedRefusedProtocol).toSortedSet()
                 if (refused.isNotEmpty()) put("refused_protocols", refused.joinToString(","))
                 if (preview.dropped.isNotEmpty()) put("dropped_sections", preview.dropped.map { it.name.lowercase() }.sorted().joinToString(","))
             },
