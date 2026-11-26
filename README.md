@@ -20,6 +20,7 @@
   - [Routing profiles](#routing-profiles)
 - [Leak protection](#leak-protection)
 - [Automation, sharing and diagnostics](#automation-sharing-and-diagnostics)
+- [Home screen](#home-screen)
 - [Local control API](#local-control-api)
 - [Usage and crash reporting](#usage-and-crash-reporting)
 - [License](#license)
@@ -97,6 +98,8 @@ The app reads these formats:
 
 The app imports share links from Xray panels such as 3x-ui as the panels generate them. These include `wireguard://` links, AmneziaVPN `vpn://` links, links with the `ech` parameter and VMess links with flattened XHTTP settings. It runs Shadowsocks over WebSocket through its built-in `v2ray-plugin`. Other Shadowsocks transports have no sing-box equivalent, so the app skips those links.
 
+VLESS, Trojan and VMess links over TLS keep Xray's certificate checks. `pcs` holds SHA-256 fingerprints of the server certificate or of the certificate authority that signed it, and `vcn` holds names to check the certificate against. A profile with a pinned server certificate trusts it even when it is self-signed. A pinned authority becomes the only one the profile trusts, and the certificate must still fit the server name. The profile editor shows both under TLS, as Pinned certificate fingerprints and Names to check the certificate against. Allow insecure does not turn them off.
+
 The app imports server profiles and drops the rest of the source, such as routing rules, DNS settings, inbounds and proxy groups. The import preview lists what it dropped and the entries it could not read.
 
 Subscription format, in the group's settings, sets the format that the app asks for in its User-Agent header. Providers can ignore the request. The NekoBox default prefers Clash and Mihomo. You can ask for share links or sing-box outbounds instead, or choose Auto. Auto tries each format, keeps the one that gives the most profiles the app can import, and moves to another if that one stops working.
@@ -126,7 +129,7 @@ Proposed links appear in the group settings. The app starts using one after you 
 
 ## Routing
 
-Route rules, in the Route screen, control where traffic goes. A rule matches apps, domains, IP addresses, ports, TCP or UDP, the detected protocol, or a rule set in `.srs` or `.json` format. It sends matching traffic through the proxy or a profile you select, lets it bypass the proxy, or blocks it. To choose which apps use the VPN at all, open Settings > Route Settings > Apps VPN mode.
+Route rules, in the Route screen, control where traffic goes. A rule matches apps, domains, IP addresses, ports, TCP or UDP, the detected protocol, or a rule set in `.srs` or `.json` format. It sends matching traffic through the proxy or a profile you select, lets it bypass the proxy, or blocks it. For split tunneling by app, open Settings > Routing > Proxied apps. Only the apps you pick use the VPN, or, with Bypass, every app except them. Route rules then split the VPN's traffic by app, domain or address, and Bypass LAN keeps local addresses out of the VPN.
 
 A domain or app rule can also send matching DNS queries through the rule's proxy, so the lookups leave through the same exit as the traffic. You can give it a custom resolver. This setting, DNS through this proxy, is off by default. Those queries do not fall back to another resolver if the proxy fails.
 
@@ -164,6 +167,14 @@ Share connection, in the ⋮ menu on Home, lets other devices use your connectio
 The ⋮ menu on Home tests profiles by URL test, TCP ping or ICMP ping. A URL test checks that the server reaches the internet. Under Tools > Network, the connection check shows what your connection reveals: its public addresses, the DNS servers that resolve your lookups, where IPv6 and UDP leave, and whether the address is on public VPN, datacenter or Tor lists. NAT behavior tests how your NAT maps and filters UDP, using a STUN server.
 
 Under Tools > Backup, you can save profiles, routing rules and settings to a file or to WebDAV, and restore them. Backups contain your server credentials, so keep them private.
+
+## Home screen
+
+The Connection widget connects and disconnects with its orb. Wider placements add the profile, its group, the state and the upload and download speed. Taller ones add your favorite profiles, then your recent picks. Tap one to switch to it, or to connect with it while the VPN is off. The widget follows the app's palette. To use your wallpaper's colors on Android 12 and later, turn on Material You colors for widgets under Settings > Appearance.
+
+The Quick Settings tile connects and disconnects too. While connected it shows the profile.
+
+App icon, under Settings > Appearance, switches between Classic, Black, Full-bleed and No plate. Some home screens remove the icon and its pinned shortcuts when it changes. On Android 13 and later, every icon takes the system tint when themed icons are on.
 
 ## Local control API
 
