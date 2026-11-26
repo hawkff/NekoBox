@@ -816,11 +816,14 @@
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.NekoBox.Input</item>
     </style>
 
-    <!-- DayNight-aware popup overlay for the MaterialToolbar overflow menu. The
-         toolbar itself uses a Dark ActionBar overlay (icons/title on the colored
-         primary bar); the overflow dropdown should follow day/night surfaces
-         instead, the M3 replacement for the old ThemeOverlay.AppCompat.DayNight. -->
-    <style name="ThemeOverlay.NekoBox.Toolbar.Popup" parent="ThemeOverlay.Material3" />
+    <!-- Popup overlay for the MaterialToolbar's menus. The toolbar uses a Dark ActionBar overlay (white on the
+         colored bar), but its menus open on the day/night surface: without the colors below they keep the bar's
+         white text and icons, which vanish on a light surface. -->
+    <style name="ThemeOverlay.NekoBox.Toolbar.Popup" parent="ThemeOverlay.Material3">
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">@color/popup_text_secondary</item>
+        <item name="colorControlNormal">@color/popup_text_secondary</item>
+    </style>
 
     <style name="PopupMenuAnimation">
         <item name="android:windowEnterAnimation">@anim/popup_enter</item>
