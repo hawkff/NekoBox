@@ -3,6 +3,7 @@ package xyz.nekobyte.nekobox.ui
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import androidx.core.content.getSystemService
@@ -87,6 +88,22 @@ class ProfileShortcutsTest {
             assertEquals(17L, migrated.intent!!.getLongExtra("profile", -1))
             assertEquals("Saved server", migrated.shortLabel)
         }
+    }
+
+    @Test
+    fun shortcutsGoOnlyToTheAliasTheLauncherShows() {
+        pin("shortcut-profile-17")
+        // A switch to Black noted but refused: Classic still shows, and the shortcut goes there.
+        LauncherIcon.pendingFile(context).writeText(LauncherIcon.BLACK.name)
+        ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
+        assertEquals(LauncherIcon.CLASSIC.component(context), manager.pinnedShortcuts.single().activity)
+        // Cut short with two aliases shown: the shortcut waits where it is.
+        context.packageManager.setComponentEnabledSetting(LauncherIcon.BLACK.component(context), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+        ShortcutMigrationShadow.updateAttempts = 0
+        ConfigBuilderTestEnv.io { migratePinnedProfileShortcuts(context) }
+        assertEquals(0, ShortcutMigrationShadow.updateAttempts)
+        assertEquals(LauncherIcon.CLASSIC.component(context), manager.pinnedShortcuts.single().activity)
+        LauncherIcon.pendingFile(context).delete()
     }
 
     @Test

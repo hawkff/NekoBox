@@ -99,6 +99,9 @@ enum class LauncherIcon(
          */
         fun current(context: Context): LauncherIcon = pending(context) ?: entries.filter { it.shown(context) }.singleOrNull() ?: CLASSIC
 
+        /** The one alias the launcher shows; null while a switch is unfinished (none or several shown). */
+        fun shownAlias(context: Context): LauncherIcon? = entries.filter { it.shown(context) }.singleOrNull()
+
         /** Leaves exactly the alias of [current] shown, as after a switch cut short; run off the main thread at start. */
         fun reconcile(context: Context) = synchronized(switching) {
             val kept = current(context)

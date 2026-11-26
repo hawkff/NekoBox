@@ -21,7 +21,9 @@ internal fun migratePinnedProfileShortcuts(context: Context) {
     try {
         val manager = context.getSystemService<ShortcutManager>() ?: return
         val target = ComponentName(context, QuickToggleShortcut::class.java)
-        val activity = LauncherIcon.current(context).component(context)
+        // The alias the launcher shows, not a pick still noted: until a switch is finished (by the reconciliation at
+        // start, which migrates after it) the shortcuts stay where they are.
+        val activity = LauncherIcon.shownAlias(context)?.component(context) ?: return
         val enable = mutableListOf<String>()
         val updates = manager.pinnedShortcuts.mapNotNull { shortcut ->
             if (shortcut.isImmutable || !shortcut.id.startsWith("shortcut-profile-")) return@mapNotNull null
