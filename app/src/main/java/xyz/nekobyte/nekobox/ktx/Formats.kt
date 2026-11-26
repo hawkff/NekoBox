@@ -331,8 +331,11 @@ suspend fun parseProxies(text: String, report: ImportReport? = null): List<Abstr
     for (link in links) {
         link.parseLink(entities, tokens)
     }
-    for (link in linksByLine) {
-        link.parseLink(entitiesByLine, lines)
+    // When no line splits, the line pass would repeat the token pass.
+    if (links != linksByLine) {
+        for (link in linksByLine) {
+            link.parseLink(entitiesByLine, lines)
+        }
     }
     // No profile links parsed but we saw an unparsable http(s) URL: treat the whole
     // input as a subscription link (single-URL paste / file). When profiles WERE found,
