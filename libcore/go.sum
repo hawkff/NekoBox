@@ -223,8 +223,8 @@ github.com/nbrownus/go-metrics-prometheus v0.0.0-20210712211119-974a6260965f h1:
 github.com/nbrownus/go-metrics-prometheus v0.0.0-20210712211119-974a6260965f/go.mod h1:nwPd6pDNId/Xi16qtKrFHrauSwMNuvk+zcjk89wrnlA=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
-github.com/nyaakuza/sing-vmess v0.2.9-0.20261126045307-e5419bb1a7a4 h1:pYPdazAL3sNF5I+1AlTqNV6OrgmApTZCSl1I0/KeG3w=
-github.com/nyaakuza/sing-vmess v0.2.9-0.20261126045307-e5419bb1a7a4/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
+github.com/nyaakuza/sing-vmess v0.2.8-mod.5 h1:RkWoAbL8F2bmrNEZXq5gkQE+UYyV2tkbR9nfB8gtLQY=
+github.com/nyaakuza/sing-vmess v0.2.8-mod.5/go.mod h1:P11scgTxMxVVQ8dlM27yNm3Cro40mD0+gHbnqrNGDuY=
 github.com/nyaakuza/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b h1:CGe8CQkl3PvmPVolZ58RYp7/qEUdVP04q0cCDn03Ao0=
 github.com/nyaakuza/tailscale v1.102.1-sing-box-1.14-mod.5.0.20261028194817-175451e9604b/go.mod h1:WLUSOPmTcf7VN9gLCe01qUSIvD+/cKC177neENyZPkI=
 github.com/nyaakuza/wireguard-go v0.0.8-0.20261028195059-3c5a73645a5b h1:K1Bbrw0lFepx4t3Fx5ShqOrc3fgLWkbXezuJFYvt1U8=
