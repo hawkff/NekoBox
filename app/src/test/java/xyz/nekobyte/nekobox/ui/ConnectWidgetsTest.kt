@@ -421,4 +421,37 @@ class ConnectWidgetsTest {
             ConnectWidgets.setCheck = setCheck
         }
     }
+
+    @Test
+    fun aProfileRenamedWhileADrawingReadsItIsDrawnAgain() {
+        val hook = ConnectWidgets.afterProfilesRead
+        ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
+        try {
+            val id = place()
+            // The selection moves to a profile the widget does not show yet, and its editor saves a new name right
+            // after the drawing read the old one.
+            var renamed = false
+            ConnectWidgets.afterProfilesRead = {
+                if (!renamed) {
+                    renamed = true
+                    val profile = ConfigBuilderTestEnv.io {
+                        ProfileDatabase.proxyDao.updateBean(
+                            18L,
+                            SOCKSBean().apply {
+                                initializeDefaultValues()
+                                name = "Osaka 005 bis"
+                            },
+                        )
+                    }!!
+                    ProfileManager.postUpdate(profile)
+                }
+            }
+            DataStore.selectedProxy = 18L
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            drawn()
+            assertEquals("Osaka 005 bis", text(id, R.id.widget_profile))
+        } finally {
+            ConnectWidgets.afterProfilesRead = hook
+        }
+    }
 }

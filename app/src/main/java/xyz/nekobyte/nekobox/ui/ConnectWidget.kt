@@ -61,6 +61,7 @@ import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.widget.OrbRing
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -209,6 +210,13 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     @Volatile private var shownIn: Context? = null
 
+    // Profiles edited or removed since the current drawing began: one it read before the edit and shows draws again.
+    private val editedProfiles: MutableSet<Long> = ConcurrentHashMap.newKeySet()
+
+    // Runs between a drawing's reads of the profiles and its publication of what it shows.
+    @VisibleForTesting
+    internal var afterProfilesRead: suspend () -> Unit = {}
+
     @Volatile private var shownGroup = 0L
 
     /**
@@ -226,11 +234,12 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
         override suspend fun onUpdated(data: List<TrafficData>) = Unit
 
-        override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) {
-            if (profile.id in shownProfiles) shownIn?.let { refresh(it) }
-        }
+        override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) = edited(profile.id)
 
-        override suspend fun onRemoved(groupId: Long, profileId: Long) {
+        override suspend fun onRemoved(groupId: Long, profileId: Long) = edited(profileId)
+
+        private fun edited(profileId: Long) {
+            editedProfiles += profileId
             if (profileId in shownProfiles) shownIn?.let { refresh(it) }
         }
 
@@ -475,6 +484,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     private suspend fun render(app: Context) {
         val manager = AppWidgetManager.getInstance(app)
         val ids = widgetIds(app)
+        editedProfiles.clear()
         if (ids.isEmpty()) {
             watch(app, null)
             check(app, false)
@@ -509,9 +519,12 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         // Pins of deleted profiles stay until the lists reload: every candidate is looked up before the chips are counted.
         val order = widgetChipOrder(DataStore.favoriteProfiles, DataStore.recentPicks, selected?.groupId ?: DataStore.selectedGroup)
         val chips = widgetChipProfiles(order, ProfileDatabase.proxyDao.getEntities(order)).map { Chip(it.id, it.displayName()) }
+        afterProfilesRead()
         shownProfiles = chips.map { it.id }.toSet() + listOfNotNull(selected?.id)
         shownGroup = group?.id ?: 0L
         shownIn = app
+        // An edit that landed after the reads above, while these profiles were not yet tracked, draws again.
+        if (editedProfiles.any { it in shownProfiles }) refresh(app)
         // The speed read here can be older than one the service posted meanwhile: once drawn, the service is told to
         // post its latest (Action.WIDGET_REDRAWN).
         val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null
