@@ -532,8 +532,11 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null
         val looks = looks(app)
         val content = Content(app, state, name, group?.displayName(), selected?.id ?: 0L, chips, speed, looks)
-        // One layout a widget, picked by its size, so that the service's speed lines can update it in place: an update
-        // that changes only some views reaches no layout of a size map.
+        // A layout for each orientation of the home screen, picked by the widget's size in it, as a landscape/portrait
+        // pair. Partial updates reach no layout of a pair (measured on Android 11 and 16) nor of a size map, so while the
+        // speed lines show, a widget gets only the current orientation's layout, and a rotation draws again (NekoBox's
+        // onConfigurationChanged, in the service's process too).
+        val sideways = app.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         for (id in ids) {
             val options = manager.getAppWidgetOptions(id)
             val sizes = if (Build.VERSION.SDK_INT >= 31) {
@@ -542,12 +545,15 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             } else {
                 emptyList()
             }
-            val (width, height) = widgetFitSize(
+            val (portrait, landscape) = widgetSizes(
                 sizes,
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
                 options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH),
+                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT),
             )
-            manager.updateAppWidget(id, content.views(widgetSpec(width, height)))
+            fun layout(size: Pair<Float, Float>) = content.views(widgetSpec(size.first, size.second))
+            manager.updateAppWidget(id, if (speed == null) RemoteViews(layout(landscape), layout(portrait)) else layout(if (sideways) landscape else portrait))
         }
         if (speed != null) app.sendBroadcast(Intent(Action.WIDGET_REDRAWN).setPackage(app.packageName))
     }

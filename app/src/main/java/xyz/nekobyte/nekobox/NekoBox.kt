@@ -185,8 +185,13 @@ class NekoBox :
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateNotificationChannels()
-        // The night mode and the wallpaper's colors reach the widgets' colors through here.
-        if (isMainProcess) ConnectWidgets.refresh(this)
+        // The night mode and the wallpaper's colors reach the widgets' colors through here, and the orientation the layout
+        // of widgets showing the live speed; the service's process, running while they do, asks for that too.
+        if (isMainProcess) {
+            ConnectWidgets.refresh(this)
+        } else if (isBgProcess) {
+            ConnectWidgets.requestRefresh()
+        }
     }
 
     // The default process is the one that schedules work again after a reboot or a force stop: the main process, where

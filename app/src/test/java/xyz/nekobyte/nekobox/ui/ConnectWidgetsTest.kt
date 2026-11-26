@@ -3,6 +3,8 @@ package xyz.nekobyte.nekobox.ui
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.os.Bundle
+import android.util.SizeF
 import android.view.View
 import android.widget.TextView
 import kotlinx.coroutines.CompletableDeferred
@@ -244,6 +246,28 @@ class ConnectWidgetsTest {
         } finally {
             ConnectWidgets.publishSpeed = publish
         }
+    }
+
+    // The 4x3 case of a Pixel home screen: upright tall enough for two rows of chips, sideways for none.
+    @Test
+    fun eachOrientationShowsTheChipRowsItsSizeHasRoomFor() {
+        for (profileId in 18L..20L) ConfigBuilderTestEnv.io { profile(profileId, "Osaka $profileId") }
+        DataStore.favoriteProfiles = listOf(18L, 19L, 20L)
+        val id = place()
+        val sizes = arrayListOf(SizeF(300f, 200f), SizeF(420f, 110f))
+        AppWidgetManager.getInstance(context).updateAppWidgetOptions(id, Bundle().apply { putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes) })
+        fun rows(): Int {
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            return listOf(R.id.widget_chips_1, R.id.widget_chips_2).count { manager.getViewFor(id).findViewById<View>(it).visibility == View.VISIBLE }
+        }
+        assertEquals(2, rows())
+        RuntimeEnvironment.setQualifiers("+land")
+        assertEquals(0, rows())
+        // With the speed lines, only the current orientation's layout, drawn again after each rotation.
+        ConnectWidgets.askService = { answer(State.Connected) }
+        assertEquals(0, rows())
+        RuntimeEnvironment.setQualifiers("+port")
+        assertEquals(2, rows())
     }
 
     @Test

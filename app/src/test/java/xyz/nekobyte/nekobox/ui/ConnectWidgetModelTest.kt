@@ -71,13 +71,21 @@ class ConnectWidgetModelTest {
     }
 
     @Test
-    fun aLayoutFitsEveryOrientation() {
-        // Android 12 and later report a size for each orientation: the smallest width and height fit both.
-        assertEquals(300f to 110f, widgetFitSize(listOf(300f to 200f, 420f to 110f), 0, 0))
-        // Before, the minimum width is the upright one, the minimum height the sideways one.
-        assertEquals(250f to 90f, widgetFitSize(emptyList(), 250, 90))
+    fun eachOrientationTakesItsOwnSize() {
+        // Android 12 and later report a size for each orientation: upright narrow and tall, sideways wide and low.
+        val reported = widgetSizes(listOf(300f to 200f, 420f to 110f), 0, 0, 0, 0)
+        assertEquals(WidgetSizes(portrait = 300f to 200f, landscape = 420f to 110f), reported)
+        // Two rows of chips upright, where the sideways height has room for none.
+        assertEquals(2, widgetSpec(reported.portrait.first, reported.portrait.second).chipRows)
+        assertEquals(0, widgetSpec(reported.landscape.first, reported.landscape.second).chipRows)
+        // Before, the minimum width and the maximum height are the upright ones, the others the sideways ones.
+        assertEquals(WidgetSizes(250f to 200f, 400f to 90f), widgetSizes(emptyList(), 250, 90, 400, 200))
+        // Only minimums: both orientations take them.
+        assertEquals(WidgetSizes(250f to 90f, 250f to 90f), widgetSizes(emptyList(), 250, 90, 0, 0))
         // Nothing reported: the lines without chips.
-        assertEquals(WidgetSpec(orbOnly = false), widgetFitSize(emptyList(), 0, 0).let { (width, height) -> widgetSpec(width, height) })
+        val none = widgetSizes(emptyList(), 0, 0, 0, 0)
+        assertEquals(WidgetSpec(orbOnly = false), widgetSpec(none.portrait.first, none.portrait.second))
+        assertEquals(WidgetSpec(orbOnly = false), widgetSpec(none.landscape.first, none.landscape.second))
     }
 
     private fun orb(state: State, selectedUsable: Boolean = true) = widgetAction(state, -1L, false, 1L, selectedUsable, false)
