@@ -311,4 +311,7 @@ object Action {
     // its own and stores them when it stops, so it counts that group's profiles from zero again.
     const val CLEAR_TRAFFIC = "xyz.nekobyte.nekobox.CLEAR_TRAFFIC"
     const val EXTRA_GROUP_ID = "xyz.nekobyte.nekobox.EXTRA_GROUP_ID"
+
+    // The app's process drew the widgets again: the service posts its latest speed to them, even unchanged.
+    const val WIDGET_REDRAWN = "xyz.nekobyte.nekobox.WIDGET_REDRAWN"
 }

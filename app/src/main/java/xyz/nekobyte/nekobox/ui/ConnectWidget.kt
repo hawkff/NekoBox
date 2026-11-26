@@ -270,8 +270,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         }.also { lastRender = it }
     }
 
-    // The live speed this process last posted, the service's, so an unchanged speed is not posted again.
-    @Volatile private var postedSpeed: Pair<String, String>? = null
+    // The service's process: the speed lines it posted last.
+    private val speedPosts = SpeedPosts()
 
     // The widgets placed, as the service's process last asked Android: each state change asks again, the speed rounds
     // at most every PLACED_CHECK_MS. A widget placed while connected gets the live speed within that time.
@@ -288,15 +288,17 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         return placedIds
     }
 
-    /** From the service's process, each speed round while connected with the screen on: the speed lines of the widgets. */
-    fun postSpeed(speed: SpeedDisplayData) {
+    /**
+     * From the service's process, each speed round while connected with the screen on: the speed lines of the widgets.
+     * [force] posts an unchanged speed too, after a redraw that may have shown an older one.
+     */
+    fun postSpeed(speed: SpeedDisplayData, force: Boolean = false) {
         try {
             val context = NekoBox.application
             val ids = placed(context)
             if (ids.isEmpty()) return
             val (tx, rx) = speedTexts(context, speed)
-            if (postedSpeed == tx to rx) return
-            postedSpeed = tx to rx
+            if (!speedPosts.shouldPost(tx to rx, force)) return
             val views = RemoteViews(context.packageName, R.layout.widget_connect)
             setSpeed(context, views, tx, rx)
             AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(ids, views)
@@ -420,8 +422,8 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val chips = widgetChipProfiles(order, ProfileDatabase.proxyDao.getEntities(order)).map { Chip(it.id, it.displayName()) }
         shownProfiles = chips.map { it.id }.toSet() + listOfNotNull(selected?.id)
         shownGroup = group?.id ?: 0L
-        // shortcut: a speed the service posts while this drawing is under way can be drawn over with the one read here,
-        // and stays until the speed changes again; post the speed with every drawing if that shows.
+        // The speed read here can be older than one the service posted meanwhile: once drawn, the service is told to
+        // post its latest (Action.WIDGET_REDRAWN).
         val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null
         val looks = looks(app)
         val content = Content(app, state, name, group?.displayName(), selected?.id ?: 0L, chips, speed, looks)
@@ -442,6 +444,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             )
             manager.updateAppWidget(id, content.views(widgetSpec(width, height)))
         }
+        if (speed != null) app.sendBroadcast(Intent(Action.WIDGET_REDRAWN).setPackage(app.packageName))
     }
 
     private class Content(

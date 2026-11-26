@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import xyz.nekobyte.nekobox.R
@@ -107,5 +108,18 @@ class ConnectWidgetModelTest {
         assertEquals(R.string.service_connected, widgetStateText(State.Connected))
         assertEquals(R.string.connecting, widgetStateText(State.Connecting))
         assertEquals(R.string.stopping, widgetStateText(State.Stopping))
+    }
+
+    @Test
+    fun aRedrawShowingAnOlderSpeedGetsTheLatestBack() {
+        val posts = SpeedPosts()
+        val a = "1 kB/s" to "2 kB/s"
+        val b = "0 B/s" to "0 B/s"
+        assertTrue(posts.shouldPost(a, force = false))
+        assertTrue(posts.shouldPost(b, force = false))
+        // A redraw drew the older A over B: the service posts B again, unchanged as it is.
+        assertTrue(posts.shouldPost(b, force = true))
+        // Then B as long as it stays is not posted again.
+        assertFalse(posts.shouldPost(b, force = false))
     }
 }

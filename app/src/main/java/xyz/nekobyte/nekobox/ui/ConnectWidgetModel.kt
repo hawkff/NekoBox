@@ -101,3 +101,18 @@ internal fun widgetStateText(state: BaseService.State) = when (state) {
     BaseService.State.Stopping -> R.string.stopping
     BaseService.State.Idle, BaseService.State.Stopped -> R.string.not_connected
 }
+
+/**
+ * The speed lines the service's process posted last: an unchanged pair is not posted again, unless forced after a
+ * redraw of the widgets, which may have shown an older one.
+ */
+internal class SpeedPosts {
+    private var posted: Pair<String, String>? = null
+
+    @Synchronized
+    fun shouldPost(lines: Pair<String, String>, force: Boolean): Boolean {
+        if (!force && lines == posted) return false
+        posted = lines
+        return true
+    }
+}

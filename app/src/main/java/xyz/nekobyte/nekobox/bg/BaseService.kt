@@ -120,6 +120,14 @@ class BaseService {
 
                 Action.CLEAR_TRAFFIC -> runOnDefaultDispatcher { clearTraffic(intent.getLongExtra(Action.EXTRA_GROUP_ID, 0L)) }
 
+                // A redraw shows the speed the app's process read, which may be older than the one posted since.
+                Action.WIDGET_REDRAWN -> {
+                    val speed = proxy?.looper?.latestSpeed
+                    if (state == State.Connected && speed != null && notification?.listenPostSpeed == true) {
+                        runOnDefaultDispatcher { ConnectWidgets.postSpeed(speed, force = true) }
+                    }
+                }
+
                 Action.RESET_UPSTREAM_CONNECTIONS -> runOnDefaultDispatcher {
                     Libcore.resetAllConnections(true)
                     runOnMainDispatcher {
@@ -786,6 +794,7 @@ class BaseService {
                 addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
                 addAction(Action.RESET_UPSTREAM_CONNECTIONS)
                 addAction(Action.CLEAR_TRAFFIC)
+                addAction(Action.WIDGET_REDRAWN)
                 addAction(NetworkAutomationService.ACTION_RECHECK)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
