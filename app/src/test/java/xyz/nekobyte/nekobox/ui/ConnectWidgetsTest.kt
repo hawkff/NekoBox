@@ -3,8 +3,6 @@ package xyz.nekobyte.nekobox.ui
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
-import android.os.Binder
-import android.os.Looper
 import android.widget.TextView
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
@@ -44,6 +42,8 @@ class ConnectWidgetsTest {
     private val manager get() = shadowOf(AppWidgetManager.getInstance(context))
     private val logSink = Logs.sink
     private val ask = ConnectWidgets.askService
+    private val bindWatch = ConnectWidgets.bindWatch
+    private val unbindWatch = ConnectWidgets.unbindWatch
     private val service = ComponentName("xyz.nekobyte.nekobox.test", "Service")
     private var group = 0L
 
@@ -65,6 +65,8 @@ class ConnectWidgetsTest {
         // Lets go of a watched service: the watch outlives a test.
         ConnectWidgets.askService = { null }
         runBlocking { ConnectWidgets.refresh(context).join() }
+        ConnectWidgets.bindWatch = bindWatch
+        ConnectWidgets.unbindWatch = unbindWatch
         ConnectWidgets.askService = ask
         ProfileManager.removeListener(ConnectWidgets.modelListener)
         GroupManager.removeListener(ConnectWidgets.modelListener)
@@ -129,19 +131,24 @@ class ConnectWidgetsTest {
     @Test
     fun aServiceWhoseProcessEndsUnseenIsShownOff() {
         val id = place()
-        shadowOf(context).setComponentNameAndServiceForBindService(service, Binder())
+        val bound = mutableListOf<ComponentName?>()
+        ConnectWidgets.bindWatch = { _, intent ->
+            bound += intent.component
+            true
+        }
+        ConnectWidgets.unbindWatch = { bound += null }
         ConnectWidgets.askService = { answer(State.Connected) }
         runBlocking { ConnectWidgets.refresh(context).join() }
-        shadowOf(Looper.getMainLooper()).idle()
         assertEquals("Connected", text(id, R.id.widget_state))
-        assertTrue(ConnectWidgets.watch in shadowOf(context).boundServiceConnections)
+        // Showing the service running, the widget watches it, without creating it.
+        assertEquals(listOf(service), bound)
         // The service's process dies: no state change reaches this process, only the lost connection.
         ConnectWidgets.askService = { null }
         ConnectWidgets.watch.onServiceDisconnected(service)
         drawn()
         assertEquals("Not connected", text(id, R.id.widget_state))
         // Nothing runs any more: the watch lets go.
-        assertFalse(ConnectWidgets.watch in shadowOf(context).boundServiceConnections)
+        assertEquals(listOf(service, null), bound)
     }
 
     @Test

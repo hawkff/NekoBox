@@ -1,5 +1,6 @@
 package xyz.nekobyte.nekobox.ui
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -91,6 +92,8 @@ class ConnectWidgetCheck(context: Context, params: WorkerParameters) : Coroutine
  * asks for a new drawing when the connection changes and posts the live speed itself. Nothing runs while no widget
  * is placed.
  */
+// The contexts it keeps (the watch's and the last drawing's) are the application's: refresh() draws with no other.
+@SuppressLint("StaticFieldLeak")
 internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
     const val ACTION_REFRESH = "xyz.nekobyte.nekobox.WIDGET_REFRESH"
 
@@ -141,26 +144,42 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     @Volatile private var watched: ComponentName? = null
 
+    // The context the watch is bound with, which unbinds it.
     @Volatile private var watchedBy: Context? = null
 
     // Under the render lock.
     private fun watch(app: Context, service: ComponentName?) {
-        if (service == watched) return
-        if (watched != null) {
-            try {
-                app.unbindService(watch)
-            } catch (_: IllegalArgumentException) {
-            }
-            watched = null
-        }
+        if (service == watched && app == watchedBy) return
+        watchedBy?.let { unbind(it) }
+        watched = null
+        watchedBy = null
         if (service == null) return
-        watchedBy = app
-        watched = service
-        if (!app.bindService(Intent(Action.SERVICE).setComponent(service), watch, 0)) watch(app, null)
+        if (bindWatch(app, Intent(Action.SERVICE).setComponent(service))) {
+            watched = service
+            watchedBy = app
+        } else {
+            // A refused binding is released all the same.
+            unbind(app)
+        }
     }
 
-    // The profiles and the group the widgets show, as last drawn: edits and removals of them draw again.
+    private fun unbind(context: Context) {
+        try {
+            unbindWatch(context)
+        } catch (_: IllegalArgumentException) {
+        }
+    }
+
+    @VisibleForTesting
+    internal var bindWatch: (Context, Intent) -> Boolean = { context, intent -> context.bindService(intent, watch, 0) }
+
+    @VisibleForTesting
+    internal var unbindWatch: (Context) -> Unit = { it.unbindService(watch) }
+
+    // The profiles and the group the widgets show, as last drawn, and where: edits and removals of them draw again.
     @Volatile private var shownProfiles: Set<Long> = emptySet()
+
+    @Volatile private var shownIn: Context? = null
 
     @Volatile private var shownGroup = 0L
 
@@ -180,25 +199,25 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         override suspend fun onUpdated(data: List<TrafficData>) = Unit
 
         override suspend fun onUpdated(profile: ProxyEntity, noTraffic: Boolean) {
-            if (profile.id in shownProfiles) refresh(NekoBox.application)
+            if (profile.id in shownProfiles) shownIn?.let { refresh(it) }
         }
 
         override suspend fun onRemoved(groupId: Long, profileId: Long) {
-            if (profileId in shownProfiles) refresh(NekoBox.application)
+            if (profileId in shownProfiles) shownIn?.let { refresh(it) }
         }
 
         override suspend fun groupAdd(group: ProxyGroup) = Unit
 
         override suspend fun groupUpdated(group: ProxyGroup) {
-            if (group.id == shownGroup) refresh(NekoBox.application)
+            if (group.id == shownGroup) shownIn?.let { refresh(it) }
         }
 
         override suspend fun groupRemoved(groupId: Long) {
-            refresh(NekoBox.application)
+            shownIn?.let { refresh(it) }
         }
 
         override suspend fun groupUpdated(groupId: Long) {
-            refresh(NekoBox.application)
+            shownIn?.let { refresh(it) }
         }
     }
 
@@ -422,6 +441,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val chips = widgetChipProfiles(order, ProfileDatabase.proxyDao.getEntities(order)).map { Chip(it.id, it.displayName()) }
         shownProfiles = chips.map { it.id }.toSet() + listOfNotNull(selected?.id)
         shownGroup = group?.id ?: 0L
+        shownIn = app
         // The speed read here can be older than one the service posted meanwhile: once drawn, the service is told to
         // post its latest (Action.WIDGET_REDRAWN).
         val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null
