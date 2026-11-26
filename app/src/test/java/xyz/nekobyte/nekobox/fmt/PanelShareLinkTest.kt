@@ -402,6 +402,34 @@ class PanelShareLinkTest {
     }
 
     @Test
+    fun httpsProfileWithCertificateChecks_sharesALinkThatKeepsThem() = runTest {
+        val pin = "ab".repeat(32)
+        val bean = xyz.nekobyte.nekobox.fmt.http.HttpBean().apply {
+            serverAddress = "192.0.2.5"
+            serverPort = 443
+            username = "user"
+            password = "pass"
+            security = "tls"
+            sni = "a.example"
+            pinnedPeerCertSha256 = pin
+            verifyPeerCertByName = "b.example"
+            name = "https"
+        }.applyDefaultValues()
+        // The HTTPS share link has no place for the checks, so the universal link carries the whole profile.
+        val link = xyz.nekobyte.nekobox.database.ProxyEntity().apply { putBean(bean) }.toStdLink()
+        assertTrue(link, link.startsWith("sn://"))
+        val copy = parseProxies(link).single() as xyz.nekobyte.nekobox.fmt.http.HttpBean
+        assertEquals(listOf(pin, "b.example", "a.example", "user"), listOf(copy.pinnedPeerCertSha256, copy.verifyPeerCertByName, copy.sni, copy.username))
+        // Without checks it keeps its own link.
+        val plain = KryoConverters.deserialize(xyz.nekobyte.nekobox.fmt.http.HttpBean(), KryoConverters.serialize(bean)).apply {
+            pinnedPeerCertSha256 = ""
+            verifyPeerCertByName = ""
+        }
+        val plainLink = xyz.nekobyte.nekobox.database.ProxyEntity().apply { putBean(plain) }.toStdLink()
+        assertFalse(plainLink, plainLink.startsWith("sn://"))
+    }
+
+    @Test
     fun fragmentMaskLink_becomesTlsFragmentationAndBack() {
         val fm = encode("""{"tcp":[{"type":"fragment","settings":{"packets":"tlshello","length":"10-20","delay":"0"}}]}""")
         val reality = "security=reality&sni=www.example.com&pbk=$REALITY_KEY&sid=ab&fp=firefox&flow=xtls-rprx-vision"

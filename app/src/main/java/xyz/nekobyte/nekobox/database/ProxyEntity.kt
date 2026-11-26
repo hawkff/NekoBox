@@ -218,6 +218,11 @@ data class ProxyEntity(
 
     fun toStdLink(compact: Boolean = false): String {
         val bean = requireBean()
+        // Only VLESS, VMess and Trojan links carry certificate checks; for an HTTPS profile with them the
+        // universal link keeps every field, so the shared copy refuses what the original refuses.
+        if (bean is StandardV2RayBean && bean !is VMessBean && bean !is TrojanBean && bean.hasCertificateChecks()) {
+            return bean.toUniversalLink()
+        }
         return ProtocolRegistry.forType(type)?.toStandardLink?.invoke(bean) ?: bean.toUniversalLink()
     }
 

@@ -101,6 +101,9 @@ private fun StandardV2RayBean.echParam() = echConfig!!.lines().filterNot { it.st
 
 fun StandardV2RayBean.isTLS(): Boolean = security == "tls"
 
+/** True when the profile pins certificates or checks them against other names. */
+fun StandardV2RayBean.hasCertificateChecks(): Boolean = !pinnedPeerCertSha256.isNullOrBlank() || !verifyPeerCertByName.isNullOrBlank()
+
 fun StandardV2RayBean.setTLS(boolean: Boolean) {
     security = if (boolean) "tls" else ""
 }
