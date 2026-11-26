@@ -3,13 +3,16 @@ package xyz.nekobyte.nekobox.ui
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.annotation.AnyRes
 import androidx.annotation.StringRes
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.Logs
+import java.io.File
 
 /**
  * The launcher icon picked in Settings > Appearance: one activity-alias of [MainActivity] per icon in the manifest,
- * exactly one enabled. The package manager keeps the choice; nothing else stores it.
+ * exactly one enabled. The package manager keeps the choice; only a switch under way is noted besides.
  */
 enum class LauncherIcon(
     private val alias: String,
@@ -26,21 +29,69 @@ enum class LauncherIcon(
     // Aliases keep the source package's names while the application id differs per build type.
     fun component(context: Context) = ComponentName(context.packageName, "xyz.nekobyte.nekobox.ui.$alias")
 
-    /** Enables this icon's alias before disabling the others, so the app keeps a launcher entry throughout. */
+    /** Whether the launcher shows this icon's alias: Classic's is enabled by the manifest until it is turned off. */
+    fun shown(context: Context) = when (context.packageManager.getComponentEnabledSetting(component(context))) {
+        PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+        PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> this == CLASSIC
+        else -> false
+    }
+
+    /**
+     * Enables this icon's alias and disables the others: in one step from Android 13, before that the target first,
+     * so the app keeps a launcher entry throughout. The pick is noted first, so a switch cut short (the process
+     * killed, a call refused) is finished by [reconcile].
+     */
     fun select(context: Context) {
+        val pending = pendingFile(context)
+        pending.writeText(name)
         val packageManager = context.packageManager
-        packageManager.setComponentEnabledSetting(component(context), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-        for (other in entries) {
-            if (other != this) {
-                packageManager.setComponentEnabledSetting(other.component(context), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+        if (Build.VERSION.SDK_INT >= 33) {
+            packageManager.setComponentEnabledSettings(
+                entries.map {
+                    PackageManager.ComponentEnabledSetting(
+                        it.component(context),
+                        if (it == this) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP,
+                    )
+                },
+            )
+        } else {
+            packageManager.setComponentEnabledSetting(component(context), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            for (other in entries) {
+                if (other != this) {
+                    packageManager.setComponentEnabledSetting(other.component(context), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+                }
             }
         }
+        pending.delete()
+    }
+
+    /** [select], false when Android refused the switch; the next start finishes it. */
+    fun trySelect(context: Context) = try {
+        select(context)
+        true
+    } catch (e: RuntimeException) {
+        Logs.w("launcher icon", e)
+        false
     }
 
     companion object {
-        /** The enabled alias; Classic, enabled by the manifest, until another is picked. */
-        fun current(context: Context): LauncherIcon = entries.firstOrNull {
-            context.packageManager.getComponentEnabledSetting(it.component(context)) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        } ?: CLASSIC
+        // The icon a switch under way goes to; device-local, so a backup restored elsewhere does not carry it.
+        internal fun pendingFile(context: Context) = File(context.noBackupFilesDir, "launcher_icon_pending")
+
+        private fun pending(context: Context) = runCatching { valueOf(pendingFile(context).readText()) }.getOrNull()
+
+        /** The icon the launcher should show: a pick still under way, else the one alias shown, else Classic. */
+        fun current(context: Context): LauncherIcon = pending(context) ?: entries.filter { it.shown(context) }.singleOrNull() ?: CLASSIC
+
+        /** Leaves exactly the alias of [current] shown, as after a switch cut short; run off the main thread at start. */
+        fun reconcile(context: Context) {
+            val kept = current(context)
+            if (entries.filter { it.shown(context) } == listOf(kept)) {
+                pendingFile(context).delete()
+            } else {
+                kept.trySelect(context)
+            }
+        }
     }
 }

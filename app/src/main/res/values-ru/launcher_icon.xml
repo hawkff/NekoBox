@@ -10,4 +10,5 @@
     <string name="launcher_icon_change_title">Сменить значок приложения?</string>
     <string name="launcher_icon_change_message">Некоторые рабочие столы при смене значка убирают значок приложения и закреплённые ярлыки. Их можно снова добавить из списка приложений.</string>
     <string name="launcher_icon_change">Сменить значок</string>
+    <string name="launcher_icon_change_failed">Android не сменил значок. Приложение завершит смену при следующем запуске.</string>
 </resources>

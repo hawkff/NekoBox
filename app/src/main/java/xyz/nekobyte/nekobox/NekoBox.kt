@@ -34,6 +34,7 @@ import xyz.nekobyte.nekobox.ktx.isPreview
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
 import xyz.nekobyte.nekobox.ui.ConnectWidgets
+import xyz.nekobyte.nekobox.ui.LauncherIcon
 import xyz.nekobyte.nekobox.ui.MainActivity
 import xyz.nekobyte.nekobox.ui.migratePinnedProfileShortcuts
 import xyz.nekobyte.nekobox.utils.*
@@ -135,6 +136,8 @@ class NekoBox :
             AppLocale.apply()
             runOnDefaultDispatcher {
                 DefaultNetworkListener.start(this) { underlyingNetwork = it }
+                // A switch of the launcher icon cut short leaves two launcher entries, or none of the app's.
+                LauncherIcon.reconcile(this@NekoBox)
                 migratePinnedProfileShortcuts(this@NekoBox)
                 // WorkManager schedules lost work again as it starts: a force stop cancels the subscription update's job.
                 WorkManager.getInstance(this@NekoBox)

@@ -10,4 +10,5 @@
     <string name="launcher_icon_change_title">Change the app icon?</string>
     <string name="launcher_icon_change_message">Some home screens remove the app\'s icon and its pinned shortcuts when the icon changes. You can add them again from the app list.</string>
     <string name="launcher_icon_change">Change icon</string>
+    <string name="launcher_icon_change_failed">Android did not change the icon. The app finishes the change the next time it starts.</string>
 </resources>

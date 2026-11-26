@@ -1,20 +1,51 @@
 package xyz.nekobyte.nekobox.ui
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.shadows.ShadowApplicationPackageManager
 import xyz.nekobyte.nekobox.R
+import xyz.nekobyte.nekobox.ktx.Logs
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = Application::class)
+@Config(sdk = [35], application = Application::class, shadows = [RefusingPackageManagerShadow::class])
 class LauncherIconTest {
     private val context get() = RuntimeEnvironment.getApplication()
+
+    private val logSink = Logs.sink
+
+    @Before
+    fun setUp() {
+        RefusingPackageManagerShadow.refuse = false
+        Logs.sink = {}
+    }
+
+    @After
+    fun tearDown() {
+        RefusingPackageManagerShadow.refuse = false
+        Logs.sink = logSink
+    }
+
+    private fun set(icon: LauncherIcon, state: Int) = context.packageManager.setComponentEnabledSetting(icon.component(context), state, PackageManager.DONT_KILL_APP)
+
+    private fun only(icon: LauncherIcon) {
+        assertEquals(icon, LauncherIcon.current(context))
+        assertEquals(listOf(icon.component(context).className), launcherEntries())
+        assertFalse(LauncherIcon.pendingFile(context).exists())
+    }
 
     private fun launcherEntries() = context.packageManager.queryIntentActivities(
         Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(context.packageName),
@@ -37,6 +68,52 @@ class LauncherIconTest {
     }
 
     @Test
+    fun aSwitchCutShortFromClassicIsFinishedAtTheNextStart() {
+        // The pick is noted and Black enabled, then the process dies: Classic is still enabled by the manifest.
+        LauncherIcon.pendingFile(context).writeText(LauncherIcon.BLACK.name)
+        set(LauncherIcon.BLACK, PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+        assertEquals(2, launcherEntries().size)
+        assertEquals(LauncherIcon.BLACK, LauncherIcon.current(context))
+        LauncherIcon.reconcile(context)
+        only(LauncherIcon.BLACK)
+    }
+
+    @Test
+    fun withoutANoteSeveralAliasesOrNoneLeaveClassic() {
+        set(LauncherIcon.BLACK, PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+        set(LauncherIcon.FULL_BLEED, PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+        assertEquals(LauncherIcon.CLASSIC, LauncherIcon.current(context))
+        LauncherIcon.reconcile(context)
+        only(LauncherIcon.CLASSIC)
+        for (icon in LauncherIcon.entries) set(icon, PackageManager.COMPONENT_ENABLED_STATE_DISABLED)
+        assertTrue(launcherEntries().isEmpty())
+        LauncherIcon.reconcile(context)
+        only(LauncherIcon.CLASSIC)
+    }
+
+    @Test
+    fun pickingTheIconShownAgainRepairsTheAliases() {
+        LauncherIcon.NO_PLATE.select(context)
+        set(LauncherIcon.CLASSIC, PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+        // Two entries and no note: the picker shows Classic, and picking it again leaves Classic alone.
+        assertEquals(LauncherIcon.CLASSIC, LauncherIcon.current(context))
+        assertTrue(LauncherIcon.CLASSIC.trySelect(context))
+        only(LauncherIcon.CLASSIC)
+    }
+
+    @Test
+    fun aRefusedSwitchIsReportedAndFinishedAtTheNextStart() {
+        RefusingPackageManagerShadow.refuse = true
+        assertFalse(LauncherIcon.FULL_BLEED.trySelect(context))
+        assertEquals(listOf(LauncherIcon.CLASSIC.component(context).className), launcherEntries())
+        // The pick stays noted, so the app shows it and the next start carries it out.
+        assertEquals(LauncherIcon.FULL_BLEED, LauncherIcon.current(context))
+        RefusingPackageManagerShadow.refuse = false
+        LauncherIcon.reconcile(context)
+        only(LauncherIcon.FULL_BLEED)
+    }
+
+    @Test
     fun everyAliasOpensMainActivityWithItsIconAndTheStaticShortcuts() {
         for (icon in LauncherIcon.entries) {
             val info = context.packageManager.getActivityInfo(
@@ -47,5 +124,25 @@ class LauncherIconTest {
             assertEquals(icon.icon, info.icon)
             assertEquals(R.xml.shortcuts, info.metaData.getInt("android.app.shortcuts"))
         }
+    }
+}
+
+// Android refusing a component switch, as a call that fails part way does.
+@Implements(className = "android.app.ApplicationPackageManager", isInAndroidSdk = false)
+class RefusingPackageManagerShadow : ShadowApplicationPackageManager() {
+    @Implementation
+    override fun setComponentEnabledSetting(componentName: ComponentName, newState: Int, flags: Int) {
+        if (refuse) throw SecurityException("refused")
+        super.setComponentEnabledSetting(componentName, newState, flags)
+    }
+
+    @Implementation(minSdk = 33)
+    override fun setComponentEnabledSettings(settings: List<PackageManager.ComponentEnabledSetting>) {
+        if (refuse) throw SecurityException("refused")
+        super.setComponentEnabledSettings(settings)
+    }
+
+    companion object {
+        var refuse = false
     }
 }
