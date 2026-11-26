@@ -73,7 +73,7 @@ class ConnectWidgetsTest {
 
     private fun text(id: Int, view: Int) = manager.getViewFor(id).findViewById<TextView>(view).text.toString()
 
-    private fun answer(state: State) = ServiceAnswer(service, state, null, null)
+    private fun answer(state: State, running: Long = -1L) = ServiceAnswer(service, state, running, null)
 
     @Test
     fun anOlderDrawingNeverLandsAfterANewerOne() {
@@ -95,5 +95,21 @@ class ConnectWidgetsTest {
             newer.join()
         }
         assertEquals("Not connected", text(id, R.id.widget_state))
+    }
+
+    @Test
+    fun theProfileTheServiceRunsShowsByItsOwnNameAndGroup() {
+        ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
+        DataStore.showGroupInNotification = true
+        val id = place()
+        // The group picked another server than the one selected.
+        ConnectWidgets.askService = { answer(State.Connected, running = 18L) }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        assertEquals("Osaka 005", text(id, R.id.widget_profile))
+        assertEquals(" · Mullvad", text(id, R.id.widget_group))
+        // Off, the selected profile.
+        ConnectWidgets.askService = { null }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        assertEquals("Tokyo 004", text(id, R.id.widget_profile))
     }
 }

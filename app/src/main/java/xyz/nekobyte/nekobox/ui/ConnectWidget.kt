@@ -84,14 +84,14 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         Key.SPEED_INTERVAL,
     )
 
-    /** What the running [service] answers: its state, its title for the profile and its latest speed. */
-    internal class ServiceAnswer(val service: ComponentName, val state: BaseService.State, val profileName: String?, val speed: SpeedDisplayData?)
+    /** What the running [service] answers: its state, the profile it runs (-1 none yet) and its latest speed. */
+    internal class ServiceAnswer(val service: ComponentName, val state: BaseService.State, val runningProfileId: Long, val speed: SpeedDisplayData?)
 
     /** Asks the service that runs, without starting one; null when none runs or none answers in time. */
     @VisibleForTesting
     internal var askService: suspend (Context) -> ServiceAnswer? = { app ->
         NekoBoxConnection.startedServices().firstNotNullOfOrNull { service ->
-            NekoBoxConnection.ask(app, service) { ServiceAnswer(service, BaseService.State.entries.getOrNull(it.state) ?: BaseService.State.Idle, it.profileName, it.latestSpeed) }
+            NekoBoxConnection.ask(app, service) { ServiceAnswer(service, BaseService.State.entries.getOrNull(it.state) ?: BaseService.State.Idle, it.runningProfileId, it.latestSpeed) }
         }
     }
 
@@ -282,10 +282,12 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         if (ids.isEmpty()) return
         val answer = askService(app)
         val state = answer?.state ?: BaseService.State.Stopped
-        val selected = ProfileDatabase.proxyDao.getById(DataStore.selectedProxy)
+        // Running, the profile the service runs, also a server its group picked on its own; else the selected one. Its
+        // own name and group, not the notification's title.
+        val runningId = answer?.runningProfileId?.takeIf { state.started && it > 0L }
+        val selected = runningId?.let { ProfileDatabase.proxyDao.getById(it) } ?: ProfileDatabase.proxyDao.getById(DataStore.selectedProxy)
         val group = selected?.let { ProfileDatabase.groupDao.getById(it.groupId) }
-        // Connected, the service names what it runs, also a server its group picked on its own.
-        val name = answer?.profileName?.takeIf { state == BaseService.State.Connected } ?: selected?.displayName() ?: app.getString(R.string.widget_no_profile)
+        val name = selected?.displayName() ?: app.getString(R.string.widget_no_profile)
         // Pins of deleted profiles stay until the lists reload: every candidate is looked up before the chips are counted.
         val order = widgetChipOrder(DataStore.favoriteProfiles, DataStore.recentPicks, selected?.groupId ?: DataStore.selectedGroup)
         val chips = widgetChipProfiles(order, ProfileDatabase.proxyDao.getEntities(order)).map { Chip(it.id, it.displayName()) }

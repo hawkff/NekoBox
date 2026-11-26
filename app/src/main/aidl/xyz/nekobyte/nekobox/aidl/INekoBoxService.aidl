@@ -7,6 +7,9 @@ import xyz.nekobyte.nekobox.aidl.SpeedDisplayData;
 interface INekoBoxService {
   int getState();
   String getProfileName();
+  // The profile the service runs: the one its group picked last when the group picks on its own; -1 while it runs
+  // none.
+  long getRunningProfileId();
   // The local mixed inbound of the connected service, for the app's own requests; null while
   // the service is not connected or runs a config without that inbound.
   @nullable LocalProxy getLocalProxy();

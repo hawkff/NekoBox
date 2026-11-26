@@ -213,6 +213,10 @@ class BaseService {
 
         override fun getState(): Int = (data?.state ?: State.Idle).ordinal
         override fun getProfileName(): String = data?.proxy?.displayProfileName ?: "Idle"
+        override fun getRunningProfileId(): Long {
+            val proxy = data?.proxy ?: return -1L
+            return proxy.looper?.selectorNowId?.takeIf { it > 0L } ?: proxy.profile.id
+        }
         override fun getRevoked() = data?.revoked == true
         override fun getLatestSpeed(): SpeedDisplayData? = data?.takeIf { it.state == State.Connected }?.proxy?.looper?.latestSpeed
 

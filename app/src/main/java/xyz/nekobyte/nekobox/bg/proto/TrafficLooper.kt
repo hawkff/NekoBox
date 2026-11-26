@@ -103,7 +103,8 @@ class TrafficLooper(
         job = sc.launch { loop() }
     }
 
-    var selectorNowId = -114514L
+    // Read by the service binder on its own threads.
+    @Volatile var selectorNowId = -114514L
     var selectorNowFakeTag = ""
 
     /**
