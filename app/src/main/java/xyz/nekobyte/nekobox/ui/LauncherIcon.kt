@@ -46,7 +46,13 @@ enum class LauncherIcon(
      */
     fun select(context: Context) = synchronized(switching) {
         val pending = pendingFile(context)
-        pending.writeText(name)
+        // Written aside, then renamed over the last note: a pick cut short while writing leaves that note whole.
+        val written = File(pending.path + ".new")
+        written.writeText(name)
+        if (!written.renameTo(pending)) {
+            written.delete()
+            throw IOException("could not note the switch to $name")
+        }
         val packageManager = context.packageManager
         if (Build.VERSION.SDK_INT >= 33) {
             packageManager.setComponentEnabledSettings(

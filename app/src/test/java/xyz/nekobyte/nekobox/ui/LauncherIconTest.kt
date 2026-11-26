@@ -19,6 +19,7 @@ import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowApplicationPackageManager
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.Logs
+import java.io.File
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -152,6 +153,22 @@ class LauncherIconTest {
         assertTrue(LauncherIcon.pendingFile(context).mkdirs())
         assertFalse(LauncherIcon.FULL_BLEED.trySelect(context))
         assertEquals(listOf(LauncherIcon.CLASSIC.component(context).className), launcherEntries())
+    }
+
+    @Test
+    fun aNoteThatCannotBeWrittenLeavesTheLastOneWhole() {
+        // A switch to No plate cut short: its note stands. The next pick cannot write its own (a directory is in the way
+        // of the file it writes first), so the last note and the aliases stay as they were.
+        LauncherIcon.pendingFile(context).writeText(LauncherIcon.NO_PLATE.name)
+        val written = File(LauncherIcon.pendingFile(context).path + ".new")
+        assertTrue(written.mkdirs())
+        try {
+            assertFalse(LauncherIcon.BLACK.trySelect(context))
+            assertEquals(LauncherIcon.NO_PLATE.name, LauncherIcon.pendingFile(context).readText())
+            assertEquals(listOf(LauncherIcon.CLASSIC.component(context).className), launcherEntries())
+        } finally {
+            written.deleteRecursively()
+        }
     }
 
     @Test
