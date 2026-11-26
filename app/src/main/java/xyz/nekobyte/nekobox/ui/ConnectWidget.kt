@@ -286,9 +286,9 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val group = selected?.let { ProfileDatabase.groupDao.getById(it.groupId) }
         // Connected, the service names what it runs, also a server its group picked on its own.
         val name = answer?.profileName?.takeIf { state == BaseService.State.Connected } ?: selected?.displayName() ?: app.getString(R.string.widget_no_profile)
-        val order = widgetChipOrder(DataStore.favoriteProfiles, DataStore.recentPicks, selected?.groupId ?: DataStore.selectedGroup).take(MAX_CHIPS * 2)
-        val profiles = ProfileDatabase.proxyDao.getEntities(order).associateBy { it.id }
-        val chips = order.mapNotNull { id -> profiles[id]?.let { Chip(id, it.displayName()) } }.take(MAX_CHIPS)
+        // Pins of deleted profiles stay until the lists reload: every candidate is looked up before the chips are counted.
+        val order = widgetChipOrder(DataStore.favoriteProfiles, DataStore.recentPicks, selected?.groupId ?: DataStore.selectedGroup)
+        val chips = widgetChipProfiles(order, ProfileDatabase.proxyDao.getEntities(order)).map { Chip(it.id, it.displayName()) }
         // shortcut: a speed the service posts while this drawing is under way can be drawn over with the one read here,
         // and stays until the speed changes again; post the speed with every drawing if that shows.
         val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null
@@ -401,5 +401,4 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     private const val ORB_DP = 72
     private const val PLACED_CHECK_MS = 30_000L
-    private const val MAX_CHIPS = 8
 }

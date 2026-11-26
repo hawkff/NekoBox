@@ -5,6 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService.State
+import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 
 class ConnectWidgetModelTest {
     @Test
@@ -22,6 +24,18 @@ class ConnectWidgetModelTest {
         assertTrue(widgetChipOrder(emptyList(), emptyMap(), selectedGroup = 1L).isEmpty())
         // Ids that name no profile are not offered.
         assertEquals(listOf(5L), widgetChipOrder(listOf(0L, -1L, 5L), mapOf(1L to listOf(5L)), selectedGroup = 1L))
+    }
+
+    private fun socks(id: Long) = ProxyEntity(id = id).putBean(SOCKSBean().apply { initializeDefaultValues() })
+
+    @Test
+    fun deletedPinsBeforeAValidOneHideNoChip() {
+        // Sixteen pins of deleted profiles, then one that exists: it is offered.
+        val order = (1001L..1016L).toList() + 5L
+        assertEquals(listOf(5L), widgetChipProfiles(order, listOf(socks(5))).map { it.id })
+        // At most eight, in the order given.
+        val many = (1L..12L).toList()
+        assertEquals((1L..8L).toList(), widgetChipProfiles(many, many.reversed().map(::socks)).map { it.id })
     }
 
     @Test

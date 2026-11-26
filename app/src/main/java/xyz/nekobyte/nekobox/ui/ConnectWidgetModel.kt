@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.ui
 
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.database.ProxyEntity
 
 /** What one size of the connect widget shows: the orb alone, or the orb with the connection's lines and [chipColumns] by [chipRows] quick-switch chips. */
 internal data class WidgetSpec(val orbOnly: Boolean, val chipColumns: Int = 0, val chipRows: Int = 0)
@@ -13,6 +14,9 @@ private const val WIDGET_TWO_ROWS_MIN_HEIGHT = 190f
 private const val CHIP_MIN_WIDTH = 120f
 private const val CHIP_ROW_PADDING = 16f
 private const val MAX_CHIP_COLUMNS = 4
+
+// Two rows of four, the most a widget shows.
+internal const val WIDGET_MAX_CHIPS = 8
 
 internal fun widgetSpec(widthDp: Float, heightDp: Float): WidgetSpec = when {
     widthDp < WIDGET_LINES_MIN_WIDTH -> WidgetSpec(orbOnly = true)
@@ -44,6 +48,12 @@ internal fun widgetFitSize(sizes: List<Pair<Float, Float>>, minWidth: Int, minHe
 internal fun widgetChipOrder(favorites: List<Long>, recentPicks: Map<Long, List<Long>>, selectedGroup: Long): List<Long> {
     val recent = recentPicks[selectedGroup].orEmpty() + recentPicks.filterKeys { it != selectedGroup }.values.flatten()
     return (favorites + recent).filter { it > 0L }.distinct()
+}
+
+/** The chips' profiles: those of [order] that exist, in its order, at most [WIDGET_MAX_CHIPS]. */
+internal fun widgetChipProfiles(order: List<Long>, profiles: List<ProxyEntity>): List<ProxyEntity> {
+    val byId = profiles.associateBy { it.id }
+    return order.mapNotNull(byId::get).take(WIDGET_MAX_CHIPS)
 }
 
 /** What a tap on the widget does. */
