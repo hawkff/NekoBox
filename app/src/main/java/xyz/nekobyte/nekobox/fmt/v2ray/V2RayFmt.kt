@@ -65,17 +65,26 @@ private fun StandardV2RayBean.applyECHParam(value: String) {
 /**
  * Xray's pinnedPeerCertSha256 (pcs) as stored: comma-separated SHA-256 hashes in lowercase hex. Links write them in
  * any case, with or without ':' between bytes. Xray refuses a config with a hash of another length, so the link is
- * refused too.
+ * refused too. An absent or empty value asks for no pin; any other value must hold at least one hash.
  */
 internal fun normalizedCertificatePins(value: String?): String {
+    if (value.isNullOrEmpty()) return ""
     // Only tokens blank as written are skipped; one that normalizes to nothing, such as ":", is no hash.
-    val pins = value.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { it.replace(":", "").lowercase() }
-    if (pins.any { pin -> pin.length != 64 || pin.any { it !in "0123456789abcdef" } }) throw UnsupportedEntryException("invalid pcs")
+    val pins = value.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { it.replace(":", "").lowercase() }
+    if (pins.isEmpty() || pins.any { pin -> pin.length != 64 || pin.any { it !in "0123456789abcdef" } }) throw UnsupportedEntryException("invalid pcs")
     return pins.joinToString(",")
 }
 
-/** Xray's verifyPeerCertByName (vcn) as stored: comma-separated names. */
-internal fun normalizedCertificateNames(value: String?) = value.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.joinToString(",")
+/**
+ * Xray's verifyPeerCertByName (vcn) as stored: comma-separated names. An absent or empty value asks for no names;
+ * any other value must hold at least one.
+ */
+internal fun normalizedCertificateNames(value: String?): String {
+    if (value.isNullOrEmpty()) return ""
+    val names = value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    if (names.isEmpty()) throw UnsupportedEntryException("invalid vcn")
+    return names.joinToString(",")
+}
 
 /** The certificate checks of a TLS link; REALITY authenticates the server itself and Xray ignores them there. */
 private fun StandardV2RayBean.applyCertificateChecks(pcs: String?, vcn: String?) {
@@ -123,7 +132,7 @@ internal fun requireSupportedLinkOptions(link: String) {
     // Only these links set a profile's TLS fragmentation and certificate checks from it.
     val fragments = link.substringBefore("://").lowercase() in setOf("vless", "vmess", "trojan")
     for ((name, value) in parameters) {
-        if (name !in UNSUPPORTED_LINK_OPTIONS || value.isBlank()) continue
+        if (name !in UNSUPPORTED_LINK_OPTIONS || (if (name == "fm") value.isBlank() else value.isEmpty())) continue
         if (fragments && name != "fm") continue
         // mKCP's own packet masks are the one Finalmask part the transport carries; TCP fragment masks
         // become the profile's TLS fragmentation.
@@ -251,7 +260,7 @@ private fun StandardV2RayBean.requireCertificateChecksKept(link: String) {
             "vcn" -> verifyPeerCertByName
             else -> continue
         }
-        if (decodeLinkComponent(parameter.substringAfter('=', "")).isNotBlank() && kept.isNullOrBlank()) {
+        if (decodeLinkComponent(parameter.substringAfter('=', "")).isNotEmpty() && kept.isNullOrBlank()) {
             throw UnsupportedEntryException("unsupported $name")
         }
     }
@@ -259,7 +268,7 @@ private fun StandardV2RayBean.requireCertificateChecksKept(link: String) {
 
 /** True for a link whose query carries a certificate pin or names; splitting it at spaces would drop them. */
 internal fun carriesCertificateChecks(link: String): Boolean = link.substringBefore('#').substringAfter('?', "").split('&').any {
-    decodeLinkComponent(it.substringBefore('=')) in setOf("pcs", "vcn") && decodeLinkComponent(it.substringAfter('=', "")).isNotBlank()
+    decodeLinkComponent(it.substringBefore('=')) in setOf("pcs", "vcn") && decodeLinkComponent(it.substringAfter('=', "")).isNotEmpty()
 }
 
 private fun parseV2RayForms(link: String): StandardV2RayBean {

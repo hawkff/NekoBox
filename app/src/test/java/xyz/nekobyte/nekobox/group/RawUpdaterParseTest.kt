@@ -688,6 +688,62 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun certificateCheckValuesThatHoldNothingAreRefusedAtEveryEntryPoint() = runTest {
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val pin = "0f".repeat(32)
+        fun query(value: String) = URLEncoder.encode(value, "UTF-8")
+        // Every way a check can be named that holds no pin or name: the link imports with none.
+        val entryPoints: List<Pair<String, (String, String) -> String>> = listOf(
+            "vless" to { name, value -> "vless://$uuid@192.0.2.1:443?type=tcp&security=tls&sni=a.example&$name=${query(value)}#v" },
+            "trojan" to { name, value -> "trojan://secret@192.0.2.2:443?type=tcp&security=tls&sni=a.example&$name=${query(value)}#t" },
+            "vmess" to { name, value -> "vmess://$uuid@192.0.2.3:443?type=tcp&encryption=auto&security=tls&$name=${query(value)}#m" },
+            "vmess json" to { name, value ->
+                "vmess://" + encode(
+                    JSONObject(mapOf("v" to "2", "ps" to "j", "add" to "192.0.2.4", "port" to "443", "id" to uuid, "aid" to "0", "net" to "tcp", "tls" to "tls", name to value)).toString(),
+                )
+            },
+            "xray json" to { name, value ->
+                val key = if (name == "pcs") "pinnedPeerCertSha256" else "verifyPeerCertByName"
+                JSONObject().put(
+                    "outbounds",
+                    JSONArray().put(
+                        JSONObject().put("protocol", "vless").put("tag", "proxy")
+                            .put("settings", JSONObject().put("vnext", JSONArray().put(JSONObject().put("address", "192.0.2.5").put("port", 443).put("users", JSONArray().put(JSONObject().put("id", uuid).put("encryption", "none"))))))
+                            .put("streamSettings", JSONObject().put("network", "tcp").put("security", "tls").put("tlsSettings", JSONObject().put("serverName", "a.example").put(key, value))),
+                    ),
+                ).toString()
+            },
+        )
+        suspend fun imported(text: String) = runCatching { RawUpdater.parseImport(text)?.proxies.orEmpty() }.getOrDefault(emptyList())
+        val empty = listOf(",", " , ", ",,", " ", "  ", "\n", "\t", " \t, \n", ",\t,")
+        val emptyPins = empty + listOf(":", "::", ",:", ": ,", " : ", ":,:")
+        for ((entry, build) in entryPoints) {
+            for ((name, values) in listOf("pcs" to emptyPins, "vcn" to empty)) {
+                for (value in values) {
+                    assertTrue("$entry $name=${JSONObject.quote(value)} imported", imported(build(name, value)).isEmpty())
+                }
+            }
+            // Absent, empty and real checks still import, with what they hold.
+            for ((name, value, stored) in listOf(
+                Triple("pcs", "", ""),
+                Triple("pcs", pin, pin),
+                Triple("pcs", " ${pin.uppercase().chunked(2).joinToString(":")} , $pin ", "$pin,$pin"),
+                Triple("vcn", "", ""),
+                Triple("vcn", "a.example", "a.example"),
+                Triple("vcn", " a.example , b.example ", "a.example,b.example"),
+            )) {
+                val bean = imported(build(name, value)).single() as StandardV2RayBean
+                assertEquals("$entry $name=$value", stored, if (name == "pcs") bean.pinnedPeerCertSha256.orEmpty() else bean.verifyPeerCertByName.orEmpty())
+            }
+        }
+        // Links that cannot carry checks refuse any value but an empty one.
+        for (value in listOf(" ", ",", ":")) {
+            assertTrue(value, imported("hy2://secret@192.0.2.6:443?sni=a.example&pcs=${query(value)}#h").isEmpty())
+        }
+        assertEquals(1, imported("hy2://secret@192.0.2.6:443?sni=a.example&pcs=#h").size)
+    }
+
+    @Test
     fun literalAmpEntitiesOutsideTheQueryAreKept() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         // '&' and ';' are valid in user info and paths, so "&amp;" there is data.
