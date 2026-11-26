@@ -147,6 +147,14 @@ class LauncherIconTest {
     }
 
     @Test
+    fun aSwitchThatCannotBeNotedLeavesTheAliasesAlone() {
+        // A directory where the note goes: writing the note fails with an IOException.
+        assertTrue(LauncherIcon.pendingFile(context).mkdirs())
+        assertFalse(LauncherIcon.FULL_BLEED.trySelect(context))
+        assertEquals(listOf(LauncherIcon.CLASSIC.component(context).className), launcherEntries())
+    }
+
+    @Test
     fun everyAliasOpensMainActivityWithItsIconAndTheStaticShortcuts() {
         for (icon in LauncherIcon.entries) {
             val info = context.packageManager.getActivityInfo(

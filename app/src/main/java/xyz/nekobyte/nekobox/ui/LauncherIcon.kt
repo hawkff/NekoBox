@@ -9,6 +9,7 @@ import androidx.annotation.StringRes
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.ktx.Logs
 import java.io.File
+import java.io.IOException
 
 /**
  * The launcher icon picked in Settings > Appearance: one activity-alias of [MainActivity] per icon in the manifest,
@@ -39,8 +40,9 @@ enum class LauncherIcon(
     /**
      * Enables this icon's alias and disables the others: in one step from Android 13, before that the target first,
      * so the app keeps a launcher entry throughout. The pick is noted first, so a switch cut short (the process
-     * killed, a call refused) is finished by [reconcile]. Switches and reconciling take turns: two of them interleaved
-     * before Android 13 could disable every alias. Not on the main thread.
+     * killed, a call refused) is finished by [reconcile]; a note that cannot be written leaves the aliases as they
+     * are. Switches and reconciling take turns: two of them interleaved before Android 13 could disable every alias.
+     * Not on the main thread.
      */
     fun select(context: Context) = synchronized(switching) {
         val pending = pendingFile(context)
@@ -69,10 +71,13 @@ enum class LauncherIcon(
         pending.delete()
     }
 
-    /** [select], false when Android refused the switch; the next start finishes it. */
+    /** [select], false when the switch could not be noted or Android refused it; the next start finishes a refused one. */
     fun trySelect(context: Context) = try {
         select(context)
         true
+    } catch (e: IOException) {
+        Logs.w("launcher icon", e)
+        false
     } catch (e: RuntimeException) {
         Logs.w("launcher icon", e)
         false
