@@ -21,6 +21,7 @@ import android.util.SizeF
 import android.view.ContextThemeWrapper
 import android.view.View
 import android.widget.RemoteViews
+import androidx.annotation.VisibleForTesting
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import com.google.android.material.color.DynamicColors
@@ -28,7 +29,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import xyz.nekobyte.nekobox.Key
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.R
@@ -42,6 +46,7 @@ import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.getColorAttr
 import xyz.nekobyte.nekobox.utils.Theme
 import xyz.nekobyte.nekobox.widget.OrbRing
+import java.util.concurrent.atomic.AtomicLong
 
 /** The home-screen widget: the connect button's orb, the profile, its group, the state, live speed and quick-switch chips. */
 class ConnectWidget : AppWidgetProvider() {
@@ -49,10 +54,14 @@ class ConnectWidget : AppWidgetProvider() {
         if (intent.action == ConnectWidgets.ACTION_REFRESH) ConnectWidgets.refresh(context, goAsync()) else super.onReceive(context, intent)
     }
 
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) = ConnectWidgets.refresh(context, goAsync())
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        ConnectWidgets.refresh(context, goAsync())
+    }
 
     // A new size can take another layout.
-    override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) = ConnectWidgets.refresh(context, goAsync())
+    override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
+        ConnectWidgets.refresh(context, goAsync())
+    }
 }
 
 /**
@@ -75,9 +84,26 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         Key.SPEED_INTERVAL,
     )
 
-    // One drawing at a time, in the order asked: the last one shows the newest state.
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val renders = Dispatchers.Default.limitedParallelism(1)
+    /** What the running [service] answers: its state, its title for the profile and its latest speed. */
+    internal class ServiceAnswer(val service: ComponentName, val state: BaseService.State, val profileName: String?, val speed: SpeedDisplayData?)
+
+    /** Asks the service that runs, without starting one; null when none runs or none answers in time. */
+    @VisibleForTesting
+    internal var askService: suspend (Context) -> ServiceAnswer? = { app ->
+        NekoBoxConnection.startedServices().firstNotNullOfOrNull { service ->
+            NekoBoxConnection.ask(app, service) { ServiceAnswer(service, BaseService.State.entries.getOrNull(it.state) ?: BaseService.State.Idle, it.profileName, it.latestSpeed) }
+        }
+    }
+
+    // One drawing at a time, across its waits for the service: an older drawing never lands after a newer one. A
+    // request that a drawing begun after it covers is dropped.
+    private val rendering = Mutex()
+    private val requested = AtomicLong()
+    private var drawnUpTo = 0L
+
+    @VisibleForTesting
+    @Volatile
+    internal var lastRender: Job? = null
 
     private fun component(context: Context) = ComponentName(context, ConnectWidget::class.java)
 
@@ -102,11 +128,17 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
 
     /** Draws every widget again, off the main thread; [pending] finishes once that is done. */
     @OptIn(DelicateCoroutinesApi::class)
-    fun refresh(context: Context, pending: BroadcastReceiver.PendingResult? = null) {
+    fun refresh(context: Context, pending: BroadcastReceiver.PendingResult? = null): Job {
         val app = context.applicationContext
-        GlobalScope.launch(renders) {
+        val request = requested.incrementAndGet()
+        return GlobalScope.launch(Dispatchers.Default) {
             try {
-                render(app)
+                rendering.withLock {
+                    if (drawnUpTo >= request) return@withLock
+                    val upTo = requested.get()
+                    render(app)
+                    drawnUpTo = upTo
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -114,7 +146,7 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
             } finally {
                 pending?.finish()
             }
-        }
+        }.also { lastRender = it }
     }
 
     // The live speed this process last posted, the service's, so an unchanged speed is not posted again.
@@ -248,18 +280,18 @@ internal object ConnectWidgets : OnPreferenceDataStoreChangeListener {
         val manager = AppWidgetManager.getInstance(app)
         val ids = manager.getAppWidgetIds(component(app))
         if (ids.isEmpty()) return
-        val answer = NekoBoxConnection.ask(app) { Triple(it.state, it.profileName, it.latestSpeed) }
-        val state = answer?.first?.let { BaseService.State.entries.getOrNull(it) } ?: BaseService.State.Stopped
+        val answer = askService(app)
+        val state = answer?.state ?: BaseService.State.Stopped
         val selected = ProfileDatabase.proxyDao.getById(DataStore.selectedProxy)
         val group = selected?.let { ProfileDatabase.groupDao.getById(it.groupId) }
         // Connected, the service names what it runs, also a server its group picked on its own.
-        val name = answer?.second?.takeIf { state == BaseService.State.Connected } ?: selected?.displayName() ?: app.getString(R.string.widget_no_profile)
+        val name = answer?.profileName?.takeIf { state == BaseService.State.Connected } ?: selected?.displayName() ?: app.getString(R.string.widget_no_profile)
         val order = widgetChipOrder(DataStore.favoriteProfiles, DataStore.recentPicks, selected?.groupId ?: DataStore.selectedGroup).take(MAX_CHIPS * 2)
         val profiles = ProfileDatabase.proxyDao.getEntities(order).associateBy { it.id }
         val chips = order.mapNotNull { id -> profiles[id]?.let { Chip(id, it.displayName()) } }.take(MAX_CHIPS)
         // shortcut: a speed the service posts while this drawing is under way can be drawn over with the one read here,
         // and stays until the speed changes again; post the speed with every drawing if that shows.
-        val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.third) else null
+        val speed = if (state == BaseService.State.Connected && DataStore.speedInterval > 0) speedTexts(app, answer?.speed) else null
         val looks = looks(app)
         val content = Content(app, state, name, group?.displayName(), selected?.id ?: 0L, chips, speed, looks)
         // One layout a widget, picked by its size, so that the service's speed lines can update it in place: an update
