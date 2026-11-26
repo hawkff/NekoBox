@@ -786,6 +786,37 @@ class RawUpdaterParseTest {
     }
 
     @Test
+    fun shadowsocksUserinfoNeedsTheDelimiterBetweenMethodAndPassword() = runTest {
+        fun b64(text: String) = Base64.getUrlEncoder().withoutPadding().encodeToString(text.toByteArray())
+        fun padded(text: String) = Base64.getEncoder().encodeToString(text.toByteArray())
+        // Without ':' the method would also become the password.
+        for (link in listOf(
+            "ss://${b64("aes-128-gcm")}@192.0.2.1:8388#sip002",
+            "ss://${padded("aes-128-gcm")}@192.0.2.1:8388#sip002-padded",
+            "ss://aes-128-gcm@192.0.2.1:8388#plain",
+            "ss://${b64("aes-128-gcm@192.0.2.1:8388")}#legacy",
+            "ss://${padded("chacha20-ietf-poly1305@192.0.2.1:8388")}#legacy-padded",
+        )) {
+            val report = ImportReport()
+            assertTrue(link, parseProxies(link, report).isEmpty())
+            assertEquals(link, listOf<String?>("ss"), report.failed)
+        }
+        // With it, an explicitly empty password stays empty in every form.
+        for ((link, methodAndPassword) in listOf(
+            "ss://none:@192.0.2.1:8388#plain-empty" to ("none" to ""),
+            "ss://${b64("none:")}@192.0.2.1:8388#sip002-empty" to ("none" to ""),
+            "ss://${b64("none:@192.0.2.1:8388")}#legacy-empty" to ("none" to ""),
+            "ss://2022-blake3-aes-128-gcm:a2V5@192.0.2.1:8388#plain" to ("2022-blake3-aes-128-gcm" to "a2V5"),
+            "ss://${b64("aes-128-gcm:secret")}@192.0.2.1:8388#sip002" to ("aes-128-gcm" to "secret"),
+            "ss://${padded("aes-128-gcm:secret@192.0.2.1:8388")}#legacy" to ("aes-128-gcm" to "secret"),
+        )) {
+            val bean = parseProxies(link).single() as ShadowsocksBean
+            assertEquals(link, methodAndPassword, bean.method to bean.password)
+            assertEquals(link, "192.0.2.1", bean.serverAddress)
+        }
+    }
+
+    @Test
     fun aRefusedCompleteLinkDoesNotDiscardItsValidNeighbors() = runTest {
         val uuid = "00000000-0000-4000-8000-000000000001"
         val firsts = listOf("socks5://192.0.2.1:1080", "socks5://192.0.2.1:1080#first${" ".repeat(2048)}server")
