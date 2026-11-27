@@ -24,12 +24,13 @@ import xyz.nekobyte.nekobox.aidl.LocalProxy
 import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.proto.ProxyInstance
+import xyz.nekobyte.nekobox.bg.proto.RunningCore
 import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
+import xyz.nekobyte.nekobox.bg.proto.testRunningPath
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
-import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.plugin.PluginManager
@@ -364,29 +365,20 @@ class BaseService {
         }
 
         override fun testWireGuardProfile(profileId: Long, fingerprint: String, answerUrl: String): String {
-            val result = JSONObject()
             val proxy = data?.takeIf { it.state == State.Connected }?.proxy?.takeIf { it.isInitialized() }
-                ?: return result.put("result", "stopping").toString()
-            val tag = proxy.config.profileTagMap[profileId]
-            val path = proxy.config.paths[profileId]
-            if (tag == null || path == null) return result.put("result", "not_running").toString()
-            // A result is for the path the caller was asked to test, which an edit since the start does not reach.
-            if (path.fingerprint == null || path.fingerprint != fingerprint) return result.put("result", "other_settings").toString()
-            val latency = try {
-                Libcore.urlTestOutbound(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
-            } catch (e: Exception) {
-                // A stop that closed the core under the test: the caller reports the stop and starts no core of its own.
-                if (data?.state != State.Connected || data?.proxy !== proxy) return result.put("result", "stopping").toString()
-                val owned = proxy.config.wireguardInstances.values.flatten().filter { it.ownerProfileId == profileId }
-                val status = wireGuardServiceStatus(true, owned) { Libcore.wireGuardStatus(proxy.box, it) }
-                if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.readableMessage)) return result.put("result", "no_handshake").toString()
-                return result.put("result", "failed").put("error", Protocols.genFriendlyMsg(e.readableMessage)).toString()
+                ?: return JSONObject().put("result", "stopping").toString()
+            val core = object : RunningCore {
+                override val running: Boolean get() = data?.state == State.Connected && data?.proxy === proxy
+
+                override fun awaitTailscaleNodes(profileId: Long) = this@Binder.awaitTailscaleNodes(proxy, profileId)
+
+                override fun urlTest(tag: String): Int = Libcore.urlTestOutbound(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+
+                override fun wireGuardStatus(tag: String): String = Libcore.wireGuardStatus(proxy.box, tag)
+
+                override fun fetchText(tag: String, link: String): String? = Libcore.fetchTextOutbound(proxy.box, tag, link, DataStore.connectionTestTimeout)
             }
-            // A page that cannot be read leaves the answer unknown; the test itself passed.
-            val answer = answerUrl.takeIf { it.isNotEmpty() }?.let {
-                runCatching { Libcore.fetchTextOutbound(proxy.box, tag, it, DataStore.connectionTestTimeout) }.getOrNull()
-            }
-            return result.put("result", "tested").put("latencyMs", latency).putOpt("answer", answer).toString()
+            return testRunningPath(proxy.config, core, profileId, fingerprint, answerUrl).toString()
         }
 
         override fun tailscalePeers(profileId: Long): String {
