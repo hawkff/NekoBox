@@ -72,7 +72,7 @@ class RunningPathTest {
 
     // A test that runs out of time after [elapsed] ms; the dead server's outbound [tag] retries its handshake once
     // the core has looked at the path for HANDSHAKE_RETRY_WINDOW_MS.
-    private inner class DeadServer(private val tag: String, private val elapsed: Long) : Core() {
+    private open inner class DeadServer(private val tag: String, private val elapsed: Long) : Core() {
         override fun urlTest(tag: String?): TestOutcome {
             calls += "test $tag"
             clock += elapsed
@@ -139,6 +139,25 @@ class RunningPathTest {
         // The front hop's outbound was built for another member first; it is on this member's path all the same.
         assertEquals("no_handshake", testRunningPath(config(), DeadServer("front", 3_000), 8, "path-8", "").getString("result"))
         assertEquals(listOf("status front"), calls.filter { it.startsWith("status") }.distinct())
+    }
+
+    @Test
+    fun aTimeoutWithoutAKnownPathOrBaselineKeepsItsOwnMessage() {
+        // The state before the test could not be read: what was sent since cannot be told.
+        var reads = 0
+        val unread = object : DeadServer("wg-7", 3_000) {
+            override fun wireGuardStatus(tag: String): String {
+                reads++
+                return if (reads == 1) error("device closed") else super.wireGuardStatus(tag)
+            }
+        }
+        val reply = testRunningPath(config(), unread, 7, "path-7", "")
+        assertEquals("failed", reply.getString("result"))
+        assertEquals("Get \"http://10.0.0.1/timeout\": context deadline exceeded", reply.getString("error"))
+        assertEquals(emptyList<String>(), calls.filter { it.startsWith("sleep") })
+        // A full custom config does not tell which outbounds a test takes.
+        val full = ConfigBuildResult("{}", emptyList(), 5, emptyMap(), emptyMap(), -1, wireGuardIdentities = WireGuardIdentities(setOf("a-b"), false, mapOf("wg-7" to setOf("a-b"))), paths = mapOf(5L to ConfigBuildResult.PathSnapshot("config-5", emptyList(), defaultRoute = true)))
+        assertEquals("failed", testRunningPath(full, DeadServer("wg-7", 3_000), 5, "config-5", "").getString("result"))
     }
 
     @Test

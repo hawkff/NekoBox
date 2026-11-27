@@ -162,9 +162,9 @@ class RunningWireGuardTest {
         val second = add(socks("second", "second.example"), groupId)
         val vpn = running(first)
         // One outbound for the hop, built for the member that came first; the other's path names it too.
-        val front = vpn.wireGuardPath(first.id).single()
-        assertEquals(listOf(front.tag), vpn.wireGuardPath(second.id).map { it.tag })
-        assertEquals(second.id, vpn.wireGuardPath(second.id).single().ownerProfileId)
+        val front = vpn.wireGuardPath(first.id)!!.single()
+        assertEquals(listOf(front.tag), vpn.wireGuardPath(second.id)!!.map { it.tag })
+        assertEquals(second.id, vpn.wireGuardPath(second.id)!!.single().ownerProfileId)
         assertEquals(1, vpn.wireGuardIdentities.byTag.size)
     }
 
@@ -224,6 +224,8 @@ class RunningWireGuardTest {
         )
         val vpn = running(full)
         assertTrue(vpn.paths.getValue(full.id).defaultRoute)
+        // Which of its outbounds a test takes is unknown, so a timeout is never put down to one of them.
+        assertNull(vpn.wireGuardPath(full.id))
         assertEquals(vpn.fingerprint(full.id), candidate(full.id))
         edit(full.id) { (this as ConfigBean).config = config.replace("51820", "51821") }
         assertNotEquals(vpn.fingerprint(full.id), candidate(full.id))

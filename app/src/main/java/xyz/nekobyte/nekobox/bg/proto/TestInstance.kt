@@ -67,10 +67,11 @@ class TestInstance(
         currentCoroutineContext().ensureActive()
         val outcome = Libcore.urlTestOutcome(box, link, timeout)
         if (outcome.error.isNotEmpty()) {
-            // A request that timed out says nothing of why; a WireGuard server that never answered does. The core
-            // started for this test, so everything its outbounds sent was sent during the test.
-            val status = wireGuardServiceStatus(true, config.wireGuardPath(profile.id)) { Libcore.wireGuardStatus(box, it) }
+            // A request that timed out says nothing of why; a WireGuard server that never answered does, on the path
+            // the test took. The core started for this test, so everything its outbounds sent was sent during it.
             val failure = IOException(outcome.error)
+            val path = config.wireGuardPath(profile.id) ?: throw failure
+            val status = wireGuardServiceStatus(true, path) { Libcore.wireGuardStatus(box, it) }
             if (parseWireGuardServiceStatus(status).noCompletedHandshake(WireGuardServiceState.NONE, outcome.timedOut, System.currentTimeMillis())) {
                 throw NoHandshakeException(timeout, failure)
             }

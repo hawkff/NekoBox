@@ -46,14 +46,16 @@ internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profi
     val tag = if (path.defaultRoute) null else config.profileTagMap[profileId] ?: return result.put("result", "not_running")
     // A result is for the path the caller was asked to test, which an edit since the start does not reach.
     if (path.fingerprint == null || path.fingerprint != fingerprint) return result.put("result", "other_settings")
-    val wireGuardPath = config.wireGuardPath(profileId)
+    // Unknown for a full custom config: its failures keep their own message.
+    val wireGuardPath = config.wireGuardPath(profileId).orEmpty()
     fun status() = parseWireGuardServiceStatus(wireGuardServiceStatus(true, wireGuardPath) { core.wireGuardStatus(it) })
-    var before = WireGuardServiceState.NONE
+    // What the path had sent before the test; null when it could not all be read, which leaves nothing to compare.
+    var before: WireGuardServiceState? = null
     var started = 0L
     val outcome = try {
         // Right after the connect a Tailscale node on the path may still be logging in or picking its exit node.
         core.awaitTailscaleNodes(profileId)
-        before = status()
+        before = status().takeIf { state -> wireGuardPath.isNotEmpty() && state.instances.none { it.error != null } }
         started = core.now()
         core.urlTest(tag)
     } catch (e: Exception) {
@@ -62,9 +64,10 @@ internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profi
     if (outcome.error.isNotEmpty()) {
         // A stop that closed the core under the test: the caller reports the stop and starts no core of its own.
         if (!core.running) return result.put("result", "stopping")
-        if (outcome.timedOut) {
+        val baseline = before
+        if (outcome.timedOut && baseline != null) {
             core.sleep((started + HANDSHAKE_RETRY_WINDOW_MS - core.now()).coerceAtLeast(0))
-            if (status().noCompletedHandshake(before, true, core.now())) return result.put("result", "no_handshake")
+            if (status().noCompletedHandshake(baseline, true, core.now())) return result.put("result", "no_handshake")
         }
         return result.put("result", "failed").put("error", outcome.error)
     }

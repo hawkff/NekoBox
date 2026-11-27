@@ -245,8 +245,11 @@ class ConfigBuildResult(
      */
     class PathSnapshot(val fingerprint: String?, val tags: List<String>, val defaultRoute: Boolean = false)
 
-    /** The WireGuard and AmneziaWG outbounds on the path of [profileId], every one when the config keeps no path for it. */
-    fun wireGuardPath(profileId: Long): List<WireGuardInstance> = (paths[profileId]?.tags ?: wireGuardIdentities.byTag.keys).distinct().filter { it in wireGuardIdentities.byTag }.map { WireGuardInstance(it, profileId) }
+    /**
+     * The WireGuard and AmneziaWG outbounds on the path of [profileId]; null when the config does not tell which ones
+     * the path takes, as a full custom config does not.
+     */
+    fun wireGuardPath(profileId: Long): List<WireGuardInstance>? = paths[profileId]?.takeUnless { it.defaultRoute }?.tags?.distinct()?.filter { it in wireGuardIdentities.byTag }?.map { WireGuardInstance(it, profileId) }
 }
 
 private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
