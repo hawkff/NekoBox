@@ -15,7 +15,7 @@ import java.util.Base64
  * decoded key bytes, as hex. Two cores with one of these pairs take the session from each other. [all] holds every
  * session read, whatever the entries' tags; [unknown] when an entry's keys cannot be read, so nothing can be told
  * about what it opens, [malformed] too when that is because the config's outbounds and endpoints are no list of
- * objects. [byTag] names each readable entry's sessions by the tag the core gives it, for status and paths.
+ * objects, or an entry's fields other than its keys are not clear: a name in two spellings, a tag that is no text. [byTag] names each readable entry's sessions by the tag the core gives it, for status and paths.
  */
 class WireGuardIdentities(val all: Set<String>, val unknown: Boolean, val byTag: Map<String, Set<String>>, val malformed: Boolean = false) {
     val isEmpty get() = all.isEmpty() && !unknown
@@ -27,6 +27,9 @@ class WireGuardIdentities(val all: Set<String>, val unknown: Boolean, val byTag:
 }
 
 private val wireGuardTypes = setOf("wireguard", "amneziawg")
+
+// The fields an entry's sessions are read from.
+private val keyFields = setOf("private_key", "peer_public_key", "peers")
 
 /**
  * [WireGuardIdentities] of a config as the core will run it, after every custom JSON was merged in, read as the core
@@ -42,6 +45,8 @@ fun wireGuardIdentities(config: String): WireGuardIdentities {
         if (entries !is JsonArray) return WireGuardIdentities.malformed()
         entries.forEachIndexed { index, entry ->
             if (entry !is JsonObject) return WireGuardIdentities.malformed()
+            // Two spellings of a name other than a key's leave open what the entry is or what it is called.
+            if (entry.keySet().groupBy { it.lowercase() }.any { (name, spellings) -> spellings.size > 1 && name !in keyFields }) return WireGuardIdentities.malformed()
             val fields = entry.fields()
             val type = fields?.text("type")?.lowercase()
             if (fields == null) {
@@ -49,8 +54,8 @@ fun wireGuardIdentities(config: String): WireGuardIdentities {
             } else if (type in wireGuardTypes) {
                 val sessions = sessionsOf(fields)
                 val tagField = fields["tag"]?.takeUnless { it.isJsonNull }
-                val tag = if (tagField == null) "$index" else (tagField as? JsonPrimitive)?.takeIf { it.isString }?.asString
-                if (sessions == null || tag == null) {
+                val tag = if (tagField == null) "$index" else (tagField as? JsonPrimitive)?.takeIf { it.isString }?.asString ?: return WireGuardIdentities.malformed()
+                if (sessions == null) {
                     unknown = true
                 } else {
                     all += sessions

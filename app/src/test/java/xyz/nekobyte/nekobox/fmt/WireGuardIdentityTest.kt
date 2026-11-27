@@ -140,8 +140,16 @@ class WireGuardIdentityTest {
         val shortKey = wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "short", "peer_public_key": "${key(2)}"}]}""")
         assertTrue(shortKey.unknown)
         assertFalse(shortKey.malformed)
-        // Two spellings of one name: which one the core takes is open.
-        assertTrue(wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "${key(1)}", "Private_Key": "${key(4)}", "peer_public_key": "${key(2)}"}]}""").unknown)
+        // Two spellings of one key: which one the core takes is open.
+        val twoKeys = wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "${key(1)}", "Private_Key": "${key(4)}", "peer_public_key": "${key(2)}"}]}""")
+        assertTrue(twoKeys.unknown)
+        assertFalse(twoKeys.malformed)
+        // Fields other than keys that are not clear are the config's fault: two spellings of a tag, also on an entry
+        // without keys, and a tag that is no text beside keys that can be read.
+        for (config in listOf("""{"outbounds": [{"type": "direct", "tag": "d", "Tag": "e"}]}""", """{"outbounds": [{"type": "wireguard", "tag": 5, "private_key": "${key(1)}", "peer_public_key": "${key(2)}"}]}""")) {
+            val identities = wireGuardIdentities(config)
+            assertTrue(config, identities.unknown && identities.malformed)
+        }
         // Not a key's fault: the outbounds are no list of objects, with or without a WireGuard entry.
         for (config in listOf("not json", "[]", """{"outbounds": {}}""", """{"outbounds": ["direct"]}""", """{"endpoints": [1, {"type": "wireguard"}]}""")) {
             val identities = wireGuardIdentities(config)
