@@ -47,7 +47,7 @@ class RunningPathTest {
             calls += "await $profileId"
         }
 
-        override fun urlTest(tag: String): TestOutcome {
+        override fun urlTest(tag: String?): TestOutcome {
             calls += "test $tag"
             return TestOutcome(42, "", false)
         }
@@ -57,7 +57,7 @@ class RunningPathTest {
             return """{"peers":[{"publicKey":"k-$tag","endpoint":"192.0.2.1:51820","lastHandshake":0,"rxBytes":0,"txBytes":${sent[tag] ?: 0}}]}"""
         }
 
-        override fun fetchText(tag: String, link: String): String {
+        override fun fetchText(tag: String?, link: String): String {
             calls += "fetch $tag $link"
             return "ip=203.0.113.7"
         }
@@ -73,7 +73,7 @@ class RunningPathTest {
     // A test that runs out of time after [elapsed] ms; the dead server's outbound [tag] retries its handshake once
     // the core has looked at the path for HANDSHAKE_RETRY_WINDOW_MS.
     private inner class DeadServer(private val tag: String, private val elapsed: Long) : Core() {
-        override fun urlTest(tag: String): TestOutcome {
+        override fun urlTest(tag: String?): TestOutcome {
             calls += "test $tag"
             clock += elapsed
             return TestOutcome(0, "Get \"http://10.0.0.1/timeout\": context deadline exceeded", true)
@@ -95,7 +95,7 @@ class RunningPathTest {
                 ready = true
             }
 
-            override fun urlTest(tag: String): TestOutcome {
+            override fun urlTest(tag: String?): TestOutcome {
                 check(ready) { "Timeout" }
                 return super.urlTest(tag)
             }
@@ -106,6 +106,17 @@ class RunningPathTest {
         // The Proxies check reads its answer through the same outbound.
         assertEquals("ip=203.0.113.7", reply.getString("answer"))
         assertEquals(listOf("await 7", "status wg-7", "test wg-7", "fetch wg-7 https://trace.example/"), calls)
+    }
+
+    @Test
+    fun aFullCustomConfigIsTestedThroughTheDefaultRouteOfTheCoreThatRunsIt() {
+        // Its display name is no outbound tag.
+        val full = ConfigBuildResult("{}", emptyList(), 5, emptyMap(), mapOf(5L to "My config"), -1, paths = mapOf(5L to ConfigBuildResult.PathSnapshot("config-5", emptyList(), defaultRoute = true)))
+        val reply = testRunningPath(full, Core(), 5, "config-5", "https://trace.example/")
+        assertEquals("tested", reply.getString("result"))
+        assertEquals("ip=203.0.113.7", reply.getString("answer"))
+        assertEquals(listOf("await 5", "test null", "fetch null https://trace.example/"), calls)
+        assertEquals("other_settings", testRunningPath(full, Core(), 5, "config-6", "").getString("result"))
     }
 
     @Test
@@ -133,7 +144,7 @@ class RunningPathTest {
     @Test
     fun aFailureWithAReasonOfItsOwnKeepsIt() {
         val refused = object : Core() {
-            override fun urlTest(tag: String) = TestOutcome(0, "Get \"http://10.99.0.1/timeout\": destination 10.99.0.1 is outside the allowed IPs", false)
+            override fun urlTest(tag: String?) = TestOutcome(0, "Get \"http://10.99.0.1/timeout\": destination 10.99.0.1 is outside the allowed IPs", false)
         }
         refused.sent["wg-7"] = 148
         val reply = testRunningPath(config(), refused, 7, "path-7", "")

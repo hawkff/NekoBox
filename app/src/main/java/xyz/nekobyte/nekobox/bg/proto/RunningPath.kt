@@ -15,11 +15,12 @@ internal interface RunningCore {
     /** Waits for the Tailscale nodes on the profile's path, as a test through them needs; throws when they are not ready. */
     fun awaitTailscaleNodes(profileId: Long)
 
-    fun urlTest(tag: String): TestOutcome
+    /** A test through the outbound [tag], or through the core's default route when null. */
+    fun urlTest(tag: String?): TestOutcome
 
     fun wireGuardStatus(tag: String): String
 
-    fun fetchText(tag: String, link: String): String?
+    fun fetchText(tag: String?, link: String): String?
 
     /** Wall clock, Unix milliseconds. */
     fun now(): Long
@@ -40,9 +41,9 @@ internal const val HANDSHAKE_RETRY_WINDOW_MS = 5_500L
  */
 internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profileId: Long, fingerprint: String, answerUrl: String): JSONObject {
     val result = JSONObject()
-    val tag = config.profileTagMap[profileId]
-    val path = config.paths[profileId]
-    if (tag == null || path == null) return result.put("result", "not_running")
+    val path = config.paths[profileId] ?: return result.put("result", "not_running")
+    // A full custom config runs as written, on its default route.
+    val tag = if (path.defaultRoute) null else config.profileTagMap[profileId] ?: return result.put("result", "not_running")
     // A result is for the path the caller was asked to test, which an edit since the start does not reach.
     if (path.fingerprint == null || path.fingerprint != fingerprint) return result.put("result", "other_settings")
     val wireGuardPath = config.wireGuardPath(profileId)

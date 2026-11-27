@@ -373,13 +373,19 @@ class BaseService {
 
                 override fun awaitTailscaleNodes(profileId: Long) = this@Binder.awaitTailscaleNodes(proxy, profileId)
 
-                override fun urlTest(tag: String) = Libcore.urlTestOutboundOutcome(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout).let {
-                    TestOutcome(it.latency, it.error, it.timedOut)
-                }
+                override fun urlTest(tag: String?) = if (tag == null) {
+                    Libcore.urlTestOutcome(proxy.box, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+                } else {
+                    Libcore.urlTestOutboundOutcome(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+                }.let { TestOutcome(it.latency, it.error, it.timedOut) }
 
                 override fun wireGuardStatus(tag: String): String = Libcore.wireGuardStatus(proxy.box, tag)
 
-                override fun fetchText(tag: String, link: String): String? = Libcore.fetchTextOutbound(proxy.box, tag, link, DataStore.connectionTestTimeout)
+                override fun fetchText(tag: String?, link: String): String? = if (tag == null) {
+                    Libcore.fetchText(proxy.box, link, DataStore.connectionTestTimeout)
+                } else {
+                    Libcore.fetchTextOutbound(proxy.box, tag, link, DataStore.connectionTestTimeout)
+                }
 
                 override fun now() = System.currentTimeMillis()
 

@@ -240,13 +240,16 @@ class ConfigBuildResult(
      * A profile's path as this config was built with it: [fingerprint] of its hops in the order they are dialed,
      * each with its settings, and of the path as it runs: every hop's outbound after all custom JSON was merged in,
      * with the DNS server that resolves its server's name, and the WireGuard sessions of the outbounds; null when
-     * that cannot be told. [tags]: the outbounds of the path, a hop another path built first included.
+     * that cannot be told. [tags]: the outbounds of the path, a hop another path built first included. A full custom
+     * config is one path through its [defaultRoute], fingerprinted as written, its outbounds unknown.
      */
-    class PathSnapshot(val fingerprint: String?, val tags: List<String>)
+    class PathSnapshot(val fingerprint: String?, val tags: List<String>, val defaultRoute: Boolean = false)
 
     /** The WireGuard and AmneziaWG outbounds on the path of [profileId], every one when the config keeps no path for it. */
     fun wireGuardPath(profileId: Long): List<WireGuardInstance> = (paths[profileId]?.tags ?: wireGuardIdentities.byTag.keys).distinct().filter { it in wireGuardIdentities.byTag }.map { WireGuardInstance(it, profileId) }
 }
+
+private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
 
 // What a path's fingerprint is made of before the config is finished.
 private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
@@ -395,6 +398,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         val bean = proxy.requireBean() as ConfigBean
         if (bean.type == 0) {
             val tagProxy = proxy.displayName()
+            val identities = wireGuardIdentities(bean.config!!)
             return ConfigBuildResult(
                 bean.config!!,
                 listOf(),
@@ -409,7 +413,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 } catch (_: RuntimeException) {
                     null
                 },
-                wireGuardIdentities = wireGuardIdentities(bean.config!!),
+                wireGuardIdentities = identities,
+                paths = mapOf(proxy.id to ConfigBuildResult.PathSnapshot(if (identities.unknown) null else "config " + sha256Hex(bean.config!!), emptyList(), defaultRoute = true)),
             )
         }
     }

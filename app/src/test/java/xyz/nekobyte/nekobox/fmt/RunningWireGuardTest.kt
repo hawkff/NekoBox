@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +22,7 @@ import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
+import xyz.nekobyte.nekobox.proxy.config.ConfigBean
 import java.util.Base64
 
 /**
@@ -209,5 +211,21 @@ class RunningWireGuardTest {
             ProfileDatabase.rulesDao.createRule(RuleEntity(domains = "full:b.example", outbound = shared.id).apply { enabled = true })
         }
         assertNotEquals(running(member).fingerprint(member.id), candidate(member.id))
+    }
+
+    @Test
+    fun aFullCustomConfigIsOnePathAsWritten() {
+        val config = """{"endpoints": [{"type": "wireguard", "tag": "w", "address": ["10.7.0.2/32"], "private_key": "${key(1)}", "peers": [{"address": "192.0.2.20", "port": 51820, "public_key": "${key(2)}", "allowed_ips": ["0.0.0.0/0"]}]}]}"""
+        val full = add(
+            ConfigBean().apply {
+                type = 0
+                this.config = config
+            },
+        )
+        val vpn = running(full)
+        assertTrue(vpn.paths.getValue(full.id).defaultRoute)
+        assertEquals(vpn.fingerprint(full.id), candidate(full.id))
+        edit(full.id) { (this as ConfigBean).config = config.replace("51820", "51821") }
+        assertNotEquals(vpn.fingerprint(full.id), candidate(full.id))
     }
 }
