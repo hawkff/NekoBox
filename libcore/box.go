@@ -386,13 +386,18 @@ func UrlTest(i *BoxInstance, link string, timeout int32) (latency int32, err err
 	}
 	if i == nil {
 		// no core: test the direct route
-		return urlTest(boxapi.CreateProxyHttpClient(nil, nil), link, timeout)
+		return urlTest(context.Background(), boxapi.CreateProxyHttpClient(nil, nil), link, timeout)
 	}
+	lifetime, release, err := i.admitCoreWork()
+	if err != nil {
+		return 0, err
+	}
+	defer release()
 	var connectionTracker adapter.ConnectionTracker
 	if i.v2api != nil {
 		connectionTracker = i.v2api.StatsService()
 	}
-	return urlTest(boxapi.CreateProxyHttpClient(i.Box, connectionTracker), link, timeout)
+	return urlTest(lifetime, boxapi.CreateProxyHttpClient(i.Box, connectionTracker), link, timeout)
 }
 
 // FetchText reads a short answer from link through the instance's route, as UrlTest reaches its link: for a
@@ -402,7 +407,24 @@ func FetchText(i *BoxInstance, link string, timeout int32) (text string, err err
 	if i == nil {
 		return "", errors.New("no instance")
 	}
-	return fetchText(boxapi.CreateProxyHttpClient(i.Box, nil), link, timeout)
+	lifetime, release, err := i.admitCoreWork()
+	if err != nil {
+		return "", err
+	}
+	defer release()
+	return fetchText(lifetime, boxapi.CreateProxyHttpClient(i.Box, nil), link, timeout)
+}
+
+// admitCoreWork admits a request through a running instance as core work: its context ends when the instance
+// starts closing, and Close waits for release before it closes the core.
+func (i *BoxInstance) admitCoreWork() (context.Context, func(), error) {
+	i.access.Lock()
+	defer i.access.Unlock()
+	lifetime, release, err := i.admitCoreWorkLocked()
+	if err != nil {
+		return nil, nil, errors.New("the core is not running")
+	}
+	return lifetime, release, nil
 }
 
 // ServeProtect keeps socket protection available to the UI process while the kill switch holds

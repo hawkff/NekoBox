@@ -12,11 +12,11 @@ import (
 
 // urlTest fetches link twice over client and returns the second request's time from headers
 // written to first response byte, so name lookup and the TCP/TLS handshakes stay out of it.
-// Redirects count as a reply and are not followed.
-func urlTest(client *http.Client, link string, timeout int32) (int32, error) {
+// Redirects count as a reply and are not followed. The requests end with lifetime.
+func urlTest(lifetime context.Context, client *http.Client, link string, timeout int32) (int32, error) {
 	defer client.CloseIdleConnections()
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(lifetime, time.Duration(timeout)*time.Millisecond)
 	defer cancel()
 	var wroteHeaders, firstByte time.Time
 	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
@@ -41,11 +41,11 @@ func urlTest(client *http.Client, link string, timeout int32) (int32, error) {
 const fetchTextLimit = 64 << 10
 
 // fetchText reads a short text answer from link over client, as the services that report the caller's address
-// give it. Redirects count as an answer, not followed, and only a 200 is read.
-func fetchText(client *http.Client, link string, timeout int32) (string, error) {
+// give it. Redirects count as an answer, not followed, and only a 200 is read. The request ends with lifetime.
+func fetchText(lifetime context.Context, client *http.Client, link string, timeout int32) (string, error) {
 	defer client.CloseIdleConnections()
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(lifetime, time.Duration(timeout)*time.Millisecond)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
