@@ -319,7 +319,8 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val 
     val builtOutbounds = builtEntries.outbounds
     val builtInbounds = builtEntries.inbounds
 
-    // Whether the profile's own outbound JSON of the hop with [tag], merged before [asBuilt], sets the field [name].
+    // Whether the hop with [tag] sets the field [name] itself, in its profile's outbound JSON, which is part of
+    // [asBuilt]: its custom outbound or the JSON merged into its outbound. Names without regard to case, as the core.
     fun customized(tag: String, name: String) = hopCustomFields[tag]?.let { "" in it || name in it } == true
 
     // The outbound the core's default route takes, when the config names one.
@@ -611,7 +612,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val appInbounds = listOfNotNull("tun-in".takeIf { isVPN && !forTest }, TAG_MIXED.takeIf { keepMixedInbound })
     val externalIndexMap = ArrayList<IndexEntity>()
 
-    // The fields each hop's own outbound JSON sets, by tag; "" when that JSON cannot be read.
+    // The fields each hop's own outbound JSON sets, a custom outbound's included, by tag in lower case; "" when that
+    // JSON cannot be read.
     val hopCustomFields = HashMap<String, Set<String>>()
 
     // The outbounds of plugins, by tag, with the inbound a plugin reaches its server by, if it has one.
@@ -1077,9 +1079,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     _hack_config_map["tag"] = tagOut
 
                     _hack_custom_config = bean.customOutboundJson
-                    bean.customOutboundJson?.takeIf { it.isNotBlank() }?.let { json ->
-                        val fields = runCatching { JsonParser.parseString(json).asJsonObject.keySet().map { it.trim('+') }.toSet() }.getOrDefault(setOf(""))
-                        changes.put(hopCustomFields, tagOut, fields)
+                    val ownJson = listOfNotNull((bean as? ConfigBean)?.config, bean.customOutboundJson).filter { it.isNotBlank() }
+                    if (ownJson.isNotEmpty()) {
+                        val fields = ownJson.flatMap { json -> runCatching { JsonParser.parseString(json).asJsonObject.keySet().map { it.trim('+').lowercase() } }.getOrDefault(listOf("")) }
+                        changes.put(hopCustomFields, tagOut, fields.toSet())
                     }
                 }
                 if (bean is WireGuardBean || bean is AmneziaWGBean) {

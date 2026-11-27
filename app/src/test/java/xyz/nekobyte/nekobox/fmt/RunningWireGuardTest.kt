@@ -360,6 +360,18 @@ class RunningWireGuardTest {
         } finally {
             DataStore.globalCustomConfig = ""
         }
+        // Or a custom outbound's own JSON, in any spelling the core reads.
+        for (name in listOf("domain_resolver", "Domain_Resolver")) {
+            val custom = add(
+                ConfigBean().apply {
+                    type = 1
+                    config = JSONObject().put("type", "socks").put("server", "custom.example").put("server_port", 1080).put(name, "dns-local").toString()
+                },
+            )
+            val viaCustom = add(chain("via custom $name", tunnel, custom))
+            assertNull(name, prepared(viaCustom.id))
+            assertNull(name, running(viaCustom).fingerprint(viaCustom.id))
+        }
         // And the tunnel's own resolver options.
         edit(tunnel.id) { customOutboundJson = JSONObject().put("domain_resolver", JSONObject().put("server", "dns-direct").put("strategy", "ipv6_only")).toString() }
         assertNull(prepared(tunnel.id))
