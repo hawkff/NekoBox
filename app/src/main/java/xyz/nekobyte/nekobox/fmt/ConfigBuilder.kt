@@ -258,8 +258,8 @@ private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").diges
 
 // What a path's fingerprint is made of before the config is finished.
 private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
-    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex, dialed: String?): ConfigBuildResult.PathSnapshot {
-        val effective = effectivePath(config, tags)
+    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex, dialed: String?, plugins: Map<String, String?>): ConfigBuildResult.PathSnapshot {
+        val effective = effectivePath(config, tags, plugins)
         if (identities.unknown || effective == null || !dialsEntry(config, dialed)) return ConfigBuildResult.PathSnapshot(null, tags)
         val digest = MessageDigest.getInstance("SHA-256")
         fun add(text: String) = digest.update((text + "\n").toByteArray())
@@ -294,17 +294,26 @@ private fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsIn
 // A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
 private fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
 
-/** The resolver of every outbound that has one, as the builder made it, before custom JSON is merged in. */
-internal fun builtResolvers(config: JsonObject): Map<String?, JsonElement> = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
-    .mapNotNull { (tag, outbound) -> outbound?.get("domain_resolver")?.let { tag to it.deepCopy() } }.toMap()
-
 /**
- * The entries of a finished config by tag, read once for all its paths, a tag given twice mapped to null, and the
- * [builtResolvers] of the config before custom JSON.
+ * The entries of a finished config by tag, read once for all its paths, a tag given twice mapped to null, and those
+ * of the config as the builder made it, [asBuilt] before custom JSON was merged in.
  */
-internal class ConfigIndex(config: JsonObject, val builtResolvers: Map<String?, JsonElement>) {
-    val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
+internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject) {
+    private class Entries(config: JsonObject) {
+        val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
+        val inbounds = byTag(objects(config["inbounds"]))
+        val routeRules: JsonElement? = (config["route"] as? JsonObject)?.get("rules")
+    }
+    private val entries = Entries(config)
+    private val builtEntries = Entries(asBuilt)
+    val outbounds = entries.outbounds
     val dnsServers = byTag(objects((config["dns"] as? JsonObject)?.get("servers")))
+    val inbounds = entries.inbounds
+    val builtOutbounds = builtEntries.outbounds
+    val builtInbounds = builtEntries.inbounds
+
+    // Whether custom JSON left the route rules as the builder made them; a plugin's way on to its server is one.
+    val routeRulesAsBuilt = entries.routeRules == builtEntries.routeRules
 
     init {
         built.incrementAndGet()
@@ -322,10 +331,13 @@ internal class ConfigIndex(config: JsonObject, val builtResolvers: Map<String?, 
  * place of its tag. The resolver the builder gave a hop differs between the two only by the VPN's server address
  * family and, on a hop dialed through the next one, by whether there is one; such a resolver is the server alone on
  * a hop dialed directly and left out on one dialed through the next. A resolver custom JSON changed keeps all its
- * options. Null when the path cannot be read so: a hop missing or given twice, a detour off the path, a resolver
- * missing.
+ * options. A hop of [plugins] is a SOCKS server on the device at a port and with a login every build makes anew; with
+ * those as built it stands for the plugin, named by its hop, and so does the inbound the plugin reaches its server
+ * by. Null when the path cannot be read so: a hop missing or given twice, a detour off the path, a resolver missing,
+ * a plugin's port, login or inbound not as built, or route rules custom JSON changed on a path with a plugin.
  */
-internal fun effectivePath(config: ConfigIndex, tags: List<String>): String? {
+internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map<String, String?> = emptyMap()): String? {
+    if (tags.any { it in plugins } && !config.routeRulesAsBuilt) return null
     val outbounds = config.outbounds
     val dnsServers = config.dnsServers
     val path = JsonArray()
@@ -338,8 +350,19 @@ internal fun effectivePath(config: ConfigIndex, tags: List<String>): String? {
             if (index < 0) return null
             hop.addProperty("detour", "hop $index")
         }
+        val index = tags.indexOf(tag)
+        if (tag in plugins) {
+            val built = config.builtOutbounds[tag] ?: return null
+            for (name in listOf("server", "server_port", "username", "password")) if (hop.remove(name) != built[name]) return null
+            hop.addProperty("plugin", "hop $index")
+            plugins[tag]?.let { mappingTag ->
+                val mapping = config.inbounds[mappingTag]?.deepCopy() ?: return null
+                for (name in listOf("tag", "listen", "listen_port")) if (mapping.remove(name) != config.builtInbounds[mappingTag]?.get(name)) return null
+                hop.add("plugin_server", mapping)
+            }
+        }
         val resolver = hop.remove("domain_resolver")
-        val built = resolver == config.builtResolvers[tag]
+        val built = resolver == config.builtOutbounds[tag]?.get("domain_resolver")
         if (resolver != null && !(built && detour != null)) {
             val options = resolver as? JsonObject ?: JsonObject().apply { add("server", resolver) }
             val server = (options["server"] as? JsonPrimitive)?.takeIf { it.isString } ?: return null
@@ -563,6 +586,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     // own connection to the user's server, which must not be sniffed and sent somewhere else.
     val appInbounds = listOfNotNull("tun-in".takeIf { isVPN && !forTest }, TAG_MIXED.takeIf { keepMixedInbound })
     val externalIndexMap = ArrayList<IndexEntity>()
+
+    // The outbounds of plugins, by tag, with the inbound a plugin reaches its server by, if it has one.
+    val pluginHops = HashMap<String, String?>()
     val ipv6Mode = if (forTest) IPv6Mode.ENABLE else DataStore.ipv6Mode
 
     fun genDomainStrategy(noAsIs: Boolean): String = genDomainStrategy(noAsIs, ipv6Mode)
@@ -902,6 +928,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 }
 
                 if (proxyEntity.needExternal()) { // externel outbound
+                    changes.put(pluginHops, tagOut, null)
                     val localPort = mkPort()
                     externalChainMap[localPort] = proxyEntity
                     currentOutbound = Outbound_SocksOptions().apply {
@@ -1044,6 +1071,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                             listen = LOCALHOST
                             listen_port = mappingPort
                             tag = "$chainTag-mapping-${proxyEntity.id}"
+                            changes.put(pluginHops, tagOut, tag)
 
                             override_address = bean.serverAddress
                             override_port = bean.serverPort
@@ -1759,7 +1787,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         if (endpointList.isNotEmpty()) endpoints = endpointList
     }.let {
         val configTree = SingBoxOptions.toJsonTree(it)
-        val builtResolvers = builtResolvers(configTree.asJsonObject)
+        val built = configTree.asJsonObject.deepCopy()
         // Merged into the finished tree: on the root option it would shift arrays before their items' own settings apply.
         if (!forTest) Util.mergeJsonElement(configTree, DataStore.globalCustomConfig)
         Util.mergeJsonElement(configTree, proxy.requireBean().customConfigJson!!)
@@ -1780,7 +1808,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            ConfigIndex(configTree.asJsonObject, builtResolvers).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id]) } },
+            ConfigIndex(configTree.asJsonObject, built).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id], pluginHops) } },
         )
     }
 }

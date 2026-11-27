@@ -20,6 +20,7 @@ import xyz.nekobyte.nekobox.database.ProxyGroup
 import xyz.nekobyte.nekobox.database.RuleEntity
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
+import xyz.nekobyte.nekobox.fmt.naive.NaiveBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
@@ -238,6 +239,42 @@ class RunningWireGuardTest {
         } finally {
             DataStore.globalCustomConfig = ""
             DataStore.configurationStore.putString("domain_strategy_for_server", "auto")
+        }
+    }
+
+    @Test
+    fun aPluginHopIsThePluginNotItsPortOnTheDevice() {
+        val naive = add(
+            NaiveBean().apply {
+                serverAddress = "naive.example"
+                serverPort = 443
+                username = "u"
+                password = "p"
+            },
+        )
+        val tunnel = add(wg("tunnel"))
+        // Naive reaches its server through the tunnel; each build gives its SOCKS server another port and login.
+        val profile = add(chain("chain", tunnel, naive))
+        val vpn = running(profile)
+        assertNotNull(vpn.fingerprint(profile.id))
+        assertEquals(vpn.fingerprint(profile.id), candidate(profile.id))
+        assertEquals(vpn.fingerprint(profile.id), running(profile).fingerprint(profile.id))
+        edit(naive.id) { (this as NaiveBean).password = "q" }
+        assertNotEquals(vpn.fingerprint(profile.id), candidate(profile.id))
+        edit(naive.id) { (this as NaiveBean).password = "p" }
+
+        val tag = vpn.paths.getValue(profile.id).tags.first()
+        val outbounds = JSONObject(vpn.config).getJSONArray("outbounds")
+        try {
+            // A port custom JSON gave the SOCKS server: not the one the plugin listens on.
+            for (index in 0 until outbounds.length()) outbounds.getJSONObject(index).takeIf { it.optString("tag") == tag }?.put("server_port", 1)
+            DataStore.globalCustomConfig = JSONObject().put("outbounds", outbounds).toString()
+            assertNull(running(profile).fingerprint(profile.id))
+            // Route rules custom JSON changed: the plugin's way to its server is not the one built.
+            DataStore.globalCustomConfig = JSONObject().put("route", JSONObject().put("+rules", JSONArray().put(JSONObject().put("action", "sniff")))).toString()
+            assertNull(running(profile).fingerprint(profile.id))
+        } finally {
+            DataStore.globalCustomConfig = ""
         }
     }
 
