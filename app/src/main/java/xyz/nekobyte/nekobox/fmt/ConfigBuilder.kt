@@ -343,24 +343,25 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val 
  * a hop dialed directly and left out on one dialed through the next. A resolver custom JSON changed keeps all its
  * options. A hop of [plugins] is a SOCKS server on the device at a port and with a login every build makes anew; with
  * those as built it stands for the plugin, named by its hop, and so does the inbound the plugin reaches its server
- * by. Null when the path cannot be read so: a hop missing or given twice, a detour off the path, a resolver missing,
- * a plugin's port, login or inbound not as built, or route rules custom JSON changed on a path with a plugin.
+ * by. Null when the path cannot be read so: a hop missing or given twice, a detour that does not name the next hop, a
+ * resolver missing, a plugin's port, login or inbound not as built, a hop's own JSON that sets them or its resolver,
+ * or route rules custom JSON changed on a path with a plugin.
  */
 internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map<String, String?> = emptyMap()): String? {
     if (tags.any { it in plugins } && !config.routeRulesAsBuilt) return null
     val outbounds = config.outbounds
     val dnsServers = config.dnsServers
     val path = JsonArray()
-    for (tag in tags.distinct()) {
+    if (tags.distinct().size != tags.size) return null
+    for ((index, tag) in tags.withIndex()) {
         val hop = outbounds[tag]?.deepCopy() ?: return null
         hop.remove("tag")
+        // Every hop is dialed through the next one, which it names; the last names none, nor does a plugin's, whose
+        // plugin reaches its server by a route rule. A detour left out or pointed elsewhere skips a hop.
         val detour = hop.remove("detour")
-        if (detour != null) {
-            val index = tags.indexOf((detour as? JsonPrimitive)?.asString)
-            if (index < 0) return null
-            hop.addProperty("detour", "hop $index")
-        }
-        val index = tags.indexOf(tag)
+        val next = tags.getOrNull(index + 1)?.takeUnless { tag in plugins }
+        if ((detour as? JsonPrimitive)?.takeIf { it.isString }?.asString != next || (detour == null) != (next == null)) return null
+        if (next != null) hop.addProperty("detour", "hop ${index + 1}")
         if (tag in plugins) {
             val built = config.builtOutbounds[tag] ?: return null
             // The plugin listens where the builder told it; a hop's own JSON that moves its server elsewhere is not read.

@@ -294,6 +294,12 @@ class RunningWireGuardTest {
         val redirected = ConfigBuilderTestEnv.io { buildConfig(fresh(profile.id), forTest = true) }
         assertNull(redirected.fingerprint(profile.id))
         assertNull(redirected.wireGuardPath(profile.id))
+        // Or without a detour at all: the landing hop dials its server itself, the tunnel left aside.
+        outbounds.getJSONObject((0 until outbounds.length()).single { outbounds.getJSONObject(it).optString("tag") == tag }).remove("detour")
+        edit(profile.id) { customConfigJson = JSONObject().put("outbounds", outbounds).toString() }
+        val skipped = ConfigBuilderTestEnv.io { buildConfig(fresh(profile.id), forTest = true) }
+        assertNull(skipped.fingerprint(profile.id))
+        assertNull(skipped.wireGuardPath(profile.id))
     }
 
     @Test
