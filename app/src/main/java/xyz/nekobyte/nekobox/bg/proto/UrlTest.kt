@@ -1,11 +1,13 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import kotlinx.coroutines.delay
+import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
+import xyz.nekobyte.nekobox.bg.PROFILE_RUNS_OTHER_SETTINGS
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
@@ -39,23 +41,28 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
 
     // A WireGuard or AmneziaWG server keeps one session per client key: a core of its own for a profile the
     // connected service runs would take that session from the tunnel. The service tests such a profile through its
-    // core; null when the profile has no such hop, the service is stopped or it does not run the profile.
+    // core, when it runs it as saved; null when the profile has no such hop, the service is stopped or it does not
+    // run the profile.
     internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult): Int? {
         if (prepared.wireguardInstances.isEmpty()) return null
         val running = connectedService() ?: return null
-        return try {
-            running.urlTestProfile(profile.id)
+        val answer = try {
+            JSONObject(running.testWireGuardProfile(profile.id))
         } catch (e: IllegalStateException) {
             val message = e.message.orEmpty()
             when {
-                PROFILE_NOT_RUNNING in message -> null
+                PROFILE_NOT_RUNNING in message -> return null
 
                 // Stopping: no isolated retry, the core may still hold the session.
                 CORE_NOT_STARTED in message -> throw vpnChanging()
 
+                // An outbound of another core would take the session: nothing tests the saved settings now.
+                PROFILE_RUNS_OTHER_SETTINGS in message -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
+
                 else -> throw e
             }
         }
+        return answer.getInt("latencyMs")
     }
 
     // The service when it is connected, null when it is stopped. A missing binder, or a service that is starting or

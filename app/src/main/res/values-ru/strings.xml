@@ -90,6 +90,7 @@
 <string name="connection_test_timeout_error">Тайм-аут</string>
 <string name="connection_test_no_handshake">Нет рукопожатия: сервер не ответил за %1$d мс</string>
 <string name="connection_test_vpn_changing">VPN запускается или останавливается. Повторите через несколько секунд</string>
+<string name="connection_test_reconnect">VPN работает с другими настройками этого профиля. Переподключитесь, чтобы проверить сохранённые</string>
 <string name="connection_test_unreachable">Недоступен</string>
 <string name="connection_test_url">URL-адрес проверки подключения</string>
 <string name="connection_test_url_test">URL-тест</string>

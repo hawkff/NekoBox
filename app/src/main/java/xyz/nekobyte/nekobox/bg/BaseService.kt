@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import libcore.Libcore
 import org.json.JSONArray
+import org.json.JSONObject
 import xyz.nekobyte.nekobox.Action
 import xyz.nekobyte.nekobox.BootReceiver
 import xyz.nekobyte.nekobox.NekoBox
@@ -27,6 +28,7 @@ import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.fmt.savedChainTraffic
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.*
@@ -54,6 +56,9 @@ const val PROFILE_NOT_RUNNING = "profile not in running configuration"
 
 // Binder error while the service has no running core: it is starting, stopping or stopped.
 const val CORE_NOT_STARTED = "core not started"
+
+// Binder error of testWireGuardProfile: the core runs the profile with other settings than the saved ones.
+const val PROFILE_RUNS_OTHER_SETTINGS = "profile runs with other settings"
 
 class BaseService {
 
@@ -359,6 +364,20 @@ class BaseService {
             } catch (e: Exception) {
                 error(Protocols.genFriendlyMsg(e.readableMessage))
             }
+        }
+
+        override fun testWireGuardProfile(profileId: Long): String {
+            val proxy = runningProxy()
+            val tag = proxy.config.profileTagMap[profileId] ?: error(PROFILE_NOT_RUNNING)
+            // A result is for the settings saved now, which an edit since the start does not reach.
+            val saved = ProfileDatabase.proxyDao.getById(profileId)?.let { runCatching { savedChainTraffic(it) }.getOrNull() }
+            if (!proxy.config.runsAsSaved(profileId, saved)) error(PROFILE_RUNS_OTHER_SETTINGS)
+            val latency = try {
+                Libcore.urlTestOutbound(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+            } catch (e: Exception) {
+                error(Protocols.genFriendlyMsg(e.readableMessage))
+            }
+            return JSONObject().put("latencyMs", latency).toString()
         }
 
         override fun tailscalePeers(profileId: Long): String {

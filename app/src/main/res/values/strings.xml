@@ -472,6 +472,7 @@
     <string name="connection_test_timeout_error">Timeout</string>
     <string name="connection_test_no_handshake">No handshake: the server did not answer within %1$d ms</string>
     <string name="connection_test_vpn_changing">The VPN is starting or stopping. Try again in a moment</string>
+    <string name="connection_test_reconnect">The VPN runs other settings of this profile. Reconnect to test the saved ones</string>
     <string name="append_http_proxy">Append HTTP proxy to VPN</string>
     <string name="append_http_proxy_sum">Browsers and some apps use the proxy port directly (Android 10+)</string>
     <string name="append_http_proxy_security_title">Security notice</string>

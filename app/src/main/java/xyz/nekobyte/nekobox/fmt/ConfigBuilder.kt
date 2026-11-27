@@ -227,7 +227,21 @@ class ConfigBuildResult(
 
     // ownerProfileId: the profile whose chain built this outbound.
     data class WireGuardInstance(val tag: String, val ownerProfileId: Long)
+
+    /** Whether the outbound of [profileId] was built with [saved], its path as saved now ([savedChainTraffic]). */
+    fun runsAsSaved(profileId: Long, saved: List<ProxyEntity>?): Boolean {
+        val built = trafficMap.values.firstOrNull { it.lastOrNull()?.id == profileId } ?: return false
+        return saved != null && built.map { it.id to it.requireBean() } == saved.map { it.id to it.requireBean() }
+    }
 }
+
+// The chain's hops, each once and in the chain's order, and then the profile itself: the service reads a tag's speed
+// from the last profile listed for it, and in a group that picks its server while it runs only the picked profile
+// counts. Told apart by id: hashing a whole profile serializes its settings.
+private fun trafficHops(profileList: List<ProxyEntity>, entity: ProxyEntity) = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
+
+/** The hops of [entity]'s path as saved now, as a configuration keeps them for the outbound it builds for it. */
+internal fun savedChainTraffic(entity: ProxyEntity): List<ProxyEntity> = trafficHops(resolveChain(entity, BuildLookupCache()), entity)
 
 // Extracted from buildConfig as pure, capture-free helpers.
 // Behavior-preserving moves: same inputs -> same outputs.
@@ -654,10 +668,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 }
                 chainTailscaleProfiles += hop.id
             }
-            // The chain's hops, each once and in the chain's order, and then the profile itself: the service reads a
-            // tag's speed from the last profile listed for it, and in a group that picks its server while it runs
-            // only the picked profile counts. Told apart by id: hashing a whole profile serializes its settings.
-            val chainTraffic = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
+            val chainTraffic = trafficHops(profileList, entity)
 
             var currentOutbound: SingBoxOption
             lateinit var pastOutbound: SingBoxOption
