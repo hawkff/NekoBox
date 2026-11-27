@@ -18,20 +18,29 @@ import xyz.nekobyte.nekobox.database.ProfileManager
 /**
  * Carries out a tap on the connect widget, without a window of its own: the orb connects or disconnects, a chip
  * switches the connection to its profile, or selects it and connects. An activity, so that a start may ask for
- * Android's VPN consent. Only the widget's own intents reach it.
+ * Android's VPN consent. Only the widget's own intents reach it. A tap on a widget showing another state than the
+ * service's only redraws it.
  */
 class ConnectWidgetActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PROFILE = "xyz.nekobyte.nekobox.EXTRA_WIDGET_PROFILE"
+
+        // Followed by the name of the BaseService.State the tapped drawing showed.
+        const val ACTION_TAP = "xyz.nekobyte.nekobox.WIDGET_TAP."
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val chipId = intent.getLongExtra(EXTRA_PROFILE, -1L)
+        val drawn = widgetDrawnState(intent.action)
         lifecycleScope.launch {
             val action = withContext(Dispatchers.Default) {
                 val tap = tapState(NekoBoxConnection.startedServices()) { ConnectWidgets.ask(applicationContext, it) }
                 val state = tap.state
+                if (widgetTapStale(drawn, state)) {
+                    ConnectWidgets.refresh(applicationContext).join()
+                    return@withContext WidgetAction.REDRAW
+                }
                 // The id comes from an intent: it acts only once it names a profile in the database this version can
                 // connect with. A chip drawn before its profile was archived or deleted opens the app instead.
                 val chip = chipId.takeIf { it > 0L }?.let { ProfileDatabase.proxyDao.getById(it) }?.takeIf { it.canBuild() }
@@ -63,7 +72,7 @@ class ConnectWidgetActivity : ComponentActivity() {
                 WidgetAction.START, WidgetAction.SELECT_AND_START -> start()
                 WidgetAction.SWITCH -> NekoBox.reloadService(chipId)
                 WidgetAction.OPEN_APP -> startActivity(Intent(this@ConnectWidgetActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                WidgetAction.SELECT, WidgetAction.NONE -> Unit
+                WidgetAction.SELECT, WidgetAction.REDRAW, WidgetAction.NONE -> Unit
             }
             finish()
         }

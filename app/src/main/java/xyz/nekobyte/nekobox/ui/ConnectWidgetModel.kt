@@ -35,15 +35,28 @@ internal fun widgetSpec(widthDp: Float, heightDp: Float): WidgetSpec = when {
     )
 }
 
+/** A widget's size in each orientation of the home screen, width to height in dp. */
+internal data class WidgetSizes(val portrait: Pair<Float, Float>, val landscape: Pair<Float, Float>)
+
 /**
- * The size, width to height in dp, a layout must fit to show in every orientation: the smallest width and height of
- * the [sizes] the home screen reports (Android 12 and later), else the minimum width and height it reports, which are
- * the upright width and the sideways height. Zero where it reports nothing: the lines without chips.
+ * The widget's size upright and sideways. Of two [sizes] the home screen reports (Android 12 and later), the narrow and
+ * tall one is upright and the wide and short one sideways. Any other report, one size, two that are not such a pair, or
+ * more than two as on a foldable, gets the narrowest width and the lowest height in both orientations, which fit every
+ * size it reports. Before Android 12, the minimum width with the maximum height is upright and the maximum width with
+ * the minimum height sideways. Where it reports nothing: the lines without chips.
  */
-internal fun widgetFitSize(sizes: List<Pair<Float, Float>>, minWidth: Int, minHeight: Int): Pair<Float, Float> = if (sizes.isNotEmpty()) {
-    sizes.minOf { it.first } to sizes.minOf { it.second }
-} else {
-    (minWidth.takeIf { it > 0 }?.toFloat() ?: WIDGET_LINES_MIN_WIDTH) to (minHeight.takeIf { it > 0 }?.toFloat() ?: 40f)
+// shortcut: a foldable's larger sizes show fewer chips than they could hold; pick a layout per reported size if that
+// matters.
+internal fun widgetSizes(sizes: List<Pair<Float, Float>>, minWidth: Int, minHeight: Int, maxWidth: Int, maxHeight: Int): WidgetSizes {
+    if (sizes.size == 2) {
+        val (narrow, wide) = sizes.sortedBy { it.first }
+        if (narrow.first < wide.first && narrow.second >= wide.second) return WidgetSizes(narrow, wide)
+    }
+    if (sizes.isNotEmpty()) return (sizes.minOf { it.first } to sizes.minOf { it.second }).let { WidgetSizes(it, it) }
+    fun dp(value: Int, default: Float) = value.takeIf { it > 0 }?.toFloat() ?: default
+    val narrow = dp(minWidth, WIDGET_LINES_MIN_WIDTH)
+    val low = dp(minHeight, 40f)
+    return WidgetSizes(narrow to dp(maxHeight, low), dp(maxWidth, narrow) to low)
 }
 
 /**
@@ -68,7 +81,22 @@ internal fun widgetChipProfiles(order: List<Long>, profiles: List<ProxyEntity>):
 internal fun widgetSpeedLine(tx: String, rx: String) = "▲ $tx   ▼ $rx"
 
 /** What a tap on the widget does. */
-internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, NONE }
+internal enum class WidgetAction { STOP, START, SWITCH, SELECT_AND_START, SELECT, OPEN_APP, REDRAW, NONE }
+
+/** The state a tap's [action] says its drawing showed: null unless it is ConnectWidgetActivity.ACTION_TAP and a state's name. */
+internal fun widgetDrawnState(action: String?): BaseService.State? = action?.takeIf { it.startsWith(ConnectWidgetActivity.ACTION_TAP) }?.removePrefix(ConnectWidgetActivity.ACTION_TAP)
+    ?.let { name -> BaseService.State.entries.firstOrNull { it.name == name } }
+
+/**
+ * Whether a tap found the service in a state other than the one the widget showed ([drawn], null when the tap did not
+ * say): then the widget is stale, both processes having ended unseen for one, and the tap only redraws it, as acting
+ * on it could do the opposite of what was meant (start a connection the widget showed as running). An unknown [live]
+ * state is not stale: [widgetAction] opens the app. Idle shows as off.
+ */
+internal fun widgetTapStale(drawn: BaseService.State?, live: BaseService.State?): Boolean {
+    fun shown(state: BaseService.State?) = if (state == BaseService.State.Idle) BaseService.State.Stopped else state
+    return live != null && shown(drawn) != shown(live)
+}
 
 /**
  * What a tap acts on: the service's [state], null when a service was started but did not answer in time, and the

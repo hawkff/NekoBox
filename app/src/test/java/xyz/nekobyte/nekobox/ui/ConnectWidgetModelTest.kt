@@ -71,13 +71,35 @@ class ConnectWidgetModelTest {
     }
 
     @Test
-    fun aLayoutFitsEveryOrientation() {
-        // Android 12 and later report a size for each orientation: the smallest width and height fit both.
-        assertEquals(300f to 110f, widgetFitSize(listOf(300f to 200f, 420f to 110f), 0, 0))
-        // Before, the minimum width is the upright one, the minimum height the sideways one.
-        assertEquals(250f to 90f, widgetFitSize(emptyList(), 250, 90))
+    fun eachOrientationTakesItsOwnSize() {
+        // Android 12 and later report a size for each orientation: upright narrow and tall, sideways wide and low.
+        val reported = widgetSizes(listOf(300f to 200f, 420f to 110f), 0, 0, 0, 0)
+        assertEquals(WidgetSizes(portrait = 300f to 200f, landscape = 420f to 110f), reported)
+        // Two rows of chips upright, where the sideways height has room for none.
+        assertEquals(2, widgetSpec(reported.portrait.first, reported.portrait.second).chipRows)
+        assertEquals(0, widgetSpec(reported.landscape.first, reported.landscape.second).chipRows)
+        // Before, the minimum width and the maximum height are the upright ones, the others the sideways ones.
+        assertEquals(WidgetSizes(250f to 200f, 400f to 90f), widgetSizes(emptyList(), 250, 90, 400, 200))
+        // Only minimums: both orientations take them.
+        assertEquals(WidgetSizes(250f to 90f, 250f to 90f), widgetSizes(emptyList(), 250, 90, 0, 0))
+        // Two sizes that are not a narrow-and-tall, wide-and-short pair: the smallest of each in both orientations, so the
+        // short one gets no chips its height cannot hold.
+        val unpaired = widgetSizes(listOf(300f to 110f, 300f to 200f), 0, 0, 0, 0)
+        assertEquals(WidgetSizes(300f to 110f, 300f to 110f), unpaired)
+        assertEquals(0, widgetSpec(unpaired.portrait.first, unpaired.portrait.second).chipRows)
+        // The same widths in the other order tell no orientation either.
+        assertEquals(unpaired, widgetSizes(listOf(300f to 200f, 300f to 110f), 0, 0, 0, 0))
+        // One size: both orientations take it.
+        assertEquals(WidgetSizes(300f to 200f, 300f to 200f), widgetSizes(listOf(300f to 200f), 0, 0, 0, 0))
+        // A foldable reports four sizes: both orientations take the narrowest width and the lowest height, so no reported
+        // size gets chips its height cannot hold.
+        val foldable = widgetSizes(listOf(210f to 150f, 300f to 90f, 400f to 300f, 500f to 220f), 0, 0, 0, 0)
+        assertEquals(WidgetSizes(210f to 90f, 210f to 90f), foldable)
+        assertEquals(0, widgetSpec(foldable.portrait.first, foldable.portrait.second).chipRows)
         // Nothing reported: the lines without chips.
-        assertEquals(WidgetSpec(orbOnly = false), widgetFitSize(emptyList(), 0, 0).let { (width, height) -> widgetSpec(width, height) })
+        val none = widgetSizes(emptyList(), 0, 0, 0, 0)
+        assertEquals(WidgetSpec(orbOnly = false), widgetSpec(none.portrait.first, none.portrait.second))
+        assertEquals(WidgetSpec(orbOnly = false), widgetSpec(none.landscape.first, none.landscape.second))
     }
 
     private fun orb(state: State, selectedUsable: Boolean = true) = widgetAction(state, -1L, false, 1L, selectedUsable, false)
@@ -158,6 +180,35 @@ class ConnectWidgetModelTest {
         // Off, or the service names none yet: the selection.
         assertEquals(17L, widgetActiveId(TapState(State.Stopped), 17L))
         assertEquals(17L, widgetActiveId(TapState(State.Connecting, -1L), 17L))
+    }
+
+    @Test
+    fun aTapOnAWidgetShowingAnotherStateOnlyRedraws() {
+        // Both processes ended with the widget on Connected: no service is found, and the tap must not start one.
+        assertTrue(widgetTapStale(drawn = State.Connected, live = State.Stopped))
+        assertTrue(widgetTapStale(drawn = State.Stopped, live = State.Connected))
+        assertTrue(widgetTapStale(drawn = State.Connecting, live = State.Connected))
+        // An intent without the drawn state comes from no drawing of this version.
+        assertTrue(widgetTapStale(drawn = null, live = State.Stopped))
+        // As shown, it acts; Idle shows as off.
+        assertFalse(widgetTapStale(drawn = State.Connected, live = State.Connected))
+        assertFalse(widgetTapStale(drawn = State.Stopped, live = State.Idle))
+        assertFalse(widgetTapStale(drawn = State.Idle, live = State.Stopped))
+        // A service slow to answer stays unknown: widgetAction opens the app.
+        assertFalse(widgetTapStale(drawn = State.Connected, live = null))
+        assertEquals(WidgetAction.OPEN_APP, widgetAction(null, -1L, false, 1L, true, false))
+    }
+
+    @Test
+    fun onlyTheTapActionCarriesADrawnState() {
+        assertEquals(State.Connected, widgetDrawnState(ConnectWidgetActivity.ACTION_TAP + "Connected"))
+        assertEquals(State.Idle, widgetDrawnState(ConnectWidgetActivity.ACTION_TAP + "Idle"))
+        // A bare state name, a foreign action, an unknown name or none: no drawn state, so the tap only redraws.
+        for (action in listOf("Stopped", "Connected", "android.intent.action.MAIN", ConnectWidgetActivity.ACTION_TAP + "Bogus", ConnectWidgetActivity.ACTION_TAP, null)) {
+            assertEquals(null, widgetDrawnState(action))
+            assertTrue(widgetTapStale(widgetDrawnState(action), State.Stopped))
+            assertTrue(widgetTapStale(widgetDrawnState(action), State.Connected))
+        }
     }
 
     @Test

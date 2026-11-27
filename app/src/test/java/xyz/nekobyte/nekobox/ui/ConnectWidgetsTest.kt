@@ -3,6 +3,9 @@ package xyz.nekobyte.nekobox.ui
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.os.Bundle
+import android.util.SizeF
+import android.view.View
 import android.widget.TextView
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
@@ -118,6 +121,42 @@ class ConnectWidgetsTest {
         assertEquals("Not connected", text(id, R.id.widget_state))
     }
 
+    // ConnectWidgetActivity compares it with the service's state: a widget left on another one only redraws.
+    @Test
+    fun aTapCarriesTheStateItsWidgetShows() {
+        val id = place()
+        fun tapped(): String? {
+            manager.getViewFor(id).findViewById<View>(R.id.widget_orb).performClick()
+            return shadowOf(context).nextStartedActivity.action
+        }
+        assertEquals(ConnectWidgetActivity.ACTION_TAP + State.Stopped.name, tapped())
+        ConnectWidgets.askService = { answer(State.Connected) }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        assertEquals(ConnectWidgetActivity.ACTION_TAP + State.Connected.name, tapped())
+    }
+
+    // The home screen can show a drawing after a newer one was made, until it applies that one: a tap on it must still
+    // carry the state it shows, or a Connected orb tapped once the service stopped would start it again.
+    @Test
+    fun aDrawingStillOnScreenKeepsTheStateItShows() {
+        ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
+        DataStore.favoriteProfiles = listOf(18L)
+        val id = place()
+        val sizes = arrayListOf(SizeF(300f, 200f))
+        AppWidgetManager.getInstance(context).updateAppWidgetOptions(id, Bundle().apply { putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes) })
+        ConnectWidgets.askService = { answer(State.Connected) }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        val shown = manager.getViewFor(id)
+        val taps = listOf(R.id.widget_orb, R.id.widget_chip).map { shown.findViewById<View>(it) }.map { it to shadowOf(it).onClickListener }
+        // A Stopped drawing is made; the Connected one's tap targets are still the ones on screen.
+        ConnectWidgets.askService = { null }
+        runBlocking { ConnectWidgets.refresh(context).join() }
+        for ((view, tap) in taps) {
+            tap.onClick(view)
+            assertEquals(ConnectWidgetActivity.ACTION_TAP + State.Connected.name, shadowOf(context).nextStartedActivity.action)
+        }
+    }
+
     @Test
     fun theProfileTheServiceRunsShowsByItsOwnNameAndGroup() {
         ConfigBuilderTestEnv.io { profile(18, "Osaka 005") }
@@ -229,6 +268,28 @@ class ConnectWidgetsTest {
         } finally {
             ConnectWidgets.publishSpeed = publish
         }
+    }
+
+    // The 4x3 case of a Pixel home screen: upright tall enough for two rows of chips, sideways for none.
+    @Test
+    fun eachOrientationShowsTheChipRowsItsSizeHasRoomFor() {
+        for (profileId in 18L..20L) ConfigBuilderTestEnv.io { profile(profileId, "Osaka $profileId") }
+        DataStore.favoriteProfiles = listOf(18L, 19L, 20L)
+        val id = place()
+        val sizes = arrayListOf(SizeF(300f, 200f), SizeF(420f, 110f))
+        AppWidgetManager.getInstance(context).updateAppWidgetOptions(id, Bundle().apply { putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, sizes) })
+        fun rows(): Int {
+            runBlocking { ConnectWidgets.refresh(context).join() }
+            return listOf(R.id.widget_chips_1, R.id.widget_chips_2).count { manager.getViewFor(id).findViewById<View>(it).visibility == View.VISIBLE }
+        }
+        assertEquals(2, rows())
+        RuntimeEnvironment.setQualifiers("+land")
+        assertEquals(0, rows())
+        // With the speed lines, only the current orientation's layout, drawn again after each rotation.
+        ConnectWidgets.askService = { answer(State.Connected) }
+        assertEquals(0, rows())
+        RuntimeEnvironment.setQualifiers("+port")
+        assertEquals(2, rows())
     }
 
     @Test
