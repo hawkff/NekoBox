@@ -22,8 +22,11 @@ internal interface RunningCore {
 
     fun fetchText(tag: String?, link: String): String?
 
-    /** Wall clock, Unix milliseconds. */
-    fun now(): Long
+    /** Milliseconds of a clock that only goes forward, for waits. */
+    fun elapsedRealtime(): Long
+
+    /** Unix milliseconds, for the times of handshakes. */
+    fun wallClock(): Long
 
     fun sleep(ms: Long)
 }
@@ -56,7 +59,7 @@ internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profi
         // Right after the connect a Tailscale node on the path may still be logging in or picking its exit node.
         core.awaitTailscaleNodes(profileId)
         before = status().takeIf { state -> wireGuardPath.isNotEmpty() && state.instances.none { it.error != null } }
-        started = core.now()
+        started = core.elapsedRealtime()
         core.urlTest(tag)
     } catch (e: Exception) {
         TestOutcome(0, e.readableMessage, false)
@@ -66,9 +69,18 @@ internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profi
         if (!core.running) return result.put("result", "stopping")
         val baseline = before
         if (outcome.timedOut && baseline != null) {
-            core.sleep((started + HANDSHAKE_RETRY_WINDOW_MS - core.now()).coerceAtLeast(0))
-            if (status().noCompletedHandshake(baseline, true, core.now())) return result.put("result", "no_handshake")
+            // A stop in the window ends it: the closed core's state says nothing of the server.
+            while (true) {
+                if (!core.running) return result.put("result", "stopping")
+                val left = started + HANDSHAKE_RETRY_WINDOW_MS - core.elapsedRealtime()
+                if (left <= 0) break
+                core.sleep(minOf(left, 250))
+            }
+            val after = status()
+            if (!core.running) return result.put("result", "stopping")
+            if (after.noCompletedHandshake(baseline, true, core.wallClock())) return result.put("result", "no_handshake")
         }
+        if (!core.running) return result.put("result", "stopping")
         return result.put("result", "failed").put("error", outcome.error)
     }
     // A page that cannot be read leaves the answer unknown; the test itself passed.

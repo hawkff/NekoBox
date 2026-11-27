@@ -387,7 +387,9 @@ class BaseService {
                     Libcore.fetchTextOutbound(proxy.box, tag, link, DataStore.connectionTestTimeout)
                 }
 
-                override fun now() = System.currentTimeMillis()
+                override fun elapsedRealtime() = SystemClock.elapsedRealtime()
+
+                override fun wallClock() = System.currentTimeMillis()
 
                 override fun sleep(ms: Long) = Thread.sleep(ms)
             }

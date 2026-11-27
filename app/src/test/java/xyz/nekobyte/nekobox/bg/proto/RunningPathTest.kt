@@ -40,7 +40,7 @@ class RunningPathTest {
 
     private open inner class Core : RunningCore {
         override var running = true
-        var clock = now
+        var clock = 0L
         val sent = mutableMapOf<String, Long>()
 
         override fun awaitTailscaleNodes(profileId: Long) {
@@ -62,7 +62,9 @@ class RunningPathTest {
             return "ip=203.0.113.7"
         }
 
-        override fun now() = clock
+        override fun elapsedRealtime() = clock
+
+        override fun wallClock() = now + clock
 
         override fun sleep(ms: Long) {
             calls += "sleep $ms"
@@ -131,7 +133,7 @@ class RunningPathTest {
     fun aTimeoutOnAServerThatSendsAndHearsNothingIsANoHandshakeFailure() {
         // The test ran out of time after 3 s; the retry window takes the rest of 5.5 s.
         assertEquals("no_handshake", testRunningPath(config(), DeadServer("wg-7", 3_000), 7, "path-7", "").getString("result"))
-        assertEquals("sleep 2500", calls.single { it.startsWith("sleep") })
+        assertEquals(2_500L, calls.filter { it.startsWith("sleep") }.sumOf { it.removePrefix("sleep ").toLong() })
     }
 
     @Test
@@ -139,6 +141,19 @@ class RunningPathTest {
         // The front hop's outbound was built for another member first; it is on this member's path all the same.
         assertEquals("no_handshake", testRunningPath(config(), DeadServer("front", 3_000), 8, "path-8", "").getString("result"))
         assertEquals(listOf("status front"), calls.filter { it.startsWith("status") }.distinct())
+    }
+
+    @Test
+    fun aStopInTheWindowIsAStopNotATimeout() {
+        val stopped = object : DeadServer("wg-7", 3_000) {
+            override fun sleep(ms: Long) {
+                super.sleep(ms)
+                running = false
+            }
+        }
+        assertEquals("stopping", testRunningPath(config(), stopped, 7, "path-7", "").getString("result"))
+        // It ends with the stop, not with the window.
+        assertEquals(listOf("sleep 250"), calls.filter { it.startsWith("sleep") })
     }
 
     @Test
