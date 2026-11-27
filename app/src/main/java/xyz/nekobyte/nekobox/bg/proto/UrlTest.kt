@@ -29,7 +29,7 @@ class UrlTest(private val service: () -> INekoBoxService?) {
         if (prepared.tailscaleEndpoints.isNotEmpty()) return doTest(profile, prepared) to null
         val wireGuard = !prepared.wireGuardIdentities.isEmpty
         if (wireGuard) viaRunningCore(profile, prepared, answerUrl)?.let { return it }
-        val instance = TestInstance(profile, link, timeout, prepared, answerUrl)
+        val instance = TestInstance(profile, link, timeout, prepared, answerUrl, ::serviceChanging)
         return ownCore(wireGuard) { instance.doTest() } to instance.answer
     }
 
@@ -37,27 +37,33 @@ class UrlTest(private val service: () -> INekoBoxService?) {
         val wireGuard = !prepared.wireGuardIdentities.isEmpty
         if (wireGuard) viaRunningCore(profile, prepared)?.let { return it.first }
         val nodes = prepared.tailscaleEndpoints.keys
-        if (nodes.isEmpty()) return ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared).doTest() }
+        if (nodes.isEmpty()) return ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared, vpnChanging = ::serviceChanging).doTest() }
         // A path with WireGuard hops is tested through the service's core only as prepared, the Tailscale node's too.
         val viaService: (INekoBoxService) -> Int = if (wireGuard) {
             { throughService(it, profile, prepared, null)?.first ?: error(PROFILE_NOT_RUNNING) }
         } else {
             { it.urlTestProfile(profile.id) }
         }
-        return TailscaleAccess.run(service, nodes, viaService) { ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared).doTest() } }
+        return TailscaleAccess.run(service, nodes, viaService) { ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared, vpnChanging = ::serviceChanging).doTest() } }
     }
 
-    // A test's own core. When the request of one with WireGuard hops times out while the VPN starts or stops, the VPN
-    // is the likely cause: its kill switch holds traffic while it connects. The test then says so. The core has closed
-    // by then and its sessions are free; the state is read once, without waiting. A request that failed otherwise, a
-    // failure to set the core up, a missing plugin or a config error, which no retry mends, and a cancellation stay
-    // as they are.
+    // A test's own core. When the request of one with WireGuard hops times out, and the VPN was already starting or
+    // stopping as it was sent, the VPN is the likely cause: its kill switch holds traffic while it connects. The test
+    // then says so. A VPN change seen only afterwards does not show that it held the request, so then, and for a
+    // request that failed otherwise, a failure to set the core up, a missing plugin or a config error, which no retry
+    // mends, and a cancellation, the failure stays as it is.
     internal suspend fun <T> ownCore(wireGuard: Boolean, probe: suspend () -> T): T = try {
         probe()
     } catch (e: IOException) {
-        val state = if (wireGuard && ((e is ProbeFailure && e.timedOut) || e is NoHandshakeException)) service()?.let { runCatching { BaseService.State.values()[it.state] }.getOrNull() } else null
-        if (state == BaseService.State.Connecting || state == BaseService.State.Stopping) throw vpnChanging(e)
+        val request = e as? ProbeFailure ?: (e as? NoHandshakeException)?.cause as? ProbeFailure
+        if (wireGuard && request != null && request.timedOut && request.duringVpnChange) throw vpnChanging(e)
         throw e
+    }
+
+    // Whether the service is starting or stopping now, read as a test's own core sends its request.
+    internal fun serviceChanging(): Boolean {
+        val state = service()?.let { runCatching { BaseService.State.values()[it.state] }.getOrNull() }
+        return state == BaseService.State.Connecting || state == BaseService.State.Stopping
     }
 
     // A WireGuard or AmneziaWG server keeps one session per client key and server key, which a core holds for its

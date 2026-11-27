@@ -132,28 +132,42 @@ class UrlTestTest {
 
     @Test
     fun aTestsOwnCoreThatFailsWhileTheVpnStartsOrStopsSaysSo() = runTest {
-        val failed = ProbeFailure("Get \"http://10.66.0.1:8080/\": context deadline exceeded", timedOut = true)
-        for (state in listOf(BaseService.State.Connecting, BaseService.State.Stopping)) {
-            val reason = failure { UrlTest { binder({ state }) { tested(1) } }.ownCore(true) { throw failed } }
+        // A request that timed out while the VPN was starting or stopping as it was sent; the state now does not count.
+        val failed = ProbeFailure("Get \"http://10.66.0.1:8080/\": context deadline exceeded", timedOut = true, duringVpnChange = true)
+        val now = binder({ BaseService.State.Stopped }) { tested(1) }
+        for (thrown in listOf(failed, NoHandshakeException(5000, failed))) {
+            val reason = failure { UrlTest { now }.ownCore(true) { throw thrown } }
             assertEquals("vpn_changing", reason.code)
-            assertEquals(failed, reason.cause)
+            assertEquals(thrown, reason.cause)
         }
-        // Otherwise the failure stays: the VPN stopped or connected, no WireGuard hop, or the sessions held.
-        assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Stopped }) { tested(1) } }.ownCore(true) { throw failed } }.exceptionOrNull())
-        assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Connected }) { tested(1) } }.ownCore(true) { throw failed } }.exceptionOrNull())
-        assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(false) { throw failed } }.exceptionOrNull())
+        // A VPN that started or stopped only after the request was sent proves nothing: the timeout stays. So does a
+        // test without WireGuard hops.
+        val earlier = ProbeFailure("Get \"http://10.66.0.1:8080/\": context deadline exceeded", timedOut = true, duringVpnChange = false)
+        for (state in listOf(BaseService.State.Connecting, BaseService.State.Stopping)) {
+            assertEquals(earlier, runCatching { UrlTest { binder({ state }) { tested(1) } }.ownCore(true) { throw earlier } }.exceptionOrNull())
+        }
+        assertEquals(failed, runCatching { UrlTest { now }.ownCore(false) { throw failed } }.exceptionOrNull())
         val held = WireGuardSessionsUnavailable("wireguard_in_use", "held")
-        assertEquals(held, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw held } }.exceptionOrNull())
+        assertEquals(held, runCatching { UrlTest { now }.ownCore(true) { throw held } }.exceptionOrNull())
         // A request that failed with a reason of its own, as one outside the profile's allowed IPs.
-        val outside = ProbeFailure("dial tcp 10.99.0.1:8090: destination 10.99.0.1 is outside the allowed IPs", timedOut = false)
-        assertEquals(outside, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw outside } }.exceptionOrNull())
+        val outside = ProbeFailure("dial tcp 10.99.0.1:8090: destination 10.99.0.1 is outside the allowed IPs", timedOut = false, duringVpnChange = true)
+        assertEquals(outside, runCatching { UrlTest { now }.ownCore(true) { throw outside } }.exceptionOrNull())
         // A core that could not be set up: a plugin missing, a config the core refuses. No retry mends that.
         for (setup in listOf(PluginManager.PluginNotFoundException("naive-plugin"), IOException("decode config: unknown field"), IllegalStateException("Missing Mieru SOCKS credentials"))) {
-            assertEquals(setup, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw setup } }.exceptionOrNull())
+            assertEquals(setup, runCatching { UrlTest { now }.ownCore(true) { throw setup } }.exceptionOrNull())
         }
         // A cancellation is no failure of the test.
         val cancelled = CancellationException("dialog closed")
-        assertEquals(cancelled, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw cancelled } }.exceptionOrNull())
+        assertEquals(cancelled, runCatching { UrlTest { now }.ownCore(true) { throw cancelled } }.exceptionOrNull())
+    }
+
+    @Test
+    fun theVpnChangesWhileTheServiceStartsOrStops() {
+        for (state in BaseService.State.values()) {
+            val changing = state == BaseService.State.Connecting || state == BaseService.State.Stopping
+            assertEquals(state.name, changing, UrlTest { binder({ state }) { tested(1) } }.serviceChanging())
+        }
+        assertEquals(false, UrlTest { null }.serviceChanging())
     }
 
     @Test

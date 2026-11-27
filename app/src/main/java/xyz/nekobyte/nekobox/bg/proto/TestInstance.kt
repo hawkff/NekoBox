@@ -54,9 +54,10 @@ internal fun unreadableWireGuard(identities: WireGuardIdentities): WireGuardSess
 
 /**
  * The test's request through a core that started failed: on the network, no setup or config error. [timedOut] when it
- * got no answer in time, as when traffic is held, rather than an answer or an error that says why.
+ * got no answer in time, as when traffic is held, rather than an answer or an error that says why; [duringVpnChange]
+ * when the VPN was starting or stopping as it was sent.
  */
-class ProbeFailure(message: String, val timedOut: Boolean) : IOException(message)
+class ProbeFailure(message: String, val timedOut: Boolean, val duringVpnChange: Boolean = false) : IOException(message)
 
 /** A connection test timed out on a WireGuard or AmneziaWG server that completed no handshake. */
 class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
@@ -68,6 +69,8 @@ class TestInstance(
     private val preparedConfig: ConfigBuildResult? = null,
     // A page to read through the profile once the test passes, such as one that reports the caller's address.
     private val answerUrl: String? = null,
+    // Whether the VPN is starting or stopping, read as the request is sent.
+    private val vpnChanging: () -> Boolean = { false },
 ) : BoxInstance(profile) {
 
     /** What [answerUrl] said, after [doTest]; null when it was not asked or could not be read. */
@@ -79,11 +82,12 @@ class TestInstance(
             awaitTailscaleReady(box, endpoint.tag, endpoint.waitForExitNode)
         }
         currentCoroutineContext().ensureActive()
+        val changing = vpnChanging()
         val outcome = Libcore.urlTestOutcome(box, link, timeout)
         if (outcome.error.isNotEmpty()) {
             // A request that timed out says nothing of why; a WireGuard server that never answered does, on the path
             // the test took. The core started for this test, so everything its outbounds sent was sent during it.
-            val failure = ProbeFailure(outcome.error, outcome.timedOut)
+            val failure = ProbeFailure(outcome.error, outcome.timedOut, changing)
             val path = config.wireGuardPath(profile.id) ?: throw failure
             val status = wireGuardServiceStatus(true, path) { Libcore.wireGuardStatus(box, it) }
             if (parseWireGuardServiceStatus(status).noCompletedHandshake(WireGuardServiceState.NONE, outcome.timedOut, System.currentTimeMillis())) {
