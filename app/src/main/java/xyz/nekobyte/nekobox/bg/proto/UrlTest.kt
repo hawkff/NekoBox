@@ -6,6 +6,7 @@ import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
@@ -24,41 +25,36 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
      */
     suspend fun check(profile: ProxyEntity, answerUrl: String, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Pair<Int, String?> {
         if (prepared.tailscaleEndpoints.isNotEmpty()) return doTest(profile, prepared) to null
-        return try {
-            val instance = TestInstance(profile, link, timeout, prepared, answerUrl)
-            instance.doTest() to instance.answer
-        } catch (_: WireGuardSessionsUnavailable) {
-            viaRunningCore(profile, prepared, answerUrl)
-        }
+        if (!prepared.wireGuardIdentities.isEmpty) viaRunningCore(profile, prepared, answerUrl)?.let { return it }
+        val instance = TestInstance(profile, link, timeout, prepared, answerUrl)
+        return instance.doTest() to instance.answer
     }
 
-    suspend fun doTest(profile: ProxyEntity, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Int = try {
-        isolated(profile, prepared)
-    } catch (_: WireGuardSessionsUnavailable) {
-        viaRunningCore(profile, prepared).first
-    }
-
-    // A core of the test's own. It takes the config's WireGuard sessions as it starts, after the Tailscale state and
-    // with nothing waited for meanwhile, in the order the VPN's core does.
-    private suspend fun isolated(profile: ProxyEntity, prepared: ConfigBuildResult): Int {
+    suspend fun doTest(profile: ProxyEntity, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Int {
+        val wireGuard = !prepared.wireGuardIdentities.isEmpty
+        if (wireGuard) viaRunningCore(profile, prepared)?.let { return it.first }
         val nodes = prepared.tailscaleEndpoints.keys
         if (nodes.isEmpty()) return TestInstance(profile, link, timeout, prepared).doTest()
-        return TailscaleAccess.run(service, nodes, { it.urlTestProfile(profile.id) }) {
-            TestInstance(profile, link, timeout, prepared).doTest()
+        // A path with WireGuard hops is tested through the service's core only as prepared, the Tailscale node's too.
+        val viaService: (INekoBoxService) -> Int = if (wireGuard) {
+            { throughService(it, profile, prepared, null)?.first ?: error(PROFILE_NOT_RUNNING) }
+        } else {
+            { it.urlTestProfile(profile.id) }
         }
+        return TailscaleAccess.run(service, nodes, viaService) { TestInstance(profile, link, timeout, prepared).doTest() }
     }
 
     // A WireGuard or AmneziaWG server keeps one session per client key and server key, which a core holds for its
-    // life. When one of the profile's is held, the profile is tested through the VPN's core if that runs the path
-    // prepared for this test, and reads [answerUrl] through it as [check] does; otherwise the test fails with the
-    // reason.
-    internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String? = null): Pair<Int, String?> {
-        val refusal = if (prepared.wireGuardIdentities.unknown) {
-            ConnectionTestFailure("wireguard_unknown_key", app.getString(R.string.connection_test_wireguard_unknown_key))
-        } else {
-            ConnectionTestFailure("wireguard_in_use", app.getString(R.string.connection_test_wireguard_in_use))
-        }
-        val running = connectedService() ?: throw refusal
+    // life. A profile with such hops is tested through the connected service's core when that runs the path prepared
+    // for this test, also when its sessions are free (another key of a connected profile is still another path), and
+    // reads [answerUrl] through it as [check] does. Null only when the service is stopped or does not run the
+    // profile: then the test may have a core of its own, which takes the sessions as it starts or fails with the reason.
+    internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String? = null): Pair<Int, String?>? {
+        val running = connectedService() ?: return null
+        return throughService(running, profile, prepared, answerUrl)
+    }
+
+    private fun throughService(running: INekoBoxService, profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String?): Pair<Int, String?>? {
         val fingerprint = prepared.paths[profile.id]?.fingerprint.orEmpty()
         val reply = try {
             JSONObject(running.testWireGuardProfile(profile.id, fingerprint, answerUrl.orEmpty()))
@@ -67,7 +63,7 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
         }
         return when (reply.optString("result")) {
             "tested" -> reply.getInt("latencyMs") to reply.optString("answer").takeIf { reply.has("answer") }
-            "not_running" -> throw refusal
+            "not_running" -> null
             "other_settings" -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
             "stopping" -> throw vpnChanging()
             "no_handshake" -> throw NoHandshakeException(timeout, IOException(reply.optString("error")))

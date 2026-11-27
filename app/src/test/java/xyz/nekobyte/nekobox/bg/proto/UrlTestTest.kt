@@ -5,6 +5,7 @@ import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -66,23 +67,36 @@ class UrlTestTest {
 
     @Test
     fun aTestHoldsNoWireGuardSessionWhileItWaitsForTheService() = runTest {
-        // A path with a Tailscale hop asks the service first, which may wait for the VPN's start: the VPN takes the
-        // sessions after the Tailscale state, as a test's core does, so the test must not hold them meanwhile.
+        // A path with a Tailscale hop may wait for the VPN's start: the VPN takes the sessions after the Tailscale
+        // state, as a test's core does, so the test must not hold them meanwhile.
         val mixed = ConfigBuildResult("{}", emptyList(), 7, emptyMap(), emptyMap(), -1, tailscaleEndpoints = mapOf(9L to ConfigBuildResult.TailscaleEndpoint("ts-9", false)), wireGuardIdentities = wireGuard.wireGuardIdentities, paths = wireGuard.paths)
         val sessionsFree = mutableListOf<Boolean>()
-        val service = binder({ BaseService.State.Connected }, onUrlTestProfile = { sessionsFree += WireGuardLease.tryAcquire(setOf("aa-bb"))?.also { it.close() } != null }) { tested(42) }
+        val service = binder({ BaseService.State.Connected }, onCall = { sessionsFree += WireGuardLease.tryAcquire(setOf("aa-bb"))?.also { it.close() } != null }) { tested(42) }
         assertEquals(42, UrlTest { service }.doTest(profile, mixed))
+        // And through the same path check as any WireGuard profile, not by its id alone.
         assertEquals(listOf(true), sessionsFree)
+        assertEquals(listOf("path-7"), fingerprints)
     }
 
     @Test
-    fun aHeldSessionTheServiceDoesNotRunIsNoCoreOfTheTestsOwn() = runTest {
-        // Another test, or a VPN with another profile of the key pair.
-        assertEquals("wireguard_in_use", failure { UrlTest { binder({ BaseService.State.Connected }) { reply("not_running") } }.viaRunningCore(profile, wireGuard) }.code)
-        assertEquals("wireguard_in_use", failure { UrlTest { binder({ BaseService.State.Stopped }) { tested(42) } }.viaRunningCore(profile, wireGuard) }.code)
+    fun anotherKeyOfTheConnectedProfileIsReconnectedForNotTestedOnItsOwn() = runTest {
+        // The edited profile's sessions are free, but the VPN runs it with the old key.
+        val service = binder({ BaseService.State.Connected }) { if (it == "path-7") reply("other_settings") else tested(42) }
+        assertEquals("reconnect_required", failure { UrlTest { service }.doTest(profile, wireGuard) }.code)
+        assertEquals("reconnect_required", failure { UrlTest { service }.check(profile, "https://trace.example/", wireGuard) }.code)
+    }
+
+    @Test
+    fun onlyAStoppedServiceOrOneThatDoesNotRunTheProfileLeavesTheTestItsOwnCore() = runTest {
+        assertNull(UrlTest { binder({ BaseService.State.Connected }) { reply("not_running") } }.viaRunningCore(profile, wireGuard))
+        assertNull(UrlTest { binder({ BaseService.State.Stopped }) { tested(42) } }.viaRunningCore(profile, wireGuard))
+        // That core still finds the sessions held (another test, a VPN with another profile of the key pair) and does
+        // not start.
+        val busy = whileTheVpnHoldsIt { failure { UrlTest { binder({ BaseService.State.Connected }) { reply("not_running") } }.doTest(profile, wireGuard) } }
+        assertEquals("wireguard_in_use", busy.code)
         // Keys that cannot be read tell no session.
         assertEquals("wireguard_unknown_key", failure { UrlTest { binder({ BaseService.State.Stopped }) { tested(42) } }.doTest(profile, unreadable) }.code)
-        assertEquals(listOf(7L), calls)
+        assertEquals(listOf(7L, 7L), calls)
     }
 
     @Test
@@ -127,19 +141,15 @@ class UrlTestTest {
 
     private fun tested(latency: Int) = """{"result":"tested","latencyMs":$latency}"""
 
-    private fun binder(state: () -> BaseService.State, onUrlTestProfile: () -> Unit = {}, testWireGuardProfile: (String) -> String) = Proxy.newProxyInstance(
+    private fun binder(state: () -> BaseService.State, onCall: () -> Unit = {}, testWireGuardProfile: (String) -> String) = Proxy.newProxyInstance(
         INekoBoxService::class.java.classLoader,
         arrayOf(INekoBoxService::class.java),
     ) { _, method, arguments ->
         when (method.name) {
             "getState" -> state().ordinal
 
-            "urlTestProfile" -> {
-                onUrlTestProfile()
-                42
-            }
-
             "testWireGuardProfile" -> {
+                onCall()
                 calls += arguments[0] as Long
                 fingerprints += arguments[1] as String
                 val answerUrl = arguments[2] as String
