@@ -230,4 +230,15 @@ class RunningWireGuardTest {
         edit(full.id) { (this as ConfigBean).config = config.replace("51820", "51821") }
         assertNotEquals(vpn.fingerprint(full.id), candidate(full.id))
     }
+
+    @Test
+    fun aConfigIsReadOnceForAllItsPaths() {
+        val groupId = group { isSelector = true }
+        val members = (1..40).map { add(wg("member $it") { privateKey = key(10 + it) }, groupId) }
+        val before = ConfigIndex.built.get()
+        val vpn = running(members.first())
+        // One reading of the finished config, not one per member.
+        assertEquals(1, ConfigIndex.built.get() - before)
+        assertTrue(members.all { vpn.fingerprint(it.id) != null })
+    }
 }

@@ -72,6 +72,7 @@ import java.net.IDN
 import java.security.MessageDigest
 import java.util.Base64
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 private fun sanitizeDnsEntry(value: String): String = value.filterNot { it.isISOControl() }.trim()
 
@@ -256,7 +257,7 @@ private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").diges
 
 // What a path's fingerprint is made of before the config is finished.
 private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
-    fun snapshot(identities: WireGuardIdentities, config: JsonObject): ConfigBuildResult.PathSnapshot {
+    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex): ConfigBuildResult.PathSnapshot {
         val effective = effectivePath(config, tags)
         if (identities.unknown || effective == null) return ConfigBuildResult.PathSnapshot(null, tags)
         val digest = MessageDigest.getInstance("SHA-256")
@@ -274,6 +275,25 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
     }
 }
 
+/** The entries of a finished config by tag, read once for all its paths. A tag given twice maps to null. */
+internal class ConfigIndex(config: JsonObject) {
+    private fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
+
+    // A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
+    private fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
+    val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
+    val dnsServers = byTag(objects((config["dns"] as? JsonObject)?.get("servers")))
+
+    init {
+        built.incrementAndGet()
+    }
+
+    companion object {
+        // How many were read, for the test that a config is read once and not once per path.
+        internal val built = AtomicInteger()
+    }
+}
+
 /**
  * The outbounds of a path in a finished config, as the core runs them, the same for a test's config and the VPN's:
  * tags left out, a detour named by its hop on the path, and the DNS server that resolves a hop's server name in
@@ -281,13 +301,9 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
  * out; so is the address family, which a test leaves to the system. Null when the path cannot be read so: a hop
  * missing or given twice, a detour off the path, a resolver missing.
  */
-internal fun effectivePath(config: JsonObject, tags: List<String>): String? {
-    fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
-
-    // A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
-    fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
-    val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
-    val dnsServers = byTag(objects((config["dns"] as? JsonObject)?.get("servers")))
+internal fun effectivePath(config: ConfigIndex, tags: List<String>): String? {
+    val outbounds = config.outbounds
+    val dnsServers = config.dnsServers
     val path = JsonArray()
     for (tag in tags.distinct()) {
         val hop = outbounds[tag]?.deepCopy() ?: return null
@@ -1742,7 +1758,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            pathParts.mapValues { it.value.snapshot(identities, configTree.asJsonObject) },
+            ConfigIndex(configTree.asJsonObject).let { index -> pathParts.mapValues { it.value.snapshot(identities, index) } },
         )
     }
 }
