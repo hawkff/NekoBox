@@ -241,7 +241,8 @@ class ConfigBuildResult(
      * A profile's path as this config was built with it: [fingerprint] of its hops in the order they are dialed,
      * each with its settings, and of the path as it runs: every hop's outbound after all custom JSON was merged in,
      * with the DNS server that resolves its server's name, and the WireGuard sessions of the outbounds; null when
-     * that cannot be told. [tags]: the outbounds of the path, a hop another path built first included. A full custom
+     * that cannot be told, also when the tag a test dials for the profile does not lead to the path. [tags]: the
+     * outbounds of the path, its entry hop first, a hop another path built first included. A full custom
      * config is one path through its [defaultRoute], fingerprinted as written, its outbounds unknown.
      */
     class PathSnapshot(val fingerprint: String?, val tags: List<String>, val defaultRoute: Boolean = false)
@@ -257,9 +258,9 @@ private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").diges
 
 // What a path's fingerprint is made of before the config is finished.
 private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
-    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex): ConfigBuildResult.PathSnapshot {
+    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex, dialed: String?): ConfigBuildResult.PathSnapshot {
         val effective = effectivePath(config, tags)
-        if (identities.unknown || effective == null) return ConfigBuildResult.PathSnapshot(null, tags)
+        if (identities.unknown || effective == null || !dialsEntry(config, dialed)) return ConfigBuildResult.PathSnapshot(null, tags)
         val digest = MessageDigest.getInstance("SHA-256")
         fun add(text: String) = digest.update((text + "\n").toByteArray())
         fun add(profile: ProxyEntity) {
@@ -272,6 +273,19 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
         add(effective)
         tags.mapNotNull { identities.byTag[it] }.flatten().sorted().forEach(::add)
         return ConfigBuildResult.PathSnapshot(digest.digest().joinToString("") { "%02x".format(it) }, tags)
+    }
+
+    // Whether the tag a test dials for the profile is the path's entry hop, or a selector that can only pick it, as a
+    // group's alias for a profile that shares its outbound is: custom JSON could point the alias anywhere else.
+    private fun dialsEntry(config: ConfigIndex, dialed: String?): Boolean {
+        val entry = tags.firstOrNull() ?: return false
+        if (dialed == entry) return true
+        // The core matches names regardless of case, so a name in other letters could stand in for one read here.
+        val alias = config.outbounds[dialed]?.takeIf { it.keySet().all { name -> name == name.lowercase() } } ?: return false
+        fun text(element: JsonElement?) = (element as? JsonPrimitive)?.takeIf { it.isString }?.asString
+        val members = alias["outbounds"] as? JsonArray ?: return false
+        val default = alias["default"]?.takeUnless { it.isJsonNull }
+        return text(alias["type"]) == "selector" && members.size() == 1 && text(members[0]) == entry && (default == null || text(default) == entry)
     }
 }
 
@@ -1758,7 +1772,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            ConfigIndex(configTree.asJsonObject).let { index -> pathParts.mapValues { it.value.snapshot(identities, index) } },
+            ConfigIndex(configTree.asJsonObject).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id]) } },
         )
     }
 }

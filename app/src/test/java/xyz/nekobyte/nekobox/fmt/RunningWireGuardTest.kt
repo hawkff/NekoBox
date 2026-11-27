@@ -69,8 +69,8 @@ class RunningWireGuardTest {
     // The VPN's config for [profile], as the service started it.
     private fun running(profile: ProxyEntity) = ConfigBuilderTestEnv.io { buildConfig(fresh(profile.id)) }
 
-    // What a test of [id] prepares now and sends to the service.
-    private fun candidate(id: Long) = ConfigBuilderTestEnv.io { buildConfig(fresh(id), forTest = true) }.paths.getValue(id).fingerprint
+    // What a test of [id] prepares now and sends to the service: always a path, or no two would compare as equal.
+    private fun candidate(id: Long) = checkNotNull(ConfigBuilderTestEnv.io { buildConfig(fresh(id), forTest = true) }.paths.getValue(id).fingerprint)
 
     private fun ConfigBuildResult.fingerprint(id: Long) = paths.getValue(id).fingerprint
 
@@ -149,6 +149,20 @@ class RunningWireGuardTest {
         assertNotEquals(vpn.fingerprint(other.id), candidate(other.id))
         assertEquals(vpn.fingerprint(selected.id), candidate(selected.id))
         assertEquals(vpn.fingerprint(alias.id), candidate(alias.id))
+
+        // Global custom JSON that points the alias at direct: a test through it would not take the path.
+        val aliased = listOf(selected, alias).single { vpn.profileTagMap.getValue(it.id) != vpn.paths.getValue(it.id).tags.first() }
+        val outbounds = JSONObject(vpn.config).getJSONArray("outbounds")
+        for (index in 0 until outbounds.length()) {
+            val outbound = outbounds.getJSONObject(index)
+            if (outbound.optString("tag") == vpn.profileTagMap.getValue(aliased.id)) outbound.put("outbounds", JSONArray().put("direct")).remove("default")
+        }
+        try {
+            DataStore.globalCustomConfig = JSONObject().put("outbounds", outbounds).toString()
+            assertNull(running(selected).fingerprint(aliased.id))
+        } finally {
+            DataStore.globalCustomConfig = ""
+        }
     }
 
     @Test

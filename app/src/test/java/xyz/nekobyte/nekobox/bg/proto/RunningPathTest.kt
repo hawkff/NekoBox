@@ -124,7 +124,9 @@ class RunningPathTest {
     @Test
     fun onlyThePathTheCoreRunsIsTestedThroughIt() {
         assertEquals("other_settings", testRunningPath(config(), Core(), 7, "path-8", "").getString("result"))
-        assertEquals("other_settings", testRunningPath(config(fingerprint = null), Core(), 7, "", "").getString("result"))
+        // Neither path can be compared: no reconnect makes them so.
+        assertEquals("unverifiable", testRunningPath(config(fingerprint = null), Core(), 7, "path-7", "").getString("result"))
+        assertEquals("unverifiable", testRunningPath(config(), Core(), 7, "", "").getString("result"))
         assertEquals("not_running", testRunningPath(config(), Core(), 9, "path-7", "").getString("result"))
         assertEquals(emptyList<String>(), calls)
     }

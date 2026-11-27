@@ -108,8 +108,8 @@ class UrlTestTest {
         }
         // The core runs another path for the profile.
         assertEquals("reconnect_required", failure { UrlTest { binder({ BaseService.State.Connected }) { reply("other_settings") } }.viaRunningCore(profile, wireGuard) }.code)
-        // A prepared path that cannot be fingerprinted is compared as such, never taken as permission.
-        assertEquals("reconnect_required", failure { UrlTest { binder({ BaseService.State.Connected }) { if (it.isEmpty()) reply("other_settings") else tested(1) } }.viaRunningCore(profile, unfingerprinted) }.code)
+        // A path that cannot be compared, which a reconnect would not change: the advice is to test it apart.
+        assertEquals("disconnect_required", failure { UrlTest { binder({ BaseService.State.Connected }) { if (it.isEmpty()) reply("unverifiable") else tested(1) } }.viaRunningCore(profile, unfingerprinted) }.code)
         // The core's server of the profile completed no handshake before the test timed out.
         assertEquals("no_handshake", failure { UrlTest { binder({ BaseService.State.Connected }) { reply("no_handshake") } }.viaRunningCore(profile, wireGuard) }.code)
         // A service that stops under the test.

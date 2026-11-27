@@ -473,6 +473,7 @@
     <string name="connection_test_no_handshake">No completed handshake with the server within %1$d ms</string>
     <string name="connection_test_vpn_changing">The VPN is starting or stopping. Try again in a moment</string>
     <string name="connection_test_reconnect">The VPN runs other settings of this profile. Reconnect to test the saved ones</string>
+    <string name="connection_test_disconnect">Disconnect the VPN to test this profile separately</string>
     <string name="connection_test_wireguard_in_use">The VPN or another connection test uses a WireGuard key pair of this profile. Try again when it ends</string>
     <string name="connection_test_wireguard_unknown_key">A WireGuard key of this profile cannot be read, so it is not tested on its own</string>
     <string name="vpn_wireguard_test_running">A connection test uses a WireGuard key pair of this profile. Connect again when it ends</string>

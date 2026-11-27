@@ -47,8 +47,10 @@ internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profi
     val path = config.paths[profileId] ?: return result.put("result", "not_running")
     // A full custom config runs as written, on its default route.
     val tag = if (path.defaultRoute) null else config.profileTagMap[profileId] ?: return result.put("result", "not_running")
-    // A result is for the path the caller was asked to test, which an edit since the start does not reach.
-    if (path.fingerprint == null || path.fingerprint != fingerprint) return result.put("result", "other_settings")
+    // A result is for the path the caller was asked to test, which an edit since the start does not reach. A path
+    // that cannot be compared, on either side, a reconnect would not make comparable.
+    if (path.fingerprint == null || fingerprint.isEmpty()) return result.put("result", "unverifiable")
+    if (path.fingerprint != fingerprint) return result.put("result", "other_settings")
     // Unknown for a full custom config: its failures keep their own message.
     val wireGuardPath = config.wireGuardPath(profileId).orEmpty()
     fun status() = parseWireGuardServiceStatus(wireGuardServiceStatus(true, wireGuardPath) { core.wireGuardStatus(it) })

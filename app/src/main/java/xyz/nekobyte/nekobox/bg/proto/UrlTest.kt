@@ -82,6 +82,7 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
             "tested" -> reply.getInt("latencyMs") to reply.optString("answer").takeIf { reply.has("answer") }
             "not_running" -> null
             "other_settings" -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
+            "unverifiable" -> throw ConnectionTestFailure("disconnect_required", app.getString(R.string.connection_test_disconnect))
             "stopping" -> throw vpnChanging()
             "no_handshake" -> throw NoHandshakeException(timeout, IOException(reply.optString("error")))
             else -> throw IOException(reply.optString("error"))
