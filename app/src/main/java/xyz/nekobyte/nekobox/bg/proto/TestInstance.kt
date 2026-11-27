@@ -40,7 +40,7 @@ internal suspend fun awaitTailscaleReady(box: libcore.BoxInstance, tag: String, 
 /** A connection test that failed for a reason the app names, with a code for the local API. */
 open class ConnectionTestFailure(val code: String, message: String, cause: Throwable? = null) : IOException(message, cause)
 
-/** A connection test failed while a WireGuard or AmneziaWG server had not answered the handshake. */
+/** A connection test timed out on a WireGuard or AmneziaWG server that completed no handshake. */
 class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
 
 class TestInstance(
@@ -66,7 +66,7 @@ class TestInstance(
         } catch (e: Exception) {
             // A request that timed out says nothing of why; a WireGuard server that never answered does.
             val status = wireGuardServiceStatus(true, config.wireguardInstances.values.flatten()) { Libcore.wireGuardStatus(box, it) }
-            if (parseWireGuardServiceStatus(status).awaitsHandshake) throw NoHandshakeException(timeout, e)
+            if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.message.orEmpty())) throw NoHandshakeException(timeout, e)
             throw e
         }
         // The test's connection resolved the server name, so the answer comes from the core's cache.

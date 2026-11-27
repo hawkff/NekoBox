@@ -387,10 +387,25 @@ class WireGuardConfigTest {
         assertNull(status.instances[0].error)
         assertTrue(status.instances[1].peers.isEmpty())
         assertTrue(status.instances[1].error!!.contains("unavailable"))
-        assertTrue(status.awaitsHandshake)
-        val answered = peers.replace("\"lastHandshake\":0", "\"lastHandshake\":1795700000000")
-        assertFalse(parseWireGuardServiceStatus(wireGuardServiceStatus(true, instances) { answered }).awaitsHandshake)
+        // Nothing sent yet: no handshake was tried.
+        assertFalse(status.noCompletedHandshake("context deadline exceeded"))
         assertFalse(parseWireGuardServiceStatus(wireGuardServiceStatus(false, emptyList()) { "" }).running)
+    }
+
+    @Test
+    fun onlyATimeoutOnAnOutboundWithoutAnsweredPeersIsANoHandshakeFailure() {
+        fun peer(handshake: Long, sent: Long) = """{"publicKey":"$key","endpoint":"192.0.2.20:51820","lastHandshake":$handshake,"rxBytes":0,"txBytes":$sent}"""
+        fun state(vararg peers: String) = parseWireGuardServiceStatus(
+            wireGuardServiceStatus(true, listOf(ConfigBuildResult.WireGuardInstance("wg", 1))) { """{"peers":[${peers.joinToString(",")}]}""" },
+        )
+        val timeout = "Get \"http://10.67.0.1:8081/\": context deadline exceeded"
+        assertTrue(state(peer(0, 148)).noCompletedHandshake(timeout))
+        assertTrue(state(peer(0, 148)).noCompletedHandshake("dial tcp 10.67.0.1:8081: i/o timeout"))
+        // An answered peer and one the request may never have needed.
+        assertFalse(state(peer(1795700000000, 148), peer(0, 148)).noCompletedHandshake(timeout))
+        // A failure with a reason of its own, as a destination no peer accepts.
+        assertFalse(state(peer(0, 148)).noCompletedHandshake("Get \"http://10.99.0.1:8090/\": destination 10.99.0.1 is outside the allowed IPs"))
+        assertFalse(state(peer(0, 148)).noCompletedHandshake("Get \"http://10.67.0.1:8081/\": EOF"))
     }
 
     @Test

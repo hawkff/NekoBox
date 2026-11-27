@@ -36,8 +36,16 @@ internal class WireGuardPeerState(
 internal class WireGuardInstanceState(val ownerProfileId: Long, val peers: List<WireGuardPeerState>, val error: String?)
 
 internal class WireGuardServiceState(val running: Boolean, val instances: List<WireGuardInstanceState>) {
-    /** Whether a peer of an outbound has not completed a handshake yet. */
-    val awaitsHandshake get() = instances.any { instance -> instance.peers.any { it.lastHandshake == 0L } }
+    /**
+     * Whether a test that failed with [failure] did so for want of a handshake: it timed out, and an outbound of its
+     * path sent handshakes and has none completed, with none of its peers. A failure with a reason of its own, or an
+     * outbound with an answered peer, which a peer it never needed proves nothing against, keeps its own message.
+     */
+    fun noCompletedHandshake(failure: String): Boolean {
+        val message = failure.lowercase()
+        if ("deadline exceeded" !in message && "timeout" !in message && "timed out" !in message) return false
+        return instances.any { instance -> instance.peers.any { it.txBytes > 0 } && instance.peers.all { it.lastHandshake == 0L } }
+    }
 }
 
 internal fun parseWireGuardServiceStatus(json: String): WireGuardServiceState {
