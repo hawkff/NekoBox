@@ -85,8 +85,8 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
      */
     internal open suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
         if (identities.isEmpty) return null
-        check(!identities.unknown) { app.getString(R.string.connection_test_wireguard_unknown_key) }
-        return WireGuardLease.tryAcquire(identities.all) ?: error(app.getString(R.string.connection_test_wireguard_in_use))
+        if (identities.unknown) throw WireGuardSessionsUnavailable("wireguard_unknown_key", app.getString(R.string.connection_test_wireguard_unknown_key))
+        return WireGuardLease.tryAcquire(identities.all) ?: throw WireGuardSessionsUnavailable("wireguard_in_use", app.getString(R.string.connection_test_wireguard_in_use))
     }
 
     open suspend fun init() {

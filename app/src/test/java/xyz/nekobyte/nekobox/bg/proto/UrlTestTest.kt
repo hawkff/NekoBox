@@ -65,6 +65,17 @@ class UrlTestTest {
     }
 
     @Test
+    fun aTestHoldsNoWireGuardSessionWhileItWaitsForTheService() = runTest {
+        // A path with a Tailscale hop asks the service first, which may wait for the VPN's start: the VPN takes the
+        // sessions after the Tailscale state, as a test's core does, so the test must not hold them meanwhile.
+        val mixed = ConfigBuildResult("{}", emptyList(), 7, emptyMap(), emptyMap(), -1, tailscaleEndpoints = mapOf(9L to ConfigBuildResult.TailscaleEndpoint("ts-9", false)), wireGuardIdentities = wireGuard.wireGuardIdentities, paths = wireGuard.paths)
+        val sessionsFree = mutableListOf<Boolean>()
+        val service = binder({ BaseService.State.Connected }, onUrlTestProfile = { sessionsFree += WireGuardLease.tryAcquire(setOf("aa-bb"))?.also { it.close() } != null }) { tested(42) }
+        assertEquals(42, UrlTest { service }.doTest(profile, mixed))
+        assertEquals(listOf(true), sessionsFree)
+    }
+
+    @Test
     fun aHeldSessionTheServiceDoesNotRunIsNoCoreOfTheTestsOwn() = runTest {
         // Another test, or a VPN with another profile of the key pair.
         assertEquals("wireguard_in_use", failure { UrlTest { binder({ BaseService.State.Connected }) { reply("not_running") } }.viaRunningCore(profile, wireGuard) }.code)
@@ -116,12 +127,17 @@ class UrlTestTest {
 
     private fun tested(latency: Int) = """{"result":"tested","latencyMs":$latency}"""
 
-    private fun binder(state: () -> BaseService.State, testWireGuardProfile: (String) -> String) = Proxy.newProxyInstance(
+    private fun binder(state: () -> BaseService.State, onUrlTestProfile: () -> Unit = {}, testWireGuardProfile: (String) -> String) = Proxy.newProxyInstance(
         INekoBoxService::class.java.classLoader,
         arrayOf(INekoBoxService::class.java),
     ) { _, method, arguments ->
         when (method.name) {
             "getState" -> state().ordinal
+
+            "urlTestProfile" -> {
+                onUrlTestProfile()
+                42
+            }
 
             "testWireGuardProfile" -> {
                 calls += arguments[0] as Long

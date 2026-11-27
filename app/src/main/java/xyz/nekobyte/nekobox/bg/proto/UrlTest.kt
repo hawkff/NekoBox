@@ -11,7 +11,6 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
 import xyz.nekobyte.nekobox.ktx.app
-import java.io.Closeable
 import java.io.IOException
 
 class UrlTest(private val service: () -> INekoBoxService? = { null }) {
@@ -25,32 +24,28 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
      */
     suspend fun check(profile: ProxyEntity, answerUrl: String, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Pair<Int, String?> {
         if (prepared.tailscaleEndpoints.isNotEmpty()) return doTest(profile, prepared) to null
-        val lease = leaseWireGuard(prepared) ?: return viaRunningCore(profile, prepared, answerUrl)
-        return lease.use {
-            val instance = TestInstance(profile, link, timeout, prepared, answerUrl, wireGuardLeaseHeld = true)
+        return try {
+            val instance = TestInstance(profile, link, timeout, prepared, answerUrl)
             instance.doTest() to instance.answer
+        } catch (_: WireGuardSessionsUnavailable) {
+            viaRunningCore(profile, prepared, answerUrl)
         }
     }
 
-    suspend fun doTest(profile: ProxyEntity, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Int {
-        val lease = leaseWireGuard(prepared) ?: return viaRunningCore(profile, prepared).first
-        return lease.use {
-            val nodes = prepared.tailscaleEndpoints.keys
-            if (nodes.isEmpty()) return@use TestInstance(profile, link, timeout, prepared, wireGuardLeaseHeld = true).doTest()
-            TailscaleAccess.run(service, nodes, { it.urlTestProfile(profile.id) }) {
-                TestInstance(profile, link, timeout, prepared, wireGuardLeaseHeld = true).doTest()
-            }
-        }
+    suspend fun doTest(profile: ProxyEntity, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Int = try {
+        isolated(profile, prepared)
+    } catch (_: WireGuardSessionsUnavailable) {
+        viaRunningCore(profile, prepared).first
     }
 
-    // The config's WireGuard sessions for a core of the test's own, held until that core has closed; a placeholder
-    // when it has none. Null when a core holds one of them, the VPN's or another test's, or the sessions cannot be
-    // told: the test then cannot have a core of its own.
-    private fun leaseWireGuard(prepared: ConfigBuildResult): Closeable? {
-        val identities = prepared.wireGuardIdentities
-        if (identities.isEmpty) return Closeable {}
-        if (identities.unknown) return null
-        return WireGuardLease.tryAcquire(identities.all)
+    // A core of the test's own. It takes the config's WireGuard sessions as it starts, after the Tailscale state and
+    // with nothing waited for meanwhile, in the order the VPN's core does.
+    private suspend fun isolated(profile: ProxyEntity, prepared: ConfigBuildResult): Int {
+        val nodes = prepared.tailscaleEndpoints.keys
+        if (nodes.isEmpty()) return TestInstance(profile, link, timeout, prepared).doTest()
+        return TailscaleAccess.run(service, nodes, { it.urlTestProfile(profile.id) }) {
+            TestInstance(profile, link, timeout, prepared).doTest()
+        }
     }
 
     // A WireGuard or AmneziaWG server keeps one session per client key and server key, which a core holds for its

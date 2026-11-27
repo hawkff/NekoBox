@@ -10,7 +10,6 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
-import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardServiceState
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
@@ -18,7 +17,6 @@ import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
-import java.io.Closeable
 import java.io.IOException
 
 // Login over DERP plus exit node selection; a phone on a slow network needs several seconds.
@@ -43,6 +41,9 @@ internal suspend fun awaitTailscaleReady(box: libcore.BoxInstance, tag: String, 
 /** A connection test that failed for a reason the app names, with a code for the local API. */
 open class ConnectionTestFailure(val code: String, message: String, cause: Throwable? = null) : IOException(message, cause)
 
+/** A test's core could not take its config's WireGuard sessions: a core holds one of them, or they cannot be read. */
+class WireGuardSessionsUnavailable(code: String, message: String) : ConnectionTestFailure(code, message)
+
 /** A connection test timed out on a WireGuard or AmneziaWG server that completed no handshake. */
 class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
 
@@ -53,11 +54,7 @@ class TestInstance(
     private val preparedConfig: ConfigBuildResult? = null,
     // A page to read through the profile once the test passes, such as one that reports the caller's address.
     private val answerUrl: String? = null,
-    // The caller holds the config's WireGuard sessions for this core's life ([UrlTest]).
-    private val wireGuardLeaseHeld: Boolean = false,
 ) : BoxInstance(profile) {
-
-    override suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? = if (wireGuardLeaseHeld) null else super.leaseWireGuard(identities)
 
     /** What [answerUrl] said, after [doTest]; null when it was not asked or could not be read. */
     var answer: String? = null
