@@ -30,6 +30,7 @@ import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.savedChainTraffic
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
+import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.plugin.PluginManager
@@ -62,6 +63,9 @@ const val PROFILE_RUNS_OTHER_SETTINGS = "profile runs with other settings"
 
 // Binder error of testWireGuardProfile: the profile does not run, but a hop of it opens a session the core opens.
 const val WIREGUARD_SESSION_IN_USE = "wireguard session in use"
+
+// Binder error of testWireGuardProfile: the test timed out on a server of the profile's path that completed no handshake.
+const val NO_COMPLETED_HANDSHAKE = "no completed handshake"
 
 class BaseService {
 
@@ -382,6 +386,11 @@ class BaseService {
             val latency = try {
                 Libcore.urlTestOutbound(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
             } catch (e: Exception) {
+                // A stop that closed the core under the test: the caller reports the stop and starts no core of its own.
+                check(data?.state == State.Connected && data?.proxy === proxy) { CORE_NOT_STARTED }
+                val path = proxy.config.wireguardInstances.values.flatten().filter { it.ownerProfileId == profileId }
+                val status = wireGuardServiceStatus(true, path) { Libcore.wireGuardStatus(proxy.box, it) }
+                if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.readableMessage)) error(NO_COMPLETED_HANDSHAKE)
                 error(Protocols.genFriendlyMsg(e.readableMessage))
             }
             return JSONObject().put("latencyMs", latency).toString()

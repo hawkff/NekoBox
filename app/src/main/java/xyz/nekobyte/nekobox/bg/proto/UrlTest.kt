@@ -6,6 +6,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
+import xyz.nekobyte.nekobox.bg.NO_COMPLETED_HANDSHAKE
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.bg.PROFILE_RUNS_OTHER_SETTINGS
 import xyz.nekobyte.nekobox.bg.WIREGUARD_SESSION_IN_USE
@@ -61,6 +62,8 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
                 PROFILE_RUNS_OTHER_SETTINGS in message -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
 
                 WIREGUARD_SESSION_IN_USE in message -> throw ConnectionTestFailure("wireguard_in_use", app.getString(R.string.connection_test_wireguard_in_use))
+
+                NO_COMPLETED_HANDSHAKE in message -> throw NoHandshakeException(timeout, e)
 
                 else -> throw e
             }

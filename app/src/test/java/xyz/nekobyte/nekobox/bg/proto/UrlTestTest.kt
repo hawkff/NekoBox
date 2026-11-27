@@ -12,6 +12,7 @@ import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
+import xyz.nekobyte.nekobox.bg.NO_COMPLETED_HANDSHAKE
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.bg.PROFILE_RUNS_OTHER_SETTINGS
 import xyz.nekobyte.nekobox.bg.WIREGUARD_SESSION_IN_USE
@@ -58,9 +59,11 @@ class UrlTestTest {
         assertEquals("reconnect_required", failure { UrlTest { binder({ BaseService.State.Connected }) { error(PROFILE_RUNS_OTHER_SETTINGS) } }.viaRunningCore(profile, wireGuard) }.code)
         // A hop of the profile opens a session the core opens.
         assertEquals("wireguard_in_use", failure { UrlTest { binder({ BaseService.State.Connected }) { error(WIREGUARD_SESSION_IN_USE) } }.viaRunningCore(profile, wireGuard) }.code)
+        // The core's server of the profile completed no handshake before the test timed out.
+        assertEquals("no_handshake", failure { UrlTest { binder({ BaseService.State.Connected }) { error(NO_COMPLETED_HANDSHAKE) } }.viaRunningCore(profile, wireGuard) }.code)
         // A service that stops under the test: no core of the test's own.
         assertEquals("vpn_changing", failure { UrlTest { binder({ BaseService.State.Connected }) { error(CORE_NOT_STARTED) } }.viaRunningCore(profile, wireGuard) }.code)
-        assertEquals(listOf(7L, 7L, 7L), calls)
+        assertEquals(listOf(7L, 7L, 7L, 7L), calls)
     }
 
     @Test
