@@ -251,8 +251,8 @@ class ConfigBuildResult(
 // What a path's fingerprint is made of before the config is finished.
 private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val resolver: String?, val tags: List<String>) {
     fun snapshot(identities: WireGuardIdentities): ConfigBuildResult.PathSnapshot {
-        val sessions = tags.filter { it in identities.byTag }.map { identities.byTag[it] }
-        if (sessions.any { it == null }) return ConfigBuildResult.PathSnapshot(null, tags)
+        if (identities.unknown) return ConfigBuildResult.PathSnapshot(null, tags)
+        val sessions = tags.mapNotNull { identities.byTag[it] }
         val digest = MessageDigest.getInstance("SHA-256")
         fun add(text: String) = digest.update((text + "\n").toByteArray())
         fun add(profile: ProxyEntity) {
@@ -263,7 +263,7 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
         add("root")
         add(entity)
         add("resolver ${resolver.orEmpty()}")
-        sessions.flatMap { it!! }.sorted().forEach(::add)
+        sessions.flatten().sorted().forEach(::add)
         return ConfigBuildResult.PathSnapshot(digest.digest().joinToString("") { "%02x".format(it) }, tags)
     }
 }

@@ -31,7 +31,7 @@ class RunningPathTest {
         emptyMap(),
         mapOf(7L to "wg-7", 8L to "socks-8"),
         -1,
-        wireGuardIdentities = WireGuardIdentities(mapOf("wg-7" to setOf("a-b"), "front" to setOf("c-d"))),
+        wireGuardIdentities = WireGuardIdentities(setOf("a-b", "c-d"), false, mapOf("wg-7" to setOf("a-b"), "front" to setOf("c-d"))),
         paths = mapOf(
             7L to ConfigBuildResult.PathSnapshot(fingerprint, listOf("wg-7")),
             8L to ConfigBuildResult.PathSnapshot("path-8", listOf("socks-8", "front")),

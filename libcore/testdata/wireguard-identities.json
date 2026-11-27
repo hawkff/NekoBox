@@ -1,0 +1,85 @@
+[
+ {
+  "name": "a null list keeps the entries read before it",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"tag\": \"w\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}], \"endpoints\": null}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334"
+  ],
+  "unknown": false,
+  "core_rejects": false
+ },
+ {
+  "name": "an untagged entry and one tagged like a reader's made-up name both count",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}, {\"type\": \"amneziawg\", \"tag\": \"outbounds[0]\", \"private_key\": \"Dg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0=\", \"peer_public_key\": \"HB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs=\"}]}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334",
+   "15586e962482459cbdadd2055079aaa7d4652a4960c858a7e1641733b8c5374e-1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b"
+  ],
+  "unknown": false,
+  "core_rejects": false
+ },
+ {
+  "name": "a tag given twice, which the core refuses, still counts every entry",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}, {\"type\": \"amneziawg\", \"tag\": \"0\", \"private_key\": \"Dg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0=\", \"peer_public_key\": \"HB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs=\"}], \"endpoints\": [{\"type\": \"wireguard\", \"private_key\": \"Dg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0=\", \"peers\": [{\"public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}]}]}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334",
+   "15586e962482459cbdadd2055079aaa7d4652a4960c858a7e1641733b8c5374e-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334",
+   "15586e962482459cbdadd2055079aaa7d4652a4960c858a7e1641733b8c5374e-1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b"
+  ],
+  "unknown": false,
+  "core_rejects": true
+ },
+ {
+  "name": "a null peer list and the top-level peer",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"tag\": \"w\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\", \"peers\": null}]}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334"
+  ],
+  "unknown": false,
+  "core_rejects": false
+ },
+ {
+  "name": "every peer of an endpoint",
+  "config": "{\"endpoints\": [{\"type\": \"wireguard\", \"tag\": \"e\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"peers\": [{\"public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}, {\"public_key\": \"HB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs=\"}]}]}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334",
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b"
+  ],
+  "unknown": false,
+  "core_rejects": false
+ },
+ {
+  "name": "names in another case, which the core refuses, are read all the same",
+  "config": "{\"outbounds\": [{\"Type\": \"wireguard\", \"TAG\": \"w\", \"Private_Key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"Peer_Public_Key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}]}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334"
+  ],
+  "unknown": false,
+  "core_rejects": true
+ },
+ {
+  "name": "a key with a line break",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"tag\": \"w\", \"private_key\": \"BwgJCgsMDQ4PEBESExQV\\nFhcYGRobHB0eHyAhIiMkJSY=\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}]}",
+  "identities": [
+   "07b8c542487686a78301855fcb6d3f6a8a911cd7f1983a9b44dc9dcd22839d23-15161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334"
+  ],
+  "unknown": false,
+  "core_rejects": false
+ },
+ {
+  "name": "a key that is not 32 bytes",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"tag\": \"w\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFg==\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}, {\"type\": \"wireguard\", \"tag\": \"v\", \"private_key\": \"Dg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0=\", \"peer_public_key\": \"HB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs=\"}]}",
+  "identities": [
+   "15586e962482459cbdadd2055079aaa7d4652a4960c858a7e1641733b8c5374e-1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b"
+  ],
+  "unknown": true,
+  "core_rejects": false
+ },
+ {
+  "name": "one name in two cases",
+  "config": "{\"outbounds\": [{\"type\": \"wireguard\", \"tag\": \"w\", \"private_key\": \"BwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSY=\", \"Private_Key\": \"Dg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0=\", \"peer_public_key\": \"FRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ=\"}]}",
+  "identities": [],
+  "unknown": true,
+  "core_rejects": false
+ }
+]

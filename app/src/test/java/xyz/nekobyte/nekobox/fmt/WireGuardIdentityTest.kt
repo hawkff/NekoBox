@@ -1,5 +1,6 @@
 package xyz.nekobyte.nekobox.fmt
 
+import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -20,6 +21,7 @@ import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardKey
 import xyz.nekobyte.nekobox.fmt.wireguard.x25519PublicKey
 import xyz.nekobyte.nekobox.proxy.config.ConfigBean
+import java.io.File
 import java.util.Base64
 
 /** The WireGuard sessions a core leases, read from the config as it runs. */
@@ -140,5 +142,19 @@ class WireGuardIdentityTest {
         assertTrue(wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "${key(1)}", "Private_Key": "${key(4)}", "peer_public_key": "${key(2)}"}]}""").unknown)
         assertTrue(wireGuardIdentities("not json").unknown)
         assertTrue(wireGuardIdentities("""{"outbounds": [{"type": "direct", "tag": "d"}]}""").isEmpty)
+    }
+
+    // The cases of the core decoder's test (libcore TestWireGuardIdentitiesAsTheCoreDecodesThem): null lists, tags,
+    // names in other cases, spellings.
+    @Test
+    fun theSessionsAreTheOnesTheCoreDecodes() {
+        val cases = JSONArray(File("../libcore/testdata/wireguard-identities.json").readText())
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val identities = wireGuardIdentities(case.getString("config"))
+            val expected = case.getJSONArray("identities").let { list -> (0 until list.length()).map { list.getString(it) }.toSet() }
+            assertEquals(case.getString("name"), expected, identities.all)
+            assertEquals(case.getString("name"), case.getBoolean("unknown"), identities.unknown)
+        }
     }
 }

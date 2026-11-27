@@ -3,6 +3,7 @@ package xyz.nekobyte.nekobox.bg.proto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.runBlocking
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.bg.runRequiredCompletion
@@ -10,6 +11,7 @@ import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
 import java.io.Closeable
 
@@ -36,8 +38,10 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
     }
 
     // A connection test that holds one of the sessions runs to its end first: a VPN started over it would take the
-    // session, and the test is bounded by its timeouts. Keys the app cannot read are for the core to refuse.
+    // session, and the test is bounded by its timeouts. A config with keys the app cannot read does not start: what
+    // it would hold cannot be told.
     override suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
+        check(!identities.unknown) { app.getString(R.string.vpn_wireguard_unknown_key) }
         if (identities.all.isEmpty()) return null
         return WireGuardLease.acquire(identities.all, 2L * DataStore.connectionTestTimeout + TAILSCALE_READY_TIMEOUT_MS + 5_000)
     }

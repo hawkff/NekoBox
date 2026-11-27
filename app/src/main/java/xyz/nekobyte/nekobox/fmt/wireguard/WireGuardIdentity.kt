@@ -2,6 +2,7 @@ package xyz.nekobyte.nekobox.fmt.wireguard
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
@@ -10,41 +11,53 @@ import java.util.Base64
 
 /**
  * The WireGuard sessions a finished config opens. A server keeps one session per client key, so for every WireGuard
- * or AmneziaWG outbound and endpoint, by tag: its client public key with each of its peers' public keys, both from
- * the decoded key bytes, as hex. Two cores with one of these pairs take the session from each other. A tag maps to
- * null when its keys cannot be read; [unknown] then: nothing can be told about what that outbound opens.
+ * or AmneziaWG outbound and endpoint: its client public key with each of its peers' public keys, both from the
+ * decoded key bytes, as hex. Two cores with one of these pairs take the session from each other. [all] holds every
+ * session read, whatever the entries' tags; [unknown] when an entry's keys cannot be read, so nothing can be told
+ * about what it opens. [byTag] names each readable entry's sessions by the tag the core gives it, for status and paths.
  */
-class WireGuardIdentities(val byTag: Map<String, Set<String>?>) {
-    val all: Set<String> = byTag.values.filterNotNull().flatten().toSet()
-    val unknown = byTag.values.any { it == null }
-    val isEmpty get() = byTag.isEmpty()
+class WireGuardIdentities(val all: Set<String>, val unknown: Boolean, val byTag: Map<String, Set<String>>) {
+    val isEmpty get() = all.isEmpty() && !unknown
 
     companion object {
-        val NONE = WireGuardIdentities(emptyMap())
+        val NONE = WireGuardIdentities(emptySet(), false, emptyMap())
+        internal fun unknown() = WireGuardIdentities(emptySet(), true, emptyMap())
     }
 }
 
 private val wireGuardTypes = setOf("wireguard", "amneziawg")
 
-/** [WireGuardIdentities] of a config as the core will run it, after every custom JSON was merged in. */
+/**
+ * [WireGuardIdentities] of a config as the core will run it, after every custom JSON was merged in, read as the core
+ * decodes it: names without regard to case, a missing or null list as none, an entry without a tag named by its index.
+ */
 fun wireGuardIdentities(config: String): WireGuardIdentities {
-    val root = (runCatching { JsonParser.parseString(config) }.getOrNull() as? JsonObject)?.fields()
-        ?: return WireGuardIdentities(mapOf("" to null))
-    val byTag = LinkedHashMap<String, Set<String>?>()
+    val root = (runCatching { JsonParser.parseString(config) }.getOrNull() as? JsonObject)?.fields() ?: return WireGuardIdentities.unknown()
+    val all = LinkedHashSet<String>()
+    val byTag = LinkedHashMap<String, Set<String>>()
+    var unknown = false
     for (list in listOf("outbounds", "endpoints")) {
-        val entries = root[list] ?: continue
-        if (entries !is JsonArray) return WireGuardIdentities(mapOf("" to null))
+        val entries = root[list]?.takeUnless { it.isJsonNull } ?: continue
+        if (entries !is JsonArray) return WireGuardIdentities.unknown()
         entries.forEachIndexed { index, entry ->
             val fields = (entry as? JsonObject)?.fields()
             val type = fields?.text("type")?.lowercase()
             if (fields == null) {
-                byTag["$list[$index]"] = null
+                unknown = true
             } else if (type in wireGuardTypes) {
-                byTag[fields.text("tag") ?: "$list[$index]"] = sessionsOf(fields)
+                val sessions = sessionsOf(fields)
+                val tagField = fields["tag"]?.takeUnless { it.isJsonNull }
+                val tag = if (tagField == null) "$index" else (tagField as? JsonPrimitive)?.takeIf { it.isString }?.asString
+                if (sessions == null || tag == null) {
+                    unknown = true
+                } else {
+                    all += sessions
+                    byTag[tag] = byTag[tag].orEmpty() + sessions
+                }
             }
         }
     }
-    return WireGuardIdentities(byTag)
+    return WireGuardIdentities(all, unknown, byTag)
 }
 
 // Names as the core reads them, without regard to case: two that differ only in case leave open which one counts.
@@ -54,16 +67,20 @@ private fun Map<String, JsonElement>.text(name: String) = (get(name) as? JsonPri
 
 private fun sessionsOf(outbound: Map<String, JsonElement>): Set<String>? {
     val client = outbound.text("private_key")?.let(::wireGuardKey)?.let(::x25519PublicKey) ?: return null
-    val peers = mutableListOf<String?>()
-    // A legacy outbound names one peer at its top level; both forms are taken, whichever the core uses.
-    if (outbound.containsKey("peer_public_key")) peers += outbound.text("peer_public_key")
+    val peers = mutableListOf<String>()
+    // A legacy outbound names one peer at its top level, the others a list; both are taken, whichever the core uses.
+    // An empty or null value is none, as the core reads it.
+    when (val key = outbound["peer_public_key"]) {
+        null, JsonNull.INSTANCE -> Unit
+        else -> (key as? JsonPrimitive)?.takeIf { it.isString }?.asString?.let { if (it.isNotEmpty()) peers += it } ?: return null
+    }
     when (val list = outbound["peers"]) {
-        null -> Unit
-        is JsonArray -> list.forEach { peer -> peers += (peer as? JsonObject)?.fields()?.text("public_key") }
+        null, JsonNull.INSTANCE -> Unit
+        is JsonArray -> list.forEach { peer -> peers += (peer as? JsonObject)?.fields()?.text("public_key") ?: return null }
         else -> return null
     }
     if (peers.isEmpty()) return null
-    return peers.mapTo(LinkedHashSet()) { key -> "${client.hex()}-${(key?.let(::wireGuardKey) ?: return null).hex()}" }
+    return peers.mapTo(LinkedHashSet()) { key -> "${client.hex()}-${(wireGuardKey(key) ?: return null).hex()}" }
 }
 
 /** A WireGuard key's 32 bytes, read leniently: whatever spelling the core accepts decodes to the same bytes. */

@@ -83,7 +83,7 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
      * The WireGuard sessions of the config for this core alone, until it has closed: a second core with one of them
      * would take it from the first. A core that cannot tell its sessions, or finds one held, does not start.
      */
-    protected open suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
+    internal open suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
         if (identities.isEmpty) return null
         check(!identities.unknown) { app.getString(R.string.connection_test_wireguard_unknown_key) }
         return WireGuardLease.tryAcquire(identities.all) ?: error(app.getString(R.string.connection_test_wireguard_in_use))

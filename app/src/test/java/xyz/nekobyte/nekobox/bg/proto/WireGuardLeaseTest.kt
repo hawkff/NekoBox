@@ -16,7 +16,10 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import java.io.File
 
 /** A WireGuard session is held by one core at a time, whichever of a test and the VPN takes it first. */
@@ -81,5 +84,16 @@ class WireGuardLeaseTest {
             val failure = runCatching { WireGuardLease.acquire(session, 0) }.exceptionOrNull()
             assertTrue(failure is LeaseBusyException)
         }
+    }
+
+    @Test
+    fun aVpnWhoseSessionsCannotAllBeReadDoesNotStart() = runTest {
+        val vpn = ProxyInstance(ProxyEntity(id = 1).putBean(WireGuardBean().apply { initializeDefaultValues() }))
+        // The readable session is free, but the config has an entry whose keys cannot be read.
+        val partly = WireGuardIdentities(session, true, mapOf("w" to session))
+        assertTrue(runCatching { vpn.leaseWireGuard(partly) }.exceptionOrNull() is IllegalStateException)
+        // Nothing was taken on the way.
+        WireGuardLease.tryAcquire(session)!!.close()
+        vpn.leaseWireGuard(WireGuardIdentities(session, false, mapOf("w" to session)))!!.close()
     }
 }

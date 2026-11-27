@@ -28,8 +28,8 @@ class UrlTestTest {
     val temporary = TemporaryFolder()
 
     private val profile = ProxyEntity(id = 7, groupId = 1)
-    private val wireGuard = prepared(WireGuardIdentities(mapOf("wg-7" to setOf("aa-bb"))))
-    private val unreadable = prepared(WireGuardIdentities(mapOf("wg-7" to null)))
+    private val wireGuard = prepared(WireGuardIdentities(setOf("aa-bb"), false, mapOf("wg-7" to setOf("aa-bb"))))
+    private val unreadable = prepared(WireGuardIdentities(emptySet(), true, emptyMap()))
     private val calls = mutableListOf<Long>()
     private val fingerprints = mutableListOf<String>()
     private val answerUrls = mutableListOf<String>()
