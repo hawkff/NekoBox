@@ -318,8 +318,10 @@ class RunningWireGuardTest {
         // Nor a rule ahead of it that takes every connection elsewhere.
         edit(tunnel.id) { customConfigJson = JSONObject().put("route", JSONObject().put("+rules", JSONArray().put(JSONObject().put("outbound", "direct")))).toString() }
         assertNull(ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }.fingerprint(tunnel.id))
-        // Nor another spelling of either beside the builder's, which the core may read in its place.
-        for (route in listOf(JSONObject().put("Final", "direct"), JSONObject().put("Rules", JSONArray().put(JSONObject().put("outbound", "direct"))))) {
+        // Nor another spelling of either beside the builder's, which the core may read in its place: also one with a long
+        // s (U+017F), which the core folds to an s.
+        val catchAll = JSONArray().put(JSONObject().put("outbound", "direct"))
+        for (route in listOf(JSONObject().put("Final", "direct"), JSONObject().put("Rules", catchAll), JSONObject().put("rule\u017F", catchAll))) {
             edit(tunnel.id) { customConfigJson = JSONObject().put("route", route).toString() }
             val spelled = ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }
             assertNull(route.toString(), spelled.fingerprint(tunnel.id))
@@ -361,7 +363,7 @@ class RunningWireGuardTest {
             DataStore.globalCustomConfig = ""
         }
         // Or a custom outbound's own JSON, in any spelling the core reads.
-        for (name in listOf("domain_resolver", "Domain_Resolver")) {
+        for (name in listOf("domain_resolver", "Domain_Resolver", "domain_re\u017Folver")) {
             val custom = add(
                 ConfigBean().apply {
                     type = 1

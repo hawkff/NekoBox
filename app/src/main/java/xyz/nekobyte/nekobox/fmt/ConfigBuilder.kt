@@ -255,6 +255,8 @@ class ConfigBuildResult(
     fun wireGuardPath(profileId: Long): List<WireGuardInstance>? = paths[profileId]?.takeUnless { it.defaultRoute || it.fingerprint == null }?.tags?.distinct()?.filter { it in wireGuardIdentities.byTag }?.map { WireGuardInstance(it, profileId) }
 }
 
+private fun String.isAscii() = all { it.code < 128 }
+
 private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
 
 // What a path's fingerprint is made of before the config is finished.
@@ -287,7 +289,7 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
         val entry = tags.firstOrNull() ?: return false
         if (dialed == entry) return true
         // The core matches names regardless of case, so a name in other letters could stand in for one read here.
-        val alias = config.outbounds[dialed]?.takeIf { it.keySet().all { name -> name == name.lowercase() } } ?: return false
+        val alias = config.outbounds[dialed]?.takeIf { it.keySet().all { name -> name == name.lowercase() && name.isAscii() } } ?: return false
         fun text(element: JsonElement?) = (element as? JsonPrimitive)?.takeIf { it.isString }?.asString
         val members = alias["outbounds"] as? JsonArray ?: return false
         val default = alias["default"]?.takeUnless { it.isJsonNull }
@@ -330,9 +332,10 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val 
     val routeRulesAsBuilt = entries.routeRules == builtEntries.routeRules && routeSpelledOnce(config)
 
     // The core reads names without regard to case: another spelling of the route, its default or its rules could
-    // stand in for the one read here.
+    // stand in for the one read here. So could a name outside ASCII, which the core folds by Unicode's rules, under
+    // which a long s is an s.
     private fun routeSpelledOnce(config: JsonObject): Boolean {
-        fun JsonObject.literal(vararg names: String) = keySet().none { it.lowercase() in names && it != it.lowercase() }
+        fun JsonObject.literal(vararg names: String) = keySet().none { (it.lowercase() in names && it != it.lowercase()) || !it.isAscii() }
         return config.literal("route") && (config["route"] as? JsonObject)?.literal("final", "rules") != false
     }
 
@@ -1081,7 +1084,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     _hack_custom_config = bean.customOutboundJson
                     val ownJson = listOfNotNull((bean as? ConfigBean)?.config, bean.customOutboundJson).filter { it.isNotBlank() }
                     if (ownJson.isNotEmpty()) {
-                        val fields = ownJson.flatMap { json -> runCatching { JsonParser.parseString(json).asJsonObject.keySet().map { it.trim('+').lowercase() } }.getOrDefault(listOf("")) }
+                        // A name outside ASCII may fold to any field: it counts as one that cannot be read.
+                        val fields = ownJson.flatMap { json -> runCatching { JsonParser.parseString(json).asJsonObject.keySet().map { it.trim('+').lowercase().takeIf(String::isAscii).orEmpty() } }.getOrDefault(listOf("")) }
                         changes.put(hopCustomFields, tagOut, fields.toSet())
                     }
                 }

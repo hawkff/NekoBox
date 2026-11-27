@@ -146,7 +146,8 @@ class WireGuardIdentityTest {
         assertFalse(twoKeys.malformed)
         // Fields other than keys that are not clear are the config's fault: two spellings of a tag, also on an entry
         // without keys, and a tag that is no text beside keys that can be read.
-        for (config in listOf("""{"outbounds": [{"type": "direct", "tag": "d", "Tag": "e"}]}""", """{"outbounds": [{"type": "wireguard", "tag": 5, "private_key": "${key(1)}", "peer_public_key": "${key(2)}"}]}""")) {
+        // A name outside ASCII too: the core folds a long s (U+017F) to an s, so it may stand for any field.
+        for (config in listOf("""{"outbounds": [{"type": "direct", "tag": "d", "Tag": "e"}]}""", """{"outbounds": [{"type": "socks", "tag": "s", "domain_re${'\u017F'}olver": "dns-local"}]}""", """{"outbound${'\u017F'}": [], "outbounds": []}""", """{"outbounds": [{"type": "wireguard", "tag": 5, "private_key": "${key(1)}", "peer_public_key": "${key(2)}"}]}""")) {
             val identities = wireGuardIdentities(config)
             assertTrue(config, identities.unknown && identities.malformed)
         }

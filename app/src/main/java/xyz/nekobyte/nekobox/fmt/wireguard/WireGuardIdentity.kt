@@ -45,6 +45,8 @@ fun wireGuardIdentities(config: String): WireGuardIdentities {
         if (entries !is JsonArray) return WireGuardIdentities.malformed()
         entries.forEachIndexed { index, entry ->
             if (entry !is JsonObject) return WireGuardIdentities.malformed()
+            // A name outside ASCII, which the core folds by Unicode's rules, may stand for any field.
+            if (entry.keySet().any { name -> name.any { it.code >= 128 } }) return WireGuardIdentities.malformed()
             // Two spellings of a name other than a key's leave open what the entry is or what it is called.
             if (entry.keySet().groupBy { it.lowercase() }.any { (name, spellings) -> spellings.size > 1 && name !in keyFields }) return WireGuardIdentities.malformed()
             val fields = entry.fields()
@@ -67,8 +69,9 @@ fun wireGuardIdentities(config: String): WireGuardIdentities {
     return WireGuardIdentities(all, unknown, byTag)
 }
 
-// Names as the core reads them, without regard to case: two that differ only in case leave open which one counts.
-private fun JsonObject.fields(): Map<String, JsonElement>? = entrySet().associate { it.key.lowercase() to it.value }.takeIf { it.size == size() }
+// Names as the core reads them, without regard to case: two that differ only in case leave open which one counts, and
+// so does a name outside ASCII, which the core folds by Unicode's rules: a long s is an s.
+private fun JsonObject.fields(): Map<String, JsonElement>? = entrySet().associate { it.key.lowercase() to it.value }.takeIf { it.size == size() && keySet().all { name -> name.all { it.code < 128 } } }
 
 private fun Map<String, JsonElement>.text(name: String) = (get(name) as? JsonPrimitive)?.takeIf { it.isString }?.asString
 
