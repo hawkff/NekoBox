@@ -310,6 +310,45 @@ class RunningWireGuardTest {
         assertNull(ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }.fingerprint(tunnel.id))
     }
 
+    // What a test of [id] prepares now, which may have no fingerprint.
+    private fun prepared(id: Long) = ConfigBuilderTestEnv.io { buildConfig(fresh(id), forTest = true) }.fingerprint(id)
+
+    @Test
+    fun aHopsOwnJsonThatMovesItsPluginOrResolverLeavesThePathUnread() {
+        val naive = add(
+            NaiveBean().apply {
+                serverAddress = "naive.example"
+                serverPort = 443
+                username = "u"
+                password = "p"
+            },
+        )
+        val landing = add(socks("landing", "landing.example"))
+        val tunnel = add(wg("tunnel"))
+        val viaNaive = add(chain("via naive", tunnel, naive))
+        val viaSocks = add(chain("via socks", tunnel, landing))
+        assertNotNull(candidate(viaNaive.id))
+        assertNotNull(candidate(viaSocks.id))
+        // The plugin listens on the port the builder gave it, not on the one the hop's own JSON names.
+        edit(naive.id) { customOutboundJson = JSONObject().put("server_port", 1).toString() }
+        assertNull(running(viaNaive).fingerprint(viaNaive.id))
+        assertNull(prepared(viaNaive.id))
+        // A resolver of the landing hop's own JSON, dialed through the tunnel, also when global JSON then changes the
+        // DNS server it names.
+        edit(landing.id) { customOutboundJson = JSONObject().put("domain_resolver", "dns-direct").toString() }
+        assertNull(prepared(viaSocks.id))
+        try {
+            DataStore.globalCustomConfig = JSONObject().put("dns", JSONObject().put("servers", JSONArray().put(JSONObject().put("type", "udp").put("tag", "dns-direct").put("server", "192.0.2.53")))).toString()
+            assertNull(running(viaSocks).fingerprint(viaSocks.id))
+        } finally {
+            DataStore.globalCustomConfig = ""
+        }
+        // And the tunnel's own resolver options.
+        edit(tunnel.id) { customOutboundJson = JSONObject().put("domain_resolver", JSONObject().put("server", "dns-direct").put("strategy", "ipv6_only")).toString() }
+        assertNull(prepared(tunnel.id))
+        assertNull(running(tunnel).fingerprint(tunnel.id))
+    }
+
     @Test
     fun aServerNameARuleOutboundSharesIsResolvedLikeTheRuleOutbound() {
         val groupId = group {

@@ -299,9 +299,10 @@ private fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPr
 
 /**
  * The entries of a finished config by tag, read once for all its paths, a tag given twice mapped to null, and those
- * of the config as the builder made it, [asBuilt] before custom JSON was merged in.
+ * of the config as the builder made it, [asBuilt] before custom JSON was merged in, but after each hop's own outbound
+ * JSON, whose fields are [hopCustomFields] by tag.
  */
-internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject) {
+internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val hopCustomFields: Map<String, Set<String>> = emptyMap()) {
     private class Entries(config: JsonObject) {
         val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
         val inbounds = byTag(objects(config["inbounds"]))
@@ -314,6 +315,9 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject) {
     val inbounds = entries.inbounds
     val builtOutbounds = builtEntries.outbounds
     val builtInbounds = builtEntries.inbounds
+
+    // Whether the profile's own outbound JSON of the hop with [tag], merged before [asBuilt], sets the field [name].
+    fun customized(tag: String, name: String) = hopCustomFields[tag]?.let { "" in it || name in it } == true
 
     // The outbound the core's default route takes, when the config names one.
     val routeFinal = ((config["route"] as? JsonObject)?.get("final") as? JsonPrimitive)?.takeIf { it.isString }?.asString
@@ -359,7 +363,8 @@ internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map
         val index = tags.indexOf(tag)
         if (tag in plugins) {
             val built = config.builtOutbounds[tag] ?: return null
-            for (name in listOf("server", "server_port", "username", "password")) if (hop.remove(name) != built[name]) return null
+            // The plugin listens where the builder told it; a hop's own JSON that moves its server elsewhere is not read.
+            for (name in listOf("server", "server_port", "username", "password")) if (config.customized(tag, name) || hop.remove(name) != built[name]) return null
             hop.addProperty("plugin", "hop $index")
             plugins[tag]?.let { mappingTag ->
                 val mapping = config.inbounds[mappingTag]?.deepCopy() ?: return null
@@ -367,6 +372,8 @@ internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map
                 hop.add("plugin_server", mapping)
             }
         }
+        // A resolver of the hop's own JSON is on both sides and not told from the builder's: its effect is not read.
+        if (config.customized(tag, "domain_resolver")) return null
         val resolver = hop.remove("domain_resolver")
         val built = resolver == config.builtOutbounds[tag]?.get("domain_resolver")
         if (resolver != null && !(built && detour != null)) {
@@ -592,6 +599,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     // own connection to the user's server, which must not be sniffed and sent somewhere else.
     val appInbounds = listOfNotNull("tun-in".takeIf { isVPN && !forTest }, TAG_MIXED.takeIf { keepMixedInbound })
     val externalIndexMap = ArrayList<IndexEntity>()
+
+    // The fields each hop's own outbound JSON sets, by tag; "" when that JSON cannot be read.
+    val hopCustomFields = HashMap<String, Set<String>>()
 
     // The outbounds of plugins, by tag, with the inbound a plugin reaches its server by, if it has one.
     val pluginHops = HashMap<String, String?>()
@@ -1056,6 +1066,10 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     _hack_config_map["tag"] = tagOut
 
                     _hack_custom_config = bean.customOutboundJson
+                    bean.customOutboundJson?.takeIf { it.isNotBlank() }?.let { json ->
+                        val fields = runCatching { JsonParser.parseString(json).asJsonObject.keySet().map { it.trim('+') }.toSet() }.getOrDefault(setOf(""))
+                        changes.put(hopCustomFields, tagOut, fields)
+                    }
                 }
                 if (bean is WireGuardBean || bean is AmneziaWGBean) {
                     chainWireGuard += proxyEntity.id to ConfigBuildResult.WireGuardInstance(tagOut, entity.id)
@@ -1814,7 +1828,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            ConfigIndex(configTree.asJsonObject, built).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id], pluginHops, forTest && id == proxy.id) } },
+            ConfigIndex(configTree.asJsonObject, built, hopCustomFields).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id], pluginHops, forTest && id == proxy.id) } },
         )
     }
 }
