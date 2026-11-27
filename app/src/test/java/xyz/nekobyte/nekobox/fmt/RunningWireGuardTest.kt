@@ -318,6 +318,13 @@ class RunningWireGuardTest {
         // Nor a rule ahead of it that takes every connection elsewhere.
         edit(tunnel.id) { customConfigJson = JSONObject().put("route", JSONObject().put("+rules", JSONArray().put(JSONObject().put("outbound", "direct")))).toString() }
         assertNull(ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }.fingerprint(tunnel.id))
+        // Nor another spelling of either beside the builder's, which the core may read in its place.
+        for (route in listOf(JSONObject().put("Final", "direct"), JSONObject().put("Rules", JSONArray().put(JSONObject().put("outbound", "direct"))))) {
+            edit(tunnel.id) { customConfigJson = JSONObject().put("route", route).toString() }
+            val spelled = ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }
+            assertNull(route.toString(), spelled.fingerprint(tunnel.id))
+            assertNull(route.toString(), spelled.wireGuardPath(tunnel.id))
+        }
     }
 
     // What a test of [id] prepares now, which may have no fingerprint.

@@ -323,10 +323,17 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val 
     fun customized(tag: String, name: String) = hopCustomFields[tag]?.let { "" in it || name in it } == true
 
     // The outbound the core's default route takes, when the config names one.
-    val routeFinal = ((config["route"] as? JsonObject)?.get("final") as? JsonPrimitive)?.takeIf { it.isString }?.asString
+    val routeFinal = ((config["route"] as? JsonObject)?.get("final") as? JsonPrimitive)?.takeIf { it.isString }?.asString?.takeIf { routeSpelledOnce(config) }
 
     // Whether custom JSON left the route rules as the builder made them; a plugin's way on to its server is one.
-    val routeRulesAsBuilt = entries.routeRules == builtEntries.routeRules
+    val routeRulesAsBuilt = entries.routeRules == builtEntries.routeRules && routeSpelledOnce(config)
+
+    // The core reads names without regard to case: another spelling of the route, its default or its rules could
+    // stand in for the one read here.
+    private fun routeSpelledOnce(config: JsonObject): Boolean {
+        fun JsonObject.literal(vararg names: String) = keySet().none { it.lowercase() in names && it != it.lowercase() }
+        return config.literal("route") && (config["route"] as? JsonObject)?.literal("final", "rules") != false
+    }
 
     init {
         built.incrementAndGet()
