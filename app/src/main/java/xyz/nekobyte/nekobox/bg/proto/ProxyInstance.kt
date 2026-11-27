@@ -41,7 +41,7 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
     // session, and the test is bounded by its timeouts. A config with keys the app cannot read does not start: what
     // it would hold cannot be told.
     override suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
-        check(!identities.unknown) { app.getString(R.string.vpn_wireguard_unknown_key) }
+        check(!identities.unknown) { app.getString(if (identities.malformed) R.string.wireguard_config_unreadable else R.string.vpn_wireguard_unknown_key) }
         if (identities.all.isEmpty()) return null
         return WireGuardLease.acquire(identities.all, 2L * DataStore.connectionTestTimeout + TAILSCALE_READY_TIMEOUT_MS + 5_000)
     }

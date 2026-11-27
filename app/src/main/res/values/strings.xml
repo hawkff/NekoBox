@@ -475,9 +475,10 @@
     <string name="connection_test_reconnect">The VPN runs other settings of this profile. Reconnect to test the saved ones</string>
     <string name="connection_test_disconnect">Disconnect the VPN to test this profile separately</string>
     <string name="connection_test_wireguard_in_use">The VPN or another connection test uses a WireGuard key pair of this profile. Try again when it ends</string>
-    <string name="connection_test_wireguard_unknown_key">A WireGuard key of this profile cannot be read, so it is not tested on its own</string>
+    <string name="connection_test_wireguard_unknown_key">A WireGuard key of this profile cannot be read, so it cannot be tested</string>
     <string name="vpn_wireguard_test_running">A connection test uses a WireGuard key pair of this profile. Connect again when it ends</string>
     <string name="vpn_wireguard_unknown_key">A WireGuard key in this configuration cannot be read. Check the keys of the profile and its custom JSON</string>
+    <string name="wireguard_config_unreadable">The outbounds of this configuration cannot be read. Check its custom JSON</string>
     <string name="append_http_proxy">Append HTTP proxy to VPN</string>
     <string name="append_http_proxy_sum">Browsers and some apps use the proxy port directly (Android 10+)</string>
     <string name="append_http_proxy_security_title">Security notice</string>

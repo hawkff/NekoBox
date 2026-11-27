@@ -14,14 +14,15 @@ import java.util.Base64
  * or AmneziaWG outbound and endpoint: its client public key with each of its peers' public keys, both from the
  * decoded key bytes, as hex. Two cores with one of these pairs take the session from each other. [all] holds every
  * session read, whatever the entries' tags; [unknown] when an entry's keys cannot be read, so nothing can be told
- * about what it opens. [byTag] names each readable entry's sessions by the tag the core gives it, for status and paths.
+ * about what it opens, [malformed] too when that is because the config's outbounds and endpoints are no list of
+ * objects. [byTag] names each readable entry's sessions by the tag the core gives it, for status and paths.
  */
-class WireGuardIdentities(val all: Set<String>, val unknown: Boolean, val byTag: Map<String, Set<String>>) {
+class WireGuardIdentities(val all: Set<String>, val unknown: Boolean, val byTag: Map<String, Set<String>>, val malformed: Boolean = false) {
     val isEmpty get() = all.isEmpty() && !unknown
 
     companion object {
         val NONE = WireGuardIdentities(emptySet(), false, emptyMap())
-        internal fun unknown() = WireGuardIdentities(emptySet(), true, emptyMap())
+        internal fun malformed() = WireGuardIdentities(emptySet(), true, emptyMap(), malformed = true)
     }
 }
 
@@ -32,15 +33,16 @@ private val wireGuardTypes = setOf("wireguard", "amneziawg")
  * decodes it: names without regard to case, a missing or null list as none, an entry without a tag named by its index.
  */
 fun wireGuardIdentities(config: String): WireGuardIdentities {
-    val root = (runCatching { JsonParser.parseString(config) }.getOrNull() as? JsonObject)?.fields() ?: return WireGuardIdentities.unknown()
+    val root = (runCatching { JsonParser.parseString(config) }.getOrNull() as? JsonObject)?.fields() ?: return WireGuardIdentities.malformed()
     val all = LinkedHashSet<String>()
     val byTag = LinkedHashMap<String, Set<String>>()
     var unknown = false
     for (list in listOf("outbounds", "endpoints")) {
         val entries = root[list]?.takeUnless { it.isJsonNull } ?: continue
-        if (entries !is JsonArray) return WireGuardIdentities.unknown()
+        if (entries !is JsonArray) return WireGuardIdentities.malformed()
         entries.forEachIndexed { index, entry ->
-            val fields = (entry as? JsonObject)?.fields()
+            if (entry !is JsonObject) return WireGuardIdentities.malformed()
+            val fields = entry.fields()
             val type = fields?.text("type")?.lowercase()
             if (fields == null) {
                 unknown = true

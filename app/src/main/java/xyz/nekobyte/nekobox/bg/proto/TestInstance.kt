@@ -10,6 +10,7 @@ import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardServiceState
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
@@ -43,6 +44,13 @@ open class ConnectionTestFailure(val code: String, message: String, cause: Throw
 
 /** A test's core could not take its config's WireGuard sessions: a core holds one of them, or they cannot be read. */
 class WireGuardSessionsUnavailable(code: String, message: String) : ConnectionTestFailure(code, message)
+
+/** Why a test cannot tell the WireGuard sessions of [identities]; null when it can. */
+internal fun unreadableWireGuard(identities: WireGuardIdentities): WireGuardSessionsUnavailable? = when {
+    identities.malformed -> WireGuardSessionsUnavailable("invalid_config", app.getString(R.string.wireguard_config_unreadable))
+    identities.unknown -> WireGuardSessionsUnavailable("wireguard_unknown_key", app.getString(R.string.connection_test_wireguard_unknown_key))
+    else -> null
+}
 
 /** A connection test timed out on a WireGuard or AmneziaWG server that completed no handshake. */
 class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)

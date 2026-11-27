@@ -137,10 +137,16 @@ class WireGuardIdentityTest {
             },
         )
         assertEquals(sessions(add(wg("same"))).all, sessions(full).all)
-        assertTrue(wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "short", "peer_public_key": "${key(2)}"}]}""").unknown)
+        val shortKey = wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "short", "peer_public_key": "${key(2)}"}]}""")
+        assertTrue(shortKey.unknown)
+        assertFalse(shortKey.malformed)
         // Two spellings of one name: which one the core takes is open.
         assertTrue(wireGuardIdentities("""{"outbounds": [{"type": "wireguard", "tag": "w", "private_key": "${key(1)}", "Private_Key": "${key(4)}", "peer_public_key": "${key(2)}"}]}""").unknown)
-        assertTrue(wireGuardIdentities("not json").unknown)
+        // Not a key's fault: the outbounds are no list of objects, with or without a WireGuard entry.
+        for (config in listOf("not json", "[]", """{"outbounds": {}}""", """{"outbounds": ["direct"]}""", """{"endpoints": [1, {"type": "wireguard"}]}""")) {
+            val identities = wireGuardIdentities(config)
+            assertTrue(config, identities.unknown && identities.malformed)
+        }
         assertTrue(wireGuardIdentities("""{"outbounds": [{"type": "direct", "tag": "d"}]}""").isEmpty)
     }
 

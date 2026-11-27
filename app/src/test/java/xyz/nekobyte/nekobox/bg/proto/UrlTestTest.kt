@@ -88,6 +88,18 @@ class UrlTestTest {
     }
 
     @Test
+    fun aKeyThatCannotBeReadFailsTheTestWithoutAskingTheConnectedVpn() = runTest {
+        // A reconnect would not make the key readable: the VPN would refuse to start with it.
+        val service = binder({ BaseService.State.Connected }) { reply("other_settings") }
+        assertEquals("wireguard_unknown_key", failure { UrlTest { service }.doTest(profile, unreadable) }.code)
+        assertEquals("wireguard_unknown_key", failure { UrlTest { service }.check(profile, "https://trace.example/", unreadable) }.code)
+        // A config whose outbounds are no list of objects is a configuration error, not a key's.
+        val malformed = prepared(WireGuardIdentities(emptySet(), true, emptyMap(), malformed = true))
+        assertEquals("invalid_config", failure { UrlTest { service }.doTest(profile, malformed) }.code)
+        assertEquals(emptyList<Long>(), calls)
+    }
+
+    @Test
     fun onlyAStoppedServiceOrOneThatDoesNotRunTheProfileLeavesTheTestItsOwnCore() = runTest {
         assertNull(UrlTest { binder({ BaseService.State.Connected }) { reply("not_running") } }.viaRunningCore(profile, wireGuard))
         assertNull(UrlTest { binder({ BaseService.State.Stopped }) { tested(42) } }.viaRunningCore(profile, wireGuard))

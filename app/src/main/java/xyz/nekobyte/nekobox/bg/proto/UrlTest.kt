@@ -66,7 +66,9 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
     // for this test, also when its sessions are free (another key of a connected profile is still another path), and
     // reads [answerUrl] through it as [check] does. Null only when the service is stopped or does not run the
     // profile: then the test may have a core of its own, which takes the sessions as it starts or fails with the reason.
+    // Sessions that cannot be told fail the test first, whatever the service runs: no reconnect would change them.
     internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String? = null): Pair<Int, String?>? {
+        unreadableWireGuard(prepared.wireGuardIdentities)?.let { throw it }
         val running = connectedService() ?: return null
         return throughService(running, profile, prepared, answerUrl)
     }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -16,10 +17,12 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
+import xyz.nekobyte.nekobox.ktx.app
 import java.io.File
 
 /** A WireGuard session is held by one core at a time, whichever of a test and the VPN takes it first. */
@@ -91,7 +94,12 @@ class WireGuardLeaseTest {
         val vpn = ProxyInstance(ProxyEntity(id = 1).putBean(WireGuardBean().apply { initializeDefaultValues() }))
         // The readable session is free, but the config has an entry whose keys cannot be read.
         val partly = WireGuardIdentities(session, true, mapOf("w" to session))
-        assertTrue(runCatching { vpn.leaseWireGuard(partly) }.exceptionOrNull() is IllegalStateException)
+        val refusal = runCatching { vpn.leaseWireGuard(partly) }.exceptionOrNull()
+        assertTrue(refusal is IllegalStateException)
+        assertEquals(app.getString(R.string.vpn_wireguard_unknown_key), refusal?.message)
+        // Outbounds that are no list of objects: a configuration error, not a key's.
+        val malformed = runCatching { vpn.leaseWireGuard(WireGuardIdentities(emptySet(), true, emptyMap(), malformed = true)) }.exceptionOrNull()
+        assertEquals(app.getString(R.string.wireguard_config_unreadable), malformed?.message)
         // Nothing was taken on the way.
         WireGuardLease.tryAcquire(session)!!.close()
         vpn.leaseWireGuard(WireGuardIdentities(session, false, mapOf("w" to session)))!!.close()
