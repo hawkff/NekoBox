@@ -82,6 +82,11 @@ class ConnectWidgetModelTest {
         assertEquals(WidgetSizes(250f to 200f, 400f to 90f), widgetSizes(emptyList(), 250, 90, 400, 200))
         // Only minimums: both orientations take them.
         assertEquals(WidgetSizes(250f to 90f, 250f to 90f), widgetSizes(emptyList(), 250, 90, 0, 0))
+        // A foldable reports four sizes: both orientations take the narrowest width and the lowest height, so no reported
+        // size gets chips its height cannot hold.
+        val foldable = widgetSizes(listOf(210f to 150f, 300f to 90f, 400f to 300f, 500f to 220f), 0, 0, 0, 0)
+        assertEquals(WidgetSizes(210f to 90f, 210f to 90f), foldable)
+        assertEquals(0, widgetSpec(foldable.portrait.first, foldable.portrait.second).chipRows)
         // Nothing reported: the lines without chips.
         val none = widgetSizes(emptyList(), 0, 0, 0, 0)
         assertEquals(WidgetSpec(orbOnly = false), widgetSpec(none.portrait.first, none.portrait.second))
