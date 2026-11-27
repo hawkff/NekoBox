@@ -241,7 +241,8 @@ class ConfigBuildResult(
      * A profile's path as this config was built with it: [fingerprint] of its hops in the order they are dialed,
      * each with its settings, and of the path as it runs: every hop's outbound after all custom JSON was merged in,
      * with the DNS server that resolves its server's name, and the WireGuard sessions of the outbounds; null when
-     * that cannot be told, also when the tag a test dials for the profile does not lead to the path. [tags]: the
+     * that cannot be told, also when the tag a test dials for the profile does not lead to the path, or, in a test's
+     * config, when its default route or route rules were changed by custom JSON. [tags]: the
      * outbounds of the path, its entry hop first, a hop another path built first included. A full custom
      * config is one path through its [defaultRoute], fingerprinted as written, its outbounds unknown.
      */
@@ -258,9 +259,11 @@ private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").diges
 
 // What a path's fingerprint is made of before the config is finished.
 private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
-    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex, dialed: String?, plugins: Map<String, String?>): ConfigBuildResult.PathSnapshot {
+    // [byDefault]: the config is a test's, which takes the core's default route rather than the dialed tag.
+    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex, dialed: String?, plugins: Map<String, String?>, byDefault: Boolean): ConfigBuildResult.PathSnapshot {
         val effective = effectivePath(config, tags, plugins)
-        if (identities.unknown || effective == null || !dialsEntry(config, dialed)) return ConfigBuildResult.PathSnapshot(null, tags)
+        val routed = !byDefault || (config.routeFinal == dialed && config.routeRulesAsBuilt)
+        if (identities.unknown || effective == null || !dialsEntry(config, dialed) || !routed) return ConfigBuildResult.PathSnapshot(null, tags)
         val digest = MessageDigest.getInstance("SHA-256")
         fun add(text: String) = digest.update((text + "\n").toByteArray())
         fun add(profile: ProxyEntity) {
@@ -311,6 +314,9 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject) {
     val inbounds = entries.inbounds
     val builtOutbounds = builtEntries.outbounds
     val builtInbounds = builtEntries.inbounds
+
+    // The outbound the core's default route takes, when the config names one.
+    val routeFinal = ((config["route"] as? JsonObject)?.get("final") as? JsonPrimitive)?.takeIf { it.isString }?.asString
 
     // Whether custom JSON left the route rules as the builder made them; a plugin's way on to its server is one.
     val routeRulesAsBuilt = entries.routeRules == builtEntries.routeRules
@@ -1808,7 +1814,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            ConfigIndex(configTree.asJsonObject, built).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id], pluginHops) } },
+            ConfigIndex(configTree.asJsonObject, built).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id], pluginHops, forTest && id == proxy.id) } },
         )
     }
 }

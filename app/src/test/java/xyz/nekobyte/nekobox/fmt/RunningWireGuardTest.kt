@@ -297,6 +297,20 @@ class RunningWireGuardTest {
     }
 
     @Test
+    fun aTestWhoseDefaultRouteLeavesThePathHasNone() {
+        val tunnel = add(wg("tunnel"))
+        assertNotNull(candidate(tunnel.id))
+        // The profile's custom JSON sends the default route direct: an isolated test would not take the tunnel.
+        edit(tunnel.id) { customConfigJson = JSONObject().put("route", JSONObject().put("final", "direct")).toString() }
+        val redirected = ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }
+        assertNull(redirected.fingerprint(tunnel.id))
+        assertNull(redirected.wireGuardPath(tunnel.id))
+        // Nor a rule ahead of it that takes every connection elsewhere.
+        edit(tunnel.id) { customConfigJson = JSONObject().put("route", JSONObject().put("+rules", JSONArray().put(JSONObject().put("outbound", "direct")))).toString() }
+        assertNull(ConfigBuilderTestEnv.io { buildConfig(fresh(tunnel.id), forTest = true) }.fingerprint(tunnel.id))
+    }
+
+    @Test
     fun aServerNameARuleOutboundSharesIsResolvedLikeTheRuleOutbound() {
         val groupId = group {
             type = GroupType.SUBSCRIPTION
