@@ -1,11 +1,9 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import android.app.Application
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -94,17 +92,25 @@ class WireGuardLeaseTest {
     }
 
     @Test
-    fun aVpnStartDoesNotTakeASessionFreedAfterItsBound() = runBlocking {
-        // On the clock: the bound is 20 ms, the test's core closes at 60 ms, before the next 100 ms round would end.
-        val test = WireGuardLease.tryAcquire(session)!!
-        val closing = launch(Dispatchers.Default) {
-            delay(60)
-            test.close()
+    fun aVpnStartDoesNotTakeASessionFreedAfterItsBound() = runTest {
+        // The test's clock, which a late wake-up moves past the bound.
+        var late = 0L
+        WireGuardLease.clock = { (testScheduler.currentTime + late) * 1_000_000 }
+        try {
+            val test = WireGuardLease.tryAcquire(session)!!
+            // The test's core closes while the VPN start waits out its 20 ms, and the start wakes only 30 ms past
+            // that, as on a busy device.
+            launch {
+                delay(10)
+                test.close()
+                late = 30
+            }
+            val outcome = runCatching { WireGuardLease.acquire(session, 20) }
+            outcome.getOrNull()?.close()
+            assertTrue(outcome.exceptionOrNull() is LeaseBusyException)
+        } finally {
+            WireGuardLease.clock = System::nanoTime
         }
-        val outcome = runCatching { WireGuardLease.acquire(session, 20) }
-        closing.join()
-        outcome.getOrNull()?.close()
-        assertTrue(outcome.exceptionOrNull() is LeaseBusyException)
     }
 
     @Test

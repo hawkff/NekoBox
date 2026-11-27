@@ -15,6 +15,9 @@ internal object WireGuardLease {
     // Overridable for tests.
     internal var directory: () -> File = { File(NekoBox.application.noBackupFilesDir, "wireguard-locks") }
 
+    // Monotonic nanoseconds; overridable for tests.
+    internal var clock: () -> Long = System::nanoTime
+
     /** All of [identities], or null when a core holds one of them. */
     fun tryAcquire(identities: Set<String>): Closeable? = try {
         ProcessLease.acquire(directory(), identities) { it }
@@ -22,14 +25,19 @@ internal object WireGuardLease {
         null
     }
 
-    /** All of [identities], waiting up to [timeoutMs] for a core that holds one of them to close, and no longer. */
+    /**
+     * All of [identities], waiting up to [timeoutMs] for a core that holds one of them to close, and no longer: a wait
+     * that wakes past the bound gives up before it tries again.
+     */
     suspend fun acquire(identities: Set<String>, timeoutMs: Long): Closeable {
-        val deadline = System.nanoTime() + timeoutMs * 1_000_000
+        val deadline = clock() + timeoutMs * 1_000_000
+        fun busy() = LeaseBusyException(NekoBox.application.getString(R.string.vpn_wireguard_test_running))
         while (true) {
             tryAcquire(identities)?.let { return it }
-            val left = deadline - System.nanoTime()
-            if (left <= 0) throw LeaseBusyException(NekoBox.application.getString(R.string.vpn_wireguard_test_running))
+            val left = deadline - clock()
+            if (left <= 0) throw busy()
             delay(minOf(100L, (left + 999_999) / 1_000_000))
+            if (deadline - clock() <= 0) throw busy()
         }
     }
 }
