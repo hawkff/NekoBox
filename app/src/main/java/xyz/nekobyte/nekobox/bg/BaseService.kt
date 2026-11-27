@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import libcore.Libcore
 import org.json.JSONArray
+import org.json.JSONObject
 import xyz.nekobyte.nekobox.Action
 import xyz.nekobyte.nekobox.BootReceiver
 import xyz.nekobyte.nekobox.NekoBox
@@ -23,7 +24,10 @@ import xyz.nekobyte.nekobox.aidl.LocalProxy
 import xyz.nekobyte.nekobox.aidl.SpeedDisplayData
 import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.proto.ProxyInstance
+import xyz.nekobyte.nekobox.bg.proto.RunningCore
 import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
+import xyz.nekobyte.nekobox.bg.proto.TestOutcome
+import xyz.nekobyte.nekobox.bg.proto.testRunningPath
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
@@ -51,6 +55,9 @@ private const val KILL_SWITCH_RETRY_MAX_MS = 60_000L
 // Binder error for a profile that is not part of the running configuration; callers fall
 // back to a test instance of their own.
 const val PROFILE_NOT_RUNNING = "profile not in running configuration"
+
+// Binder error while the service has no running core: it is starting, stopping or stopped.
+const val CORE_NOT_STARTED = "core not started"
 
 class BaseService {
 
@@ -304,7 +311,7 @@ class BaseService {
         }
 
         override fun urlTest(): Int {
-            val box = data?.proxy?.box ?: error("core not started")
+            val box = data?.proxy?.box ?: error(CORE_NOT_STARTED)
             return try {
                 Libcore.urlTest(
                     box,
@@ -317,7 +324,7 @@ class BaseService {
         }
 
         private fun runningProxy() = data?.takeIf { it.state == State.Connected }?.proxy?.takeIf { it.isInitialized() }
-            ?: error("core not started")
+            ?: error(CORE_NOT_STARTED)
 
         // Right after Connected a node may still be logging in or selecting its exit node. Only
         // the nodes on the tested profile's path are awaited, so another member's broken node
@@ -328,7 +335,7 @@ class BaseService {
                 val endpoint = proxy.config.tailscaleEndpoints[nodeId] ?: continue
                 val deadline = SystemClock.elapsedRealtime() + TAILSCALE_READY_TIMEOUT_MS
                 while (true) {
-                    check(data?.state == State.Connected && data?.proxy === proxy) { "core not started" }
+                    check(data?.state == State.Connected && data?.proxy === proxy) { CORE_NOT_STARTED }
                     try {
                         Libcore.tailscaleWaitReady(
                             proxy.box,
@@ -356,6 +363,38 @@ class BaseService {
             } catch (e: Exception) {
                 error(Protocols.genFriendlyMsg(e.readableMessage))
             }
+        }
+
+        // The caller's test URL and timeout: the service's copy of the settings may not have caught up with a change yet.
+        override fun testWireGuardProfile(profileId: Long, fingerprint: String, answerUrl: String, testUrl: String, timeoutMs: Int): String {
+            val proxy = data?.takeIf { it.state == State.Connected }?.proxy?.takeIf { it.isInitialized() }
+                ?: return JSONObject().put("result", "stopping").toString()
+            val core = object : RunningCore {
+                override val running: Boolean get() = data?.state == State.Connected && data?.proxy === proxy
+
+                override fun awaitTailscaleNodes(profileId: Long) = this@Binder.awaitTailscaleNodes(proxy, profileId)
+
+                override fun urlTest(tag: String?) = if (tag == null) {
+                    Libcore.urlTestOutcome(proxy.box, testUrl, timeoutMs)
+                } else {
+                    Libcore.urlTestOutboundOutcome(proxy.box, tag, testUrl, timeoutMs)
+                }.let { TestOutcome(it.latency, it.error, it.timedOut) }
+
+                override fun wireGuardStatus(tag: String): String = Libcore.wireGuardStatus(proxy.box, tag)
+
+                override fun fetchText(tag: String?, link: String): String? = if (tag == null) {
+                    Libcore.fetchText(proxy.box, link, timeoutMs)
+                } else {
+                    Libcore.fetchTextOutbound(proxy.box, tag, link, timeoutMs)
+                }
+
+                override fun elapsedRealtime() = SystemClock.elapsedRealtime()
+
+                override fun wallClock() = System.currentTimeMillis()
+
+                override fun sleep(ms: Long) = Thread.sleep(ms)
+            }
+            return testRunningPath(proxy.config, core, profileId, fingerprint, answerUrl).toString()
         }
 
         override fun tailscalePeers(profileId: Long): String {

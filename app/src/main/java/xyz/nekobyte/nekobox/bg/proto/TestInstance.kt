@@ -6,12 +6,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import libcore.Libcore
 import xyz.nekobyte.nekobox.BuildConfig
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardServiceState
+import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
+import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.Logs
+import xyz.nekobyte.nekobox.ktx.app
 import xyz.nekobyte.nekobox.ktx.readableMessage
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
+import java.io.IOException
 
 // Login over DERP plus exit node selection; a phone on a slow network needs several seconds.
 const val TAILSCALE_READY_TIMEOUT_MS = 20_000
@@ -32,6 +39,29 @@ internal suspend fun awaitTailscaleReady(box: libcore.BoxInstance, tag: String, 
     }
 }
 
+/** A connection test that failed for a reason the app names, with a code for the local API. */
+open class ConnectionTestFailure(val code: String, message: String, cause: Throwable? = null) : IOException(message, cause)
+
+/** A test's core could not take its config's WireGuard sessions: a core holds one of them, or they cannot be read. */
+class WireGuardSessionsUnavailable(code: String, message: String) : ConnectionTestFailure(code, message)
+
+/** Why a test cannot tell the WireGuard sessions of [identities]; null when it can. */
+internal fun unreadableWireGuard(identities: WireGuardIdentities): WireGuardSessionsUnavailable? = when {
+    identities.malformed -> WireGuardSessionsUnavailable("invalid_config", app.getString(R.string.wireguard_config_unreadable))
+    identities.unknown -> WireGuardSessionsUnavailable("wireguard_unknown_key", app.getString(R.string.connection_test_wireguard_unknown_key))
+    else -> null
+}
+
+/**
+ * The test's request through a core that started failed: on the network, no setup or config error. [timedOut] when it
+ * got no answer in time, as when traffic is held, rather than an answer or an error that says why; [duringVpnChange]
+ * when the VPN was starting or stopping as it was sent.
+ */
+class ProbeFailure(message: String, val timedOut: Boolean, val duringVpnChange: Boolean = false) : IOException(message)
+
+/** A connection test timed out on a WireGuard or AmneziaWG server that completed no handshake. */
+class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
+
 class TestInstance(
     profile: ProxyEntity,
     val link: String,
@@ -39,6 +69,8 @@ class TestInstance(
     private val preparedConfig: ConfigBuildResult? = null,
     // A page to read through the profile once the test passes, such as one that reports the caller's address.
     private val answerUrl: String? = null,
+    // Whether the VPN is starting or stopping, read as the request is sent.
+    private val vpnChanging: () -> Boolean = { false },
 ) : BoxInstance(profile) {
 
     /** What [answerUrl] said, after [doTest]; null when it was not asked or could not be read. */
@@ -50,12 +82,25 @@ class TestInstance(
             awaitTailscaleReady(box, endpoint.tag, endpoint.waitForExitNode)
         }
         currentCoroutineContext().ensureActive()
-        Libcore.urlTest(box, link, timeout).also {
-            // The test's connection resolved the server name, so the answer comes from the core's cache.
-            lookUpServer()
-            // A page that cannot be read leaves the answer unknown; the test itself passed.
-            answerUrl?.let { url -> answer = runCatching { Libcore.fetchText(box, url, timeout) }.getOrNull() }
+        val changing = vpnChanging()
+        val outcome = Libcore.urlTestOutcome(box, link, timeout)
+        if (outcome.error.isNotEmpty()) {
+            // A request that timed out says nothing of why; a WireGuard server that never answered does, on the path
+            // the test took. The core started for this test, so everything its outbounds sent was sent during it.
+            val failure = ProbeFailure(outcome.error, outcome.timedOut, changing)
+            val path = config.wireGuardPath(profile.id) ?: throw failure
+            val status = wireGuardServiceStatus(true, path) { Libcore.wireGuardStatus(box, it) }
+            if (parseWireGuardServiceStatus(status).noCompletedHandshake(WireGuardServiceState.NONE, outcome.timedOut, System.currentTimeMillis())) {
+                throw NoHandshakeException(timeout, failure)
+            }
+            throw failure
         }
+        val latency = outcome.latency
+        // The test's connection resolved the server name, so the answer comes from the core's cache.
+        lookUpServer()
+        // A page that cannot be read leaves the answer unknown; the test itself passed.
+        answerUrl?.let { url -> answer = runCatching { Libcore.fetchText(box, url, timeout) }.getOrNull() }
+        latency
     }
 
     // A lookup alone starts the core without the sidecar processes a URL test needs.

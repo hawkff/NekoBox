@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -177,8 +178,99 @@ func TestWireGuardStatusReportsAppliedPeerSettings(t *testing.T) {
 	}
 }
 
+// wireGuardTestRelay forwards datagrams between the clients and the server at serverAddress and
+// counts the client sockets that sent any.
+type wireGuardTestRelay struct {
+	conn    net.PacketConn
+	server  string
+	access  sync.Mutex
+	clients map[string]bool
+	last    net.Addr
+}
+
+func startWireGuardTestRelay(t *testing.T, serverAddress string) *wireGuardTestRelay {
+	t.Helper()
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	server, err := net.ResolveUDPAddr("udp", serverAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	relay := &wireGuardTestRelay{conn: conn, server: server.String(), clients: make(map[string]bool)}
+	go func() {
+		buffer := make([]byte, 65535)
+		for {
+			n, source, err := conn.ReadFrom(buffer)
+			if err != nil {
+				return
+			}
+			relay.access.Lock()
+			destination := net.Addr(server)
+			if source.String() == relay.server {
+				destination = relay.last
+			} else {
+				relay.clients[source.String()] = true
+				relay.last = source
+			}
+			relay.access.Unlock()
+			if destination != nil {
+				conn.WriteTo(buffer[:n], destination)
+			}
+		}
+	}()
+	return relay
+}
+
+func (r *wireGuardTestRelay) clientSockets() int {
+	r.access.Lock()
+	defer r.access.Unlock()
+	return len(r.clients)
+}
+
+// The platform reports no default interface, so the network manager pauses the network as the core
+// starts. Nothing may act on that pause: WireGuard devices would go down and come back on new sockets.
+func TestPlatformInstanceStartKeepsTheNetworkAwake(t *testing.T) {
+	previous := intfBox
+	intfBox = socketProtectionPlatform{}
+	t.Cleanup(func() { intfBox = previous })
+	instance, err := NewSingBoxInstance(`{"log": {"disabled": true}}`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { instance.Close() })
+	var access sync.Mutex
+	var events []int
+	instance.pauseManager.RegisterCallback(func(event int) {
+		access.Lock()
+		events = append(events, event)
+		access.Unlock()
+	})
+	if err = instance.Start(); err != nil {
+		t.Fatal(err)
+	}
+	access.Lock()
+	if len(events) != 0 || instance.pauseManager.IsNetworkPaused() {
+		t.Fatalf("pause events during start: %v, paused %v", events, instance.pauseManager.IsNetworkPaused())
+	}
+	access.Unlock()
+	// Device idle still pauses the core.
+	instance.Sleep()
+	paused := instance.pauseManager.IsPaused()
+	instance.Wake()
+	access.Lock()
+	defer access.Unlock()
+	if !paused || instance.pauseManager.IsPaused() || !slices.Equal(events, []int{pause.EventDevicePaused, pause.EventDeviceWake}) {
+		t.Fatalf("device idle: paused %v, events %v", paused, events)
+	}
+}
+
 // The app starts cores through NewSingBoxInstance, whose platform reports no default interface.
-// That must not leave the network paused and the WireGuard device down.
+// The device must come up once and complete its first handshake on the socket it sent it from: a
+// second socket gets a second handshake, which the server drops as a replay when both share their
+// timestamp, and the answer to the first goes to the closed socket.
 func TestPlatformInstanceWireGuardHandshakes(t *testing.T) {
 	previous := intfBox
 	intfBox = socketProtectionPlatform{}
@@ -187,7 +279,8 @@ func TestPlatformInstanceWireGuardHandshakes(t *testing.T) {
 		t.Run(outboundType, func(t *testing.T) {
 			clientPrivate, clientPublic := wireGuardTestKey(t)
 			serverAddress, serverPublic := startWireGuardTestServer(t, clientPublic)
-			server := M.ParseSocksaddr(serverAddress)
+			relay := startWireGuardTestRelay(t, serverAddress)
+			server := M.ParseSocksaddr(relay.conn.LocalAddr().String())
 			instance, err := NewSingBoxInstance(fmt.Sprintf(`{
   "log": {"disabled": true},
   "outbounds": [{
@@ -215,6 +308,9 @@ func TestPlatformInstanceWireGuardHandshakes(t *testing.T) {
 					t.Fatal(err)
 				}
 				if len(status.Peers) == 1 && status.Peers[0].LastHandshake != 0 {
+					if sockets := relay.clientSockets(); sockets != 1 {
+						t.Fatalf("handshakes from %d client sockets", sockets)
+					}
 					return
 				}
 				if time.Now().After(deadline) {

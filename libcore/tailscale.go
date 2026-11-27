@@ -18,26 +18,52 @@ import (
 
 // UrlTestOutbound measures the connection test URL through one outbound or endpoint of a
 // running instance instead of its default outbound, so a profile the service already runs
-// can be tested without starting a second core.
+// can be tested without starting a second core. The request ends when the instance closes.
 func UrlTestOutbound(i *BoxInstance, tag string, link string, timeout int32) (latency int32, err error) {
 	defer deferPanicToError("box.UrlTestOutbound", func(err_ error) { err = err_ })
+	client, lifetime, release, err := outboundHTTPClient(i, tag)
+	if err != nil {
+		return 0, err
+	}
+	defer release()
+	return urlTest(lifetime, client, link, timeout)
+}
+
+// FetchTextOutbound reads a short answer from link through one outbound or endpoint of a running instance, as
+// UrlTestOutbound reaches its link. The request ends when the instance closes.
+func FetchTextOutbound(i *BoxInstance, tag string, link string, timeout int32) (text string, err error) {
+	defer deferPanicToError("box.FetchTextOutbound", func(err_ error) { err = err_ })
+	client, lifetime, release, err := outboundHTTPClient(i, tag)
+	if err != nil {
+		return "", err
+	}
+	defer release()
+	return fetchText(lifetime, client, link, timeout)
+}
+
+// outboundHTTPClient admits a request through the outbound or endpoint tag of a running instance as core work.
+func outboundHTTPClient(i *BoxInstance, tag string) (*http.Client, context.Context, func(), error) {
 	if i == nil {
-		return 0, E.New("no instance")
+		return nil, nil, nil, E.New("no instance")
+	}
+	lifetime, release, err := i.admitCoreWork()
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	if _, loaded := i.Box.Outbound().Outbound(tag); !loaded {
-		return 0, E.New("outbound not found: ", tag)
+		release()
+		return nil, nil, nil, E.New("outbound not found: ", tag)
 	}
 	detour := dialer.NewDetour(i.Box.Outbound(), tag, true)
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSHandshakeTimeout:   3 * time.Second,
-			ResponseHeaderTimeout: 3 * time.Second,
-			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-				return detour.DialContext(ctx, network, M.ParseSocksaddr(address))
-			},
+	transport := &http.Transport{
+		TLSHandshakeTimeout:   3 * time.Second,
+		ResponseHeaderTimeout: 3 * time.Second,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return detour.DialContext(ctx, network, M.ParseSocksaddr(address))
 		},
 	}
-	return urlTest(client, link, timeout)
+	admitDials(i, lifetime, transport)
+	return &http.Client{Transport: transport}, lifetime, release, nil
 }
 
 // tailscaleReady reports backend and exit selection readiness, not packet reachability.

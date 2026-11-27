@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -109,6 +111,8 @@ func NewSingBoxInstance(config string, localTransport LocalDNSTransport) (b *Box
 	)
 	ctx = service.ContextWithDefaultRegistry(ctx)
 	ctx = service.ContextWith[adapter.PlatformInterface](ctx, newBoxPlatformInterfaceWrapper())
+	ctx = pause.WithDefaultManager(ctx)
+	ctx = service.ContextWith[pause.Manager](ctx, networkAwakePauseManager{service.FromContext[pause.Manager](ctx)})
 
 	// parse options
 	var options option.Options
@@ -184,11 +188,6 @@ func (b *BoxInstance) Start() (err error) {
 		registerTailscaleInterfaces()
 		err = b.Box.Start()
 		b.running = err == nil
-		if b.running && b.pauseManager != nil {
-			// The stub interface monitor reports no default interface, so the network manager pauses the
-			// network at startup and nothing wakes it: WireGuard devices stay down, URL tests stay idle.
-			b.pauseManager.NetworkWake()
-		}
 		return err
 	}
 	return errors.New("already started")
@@ -270,6 +269,15 @@ func ownCacheFile(options *option.Options) (string, error) {
 	options.Experimental.CacheFile.Path = filepath.Join(dir, "cache.db")
 	return dir, nil
 }
+
+// networkAwakePauseManager never pauses the network. The platform's interface monitor is a stub that
+// reports no default interface, so the network manager's only pause is the one at every start. A
+// WireGuard device goes down on it and comes back on a new socket with a new handshake: the server
+// answers the first handshake on the closed socket and drops the second, sent in the same timestamp
+// tick, as a replay, so the device waits for its retry five seconds later.
+type networkAwakePauseManager struct{ pause.Manager }
+
+func (networkAwakePauseManager) NetworkPause() {}
 
 func (b *BoxInstance) Sleep() {
 	if b.pauseManager != nil {
@@ -380,13 +388,20 @@ func UrlTest(i *BoxInstance, link string, timeout int32) (latency int32, err err
 	}
 	if i == nil {
 		// no core: test the direct route
-		return urlTest(boxapi.CreateProxyHttpClient(nil, nil), link, timeout)
+		return urlTest(context.Background(), boxapi.CreateProxyHttpClient(nil, nil), link, timeout)
 	}
+	lifetime, release, err := i.admitCoreWork()
+	if err != nil {
+		return 0, err
+	}
+	defer release()
 	var connectionTracker adapter.ConnectionTracker
 	if i.v2api != nil {
 		connectionTracker = i.v2api.StatsService()
 	}
-	return urlTest(boxapi.CreateProxyHttpClient(i.Box, connectionTracker), link, timeout)
+	client := boxapi.CreateProxyHttpClient(i.Box, connectionTracker)
+	admitDials(i, lifetime, client.Transport.(*http.Transport))
+	return urlTest(lifetime, client, link, timeout)
 }
 
 // FetchText reads a short answer from link through the instance's route, as UrlTest reaches its link: for a
@@ -396,7 +411,50 @@ func FetchText(i *BoxInstance, link string, timeout int32) (text string, err err
 	if i == nil {
 		return "", errors.New("no instance")
 	}
-	return fetchText(boxapi.CreateProxyHttpClient(i.Box, nil), link, timeout)
+	lifetime, release, err := i.admitCoreWork()
+	if err != nil {
+		return "", err
+	}
+	defer release()
+	client := boxapi.CreateProxyHttpClient(i.Box, nil)
+	admitDials(i, lifetime, client.Transport.(*http.Transport))
+	return fetchText(lifetime, client, link, timeout)
+}
+
+// dialEnteredForTest, when set, runs in every admitted dial before it dials: tests hold a dial there.
+var dialEnteredForTest func()
+
+// admitDials makes every dial of transport core work of i that ends with lifetime. The HTTP transport dials in
+// goroutines of its own, which a request that returns does not wait for, and Close must not close the core under
+// one of them.
+func admitDials(i *BoxInstance, lifetime context.Context, transport *http.Transport) {
+	dial := transport.DialContext
+	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		_, release, err := i.admitCoreWork()
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		defer context.AfterFunc(lifetime, cancel)()
+		if dialEnteredForTest != nil {
+			dialEnteredForTest()
+		}
+		return dial(ctx, network, address)
+	}
+}
+
+// admitCoreWork admits a request through a running instance as core work: its context ends when the instance
+// starts closing, and Close waits for release before it closes the core.
+func (i *BoxInstance) admitCoreWork() (context.Context, func(), error) {
+	i.access.Lock()
+	defer i.access.Unlock()
+	lifetime, release, err := i.admitCoreWorkLocked()
+	if err != nil {
+		return nil, nil, errors.New("the core is not running")
+	}
+	return lifetime, release, nil
 }
 
 // ServeProtect keeps socket protection available to the UI process while the kill switch holds

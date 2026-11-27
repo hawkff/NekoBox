@@ -7,6 +7,7 @@ import org.json.JSONArray
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.ktx.app
@@ -18,8 +19,6 @@ object TailscaleAccess {
     // Probes (URL tests, peer listings) run one at a time: two tests of chains sharing a node
     // would otherwise start it twice.
     private val probeLock = Mutex()
-
-    private const val CORE_NOT_STARTED = "core not started"
 
     internal suspend fun <T> whileStopped(state: () -> BaseService.State, probe: suspend () -> T): T {
         check(state() == BaseService.State.Stopped) { "tailscale:not-stopped" }

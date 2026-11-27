@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import xyz.nekobyte.nekobox.bg.proto.TailscaleLockProcess
+import xyz.nekobyte.nekobox.bg.proto.ProcessLockFixture
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
@@ -124,7 +124,7 @@ class DatabaseFilesTest {
     fun anotherProcessKeepsTheMigrationBlockedUntilItsLockIsReleased() {
         val from = source()
         val to = File(folder.root, "profiles.db")
-        val fixture = TailscaleLockProcess::class.java
+        val fixture = ProcessLockFixture::class.java
         val process = ProcessBuilder(
             File(System.getProperty("java.home"), "bin/java").path,
             "-cp",

@@ -52,9 +52,9 @@ abstract class AbstractBean : Serializable() {
         output.writeString(customConfigJson)
     }
 
-    // What equality compares: every stored field but the name. It leaves the bean as it is, so a bean compared or
-    // hashed on one thread can be stored on another.
-    private fun settings(): ByteArray {
+    // What equality compares, and a path's fingerprint: every stored field but the name. It leaves the bean as it is,
+    // so a bean compared or hashed on one thread can be stored on another.
+    internal fun settings(): ByteArray {
         val bytes = ByteArrayOutputStream()
         bytes.byteBuffer().use { buffer ->
             serializeToBuffer(buffer, withName = false)

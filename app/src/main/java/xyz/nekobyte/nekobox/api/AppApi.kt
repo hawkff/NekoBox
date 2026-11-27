@@ -16,6 +16,7 @@ import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.LocationSpoofing
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
+import xyz.nekobyte.nekobox.bg.proto.ConnectionTestFailure
 import xyz.nekobyte.nekobox.bg.proto.UrlTest
 import xyz.nekobyte.nekobox.database.*
 import xyz.nekobyte.nekobox.database.preference.KeyValuePair
@@ -767,10 +768,17 @@ internal class AppApi(
             Libcore.nekoLogClear()
             JSONObject().put("cleared", true)
         }
-        command("profiles.test", "Test a saved profile with the existing isolated probe lifecycle", "id") {
+        command("profiles.test", "Test a saved profile in an isolated probe; a WireGuard profile the connected service runs goes through its core", "id") {
             val profile = profile(it.positiveId())
             requireApi(profile.canBuild(), "Archived profiles cannot run")
-            runtime.job { JSONObject().put("latencyMs", UrlTest { runCatching { runtime.binder() }.getOrNull() }.doTest(profile)) }
+            runtime.job {
+                val latency = try {
+                    UrlTest { runCatching { runtime.binder() }.getOrNull() }.doTest(profile)
+                } catch (e: ConnectionTestFailure) {
+                    reject(e.code, e.message!!)
+                }
+                JSONObject().put("latencyMs", latency)
+            }
         }
         command("apps.list", "List installed packages for per-app routing") {
             @Suppress("DEPRECATION")

@@ -47,8 +47,10 @@ import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardDnsMode
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardProfileDns
 import xyz.nekobyte.nekobox.fmt.wireguard.buildSingBoxOutboundWireguardBean
+import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardProfileDns
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.isIpAddress
@@ -67,7 +69,10 @@ import xyz.nekobyte.nekobox.utils.Telemetry
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.utils.listByLineOrComma
 import java.net.IDN
+import java.security.MessageDigest
+import java.util.Base64
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 private fun sanitizeDnsEntry(value: String): String = value.filterNot { it.isISOControl() }.trim()
 
@@ -220,6 +225,10 @@ class ConfigBuildResult(
     // The local mixed inbound the config runs, for the app's own requests, or null without one: VPN mode leaves it
     // out unless a setting asks for it, and custom JSON can remove it.
     val localProxy: LocalProxy? = null,
+    // The WireGuard sessions of the config as it runs, which its core leases for its life.
+    val wireGuardIdentities: WireGuardIdentities = WireGuardIdentities.NONE,
+    // Profile id -> its path as built, for every profile the config runs on its own tag; none in a full custom config.
+    val paths: Map<Long, PathSnapshot> = emptyMap(),
 ) {
     data class IndexEntity(var chain: LinkedHashMap<Int, ProxyEntity>)
 
@@ -227,6 +236,183 @@ class ConfigBuildResult(
 
     // ownerProfileId: the profile whose chain built this outbound.
     data class WireGuardInstance(val tag: String, val ownerProfileId: Long)
+
+    /**
+     * A profile's path as this config was built with it: [fingerprint], the digest of its hops in the order they are
+     * dialed, each with its saved settings, a dot, and the digest of the path as it runs: every hop's outbound after
+     * all custom JSON was merged in, with the DNS server that resolves its server's name, and the WireGuard sessions
+     * of the outbounds; null when that cannot be told, also when the tag a test dials for the profile does not lead
+     * to the path, or, in a test's config, when its default route or route rules were changed by custom JSON.
+     * [tags]: the outbounds of the path, its entry hop first, a hop another path built first included. A full custom
+     * config is one path through its [defaultRoute], fingerprinted as written, its outbounds unknown.
+     */
+    class PathSnapshot(val fingerprint: String?, val tags: List<String>, val defaultRoute: Boolean = false)
+
+    /**
+     * The WireGuard and AmneziaWG outbounds on the path of [profileId]; null when the config does not tell which ones
+     * the path takes, as a full custom config does not, nor one whose path cannot be read for its fingerprint.
+     */
+    fun wireGuardPath(profileId: Long): List<WireGuardInstance>? = paths[profileId]?.takeUnless { it.defaultRoute || it.fingerprint == null }?.tags?.distinct()?.filter { it in wireGuardIdentities.byTag }?.map { WireGuardInstance(it, profileId) }
+}
+
+private fun String.isAscii() = all { it.code < 128 }
+
+private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
+
+// What a path's fingerprint is made of before the config is finished.
+private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
+    // [byDefault]: the config is a test's, which takes the core's default route rather than the dialed tag.
+    fun snapshot(identities: WireGuardIdentities, config: ConfigIndex, dialed: String?, plugins: Map<String, String?>, byDefault: Boolean): ConfigBuildResult.PathSnapshot {
+        val effective = effectivePath(config, tags, plugins)
+        val routed = !byDefault || (config.routeFinal == dialed && config.routeRulesAsBuilt)
+        if (identities.unknown || effective == null || !dialsEntry(config, dialed) || !routed) return ConfigBuildResult.PathSnapshot(null, tags)
+        // The saved settings, then the path as it runs: when only the path differs, a reconnect would not change it.
+        val settings = MessageDigest.getInstance("SHA-256")
+        val path = MessageDigest.getInstance("SHA-256")
+        fun MessageDigest.add(text: String) = update((text + "\n").toByteArray())
+        fun add(profile: ProxyEntity) {
+            val bean = profile.requireBean()
+            settings.add("${profile.id} ${bean.javaClass.name} ${Base64.getEncoder().encodeToString(bean.settings())}")
+        }
+        hops.forEach(::add)
+        settings.add("root")
+        add(entity)
+        path.add(effective)
+        tags.mapNotNull { identities.byTag[it] }.flatten().sorted().forEach { path.add(it) }
+        fun MessageDigest.hex() = digest().joinToString("") { "%02x".format(it) }
+        return ConfigBuildResult.PathSnapshot("${settings.hex()}.${path.hex()}", tags)
+    }
+
+    // Whether the tag a test dials for the profile is the path's entry hop, or a selector that can only pick it, as a
+    // group's alias for a profile that shares its outbound is: custom JSON could point the alias anywhere else.
+    private fun dialsEntry(config: ConfigIndex, dialed: String?): Boolean {
+        val entry = tags.firstOrNull() ?: return false
+        if (dialed == entry) return true
+        // The core matches names regardless of case, so a name in other letters could stand in for one read here.
+        val alias = config.outbounds[dialed]?.takeIf { it.keySet().all { name -> name == name.lowercase() && name.isAscii() } } ?: return false
+        fun text(element: JsonElement?) = (element as? JsonPrimitive)?.takeIf { it.isString }?.asString
+        val members = alias["outbounds"] as? JsonArray ?: return false
+        val default = alias["default"]?.takeUnless { it.isJsonNull }
+        return text(alias["type"]) == "selector" && members.size() == 1 && text(members[0]) == entry && (default == null || text(default) == entry)
+    }
+}
+
+private fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
+
+// A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
+private fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
+
+/**
+ * The entries of a finished config by tag, read once for all its paths, a tag given twice mapped to null, and those
+ * of the config as the builder made it, [asBuilt] before custom JSON was merged in, but after each hop's own outbound
+ * JSON, whose fields are [hopCustomFields] by tag.
+ */
+internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val hopCustomFields: Map<String, Set<String>> = emptyMap()) {
+    private class Entries(config: JsonObject) {
+        val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
+        val inbounds = byTag(objects(config["inbounds"]))
+        val routeRules: JsonElement? = (config["route"] as? JsonObject)?.get("rules")
+    }
+    private val entries = Entries(config)
+    private val builtEntries = Entries(asBuilt)
+    val outbounds = entries.outbounds
+    val dnsServers = byTag(objects((config["dns"] as? JsonObject)?.get("servers")))
+    val inbounds = entries.inbounds
+    val builtOutbounds = builtEntries.outbounds
+    val builtInbounds = builtEntries.inbounds
+
+    // Whether the hop with [tag] sets the field [name] itself, in its profile's outbound JSON, which is part of
+    // [asBuilt]: its custom outbound or the JSON merged into its outbound. Names without regard to case, as the core.
+    fun customized(tag: String, name: String) = hopCustomFields[tag]?.let { "" in it || name in it } == true
+
+    // The outbound the core's default route takes, when the config names one.
+    val routeFinal = ((config["route"] as? JsonObject)?.get("final") as? JsonPrimitive)?.takeIf { it.isString }?.asString?.takeIf { routeSpelledOnce(config) }
+
+    // Whether custom JSON left the route rules as the builder made them; a plugin's way on to its server is one.
+    val routeRulesAsBuilt = entries.routeRules == builtEntries.routeRules && routeSpelledOnce(config)
+
+    // The core reads names without regard to case: another spelling of the route, its default or its rules could
+    // stand in for the one read here. So could a name outside ASCII, which the core folds by Unicode's rules, under
+    // which a long s is an s.
+    private fun routeSpelledOnce(config: JsonObject): Boolean {
+        fun JsonObject.literal(vararg names: String) = keySet().none { (it.lowercase() in names && it != it.lowercase()) || !it.isAscii() }
+        return config.literal("route") && (config["route"] as? JsonObject)?.literal("final", "rules") != false
+    }
+
+    init {
+        built.incrementAndGet()
+    }
+
+    companion object {
+        // How many were read, for the test that a config is read once and not once per path.
+        internal val built = AtomicInteger()
+    }
+}
+
+/**
+ * The outbounds of a path in a finished config, as the core runs them, the same for a test's config and the VPN's:
+ * tags left out, a detour named by its hop on the path, and the DNS server that resolves a hop's server name in
+ * place of its tag, with every DNS server that one resolves its own name through. The resolver the builder gave a
+ * hop differs between the two only by the VPN's server address family and, on a hop dialed through the next one, by
+ * whether there is one; such a resolver is the server alone on a hop dialed directly and left out on one dialed
+ * through the next. A resolver custom JSON changed keeps all its options. A hop of [plugins] is a SOCKS server on the device at a port and with a login every build makes anew; with
+ * those as built it stands for the plugin, named by its hop, and so does the inbound the plugin reaches its server
+ * by. Null when the path cannot be read so: a hop missing or given twice, a detour that does not name the next hop, a
+ * resolver missing, a plugin's port, login or inbound not as built, a hop's own JSON that sets them or its resolver,
+ * or route rules custom JSON changed on a path with a plugin.
+ */
+internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map<String, String?> = emptyMap()): String? {
+    // A DNS server that resolves its own server's name through another, as one at a hostname does through dns-local,
+    // stands with that one's definition in place of its tag, and so on down; null when one is missing, given twice,
+    // or names one it was reached through.
+    fun dnsServerDefinition(servers: Map<String?, JsonObject?>, tag: String, through: Set<String>): JsonObject? {
+        if (tag in through) return null
+        val definition = servers[tag]?.deepCopy() ?: return null
+        definition.remove("tag")
+        val resolver = definition["domain_resolver"] ?: return definition
+        val options = resolver as? JsonObject ?: JsonObject().apply { add("server", resolver) }
+        val next = (options["server"] as? JsonPrimitive)?.takeIf { it.isString }?.asString ?: return null
+        definition.add("domain_resolver", options.deepCopy().apply { add("server", dnsServerDefinition(servers, next, through + tag) ?: return null) })
+        return definition
+    }
+    if (tags.any { it in plugins } && !config.routeRulesAsBuilt) return null
+    val outbounds = config.outbounds
+    val dnsServers = config.dnsServers
+    val path = JsonArray()
+    if (tags.distinct().size != tags.size) return null
+    for ((index, tag) in tags.withIndex()) {
+        val hop = outbounds[tag]?.deepCopy() ?: return null
+        hop.remove("tag")
+        // Every hop is dialed through the next one, which it names; the last names none, nor does a plugin's, whose
+        // plugin reaches its server by a route rule. A detour left out or pointed elsewhere skips a hop.
+        val detour = hop.remove("detour")
+        val next = tags.getOrNull(index + 1)?.takeUnless { tag in plugins }
+        if ((detour as? JsonPrimitive)?.takeIf { it.isString }?.asString != next || (detour == null) != (next == null)) return null
+        if (next != null) hop.addProperty("detour", "hop ${index + 1}")
+        if (tag in plugins) {
+            val built = config.builtOutbounds[tag] ?: return null
+            // The plugin listens where the builder told it; a hop's own JSON that moves its server elsewhere is not read.
+            for (name in listOf("server", "server_port", "username", "password")) if (config.customized(tag, name) || hop.remove(name) != built[name]) return null
+            hop.addProperty("plugin", "hop $index")
+            plugins[tag]?.let { mappingTag ->
+                val mapping = config.inbounds[mappingTag]?.deepCopy() ?: return null
+                for (name in listOf("tag", "listen", "listen_port")) if (mapping.remove(name) != config.builtInbounds[mappingTag]?.get(name)) return null
+                hop.add("plugin_server", mapping)
+            }
+        }
+        // A resolver of the hop's own JSON is on both sides and not told from the builder's: its effect is not read.
+        if (config.customized(tag, "domain_resolver")) return null
+        val resolver = hop.remove("domain_resolver")
+        val built = resolver == config.builtOutbounds[tag]?.get("domain_resolver")
+        if (resolver != null && !(built && detour != null)) {
+            val options = resolver as? JsonObject ?: JsonObject().apply { add("server", resolver) }
+            val server = (options["server"] as? JsonPrimitive)?.takeIf { it.isString } ?: return null
+            val definition = dnsServerDefinition(dnsServers, server.asString, emptySet()) ?: return null
+            hop.add("domain_resolver", if (built) definition else options.deepCopy().apply { add("server", definition) })
+        }
+        path.add(hop)
+    }
+    return path.toString()
 }
 
 // Extracted from buildConfig as pure, capture-free helpers.
@@ -315,6 +501,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         val bean = proxy.requireBean() as ConfigBean
         if (bean.type == 0) {
             val tagProxy = proxy.displayName()
+            val identities = wireGuardIdentities(bean.config!!)
             return ConfigBuildResult(
                 bean.config!!,
                 listOf(),
@@ -329,6 +516,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 } catch (_: RuntimeException) {
                     null
                 },
+                wireGuardIdentities = identities,
+                paths = mapOf(proxy.id to ConfigBuildResult.PathSnapshot(if (identities.unknown) null else "config " + sha256Hex(bean.config!!), emptyList(), defaultRoute = true)),
             )
         }
     }
@@ -380,6 +569,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val tailscaleEndpoints = HashMap<Long, ConfigBuildResult.TailscaleEndpoint>()
     val profileTailscaleNodes = HashMap<Long, Set<Long>>()
     val wireguardInstances = LinkedHashMap<Long, MutableList<ConfigBuildResult.WireGuardInstance>>()
+    val pathParts = HashMap<Long, PathParts>()
     // Profile DNS of each WireGuard/AmneziaWG outbound, and whether a selected chain built it.
     val profileDnsList = mutableListOf<Pair<Boolean, WireGuardProfileDns>>()
     if (buildSelector) {
@@ -436,6 +626,13 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     // own connection to the user's server, which must not be sniffed and sent somewhere else.
     val appInbounds = listOfNotNull("tun-in".takeIf { isVPN && !forTest }, TAG_MIXED.takeIf { keepMixedInbound })
     val externalIndexMap = ArrayList<IndexEntity>()
+
+    // The fields each hop's own outbound JSON sets, a custom outbound's included, by tag in lower case; "" when that
+    // JSON cannot be read.
+    val hopCustomFields = HashMap<String, Set<String>>()
+
+    // The outbounds of plugins, by tag, with the inbound a plugin reaches its server by, if it has one.
+    val pluginHops = HashMap<String, String?>()
     val ipv6Mode = if (forTest) IPv6Mode.ENABLE else DataStore.ipv6Mode
 
     fun genDomainStrategy(noAsIs: Boolean): String = genDomainStrategy(noAsIs, ipv6Mode)
@@ -658,6 +855,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             // tag's speed from the last profile listed for it, and in a group that picks its server while it runs
             // only the picked profile counts. Told apart by id: hashing a whole profile serializes its settings.
             val chainTraffic = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
+            val chainTags = mutableListOf<String>()
 
             var currentOutbound: SingBoxOption
             lateinit var pastOutbound: SingBoxOption
@@ -747,6 +945,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 // already own a readable tag rather than the provisional global tag.
                 val reusedGlobalTag = if (needGlobal) globalOutbounds[proxyEntity.id] else null
                 if (reusedGlobalTag != null) tagOut = reusedGlobalTag
+                chainTags += tagOut
 
                 // chain rules
                 if (index > 0) {
@@ -773,6 +972,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 }
 
                 if (proxyEntity.needExternal()) { // externel outbound
+                    changes.put(pluginHops, tagOut, null)
                     val localPort = mkPort()
                     externalChainMap[localPort] = proxyEntity
                     currentOutbound = Outbound_SocksOptions().apply {
@@ -894,6 +1094,12 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                     _hack_config_map["tag"] = tagOut
 
                     _hack_custom_config = bean.customOutboundJson
+                    val ownJson = listOfNotNull((bean as? ConfigBean)?.config, bean.customOutboundJson).filter { it.isNotBlank() }
+                    if (ownJson.isNotEmpty()) {
+                        // A name outside ASCII may fold to any field: it counts as one that cannot be read.
+                        val fields = ownJson.flatMap { json -> runCatching { JsonParser.parseString(json).asJsonObject.keySet().map { it.trim('+').lowercase().takeIf(String::isAscii).orEmpty() } }.getOrDefault(listOf("")) }
+                        changes.put(hopCustomFields, tagOut, fields.toSet())
+                    }
                 }
                 if (bean is WireGuardBean || bean is AmneziaWGBean) {
                     chainWireGuard += proxyEntity.id to ConfigBuildResult.WireGuardInstance(tagOut, entity.id)
@@ -915,6 +1121,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                             listen = LOCALHOST
                             listen_port = mappingPort
                             tag = "$chainTag-mapping-${proxyEntity.id}"
+                            changes.put(pluginHops, tagOut, tag)
 
                             override_address = bean.serverAddress
                             override_port = bean.serverPort
@@ -967,6 +1174,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 ) { NekoBox.application.getString(R.string.route_proxy_invalid, entity.displayName()) }
             }
             trafficMap[chainTagOut] = chainTraffic
+            pathParts[entity.id] = PathParts(entity, profileList, chainTags)
             // Reserve only for a chain that built completely; a hop that fails later releases them.
             tailscaleProfiles += chainTailscaleProfiles
             tailscaleEndpoints += chainTailscaleEndpoints
@@ -1629,11 +1837,14 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         if (endpointList.isNotEmpty()) endpoints = endpointList
     }.let {
         val configTree = SingBoxOptions.toJsonTree(it)
+        val built = configTree.asJsonObject.deepCopy()
         // Merged into the finished tree: on the root option it would shift arrays before their items' own settings apply.
         if (!forTest) Util.mergeJsonElement(configTree, DataStore.globalCustomConfig)
         Util.mergeJsonElement(configTree, proxy.requireBean().customConfigJson!!)
+        val config = SingBoxOptions.treeToJson(configTree)
+        val identities = wireGuardIdentities(config)
         ConfigBuildResult(
-            SingBoxOptions.treeToJson(configTree),
+            config,
             externalIndexMap,
             proxy.id,
             trafficMap,
@@ -1646,6 +1857,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             wireguardInstances,
             joinNebula,
             localProxyOf(configTree, ownSecret),
+            identities,
+            ConfigIndex(configTree.asJsonObject, built, hopCustomFields).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id], pluginHops, forTest && id == proxy.id) } },
         )
     }
 }

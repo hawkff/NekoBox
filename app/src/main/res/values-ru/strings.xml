@@ -88,6 +88,15 @@
 <string name="connection_test_tcp_ping">TCP-пинг</string>
 <string name="connection_test_testing">Тестирование…</string>
 <string name="connection_test_timeout_error">Тайм-аут</string>
+<string name="connection_test_no_handshake">Нет завершённого рукопожатия с сервером за %1$d мс</string>
+<string name="connection_test_vpn_changing">VPN запускается или останавливается. Повторите через несколько секунд</string>
+<string name="connection_test_reconnect">VPN работает с другими настройками этого профиля. Переподключитесь, чтобы проверить сохранённые</string>
+<string name="connection_test_disconnect">Отключите VPN, чтобы проверить этот профиль отдельно</string>
+<string name="connection_test_wireguard_in_use">VPN или другая проверка использует пару ключей WireGuard этого профиля. Повторите, когда она завершится</string>
+<string name="connection_test_wireguard_unknown_key">Ключ WireGuard этого профиля не читается, поэтому профиль нельзя проверить</string>
+<string name="vpn_wireguard_test_running">Проверка подключения использует пару ключей WireGuard этого профиля. Подключитесь снова, когда она завершится</string>
+<string name="vpn_wireguard_unknown_key">Ключ WireGuard в этой конфигурации не читается. Проверьте ключи профиля и его пользовательский JSON</string>
+<string name="wireguard_config_unreadable">Исходящие подключения этой конфигурации не читаются. Проверьте её пользовательский JSON</string>
 <string name="connection_test_unreachable">Недоступен</string>
 <string name="connection_test_url">URL-адрес проверки подключения</string>
 <string name="connection_test_url_test">URL-тест</string>
