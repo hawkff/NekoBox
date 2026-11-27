@@ -14,7 +14,9 @@ import xyz.nekobyte.nekobox.fmt.buildConfig
 import xyz.nekobyte.nekobox.ktx.app
 import java.io.IOException
 
-class UrlTest(private val service: () -> INekoBoxService? = { null }) {
+// [service]: the app's service, null while it is not bound yet. Every caller names one: without it a WireGuard test
+// could not tell a stopped VPN from one still binding.
+class UrlTest(private val service: () -> INekoBoxService?) {
 
     val link = DataStore.connectionTestURL
     private val timeout = DataStore.connectionTestTimeout
