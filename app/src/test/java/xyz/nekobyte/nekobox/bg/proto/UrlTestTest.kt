@@ -20,6 +20,7 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
+import xyz.nekobyte.nekobox.plugin.PluginManager
 import java.io.IOException
 import java.lang.reflect.Proxy
 
@@ -131,7 +132,7 @@ class UrlTestTest {
 
     @Test
     fun aTestsOwnCoreThatFailsWhileTheVpnStartsOrStopsSaysSo() = runTest {
-        val failed = IOException("Get \"http://10.66.0.1:8080/\": context deadline exceeded")
+        val failed = ProbeFailure("Get \"http://10.66.0.1:8080/\": context deadline exceeded")
         for (state in listOf(BaseService.State.Connecting, BaseService.State.Stopping)) {
             val reason = failure { UrlTest { binder({ state }) { tested(1) } }.ownCore(true) { throw failed } }
             assertEquals("vpn_changing", reason.code)
@@ -143,6 +144,10 @@ class UrlTestTest {
         assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(false) { throw failed } }.exceptionOrNull())
         val held = WireGuardSessionsUnavailable("wireguard_in_use", "held")
         assertEquals(held, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw held } }.exceptionOrNull())
+        // A core that could not be set up: a plugin missing, a config the core refuses. No retry mends that.
+        for (setup in listOf(PluginManager.PluginNotFoundException("naive-plugin"), IOException("decode config: unknown field"), IllegalStateException("Missing Mieru SOCKS credentials"))) {
+            assertEquals(setup, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw setup } }.exceptionOrNull())
+        }
         // A cancellation is no failure of the test.
         val cancelled = CancellationException("dialog closed")
         assertEquals(cancelled, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw cancelled } }.exceptionOrNull())

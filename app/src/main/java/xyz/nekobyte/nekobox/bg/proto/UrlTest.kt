@@ -1,7 +1,6 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import android.os.RemoteException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
@@ -46,17 +45,14 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
         return TailscaleAccess.run(service, nodes, viaService) { ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared).doTest() } }
     }
 
-    // A test's own core. When one with WireGuard hops fails while the VPN starts or stops, the VPN is the likely cause:
-    // its kill switch holds traffic while it connects. The test then says so. The core has closed by then and its
-    // sessions are free; the state is read once, without waiting. Other failures, and a cancellation, stay as they are.
+    // A test's own core. When the request of one with WireGuard hops fails while the VPN starts or stops, the VPN is
+    // the likely cause: its kill switch holds traffic while it connects. The test then says so. The core has closed by
+    // then and its sessions are free; the state is read once, without waiting. A failure to set the core up, a missing
+    // plugin or a config error, which no retry mends, and a cancellation stay as they are.
     internal suspend fun <T> ownCore(wireGuard: Boolean, probe: suspend () -> T): T = try {
         probe()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: WireGuardSessionsUnavailable) {
-        throw e
-    } catch (e: Exception) {
-        val state = if (wireGuard) service()?.let { runCatching { BaseService.State.values()[it.state] }.getOrNull() } else null
+    } catch (e: IOException) {
+        val state = if (wireGuard && (e is ProbeFailure || e is NoHandshakeException)) service()?.let { runCatching { BaseService.State.values()[it.state] }.getOrNull() } else null
         if (state == BaseService.State.Connecting || state == BaseService.State.Stopping) throw vpnChanging(e)
         throw e
     }
