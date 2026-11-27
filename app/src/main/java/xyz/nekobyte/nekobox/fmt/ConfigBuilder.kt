@@ -238,9 +238,9 @@ class ConfigBuildResult(
 
     /**
      * A profile's path as this config was built with it: [fingerprint] of its hops in the order they are dialed,
-     * each with its settings, the resolver its subscription gives the path and the WireGuard sessions of the
-     * outbounds as they run; null when a session cannot be read. [tags]: the outbounds of the path, a hop another
-     * path built first included.
+     * each with its settings, and of the path as it runs: every hop's outbound after all custom JSON was merged in,
+     * with the DNS server that resolves its server's name, and the WireGuard sessions of the outbounds; null when
+     * that cannot be told. [tags]: the outbounds of the path, a hop another path built first included.
      */
     class PathSnapshot(val fingerprint: String?, val tags: List<String>)
 
@@ -249,10 +249,10 @@ class ConfigBuildResult(
 }
 
 // What a path's fingerprint is made of before the config is finished.
-private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val resolver: String?, val tags: List<String>) {
-    fun snapshot(identities: WireGuardIdentities): ConfigBuildResult.PathSnapshot {
-        if (identities.unknown) return ConfigBuildResult.PathSnapshot(null, tags)
-        val sessions = tags.mapNotNull { identities.byTag[it] }
+private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val tags: List<String>) {
+    fun snapshot(identities: WireGuardIdentities, config: JsonObject): ConfigBuildResult.PathSnapshot {
+        val effective = effectivePath(config, tags)
+        if (identities.unknown || effective == null) return ConfigBuildResult.PathSnapshot(null, tags)
         val digest = MessageDigest.getInstance("SHA-256")
         fun add(text: String) = digest.update((text + "\n").toByteArray())
         fun add(profile: ProxyEntity) {
@@ -262,10 +262,51 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
         hops.forEach(::add)
         add("root")
         add(entity)
-        add("resolver ${resolver.orEmpty()}")
-        sessions.flatten().sorted().forEach(::add)
+        add(effective)
+        tags.mapNotNull { identities.byTag[it] }.flatten().sorted().forEach(::add)
         return ConfigBuildResult.PathSnapshot(digest.digest().joinToString("") { "%02x".format(it) }, tags)
     }
+}
+
+/**
+ * The outbounds of a path in a finished config, as the core runs them, the same for a test's config and the VPN's:
+ * tags left out, a detour named by its hop on the path, and the DNS server that resolves a hop's server name in
+ * place of its tag. A hop dialed through the next one hands its server's name on in a test, so its resolver is left
+ * out; so is the address family, which a test leaves to the system. Null when the path cannot be read so: a hop
+ * missing or given twice, a detour off the path, a resolver missing.
+ */
+internal fun effectivePath(config: JsonObject, tags: List<String>): String? {
+    fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
+
+    // A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
+    fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
+    val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
+    val dnsServers = byTag(objects((config["dns"] as? JsonObject)?.get("servers")))
+    val path = JsonArray()
+    for (tag in tags.distinct()) {
+        val hop = outbounds[tag]?.deepCopy() ?: return null
+        hop.remove("tag")
+        val detour = hop.remove("detour")
+        if (detour != null) {
+            val index = tags.indexOf((detour as? JsonPrimitive)?.asString)
+            if (index < 0) return null
+            hop.addProperty("detour", "hop $index")
+            hop.remove("domain_resolver")
+        } else {
+            when (val resolver = hop.remove("domain_resolver")) {
+                null -> Unit
+
+                else -> {
+                    val server = ((resolver as? JsonObject)?.get("server") ?: resolver) as? JsonPrimitive ?: return null
+                    val definition = dnsServers[server.asString]?.deepCopy() ?: return null
+                    definition.remove("tag")
+                    hop.add("domain_resolver", definition)
+                }
+            }
+        }
+        path.add(hop)
+    }
+    return path.toString()
 }
 
 // Extracted from buildConfig as pure, capture-free helpers.
@@ -700,7 +741,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             // only the picked profile counts. Told apart by id: hashing a whole profile serializes its settings.
             val chainTraffic = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
             val chainTags = mutableListOf<String>()
-            var chainResolver: String? = null
 
             var currentOutbound: SingBoxOption
             lateinit var pastOutbound: SingBoxOption
@@ -751,7 +791,6 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         ?.subscription?.customDnsResolver
                         ?.let { sanitizeDnsEntry(it) }
                         ?.takeIf { it.isNotBlank() }
-                    chainResolver = resolver
 
                     if (resolver != null) {
                         // Record hosts of every chain hop owned by this subscription.
@@ -1012,7 +1051,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 ) { NekoBox.application.getString(R.string.route_proxy_invalid, entity.displayName()) }
             }
             trafficMap[chainTagOut] = chainTraffic
-            pathParts[entity.id] = PathParts(entity, profileList, chainResolver, chainTags)
+            pathParts[entity.id] = PathParts(entity, profileList, chainTags)
             // Reserve only for a chain that built completely; a hop that fails later releases them.
             tailscaleProfiles += chainTailscaleProfiles
             tailscaleEndpoints += chainTailscaleEndpoints
@@ -1695,7 +1734,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            pathParts.mapValues { it.value.snapshot(identities) },
+            pathParts.mapValues { it.value.snapshot(identities, configTree.asJsonObject) },
         )
     }
 }

@@ -1,17 +1,22 @@
 package xyz.nekobyte.nekobox.fmt
 
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.GroupType
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.database.RuleEntity
 import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
@@ -159,5 +164,50 @@ class RunningWireGuardTest {
         assertEquals(listOf(front.tag), vpn.wireGuardPath(second.id).map { it.tag })
         assertEquals(second.id, vpn.wireGuardPath(second.id).single().ownerProfileId)
         assertEquals(1, vpn.wireGuardIdentities.byTag.size)
+    }
+
+    @Test
+    fun globalCustomJsonThatChangesTheRunningOutboundIsAnotherPath() {
+        val tunnel = add(wg("tunnel"))
+        val plain = running(tunnel)
+        assertEquals(plain.fingerprint(tunnel.id), candidate(tunnel.id))
+        // The same outbound, tag and keys, at another server; a test's config leaves global custom JSON out.
+        val outbounds = JSONObject(plain.config).getJSONArray("outbounds")
+        val tag = plain.profileTagMap.getValue(tunnel.id)
+        for (index in 0 until outbounds.length()) {
+            val outbound = outbounds.getJSONObject(index)
+            if (outbound.optString("tag") == tag) outbound.put("server", "203.0.113.9")
+        }
+        try {
+            DataStore.globalCustomConfig = JSONObject().put("outbounds", outbounds).toString()
+            assertNotEquals(running(tunnel).fingerprint(tunnel.id), candidate(tunnel.id))
+            // An outbound added with the tag once more: which one the core takes is open.
+            val again = (0 until outbounds.length()).map { outbounds.getJSONObject(it) }.single { it.optString("tag") == tag }
+            DataStore.globalCustomConfig = JSONObject().put("+outbounds", JSONArray().put(again)).toString()
+            assertNull(running(tunnel).fingerprint(tunnel.id))
+        } finally {
+            DataStore.globalCustomConfig = ""
+        }
+    }
+
+    @Test
+    fun aServerNameARuleOutboundSharesIsResolvedLikeTheRuleOutbound() {
+        val groupId = group {
+            type = GroupType.SUBSCRIPTION
+            subscription = SubscriptionBean().apply {
+                initializeDefaultValues()
+                customDnsResolver = "https://resolver.example/dns-query"
+            }
+        }
+        val member = add(wg("member"), groupId)
+        assertEquals(running(member).fingerprint(member.id), candidate(member.id))
+        // A profile of another group on the same server name, the target of a rule: the VPN resolves that name with
+        // direct DNS then, which a test's config, without rules, does not.
+        val shared = add(socks("shared", "wg.example"))
+        ConfigBuilderTestEnv.io {
+            ProfileDatabase.rulesDao.reset()
+            ProfileDatabase.rulesDao.createRule(RuleEntity(domains = "full:b.example", outbound = shared.id).apply { enabled = true })
+        }
+        assertNotEquals(running(member).fingerprint(member.id), candidate(member.id))
     }
 }
