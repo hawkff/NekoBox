@@ -52,6 +52,9 @@ private const val KILL_SWITCH_RETRY_MAX_MS = 60_000L
 // back to a test instance of their own.
 const val PROFILE_NOT_RUNNING = "profile not in running configuration"
 
+// Binder error while the service has no running core: it is starting, stopping or stopped.
+const val CORE_NOT_STARTED = "core not started"
+
 class BaseService {
 
     enum class State(
@@ -304,7 +307,7 @@ class BaseService {
         }
 
         override fun urlTest(): Int {
-            val box = data?.proxy?.box ?: error("core not started")
+            val box = data?.proxy?.box ?: error(CORE_NOT_STARTED)
             return try {
                 Libcore.urlTest(
                     box,
@@ -317,7 +320,7 @@ class BaseService {
         }
 
         private fun runningProxy() = data?.takeIf { it.state == State.Connected }?.proxy?.takeIf { it.isInitialized() }
-            ?: error("core not started")
+            ?: error(CORE_NOT_STARTED)
 
         // Right after Connected a node may still be logging in or selecting its exit node. Only
         // the nodes on the tested profile's path are awaited, so another member's broken node
@@ -328,7 +331,7 @@ class BaseService {
                 val endpoint = proxy.config.tailscaleEndpoints[nodeId] ?: continue
                 val deadline = SystemClock.elapsedRealtime() + TAILSCALE_READY_TIMEOUT_MS
                 while (true) {
-                    check(data?.state == State.Connected && data?.proxy === proxy) { "core not started" }
+                    check(data?.state == State.Connected && data?.proxy === proxy) { CORE_NOT_STARTED }
                     try {
                         Libcore.tailscaleWaitReady(
                             proxy.box,

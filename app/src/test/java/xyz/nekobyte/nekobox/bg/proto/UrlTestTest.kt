@@ -1,9 +1,9 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import android.app.Application
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -11,6 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
@@ -30,39 +31,57 @@ class UrlTestTest {
     }
 
     @Test
-    fun aWireGuardProfileTheConnectedServiceRunsIsTestedThroughItsCore() {
-        val service = binder(BaseService.State.Connected) { 42 }
+    fun aWireGuardProfileTheConnectedServiceRunsIsTestedThroughItsCore() = runTest {
+        val service = binder({ BaseService.State.Connected }) { 42 }
         assertEquals(42, UrlTest { service }.viaRunningCore(profile, wireGuard))
         assertEquals(listOf(7L), calls)
     }
 
     @Test
-    fun otherProfilesKeepTheirOwnCore() {
-        val connected = binder(BaseService.State.Connected) { 42 }
-        // Not in the running configuration.
-        assertNull(UrlTest { binder(BaseService.State.Connected) { error(PROFILE_NOT_RUNNING) } }.viaRunningCore(profile, wireGuard))
-        // No WireGuard or AmneziaWG hop.
-        assertNull(UrlTest { connected }.viaRunningCore(profile, prepared(emptyMap())))
-        // No connected service.
-        assertNull(UrlTest { null }.viaRunningCore(profile, wireGuard))
-        assertNull(UrlTest { binder(BaseService.State.Connecting) { 42 } }.viaRunningCore(profile, wireGuard))
+    fun onlyAStoppedServiceOrAProfileItDoesNotRunLeavesTheTestACoreOfItsOwn() = runTest {
+        assertNull(UrlTest { binder({ BaseService.State.Connected }) { error(PROFILE_NOT_RUNNING) } }.viaRunningCore(profile, wireGuard))
+        assertNull(UrlTest { binder({ BaseService.State.Stopped }) { 42 } }.viaRunningCore(profile, wireGuard))
+        // No WireGuard or AmneziaWG hop: the service is not asked.
+        assertNull(UrlTest { binder({ BaseService.State.Connecting }) { 42 } }.viaRunningCore(profile, prepared(emptyMap())))
         assertEquals(listOf(7L), calls)
     }
 
     @Test
-    fun aFailureOfTheRunningCoreIsTheTestsResult() {
-        val service = binder(BaseService.State.Connected) { error("timeout") }
-        assertEquals("timeout", assertThrows(IllegalStateException::class.java) { UrlTest { service }.viaRunningCore(profile, wireGuard) }.message)
+    fun aServiceThatCannotTellWhetherItRunsTheProfileFailsTheTest() = runTest {
+        // No binder yet, starting or stopping: its core may run the profile.
+        for (service in listOf<INekoBoxService?>(null, binder({ BaseService.State.Connecting }) { 42 }, binder({ BaseService.State.Stopping }) { 42 })) {
+            assertEquals("vpn_changing", failure { UrlTest { service }.viaRunningCore(profile, wireGuard) }.code)
+        }
+        // A service that stops under the test: no core of the test's own.
+        assertEquals("vpn_changing", failure { UrlTest { binder({ BaseService.State.Connected }) { error(CORE_NOT_STARTED) } }.viaRunningCore(profile, wireGuard) }.code)
+        assertEquals(listOf(7L), calls)
     }
+
+    @Test
+    fun aServiceThatSettlesInAMomentIsWaitedFor() = runTest {
+        var states = listOf(BaseService.State.Connecting, BaseService.State.Connecting, BaseService.State.Connected)
+        val service = binder({ states.first().also { if (states.size > 1) states = states.drop(1) } }) { 42 }
+        assertEquals(42, UrlTest { service }.viaRunningCore(profile, wireGuard))
+    }
+
+    @Test
+    fun aFailureOfTheRunningCoreIsTheTestsResult() = runTest {
+        val service = binder({ BaseService.State.Connected }) { error("Timeout") }
+        val failure = runCatching { UrlTest { service }.viaRunningCore(profile, wireGuard) }.exceptionOrNull()
+        assertEquals(IllegalStateException::class.java, failure?.javaClass)
+        assertEquals("Timeout", failure?.message)
+    }
+
+    private suspend fun failure(block: suspend () -> Unit) = runCatching { block() }.exceptionOrNull() as ConnectionTestFailure
 
     private fun prepared(wireguardInstances: Map<Long, List<ConfigBuildResult.WireGuardInstance>>) = ConfigBuildResult("{}", emptyList(), 7, emptyMap(), emptyMap(), -1, wireguardInstances = wireguardInstances)
 
-    private fun binder(state: BaseService.State, urlTestProfile: () -> Int) = Proxy.newProxyInstance(
+    private fun binder(state: () -> BaseService.State, urlTestProfile: () -> Int) = Proxy.newProxyInstance(
         INekoBoxService::class.java.classLoader,
         arrayOf(INekoBoxService::class.java),
     ) { _, method, arguments ->
         when (method.name) {
-            "getState" -> state.ordinal
+            "getState" -> state().ordinal
 
             "urlTestProfile" -> {
                 calls += arguments[0] as Long

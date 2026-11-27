@@ -37,8 +37,11 @@ internal suspend fun awaitTailscaleReady(box: libcore.BoxInstance, tag: String, 
     }
 }
 
+/** A connection test that failed for a reason the app names, with a code for the local API. */
+open class ConnectionTestFailure(val code: String, message: String, cause: Throwable? = null) : IOException(message, cause)
+
 /** A connection test failed while a WireGuard or AmneziaWG server had not answered the handshake. */
-class NoHandshakeException(timeoutMs: Int, cause: Throwable) : IOException(app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
+class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
 
 class TestInstance(
     profile: ProxyEntity,

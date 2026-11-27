@@ -16,7 +16,7 @@ import xyz.nekobyte.nekobox.*
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.LocationSpoofing
 import xyz.nekobyte.nekobox.bg.NetworkAutomation
-import xyz.nekobyte.nekobox.bg.proto.NoHandshakeException
+import xyz.nekobyte.nekobox.bg.proto.ConnectionTestFailure
 import xyz.nekobyte.nekobox.bg.proto.UrlTest
 import xyz.nekobyte.nekobox.database.*
 import xyz.nekobyte.nekobox.database.preference.KeyValuePair
@@ -774,8 +774,8 @@ internal class AppApi(
             runtime.job {
                 val latency = try {
                     UrlTest { runCatching { runtime.binder() }.getOrNull() }.doTest(profile)
-                } catch (e: NoHandshakeException) {
-                    reject("no_handshake", e.message!!)
+                } catch (e: ConnectionTestFailure) {
+                    reject(e.code, e.message!!)
                 }
                 JSONObject().put("latencyMs", latency)
             }
