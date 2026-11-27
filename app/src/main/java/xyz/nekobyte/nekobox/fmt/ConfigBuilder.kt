@@ -352,16 +352,29 @@ internal class ConfigIndex(config: JsonObject, asBuilt: JsonObject, private val 
 /**
  * The outbounds of a path in a finished config, as the core runs them, the same for a test's config and the VPN's:
  * tags left out, a detour named by its hop on the path, and the DNS server that resolves a hop's server name in
- * place of its tag. The resolver the builder gave a hop differs between the two only by the VPN's server address
- * family and, on a hop dialed through the next one, by whether there is one; such a resolver is the server alone on
- * a hop dialed directly and left out on one dialed through the next. A resolver custom JSON changed keeps all its
- * options. A hop of [plugins] is a SOCKS server on the device at a port and with a login every build makes anew; with
+ * place of its tag, with every DNS server that one resolves its own name through. The resolver the builder gave a
+ * hop differs between the two only by the VPN's server address family and, on a hop dialed through the next one, by
+ * whether there is one; such a resolver is the server alone on a hop dialed directly and left out on one dialed
+ * through the next. A resolver custom JSON changed keeps all its options. A hop of [plugins] is a SOCKS server on the device at a port and with a login every build makes anew; with
  * those as built it stands for the plugin, named by its hop, and so does the inbound the plugin reaches its server
  * by. Null when the path cannot be read so: a hop missing or given twice, a detour that does not name the next hop, a
  * resolver missing, a plugin's port, login or inbound not as built, a hop's own JSON that sets them or its resolver,
  * or route rules custom JSON changed on a path with a plugin.
  */
 internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map<String, String?> = emptyMap()): String? {
+    // A DNS server that resolves its own server's name through another, as one at a hostname does through dns-local,
+    // stands with that one's definition in place of its tag, and so on down; null when one is missing, given twice,
+    // or names one it was reached through.
+    fun dnsServerDefinition(servers: Map<String?, JsonObject?>, tag: String, through: Set<String>): JsonObject? {
+        if (tag in through) return null
+        val definition = servers[tag]?.deepCopy() ?: return null
+        definition.remove("tag")
+        val resolver = definition["domain_resolver"] ?: return definition
+        val options = resolver as? JsonObject ?: JsonObject().apply { add("server", resolver) }
+        val next = (options["server"] as? JsonPrimitive)?.takeIf { it.isString }?.asString ?: return null
+        definition.add("domain_resolver", options.deepCopy().apply { add("server", dnsServerDefinition(servers, next, through + tag) ?: return null) })
+        return definition
+    }
     if (tags.any { it in plugins } && !config.routeRulesAsBuilt) return null
     val outbounds = config.outbounds
     val dnsServers = config.dnsServers
@@ -394,8 +407,7 @@ internal fun effectivePath(config: ConfigIndex, tags: List<String>, plugins: Map
         if (resolver != null && !(built && detour != null)) {
             val options = resolver as? JsonObject ?: JsonObject().apply { add("server", resolver) }
             val server = (options["server"] as? JsonPrimitive)?.takeIf { it.isString } ?: return null
-            val definition = dnsServers[server.asString]?.deepCopy() ?: return null
-            definition.remove("tag")
+            val definition = dnsServerDefinition(dnsServers, server.asString, emptySet()) ?: return null
             hop.add("domain_resolver", if (built) definition else options.deepCopy().apply { add("server", definition) })
         }
         path.add(hop)

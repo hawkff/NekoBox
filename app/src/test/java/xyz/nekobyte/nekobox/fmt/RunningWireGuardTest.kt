@@ -381,6 +381,30 @@ class RunningWireGuardTest {
     }
 
     @Test
+    fun theDnsServersAResolverResolvesItsOwnNameThroughArePartOfThePath() {
+        val tunnel = add(wg("tunnel"))
+        try {
+            // Direct DNS at a hostname: it resolves that name through dns-local.
+            DataStore.directDns = "https://dns.example/dns-query"
+            val vpn = running(tunnel)
+            assertEquals(vpn.fingerprint(tunnel.id), candidate(tunnel.id))
+            // Global custom JSON that changes dns-local alone, which the tunnel's server name is resolved through.
+            val servers = JSONObject(vpn.config).getJSONObject("dns").getJSONArray("servers")
+            val local = (0 until servers.length()).map { servers.getJSONObject(it) }.single { it.optString("tag") == "dns-local" }
+            local.put("type", "udp").put("server", "192.0.2.53")
+            DataStore.globalCustomConfig = JSONObject().put("dns", JSONObject().put("servers", servers)).toString()
+            assertNotEquals(running(tunnel).fingerprint(tunnel.id), candidate(tunnel.id))
+            // A resolver that comes back to one it was reached through cannot be read.
+            local.put("domain_resolver", "dns-direct")
+            DataStore.globalCustomConfig = JSONObject().put("dns", JSONObject().put("servers", servers)).toString()
+            assertNull(running(tunnel).fingerprint(tunnel.id))
+        } finally {
+            DataStore.globalCustomConfig = ""
+            DataStore.directDns = "https://1.1.1.1/dns-query"
+        }
+    }
+
+    @Test
     fun aServerNameARuleOutboundSharesIsResolvedLikeTheRuleOutbound() {
         val groupId = group {
             type = GroupType.SUBSCRIPTION
