@@ -2,7 +2,9 @@ package libcore
 
 import (
 	"context"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"time"
@@ -35,6 +37,32 @@ func urlTest(lifetime context.Context, client *http.Client, link string, timeout
 		response.Body.Close()
 	}
 	return int32(firstByte.Sub(wroteHeaders).Milliseconds()), nil
+}
+
+// URLTestOutcome is a connection test as the app reads it: the latency, or the failure and whether the test ran out
+// of time, which a failure with a reason of its own, such as a refused connection, did not.
+type URLTestOutcome struct {
+	Latency  int32
+	Error    string
+	TimedOut bool
+}
+
+func urlTestOutcome(latency int32, err error) *URLTestOutcome {
+	if err == nil {
+		return &URLTestOutcome{Latency: latency}
+	}
+	var netErr net.Error
+	return &URLTestOutcome{Error: err.Error(), TimedOut: errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) && netErr.Timeout()}
+}
+
+// UrlTestOutcome is UrlTest with a timeout told apart from other failures.
+func UrlTestOutcome(i *BoxInstance, link string, timeout int32) *URLTestOutcome {
+	return urlTestOutcome(UrlTest(i, link, timeout))
+}
+
+// UrlTestOutboundOutcome is UrlTestOutbound with a timeout told apart from other failures.
+func UrlTestOutboundOutcome(i *BoxInstance, tag string, link string, timeout int32) *URLTestOutcome {
+	return urlTestOutcome(UrlTestOutbound(i, tag, link, timeout))
 }
 
 // fetchTextLimit bounds an answer FetchText reads: what a service says about the connection, not a download.

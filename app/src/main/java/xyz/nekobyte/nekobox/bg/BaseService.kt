@@ -26,6 +26,7 @@ import xyz.nekobyte.nekobox.aidl.TrafficData
 import xyz.nekobyte.nekobox.bg.proto.ProxyInstance
 import xyz.nekobyte.nekobox.bg.proto.RunningCore
 import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
+import xyz.nekobyte.nekobox.bg.proto.TestOutcome
 import xyz.nekobyte.nekobox.bg.proto.testRunningPath
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
@@ -372,11 +373,17 @@ class BaseService {
 
                 override fun awaitTailscaleNodes(profileId: Long) = this@Binder.awaitTailscaleNodes(proxy, profileId)
 
-                override fun urlTest(tag: String): Int = Libcore.urlTestOutbound(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+                override fun urlTest(tag: String) = Libcore.urlTestOutboundOutcome(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout).let {
+                    TestOutcome(it.latency, it.error, it.timedOut)
+                }
 
                 override fun wireGuardStatus(tag: String): String = Libcore.wireGuardStatus(proxy.box, tag)
 
                 override fun fetchText(tag: String, link: String): String? = Libcore.fetchTextOutbound(proxy.box, tag, link, DataStore.connectionTestTimeout)
+
+                override fun now() = System.currentTimeMillis()
+
+                override fun sleep(ms: Long) = Thread.sleep(ms)
             }
             return testRunningPath(proxy.config, core, profileId, fingerprint, answerUrl).toString()
         }

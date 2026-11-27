@@ -143,4 +143,21 @@ class RunningWireGuardTest {
         assertEquals(vpn.fingerprint(selected.id), candidate(selected.id))
         assertEquals(vpn.fingerprint(alias.id), candidate(alias.id))
     }
+
+    @Test
+    fun aSharedWireGuardFrontHopIsOnEveryMembersPath() {
+        val tunnel = add(wg("front"))
+        val groupId = group {
+            isSelector = true
+            frontProxy = tunnel.id
+        }
+        val first = add(socks("first", "first.example"), groupId)
+        val second = add(socks("second", "second.example"), groupId)
+        val vpn = running(first)
+        // One outbound for the hop, built for the member that came first; the other's path names it too.
+        val front = vpn.wireGuardPath(first.id).single()
+        assertEquals(listOf(front.tag), vpn.wireGuardPath(second.id).map { it.tag })
+        assertEquals(second.id, vpn.wireGuardPath(second.id).single().ownerProfileId)
+        assertEquals(1, vpn.wireGuardIdentities.byTag.size)
+    }
 }

@@ -25,6 +25,7 @@ import xyz.nekobyte.nekobox.fmt.wireguard.MAX_WIREGUARD_PEERS
 import xyz.nekobyte.nekobox.fmt.wireguard.MAX_WIREGUARD_PROFILE_BYTES
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardDnsMode
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardServiceState
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import java.io.File
@@ -388,24 +389,28 @@ class WireGuardConfigTest {
         assertTrue(status.instances[1].peers.isEmpty())
         assertTrue(status.instances[1].error!!.contains("unavailable"))
         // Nothing sent yet: no handshake was tried.
-        assertFalse(status.noCompletedHandshake("context deadline exceeded"))
+        assertFalse(status.noCompletedHandshake(WireGuardServiceState.NONE, true, 1795700000000))
         assertFalse(parseWireGuardServiceStatus(wireGuardServiceStatus(false, emptyList()) { "" }).running)
     }
 
     @Test
-    fun onlyATimeoutOnAnOutboundWithoutAnsweredPeersIsANoHandshakeFailure() {
-        fun peer(handshake: Long, sent: Long) = """{"publicKey":"$key","endpoint":"192.0.2.20:51820","lastHandshake":$handshake,"rxBytes":0,"txBytes":$sent}"""
+    fun onlyATimeoutOnAnOutboundThatSentAndHasNoSessionIsANoHandshakeFailure() {
+        val now = 1795700000000L
+        fun peer(handshake: Long, sent: Long, publicKey: String = key) = """{"publicKey":"$publicKey","endpoint":"192.0.2.20:51820","lastHandshake":$handshake,"rxBytes":0,"txBytes":$sent}"""
         fun state(vararg peers: String) = parseWireGuardServiceStatus(
             wireGuardServiceStatus(true, listOf(ConfigBuildResult.WireGuardInstance("wg", 1))) { """{"peers":[${peers.joinToString(",")}]}""" },
         )
-        val timeout = "Get \"http://10.67.0.1:8081/\": context deadline exceeded"
-        assertTrue(state(peer(0, 148)).noCompletedHandshake(timeout))
-        assertTrue(state(peer(0, 148)).noCompletedHandshake("dial tcp 10.67.0.1:8081: i/o timeout"))
-        // An answered peer and one the request may never have needed.
-        assertFalse(state(peer(1795700000000, 148), peer(0, 148)).noCompletedHandshake(timeout))
-        // A failure with a reason of its own, as a destination no peer accepts.
-        assertFalse(state(peer(0, 148)).noCompletedHandshake("Get \"http://10.99.0.1:8090/\": destination 10.99.0.1 is outside the allowed IPs"))
-        assertFalse(state(peer(0, 148)).noCompletedHandshake("Get \"http://10.67.0.1:8081/\": EOF"))
+        val fresh = WireGuardServiceState.NONE
+        assertTrue(state(peer(0, 148)).noCompletedHandshake(fresh, true, now))
+        // A failure with a reason of its own, as a destination no peer accepts, even when its URL says "timeout".
+        assertFalse(state(peer(0, 148)).noCompletedHandshake(fresh, false, now))
+        // An answered peer, and one the request may never have needed.
+        assertFalse(state(peer(now - 1_000, 148), peer(0, 148, secondKey)).noCompletedHandshake(fresh, true, now))
+        // A session older than WireGuard keeps its keys is none.
+        assertTrue(state(peer(now - 200_000, 148)).noCompletedHandshake(fresh, true, now))
+        // Only what was sent during the test counts.
+        assertFalse(state(peer(0, 148)).noCompletedHandshake(state(peer(0, 148)), true, now))
+        assertTrue(state(peer(0, 296)).noCompletedHandshake(state(peer(0, 148)), true, now))
     }
 
     @Test

@@ -135,3 +135,36 @@ func TestUrlTestsEndWhenTheInstanceCloses(t *testing.T) {
 		})
 	}
 }
+
+// A test that runs out of time says so, and a failure with a reason of its own does not, whatever its text holds.
+func TestURLTestOutcomeTellsATimeoutFromOtherFailures(t *testing.T) {
+	answer := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-answer:
+		case <-r.Context().Done():
+		}
+	}))
+	defer server.Close()
+	defer close(answer)
+	client := func() *http.Client { return &http.Client{Transport: &http.Transport{}} }
+
+	outcome := urlTestOutcome(urlTest(context.Background(), client(), server.URL+"/", 300))
+	if !outcome.TimedOut || outcome.Error == "" {
+		t.Fatalf("an unanswered test: %+v", outcome)
+	}
+	// Refused at once, with "timeout" in its URL.
+	outcome = urlTestOutcome(urlTest(context.Background(), client(), "http://127.0.0.1:1/timeout", 3000))
+	if outcome.TimedOut || !strings.Contains(outcome.Error, "timeout") {
+		t.Fatalf("a refused test: %+v", outcome)
+	}
+	// Ended by a closing core.
+	lifetime, cancel := context.WithCancel(context.Background())
+	cancel()
+	if outcome = urlTestOutcome(urlTest(lifetime, client(), server.URL+"/", 3000)); outcome.TimedOut {
+		t.Fatalf("a canceled test: %+v", outcome)
+	}
+	if outcome = urlTestOutcome(7, nil); outcome.Error != "" || outcome.Latency != 7 {
+		t.Fatalf("a passed test: %+v", outcome)
+	}
+}

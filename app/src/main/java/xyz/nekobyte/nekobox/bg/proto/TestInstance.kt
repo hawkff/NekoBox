@@ -11,6 +11,7 @@ import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardServiceState
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
 import xyz.nekobyte.nekobox.ktx.Logs
@@ -67,14 +68,18 @@ class TestInstance(
             awaitTailscaleReady(box, endpoint.tag, endpoint.waitForExitNode)
         }
         currentCoroutineContext().ensureActive()
-        val latency = try {
-            Libcore.urlTest(box, link, timeout)
-        } catch (e: Exception) {
-            // A request that timed out says nothing of why; a WireGuard server that never answered does.
-            val status = wireGuardServiceStatus(true, config.wireguardInstances.values.flatten()) { Libcore.wireGuardStatus(box, it) }
-            if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.message.orEmpty())) throw NoHandshakeException(timeout, e)
-            throw e
+        val outcome = Libcore.urlTestOutcome(box, link, timeout)
+        if (outcome.error.isNotEmpty()) {
+            // A request that timed out says nothing of why; a WireGuard server that never answered does. The core
+            // started for this test, so everything its outbounds sent was sent during the test.
+            val status = wireGuardServiceStatus(true, config.wireGuardPath(profile.id)) { Libcore.wireGuardStatus(box, it) }
+            val failure = IOException(outcome.error)
+            if (parseWireGuardServiceStatus(status).noCompletedHandshake(WireGuardServiceState.NONE, outcome.timedOut, System.currentTimeMillis())) {
+                throw NoHandshakeException(timeout, failure)
+            }
+            throw failure
         }
+        val latency = outcome.latency
         // The test's connection resolved the server name, so the answer comes from the core's cache.
         lookUpServer()
         // A page that cannot be read leaves the answer unknown; the test itself passed.

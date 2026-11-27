@@ -243,6 +243,9 @@ class ConfigBuildResult(
      * path built first included.
      */
     class PathSnapshot(val fingerprint: String?, val tags: List<String>)
+
+    /** The WireGuard and AmneziaWG outbounds on the path of [profileId], every one when the config keeps no path for it. */
+    fun wireGuardPath(profileId: Long): List<WireGuardInstance> = (paths[profileId]?.tags ?: wireGuardIdentities.byTag.keys).distinct().filter { it in wireGuardIdentities.byTag }.map { WireGuardInstance(it, profileId) }
 }
 
 // What a path's fingerprint is made of before the config is finished.

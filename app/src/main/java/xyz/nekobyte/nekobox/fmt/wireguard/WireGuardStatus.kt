@@ -37,16 +37,27 @@ internal class WireGuardInstanceState(val ownerProfileId: Long, val peers: List<
 
 internal class WireGuardServiceState(val running: Boolean, val instances: List<WireGuardInstanceState>) {
     /**
-     * Whether a test that failed with [failure] did so for want of a handshake: it timed out, and an outbound of its
-     * path sent handshakes and has none completed, with none of its peers. A failure with a reason of its own, or an
-     * outbound with an answered peer, which a peer it never needed proves nothing against, keeps its own message.
+     * Whether a test that [timedOut] did so for want of a handshake: an outbound of its path sent during the test,
+     * that is since [before] (the same outbounds in the same order; a core started for the test has none before it),
+     * and none of its peers has a session at [now]. A failure with a reason of its own, or an outbound with a live
+     * session, which a peer the test never needed proves nothing against, keeps its own message.
      */
-    fun noCompletedHandshake(failure: String): Boolean {
-        val message = failure.lowercase()
-        if ("deadline exceeded" !in message && "timeout" !in message && "timed out" !in message) return false
-        return instances.any { instance -> instance.peers.any { it.txBytes > 0 } && instance.peers.all { it.lastHandshake == 0L } }
+    fun noCompletedHandshake(before: WireGuardServiceState, timedOut: Boolean, now: Long): Boolean {
+        if (!timedOut) return false
+        return instances.withIndex().any { (index, instance) ->
+            val earlier = before.instances.getOrNull(index)?.peers.orEmpty().associateBy { it.publicKey }
+            val sent = instance.peers.any { it.txBytes > (earlier[it.publicKey]?.txBytes ?: 0L) }
+            sent && instance.peers.none { it.lastHandshake != 0L && now - it.lastHandshake < WIREGUARD_SESSION_MS }
+        }
+    }
+
+    companion object {
+        val NONE = WireGuardServiceState(true, emptyList())
     }
 }
+
+// How long WireGuard keeps the keys of a handshake (REJECT_AFTER_TIME): an older one leaves the peer without a session.
+private const val WIREGUARD_SESSION_MS = 180_000L
 
 internal fun parseWireGuardServiceStatus(json: String): WireGuardServiceState {
     val root = JSONObject(json)
