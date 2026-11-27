@@ -279,6 +279,24 @@ class RunningWireGuardTest {
     }
 
     @Test
+    fun aPathThatCannotBeReadNamesNoWireGuardHopToBlame() {
+        val landing = add(socks("landing", "landing.example"))
+        val tunnel = add(wg("tunnel"))
+        val profile = add(chain("chain", tunnel, landing))
+        val prepared = ConfigBuilderTestEnv.io { buildConfig(fresh(profile.id), forTest = true) }
+        assertEquals(1, prepared.wireGuardPath(profile.id)!!.size)
+        // The profile's custom JSON sends the landing hop direct: the tunnel is not on the way, a test's timeout is
+        // no handshake missing there.
+        val tag = prepared.paths.getValue(profile.id).tags.first()
+        val outbounds = JSONObject(prepared.config).getJSONArray("outbounds")
+        for (index in 0 until outbounds.length()) outbounds.getJSONObject(index).takeIf { it.optString("tag") == tag }?.put("detour", "direct")
+        edit(profile.id) { customConfigJson = JSONObject().put("outbounds", outbounds).toString() }
+        val redirected = ConfigBuilderTestEnv.io { buildConfig(fresh(profile.id), forTest = true) }
+        assertNull(redirected.fingerprint(profile.id))
+        assertNull(redirected.wireGuardPath(profile.id))
+    }
+
+    @Test
     fun aServerNameARuleOutboundSharesIsResolvedLikeTheRuleOutbound() {
         val groupId = group {
             type = GroupType.SUBSCRIPTION

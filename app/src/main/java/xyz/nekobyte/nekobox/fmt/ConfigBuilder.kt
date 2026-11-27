@@ -249,9 +249,9 @@ class ConfigBuildResult(
 
     /**
      * The WireGuard and AmneziaWG outbounds on the path of [profileId]; null when the config does not tell which ones
-     * the path takes, as a full custom config does not.
+     * the path takes, as a full custom config does not, nor one whose path cannot be read for its fingerprint.
      */
-    fun wireGuardPath(profileId: Long): List<WireGuardInstance>? = paths[profileId]?.takeUnless { it.defaultRoute }?.tags?.distinct()?.filter { it in wireGuardIdentities.byTag }?.map { WireGuardInstance(it, profileId) }
+    fun wireGuardPath(profileId: Long): List<WireGuardInstance>? = paths[profileId]?.takeUnless { it.defaultRoute || it.fingerprint == null }?.tags?.distinct()?.filter { it in wireGuardIdentities.byTag }?.map { WireGuardInstance(it, profileId) }
 }
 
 private fun sha256Hex(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
