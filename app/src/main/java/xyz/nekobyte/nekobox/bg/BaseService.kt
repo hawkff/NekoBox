@@ -365,7 +365,8 @@ class BaseService {
             }
         }
 
-        override fun testWireGuardProfile(profileId: Long, fingerprint: String, answerUrl: String): String {
+        // The caller's test URL and timeout: the service's copy of the settings may not have caught up with a change yet.
+        override fun testWireGuardProfile(profileId: Long, fingerprint: String, answerUrl: String, testUrl: String, timeoutMs: Int): String {
             val proxy = data?.takeIf { it.state == State.Connected }?.proxy?.takeIf { it.isInitialized() }
                 ?: return JSONObject().put("result", "stopping").toString()
             val core = object : RunningCore {
@@ -374,17 +375,17 @@ class BaseService {
                 override fun awaitTailscaleNodes(profileId: Long) = this@Binder.awaitTailscaleNodes(proxy, profileId)
 
                 override fun urlTest(tag: String?) = if (tag == null) {
-                    Libcore.urlTestOutcome(proxy.box, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+                    Libcore.urlTestOutcome(proxy.box, testUrl, timeoutMs)
                 } else {
-                    Libcore.urlTestOutboundOutcome(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
+                    Libcore.urlTestOutboundOutcome(proxy.box, tag, testUrl, timeoutMs)
                 }.let { TestOutcome(it.latency, it.error, it.timedOut) }
 
                 override fun wireGuardStatus(tag: String): String = Libcore.wireGuardStatus(proxy.box, tag)
 
                 override fun fetchText(tag: String?, link: String): String? = if (tag == null) {
-                    Libcore.fetchText(proxy.box, link, DataStore.connectionTestTimeout)
+                    Libcore.fetchText(proxy.box, link, timeoutMs)
                 } else {
-                    Libcore.fetchTextOutbound(proxy.box, tag, link, DataStore.connectionTestTimeout)
+                    Libcore.fetchTextOutbound(proxy.box, tag, link, timeoutMs)
                 }
 
                 override fun elapsedRealtime() = SystemClock.elapsedRealtime()

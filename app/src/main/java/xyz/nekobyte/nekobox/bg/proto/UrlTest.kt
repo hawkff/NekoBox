@@ -81,7 +81,7 @@ class UrlTest(private val service: () -> INekoBoxService?) {
     private fun throughService(running: INekoBoxService, profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String?): Pair<Int, String?>? {
         val fingerprint = prepared.paths[profile.id]?.fingerprint.orEmpty()
         val reply = try {
-            JSONObject(running.testWireGuardProfile(profile.id, fingerprint, answerUrl.orEmpty()))
+            JSONObject(running.testWireGuardProfile(profile.id, fingerprint, answerUrl.orEmpty(), link, timeout))
         } catch (_: RemoteException) {
             throw vpnChanging()
         }

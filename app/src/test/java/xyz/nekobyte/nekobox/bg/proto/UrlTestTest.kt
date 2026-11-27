@@ -16,6 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
+import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
@@ -36,6 +37,7 @@ class UrlTestTest {
     private val calls = mutableListOf<Long>()
     private val fingerprints = mutableListOf<String>()
     private val answerUrls = mutableListOf<String>()
+    private val links = mutableListOf<String>()
     private val originalDirectory = WireGuardLease.directory
 
     @Before
@@ -65,6 +67,8 @@ class UrlTestTest {
         // The service compares the path prepared for this test, not one read again.
         assertEquals(listOf("path-7", "path-7"), fingerprints)
         assertEquals(listOf("", "https://trace.example/"), answerUrls)
+        // With the caller's test URL and timeout, which the service's copy of the settings may not have caught up with.
+        assertEquals(List(2) { "${DataStore.connectionTestURL} ${DataStore.connectionTestTimeout}" }, links)
     }
 
     @Test
@@ -213,6 +217,7 @@ class UrlTestTest {
                 onCall()
                 calls += arguments[0] as Long
                 fingerprints += arguments[1] as String
+                links += "${arguments[3]} ${arguments[4]}"
                 val answerUrl = arguments[2] as String
                 answerUrls += answerUrl
                 val reply = JSONObject(testWireGuardProfile(arguments[1] as String))
