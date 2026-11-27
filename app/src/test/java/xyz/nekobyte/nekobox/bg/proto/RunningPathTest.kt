@@ -128,6 +128,10 @@ class RunningPathTest {
         assertEquals("unverifiable", testRunningPath(config(fingerprint = null), Core(), 7, "path-7", "").getString("result"))
         assertEquals("unverifiable", testRunningPath(config(), Core(), 7, "", "").getString("result"))
         assertEquals("not_running", testRunningPath(config(), Core(), 9, "path-7", "").getString("result"))
+        // Saved settings the same, the path runs otherwise, as global custom JSON makes it: a reconnect would not
+        // change that. Saved settings edited since the start: a reconnect takes them.
+        assertEquals("unverifiable", testRunningPath(config(fingerprint = "saved.runs"), Core(), 7, "saved.differs", "").getString("result"))
+        assertEquals("other_settings", testRunningPath(config(fingerprint = "saved.runs"), Core(), 7, "edited.runs", "").getString("result"))
         assertEquals(emptyList<String>(), calls)
     }
 

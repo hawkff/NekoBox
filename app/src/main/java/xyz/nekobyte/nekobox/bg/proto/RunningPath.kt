@@ -50,7 +50,8 @@ internal fun testRunningPath(config: ConfigBuildResult, core: RunningCore, profi
     // A result is for the path the caller was asked to test, which an edit since the start does not reach. A path
     // that cannot be compared, on either side, a reconnect would not make comparable.
     if (path.fingerprint == null || fingerprint.isEmpty()) return result.put("result", "unverifiable")
-    if (path.fingerprint != fingerprint) return result.put("result", "other_settings")
+    // A reconnect takes saved settings that changed since the start, not a difference in how the path runs.
+    if (path.fingerprint != fingerprint) return result.put("result", if (path.fingerprint.substringBefore('.') != fingerprint.substringBefore('.')) "other_settings" else "unverifiable")
     // Unknown for a full custom config: its failures keep their own message.
     val wireGuardPath = config.wireGuardPath(profileId).orEmpty()
     fun status() = parseWireGuardServiceStatus(wireGuardServiceStatus(true, wireGuardPath) { core.wireGuardStatus(it) })

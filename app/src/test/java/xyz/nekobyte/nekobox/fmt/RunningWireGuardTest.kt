@@ -236,6 +236,8 @@ class RunningWireGuardTest {
             // The tunnel's server resolved by the same DNS server, for another address family only.
             overrideResolver(vpn.config, tunnelTag, JSONObject().put("server", "dns-direct").put("strategy", "ipv6_only"))
             assertNotEquals(running(profile).fingerprint(profile.id), candidate(profile.id))
+            // Only the path differs, not the saved settings: a reconnect would not make them the same.
+            assertEquals(running(profile).fingerprint(profile.id)!!.substringBefore('.'), candidate(profile.id).substringBefore('.'))
         } finally {
             DataStore.globalCustomConfig = ""
             DataStore.configurationStore.putString("domain_strategy_for_server", "auto")
@@ -261,6 +263,8 @@ class RunningWireGuardTest {
         assertEquals(vpn.fingerprint(profile.id), running(profile).fingerprint(profile.id))
         edit(naive.id) { (this as NaiveBean).password = "q" }
         assertNotEquals(vpn.fingerprint(profile.id), candidate(profile.id))
+        // An edit of the saved settings, which a reconnect takes.
+        assertNotEquals(vpn.fingerprint(profile.id)!!.substringBefore('.'), candidate(profile.id).substringBefore('.'))
         edit(naive.id) { (this as NaiveBean).password = "p" }
 
         val tag = vpn.paths.getValue(profile.id).tags.first()

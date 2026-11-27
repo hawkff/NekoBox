@@ -238,12 +238,12 @@ class ConfigBuildResult(
     data class WireGuardInstance(val tag: String, val ownerProfileId: Long)
 
     /**
-     * A profile's path as this config was built with it: [fingerprint] of its hops in the order they are dialed,
-     * each with its settings, and of the path as it runs: every hop's outbound after all custom JSON was merged in,
-     * with the DNS server that resolves its server's name, and the WireGuard sessions of the outbounds; null when
-     * that cannot be told, also when the tag a test dials for the profile does not lead to the path, or, in a test's
-     * config, when its default route or route rules were changed by custom JSON. [tags]: the
-     * outbounds of the path, its entry hop first, a hop another path built first included. A full custom
+     * A profile's path as this config was built with it: [fingerprint], the digest of its hops in the order they are
+     * dialed, each with its saved settings, a dot, and the digest of the path as it runs: every hop's outbound after
+     * all custom JSON was merged in, with the DNS server that resolves its server's name, and the WireGuard sessions
+     * of the outbounds; null when that cannot be told, also when the tag a test dials for the profile does not lead
+     * to the path, or, in a test's config, when its default route or route rules were changed by custom JSON.
+     * [tags]: the outbounds of the path, its entry hop first, a hop another path built first included. A full custom
      * config is one path through its [defaultRoute], fingerprinted as written, its outbounds unknown.
      */
     class PathSnapshot(val fingerprint: String?, val tags: List<String>, val defaultRoute: Boolean = false)
@@ -264,18 +264,21 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
         val effective = effectivePath(config, tags, plugins)
         val routed = !byDefault || (config.routeFinal == dialed && config.routeRulesAsBuilt)
         if (identities.unknown || effective == null || !dialsEntry(config, dialed) || !routed) return ConfigBuildResult.PathSnapshot(null, tags)
-        val digest = MessageDigest.getInstance("SHA-256")
-        fun add(text: String) = digest.update((text + "\n").toByteArray())
+        // The saved settings, then the path as it runs: when only the path differs, a reconnect would not change it.
+        val settings = MessageDigest.getInstance("SHA-256")
+        val path = MessageDigest.getInstance("SHA-256")
+        fun MessageDigest.add(text: String) = update((text + "\n").toByteArray())
         fun add(profile: ProxyEntity) {
             val bean = profile.requireBean()
-            add("${profile.id} ${bean.javaClass.name} ${Base64.getEncoder().encodeToString(bean.settings())}")
+            settings.add("${profile.id} ${bean.javaClass.name} ${Base64.getEncoder().encodeToString(bean.settings())}")
         }
         hops.forEach(::add)
-        add("root")
+        settings.add("root")
         add(entity)
-        add(effective)
-        tags.mapNotNull { identities.byTag[it] }.flatten().sorted().forEach(::add)
-        return ConfigBuildResult.PathSnapshot(digest.digest().joinToString("") { "%02x".format(it) }, tags)
+        path.add(effective)
+        tags.mapNotNull { identities.byTag[it] }.flatten().sorted().forEach { path.add(it) }
+        fun MessageDigest.hex() = digest().joinToString("") { "%02x".format(it) }
+        return ConfigBuildResult.PathSnapshot("${settings.hex()}.${path.hex()}", tags)
     }
 
     // Whether the tag a test dials for the profile is the path's entry hop, or a selector that can only pick it, as a

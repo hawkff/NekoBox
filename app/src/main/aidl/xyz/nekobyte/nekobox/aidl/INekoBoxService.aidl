@@ -52,8 +52,8 @@ interface INekoBoxService {
   // session per client key: for the path the caller was asked to test, by its fingerprint (ConfigBuildResult.paths of
   // the caller's prepared config). JSON {"result": ...}: "tested" with "latencyMs" and "answer" (answerUrl read
   // through that outbound, missing when it could not be read); "not_running" when the config has no path for the
-  // profile; "other_settings" when it runs another; "unverifiable" when its path or the caller's cannot be compared;
-  // "stopping" when the core is not running; "no_handshake" when the test timed out on a server of the path that
-  // completed no handshake; "failed" with "error".
+  // profile; "other_settings" when it runs other saved settings of it; "unverifiable" when its path or the caller's
+  // cannot be compared, or only how the path runs differs; "stopping" when the core is not running; "no_handshake"
+  // when the test timed out on a server of the path that completed no handshake; "failed" with "error".
   String testWireGuardProfile(long profileId, String fingerprint, String answerUrl);
 }
