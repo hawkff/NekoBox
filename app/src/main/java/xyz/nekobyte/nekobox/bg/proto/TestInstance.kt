@@ -52,8 +52,11 @@ internal fun unreadableWireGuard(identities: WireGuardIdentities): WireGuardSess
     else -> null
 }
 
-/** The test's request through a core that started: a failure of the network on the way, no setup or config error. */
-class ProbeFailure(message: String) : IOException(message)
+/**
+ * The test's request through a core that started failed: on the network, no setup or config error. [timedOut] when it
+ * got no answer in time, as when traffic is held, rather than an answer or an error that says why.
+ */
+class ProbeFailure(message: String, val timedOut: Boolean) : IOException(message)
 
 /** A connection test timed out on a WireGuard or AmneziaWG server that completed no handshake. */
 class NoHandshakeException(timeoutMs: Int, cause: Throwable) : ConnectionTestFailure("no_handshake", app.getString(R.string.connection_test_no_handshake, timeoutMs), cause)
@@ -80,7 +83,7 @@ class TestInstance(
         if (outcome.error.isNotEmpty()) {
             // A request that timed out says nothing of why; a WireGuard server that never answered does, on the path
             // the test took. The core started for this test, so everything its outbounds sent was sent during it.
-            val failure = ProbeFailure(outcome.error)
+            val failure = ProbeFailure(outcome.error, outcome.timedOut)
             val path = config.wireGuardPath(profile.id) ?: throw failure
             val status = wireGuardServiceStatus(true, path) { Libcore.wireGuardStatus(box, it) }
             if (parseWireGuardServiceStatus(status).noCompletedHandshake(WireGuardServiceState.NONE, outcome.timedOut, System.currentTimeMillis())) {

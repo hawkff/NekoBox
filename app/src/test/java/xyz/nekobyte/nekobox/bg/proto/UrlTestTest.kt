@@ -132,7 +132,7 @@ class UrlTestTest {
 
     @Test
     fun aTestsOwnCoreThatFailsWhileTheVpnStartsOrStopsSaysSo() = runTest {
-        val failed = ProbeFailure("Get \"http://10.66.0.1:8080/\": context deadline exceeded")
+        val failed = ProbeFailure("Get \"http://10.66.0.1:8080/\": context deadline exceeded", timedOut = true)
         for (state in listOf(BaseService.State.Connecting, BaseService.State.Stopping)) {
             val reason = failure { UrlTest { binder({ state }) { tested(1) } }.ownCore(true) { throw failed } }
             assertEquals("vpn_changing", reason.code)
@@ -144,6 +144,9 @@ class UrlTestTest {
         assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(false) { throw failed } }.exceptionOrNull())
         val held = WireGuardSessionsUnavailable("wireguard_in_use", "held")
         assertEquals(held, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw held } }.exceptionOrNull())
+        // A request that failed with a reason of its own, as one outside the profile's allowed IPs.
+        val outside = ProbeFailure("dial tcp 10.99.0.1:8090: destination 10.99.0.1 is outside the allowed IPs", timedOut = false)
+        assertEquals(outside, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw outside } }.exceptionOrNull())
         // A core that could not be set up: a plugin missing, a config the core refuses. No retry mends that.
         for (setup in listOf(PluginManager.PluginNotFoundException("naive-plugin"), IOException("decode config: unknown field"), IllegalStateException("Missing Mieru SOCKS credentials"))) {
             assertEquals(setup, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw setup } }.exceptionOrNull())
