@@ -213,21 +213,6 @@ internal fun AbstractBean.wireGuardSettings(): WireGuardSettings? = when (this) 
     else -> null
 }
 
-/**
- * The sessions a WireGuard or AmneziaWG hop opens, as client key and server key: a server keeps one session for each
- * client key, so two cores with one of these pairs take the session from each other.
- */
-internal fun AbstractBean.wireGuardSessions(): Set<Pair<String, String>> {
-    val clientKey = when (this) {
-        is WireGuardBean -> privateKey
-        is AmneziaWGBean -> privateKey
-        else -> null
-    }?.trim().orEmpty()
-    val settings = runCatching { wireGuardSettings() }.getOrNull() ?: return emptySet()
-    val extraKeys = runCatching { IniConfig.parse(settings.extraPeers).getAll("Peer").orEmpty().mapNotNull { it["PublicKey"] } }.getOrDefault(emptyList())
-    return (listOf(settings.publicKey) + extraKeys).map { it.trim() }.filter { it.isNotEmpty() }.mapTo(HashSet()) { clientKey to it }
-}
-
 private fun string(id: Int, vararg args: Any) = NekoBox.application.getString(id, *args)
 
 private fun WireGuardSettings.extraSections(): List<IniConfig.Section> {

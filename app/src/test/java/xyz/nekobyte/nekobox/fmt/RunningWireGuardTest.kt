@@ -7,7 +7,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
@@ -95,40 +94,5 @@ class RunningWireGuardTest {
         edit(other.id) { (this as WireGuardBean).privateKey = key(5) }
         assertFalse(config.runsAsSaved(other.id, saved(other.id)))
         assertTrue(config.runsAsSaved(selected.id, saved(selected.id)))
-    }
-
-    @Test
-    fun aProfileTheVpnDoesNotRunMayStillShareItsWireGuardSession() {
-        val tunnel = add(wg("tunnel"))
-        val config = build(tunnel)
-        // A chain through the running hop.
-        val path = add(chain("path", add(socks("hop")), tunnel))
-        assertTrue(config.sharesWireGuardSession(saved(path.id)))
-        // A copy under another id.
-        val copy = add(wg("copy"))
-        assertTrue(config.sharesWireGuardSession(saved(copy.id)))
-        // The same server with another client key, and the same client key with another server.
-        assertFalse(config.sharesWireGuardSession(saved(add(wg("other key") { privateKey = key(6) }).id)))
-        assertFalse(config.sharesWireGuardSession(saved(add(wg("other server") { peerPublicKey = key(7) }).id)))
-        // An extra peer with the running server's key.
-        val extra = add(
-            wg("extra") {
-                peerPublicKey = key(8)
-                extraPeers = "[Peer]\nPublicKey = ${key(2)}\nAllowedIPs = 10.9.0.0/24\n"
-            },
-        )
-        assertTrue(config.sharesWireGuardSession(saved(extra.id)))
-        assertFalse(config.sharesWireGuardSession(saved(add(socks("plain")).id)))
-    }
-
-    @Test
-    fun relaysOfAListShareTheListsFirstWireGuardHop() {
-        val tunnel = add(wg("tunnel"))
-        val list = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(name = "relays", type = GroupType.PROXIES, frontProxy = tunnel.id)) }
-        val running = add(socks("relay-a"), list)
-        val other = add(socks("relay-b"), list)
-        val config = build(running)
-        assertFalse(other.id in config.profileTagMap)
-        assertTrue(config.sharesWireGuardSession(saved(other.id)))
     }
 }

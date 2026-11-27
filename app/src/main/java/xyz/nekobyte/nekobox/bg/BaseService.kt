@@ -61,9 +61,6 @@ const val CORE_NOT_STARTED = "core not started"
 // Binder error of testWireGuardProfile: the core runs the profile with other settings than the saved ones.
 const val PROFILE_RUNS_OTHER_SETTINGS = "profile runs with other settings"
 
-// Binder error of testWireGuardProfile: the profile does not run, but a hop of it opens a session the core opens.
-const val WIREGUARD_SESSION_IN_USE = "wireguard session in use"
-
 // Binder error of testWireGuardProfile: the test timed out on a server of the profile's path that completed no handshake.
 const val NO_COMPLETED_HANDSHAKE = "no completed handshake"
 
@@ -376,11 +373,7 @@ class BaseService {
         override fun testWireGuardProfile(profileId: Long, answerUrl: String): String {
             val proxy = runningProxy()
             val saved = ProfileDatabase.proxyDao.getById(profileId)?.let { runCatching { savedChainTraffic(it) }.getOrNull() }
-            val tag = proxy.config.profileTagMap[profileId] ?: run {
-                // A core of the caller's own would take that session from the tunnel.
-                if (saved != null && proxy.config.sharesWireGuardSession(saved)) error(WIREGUARD_SESSION_IN_USE)
-                error(PROFILE_NOT_RUNNING)
-            }
+            val tag = proxy.config.profileTagMap[profileId] ?: error(PROFILE_NOT_RUNNING)
             // A result is for the settings saved now, which an edit since the start does not reach.
             if (!proxy.config.runsAsSaved(profileId, saved)) error(PROFILE_RUNS_OTHER_SETTINGS)
             val latency = try {

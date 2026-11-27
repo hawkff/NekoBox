@@ -8,8 +8,10 @@ import xyz.nekobyte.nekobox.bg.ServiceNotification
 import xyz.nekobyte.nekobox.bg.runRequiredCompletion
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.runOnDefaultDispatcher
+import java.io.Closeable
 
 class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = null) : BoxInstance(profile) {
 
@@ -31,6 +33,13 @@ class ProxyInstance(profile: ProxyEntity, var service: BaseService.Interface? = 
         super.buildConfig()
         lastSelectorGroupId = super.config.selectorGroupId
         lastAutoSelect = super.config.autoSelect
+    }
+
+    // A connection test that holds one of the sessions runs to its end first: a VPN started over it would take the
+    // session, and the test is bounded by its timeouts. Keys the app cannot read are for the core to refuse.
+    override suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
+        if (identities.all.isEmpty()) return null
+        return WireGuardLease.acquire(identities.all, 2L * DataStore.connectionTestTimeout + TAILSCALE_READY_TIMEOUT_MS + 5_000)
     }
 
     override suspend fun init() {

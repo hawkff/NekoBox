@@ -47,10 +47,11 @@ import xyz.nekobyte.nekobox.fmt.v2ray.StandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.v2ray.buildSingBoxOutboundStandardV2RayBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardDnsMode
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardProfileDns
 import xyz.nekobyte.nekobox.fmt.wireguard.buildSingBoxOutboundWireguardBean
+import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardIdentities
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardProfileDns
-import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardSessions
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.isIpAddress
 import xyz.nekobyte.nekobox.ktx.mkPort
@@ -221,6 +222,8 @@ class ConfigBuildResult(
     // The local mixed inbound the config runs, for the app's own requests, or null without one: VPN mode leaves it
     // out unless a setting asks for it, and custom JSON can remove it.
     val localProxy: LocalProxy? = null,
+    // The WireGuard sessions of the config as it runs, which its core leases for its life.
+    val wireGuardIdentities: WireGuardIdentities = WireGuardIdentities.NONE,
 ) {
     data class IndexEntity(var chain: LinkedHashMap<Int, ProxyEntity>)
 
@@ -233,15 +236,6 @@ class ConfigBuildResult(
     fun runsAsSaved(profileId: Long, saved: List<ProxyEntity>?): Boolean {
         val built = trafficMap.values.firstOrNull { it.lastOrNull()?.id == profileId } ?: return false
         return saved != null && built.map { it.id to it.requireBean() } == saved.map { it.id to it.requireBean() }
-    }
-
-    /**
-     * Whether [saved], a path as saved now, opens a WireGuard or AmneziaWG session a hop of this configuration
-     * opens, under whatever profile: another chain through that hop, a list's shared first hop, a copy.
-     */
-    fun sharesWireGuardSession(saved: List<ProxyEntity>): Boolean {
-        val running = trafficMap.values.flatten().flatMapTo(HashSet()) { it.requireBean().wireGuardSessions() }
-        return saved.any { hop -> hop.requireBean().wireGuardSessions().any { it in running } }
     }
 }
 
@@ -353,6 +347,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 } catch (_: RuntimeException) {
                     null
                 },
+                wireGuardIdentities = wireGuardIdentities(bean.config!!),
             )
         }
     }
@@ -1653,8 +1648,9 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         // Merged into the finished tree: on the root option it would shift arrays before their items' own settings apply.
         if (!forTest) Util.mergeJsonElement(configTree, DataStore.globalCustomConfig)
         Util.mergeJsonElement(configTree, proxy.requireBean().customConfigJson!!)
+        val config = SingBoxOptions.treeToJson(configTree)
         ConfigBuildResult(
-            SingBoxOptions.treeToJson(configTree),
+            config,
             externalIndexMap,
             proxy.id,
             trafficMap,
@@ -1667,6 +1663,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             wireguardInstances,
             joinNebula,
             localProxyOf(configTree, ownSecret),
+            wireGuardIdentities(config),
         )
     }
 }

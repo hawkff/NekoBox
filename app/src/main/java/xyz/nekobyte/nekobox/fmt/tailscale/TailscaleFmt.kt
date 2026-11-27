@@ -6,7 +6,7 @@ import android.system.OsConstants
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.NekoBox
 import xyz.nekobyte.nekobox.SingBoxOptions
-import xyz.nekobyte.nekobox.bg.proto.TailscaleStateLease
+import xyz.nekobyte.nekobox.bg.proto.ProcessLease
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
@@ -24,7 +24,9 @@ fun tailscaleStateDirectory(profileId: Long) = "tailscale/$profileId"
 fun tailscaleStateFile(profileId: Long) = File(NekoBox.application.noBackupFilesDir, tailscaleStateDirectory(profileId))
 
 internal fun acquireTailscaleState(ids: Collection<Long>): Closeable {
-    val lease = TailscaleStateLease.acquire(File(NekoBox.application.noBackupFilesDir, "tailscale-locks"), ids)
+    val lease = ProcessLease.acquire(File(NekoBox.application.noBackupFilesDir, "tailscale-locks"), ids.map { "$it" }) {
+        "Tailscale node $it is in use. Stop the service or close the active probe and retry."
+    }
     try {
         ids.distinct().forEach { recoverTailscaleRestore(it) }
         return lease

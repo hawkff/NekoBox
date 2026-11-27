@@ -5,8 +5,14 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 
-/** Lock files outlive state directories: removing them would split ownership across inodes. */
-internal class TailscaleStateLease private constructor(
+/** A name [ProcessLease.acquire] found held, by this process or another. */
+internal class LeaseBusyException(message: String) : IllegalStateException(message)
+
+/**
+ * Exclusive use of names across the app's processes: a reservation in this process and a lock on a file per name.
+ * Lock files outlive what they guard: removing them would split ownership across inodes.
+ */
+internal class ProcessLease private constructor(
     private val path: String,
     private val file: RandomAccessFile,
     private val lock: FileLock,
@@ -33,20 +39,21 @@ internal class TailscaleStateLease private constructor(
         // this process's POSIX lock on the inode.
         private val reservations = HashSet<String>()
 
-        fun acquire(directory: File, ids: Collection<Long>): Closeable {
+        /** Every one of [names] in [directory], or none; [busy] words the failure for the name held elsewhere. */
+        fun acquire(directory: File, names: Collection<String>, busy: (String) -> String): Closeable {
             directory.mkdirs()
-            check(directory.isDirectory) { "Cannot create Tailscale lock directory" }
-            val acquired = ArrayList<TailscaleStateLease>()
+            check(directory.isDirectory) { "Cannot create lock directory ${directory.name}" }
+            val acquired = ArrayList<ProcessLease>()
             try {
-                for (id in ids.distinct().sorted()) {
-                    val path = File(directory, "$id.lock").canonicalPath
+                for (name in names.distinct().sorted()) {
+                    val path = File(directory, "$name.lock").canonicalPath
                     synchronized(reservations) {
-                        check(reservations.add(path)) { busyMessage(id) }
+                        if (!reservations.add(path)) throw LeaseBusyException(busy(name))
                         var file: RandomAccessFile? = null
                         try {
                             file = RandomAccessFile(path, "rw")
-                            val lock = file.channel.tryLock() ?: error(busyMessage(id))
-                            acquired += TailscaleStateLease(path, file, lock)
+                            val lock = file.channel.tryLock() ?: throw LeaseBusyException(busy(name))
+                            acquired += ProcessLease(path, file, lock)
                         } catch (e: Throwable) {
                             try {
                                 file?.close()
@@ -70,7 +77,7 @@ internal class TailscaleStateLease private constructor(
             return Closeable { closeAll(acquired) }
         }
 
-        private fun closeAll(leases: List<TailscaleStateLease>) {
+        private fun closeAll(leases: List<ProcessLease>) {
             var failure: Throwable? = null
             for (lease in leases.asReversed()) {
                 try {
@@ -81,7 +88,5 @@ internal class TailscaleStateLease private constructor(
             }
             failure?.let { throw it }
         }
-
-        private fun busyMessage(id: Long) = "Tailscale node $id is in use. Stop the service or close the active probe and retry."
     }
 }

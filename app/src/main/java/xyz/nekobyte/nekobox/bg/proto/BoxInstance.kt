@@ -6,6 +6,7 @@ import kotlinx.coroutines.selects.select
 import libcore.BoxInstance
 import libcore.Libcore
 import xyz.nekobyte.nekobox.NekoBox
+import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.GuardedProcessPool
 import xyz.nekobyte.nekobox.database.DataStore
@@ -20,6 +21,7 @@ import xyz.nekobyte.nekobox.fmt.naive.NaiveBean
 import xyz.nekobyte.nekobox.fmt.naive.buildNaiveConfig
 import xyz.nekobyte.nekobox.fmt.tailscale.acquireTailscaleState
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
+import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardIdentities
 import xyz.nekobyte.nekobox.ktx.*
 import xyz.nekobyte.nekobox.net.LocalResolverImpl
 import xyz.nekobyte.nekobox.plugin.PluginManager
@@ -44,6 +46,7 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
     open lateinit var processes: GuardedProcessPool
     private val cacheFiles = ArrayList<File>()
     private var stateLease: Closeable? = null
+    private var wireGuardLease: Closeable? = null
 
     fun isInitialized() = ::config.isInitialized && ::box.isInitialized
 
@@ -76,6 +79,16 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
         return address
     }
 
+    /**
+     * The WireGuard sessions of the config for this core alone, until it has closed: a second core with one of them
+     * would take it from the first. A core that cannot tell its sessions, or finds one held, does not start.
+     */
+    protected open suspend fun leaseWireGuard(identities: WireGuardIdentities): Closeable? {
+        if (identities.isEmpty) return null
+        check(!identities.unknown) { app.getString(R.string.connection_test_wireguard_unknown_key) }
+        return WireGuardLease.tryAcquire(identities.all) ?: error(app.getString(R.string.connection_test_wireguard_in_use))
+    }
+
     open suspend fun init() {
         buildConfig()
         val nodes = config.tailscaleEndpoints.keys
@@ -92,6 +105,8 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                 }
             }
         }
+        currentCoroutineContext().ensureActive()
+        wireGuardLease = leaseWireGuard(config.wireGuardIdentities)
         currentCoroutineContext().ensureActive()
         for ((chain) in config.externalIndex) {
             for ((port, profile) in chain) {
@@ -245,8 +260,13 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                 it.delete()
                 true
             }
-            stateLease?.close()
-            stateLease = null
+            try {
+                stateLease?.close()
+            } finally {
+                stateLease = null
+                wireGuardLease?.close()
+                wireGuardLease = null
+            }
         }
         if (::config.isInitialized && config.tailscaleEndpoints.isNotEmpty()) {
             try {
