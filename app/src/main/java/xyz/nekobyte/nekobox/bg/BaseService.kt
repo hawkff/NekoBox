@@ -28,7 +28,6 @@ import xyz.nekobyte.nekobox.bg.proto.TAILSCALE_READY_TIMEOUT_MS
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
-import xyz.nekobyte.nekobox.fmt.savedChainTraffic
 import xyz.nekobyte.nekobox.fmt.tailscale.pruneTailscaleState
 import xyz.nekobyte.nekobox.fmt.wireguard.parseWireGuardServiceStatus
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardServiceStatus
@@ -57,12 +56,6 @@ const val PROFILE_NOT_RUNNING = "profile not in running configuration"
 
 // Binder error while the service has no running core: it is starting, stopping or stopped.
 const val CORE_NOT_STARTED = "core not started"
-
-// Binder error of testWireGuardProfile: the core runs the profile with other settings than the saved ones.
-const val PROFILE_RUNS_OTHER_SETTINGS = "profile runs with other settings"
-
-// Binder error of testWireGuardProfile: the test timed out on a server of the profile's path that completed no handshake.
-const val NO_COMPLETED_HANDSHAKE = "no completed handshake"
 
 class BaseService {
 
@@ -370,27 +363,30 @@ class BaseService {
             }
         }
 
-        override fun testWireGuardProfile(profileId: Long, answerUrl: String): String {
-            val proxy = runningProxy()
-            val saved = ProfileDatabase.proxyDao.getById(profileId)?.let { runCatching { savedChainTraffic(it) }.getOrNull() }
-            val tag = proxy.config.profileTagMap[profileId] ?: error(PROFILE_NOT_RUNNING)
-            // A result is for the settings saved now, which an edit since the start does not reach.
-            if (!proxy.config.runsAsSaved(profileId, saved)) error(PROFILE_RUNS_OTHER_SETTINGS)
+        override fun testWireGuardProfile(profileId: Long, fingerprint: String, answerUrl: String): String {
+            val result = JSONObject()
+            val proxy = data?.takeIf { it.state == State.Connected }?.proxy?.takeIf { it.isInitialized() }
+                ?: return result.put("result", "stopping").toString()
+            val tag = proxy.config.profileTagMap[profileId]
+            val path = proxy.config.paths[profileId]
+            if (tag == null || path == null) return result.put("result", "not_running").toString()
+            // A result is for the path the caller was asked to test, which an edit since the start does not reach.
+            if (path.fingerprint == null || path.fingerprint != fingerprint) return result.put("result", "other_settings").toString()
             val latency = try {
                 Libcore.urlTestOutbound(proxy.box, tag, DataStore.connectionTestURL, DataStore.connectionTestTimeout)
             } catch (e: Exception) {
                 // A stop that closed the core under the test: the caller reports the stop and starts no core of its own.
-                check(data?.state == State.Connected && data?.proxy === proxy) { CORE_NOT_STARTED }
-                val path = proxy.config.wireguardInstances.values.flatten().filter { it.ownerProfileId == profileId }
-                val status = wireGuardServiceStatus(true, path) { Libcore.wireGuardStatus(proxy.box, it) }
-                if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.readableMessage)) error(NO_COMPLETED_HANDSHAKE)
-                error(Protocols.genFriendlyMsg(e.readableMessage))
+                if (data?.state != State.Connected || data?.proxy !== proxy) return result.put("result", "stopping").toString()
+                val owned = proxy.config.wireguardInstances.values.flatten().filter { it.ownerProfileId == profileId }
+                val status = wireGuardServiceStatus(true, owned) { Libcore.wireGuardStatus(proxy.box, it) }
+                if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.readableMessage)) return result.put("result", "no_handshake").toString()
+                return result.put("result", "failed").put("error", Protocols.genFriendlyMsg(e.readableMessage)).toString()
             }
             // A page that cannot be read leaves the answer unknown; the test itself passed.
             val answer = answerUrl.takeIf { it.isNotEmpty() }?.let {
                 runCatching { Libcore.fetchTextOutbound(proxy.box, tag, it, DataStore.connectionTestTimeout) }.getOrNull()
             }
-            return JSONObject().put("latencyMs", latency).putOpt("answer", answer).toString()
+            return result.put("result", "tested").put("latencyMs", latency).putOpt("answer", answer).toString()
         }
 
         override fun tailscalePeers(profileId: Long): String {

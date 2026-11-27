@@ -1,20 +1,18 @@
 package xyz.nekobyte.nekobox.bg.proto
 
+import android.os.RemoteException
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
 import xyz.nekobyte.nekobox.aidl.INekoBoxService
 import xyz.nekobyte.nekobox.bg.BaseService
-import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
-import xyz.nekobyte.nekobox.bg.NO_COMPLETED_HANDSHAKE
-import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
-import xyz.nekobyte.nekobox.bg.PROFILE_RUNS_OTHER_SETTINGS
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.buildConfig
 import xyz.nekobyte.nekobox.ktx.app
 import java.io.Closeable
+import java.io.IOException
 
 class UrlTest(private val service: () -> INekoBoxService? = { null }) {
 
@@ -56,8 +54,9 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
     }
 
     // A WireGuard or AmneziaWG server keeps one session per client key and server key, which a core holds for its
-    // life. When one of the profile's is held, the profile is tested through the VPN's core if that runs it as saved,
-    // and reads [answerUrl] through it as [check] does; otherwise the test fails with the reason.
+    // life. When one of the profile's is held, the profile is tested through the VPN's core if that runs the path
+    // prepared for this test, and reads [answerUrl] through it as [check] does; otherwise the test fails with the
+    // reason.
     internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String? = null): Pair<Int, String?> {
         val refusal = if (prepared.wireGuardIdentities.unknown) {
             ConnectionTestFailure("wireguard_unknown_key", app.getString(R.string.connection_test_wireguard_unknown_key))
@@ -65,24 +64,20 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
             ConnectionTestFailure("wireguard_in_use", app.getString(R.string.connection_test_wireguard_in_use))
         }
         val running = connectedService() ?: throw refusal
-        val answer = try {
-            JSONObject(running.testWireGuardProfile(profile.id, answerUrl.orEmpty()))
-        } catch (e: IllegalStateException) {
-            val message = e.message.orEmpty()
-            when {
-                PROFILE_NOT_RUNNING in message -> throw refusal
-
-                // Stopping: the core may still hold the session.
-                CORE_NOT_STARTED in message -> throw vpnChanging()
-
-                PROFILE_RUNS_OTHER_SETTINGS in message -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
-
-                NO_COMPLETED_HANDSHAKE in message -> throw NoHandshakeException(timeout, e)
-
-                else -> throw e
-            }
+        val fingerprint = prepared.paths[profile.id]?.fingerprint.orEmpty()
+        val reply = try {
+            JSONObject(running.testWireGuardProfile(profile.id, fingerprint, answerUrl.orEmpty()))
+        } catch (_: RemoteException) {
+            throw vpnChanging()
         }
-        return answer.getInt("latencyMs") to answer.optString("answer").takeIf { answer.has("answer") }
+        return when (reply.optString("result")) {
+            "tested" -> reply.getInt("latencyMs") to reply.optString("answer").takeIf { reply.has("answer") }
+            "not_running" -> throw refusal
+            "other_settings" -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
+            "stopping" -> throw vpnChanging()
+            "no_handshake" -> throw NoHandshakeException(timeout, IOException(reply.optString("error")))
+            else -> throw IOException(reply.optString("error"))
+        }
     }
 
     // The service when it is connected, null when it is stopped, waiting a moment for one starting or stopping.

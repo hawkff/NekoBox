@@ -48,11 +48,11 @@ interface INekoBoxService {
   String wireguardStatus(long profileId);
 
   // Appended: methods keep their transaction numbers.
-  // Connection test of a saved profile with WireGuard or AmneziaWG hops through its running outbound, as JSON
-  // {"latencyMs": int, "answer": text}: the answer of answerUrl, when not empty, read through that outbound after the
-  // test, missing when it could not be read. A server keeps one session per client key, so nothing else may test
-  // such a profile while the service runs it. Fails with a reason the caller maps (BaseService.kt): not part of the configuration, a hop
-  // of it opening a session the core opens, run with other settings than the saved ones, or a timeout on a server of
-  // its path that completed no handshake.
-  String testWireGuardProfile(long profileId, String answerUrl);
+  // Connection test of a profile with WireGuard or AmneziaWG hops through its running outbound, a server keeping one
+  // session per client key: for the path the caller was asked to test, by its fingerprint (ConfigBuildResult.paths of
+  // the caller's prepared config). JSON {"result": ...}: "tested" with "latencyMs" and "answer" (answerUrl read
+  // through that outbound, missing when it could not be read); "not_running" when the config has no path for the
+  // profile; "other_settings" when it runs another; "stopping" when the core is not running; "no_handshake" when the
+  // test timed out on a server of the path that completed no handshake; "failed" with "error".
+  String testWireGuardProfile(long profileId, String fingerprint, String answerUrl);
 }

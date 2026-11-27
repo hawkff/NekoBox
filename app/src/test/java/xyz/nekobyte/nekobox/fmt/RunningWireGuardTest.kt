@@ -1,21 +1,27 @@
 package xyz.nekobyte.nekobox.fmt
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import xyz.nekobyte.nekobox.GroupType
 import xyz.nekobyte.nekobox.database.ProfileDatabase
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.database.ProxyGroup
+import xyz.nekobyte.nekobox.database.SubscriptionBean
 import xyz.nekobyte.nekobox.fmt.internal.ChainBean
 import xyz.nekobyte.nekobox.fmt.socks.SOCKSBean
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardBean
 import java.util.Base64
 
-/** What the service checks before it tests a profile with WireGuard hops through its running core. */
+/**
+ * The path the VPN's core was built with for a profile, against the one a test prepares for it now: the service
+ * tests through its core only when they are the same.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class RunningWireGuardTest {
@@ -28,7 +34,7 @@ class RunningWireGuardTest {
 
     private fun wg(name: String, block: WireGuardBean.() -> Unit = {}) = WireGuardBean().apply {
         this.name = name
-        serverAddress = "192.0.2.20"
+        serverAddress = "wg.example"
         serverPort = 51820
         localAddress = "10.7.0.2/32"
         privateKey = key(1)
@@ -37,9 +43,9 @@ class RunningWireGuardTest {
         block()
     }
 
-    private fun socks(name: String) = SOCKSBean().apply {
+    private fun socks(name: String, server: String = "192.0.2.30") = SOCKSBean().apply {
         this.name = name
-        serverAddress = "192.0.2.30"
+        serverAddress = server
         serverPort = 1080
     }
 
@@ -51,9 +57,15 @@ class RunningWireGuardTest {
         proxies = hops.map { it.id }
     }
 
-    private fun build(profile: ProxyEntity) = ConfigBuilderTestEnv.io { buildConfig(profile) }
+    private fun fresh(id: Long) = ConfigBuilderTestEnv.io { ProfileDatabase.proxyDao.getById(id)!! }
 
-    private fun saved(id: Long) = ConfigBuilderTestEnv.io { savedChainTraffic(ProfileDatabase.proxyDao.getById(id)!!) }
+    // The VPN's config for [profile], as the service started it.
+    private fun running(profile: ProxyEntity) = ConfigBuilderTestEnv.io { buildConfig(fresh(profile.id)) }
+
+    // What a test of [id] prepares now and sends to the service.
+    private fun candidate(id: Long) = ConfigBuilderTestEnv.io { buildConfig(fresh(id), forTest = true) }.paths.getValue(id).fingerprint
+
+    private fun ConfigBuildResult.fingerprint(id: Long) = paths.getValue(id).fingerprint
 
     private fun edit(id: Long, block: AbstractBean.() -> Unit) = ConfigBuilderTestEnv.io {
         val profile = ProfileDatabase.proxyDao.getById(id)!!
@@ -61,38 +73,74 @@ class RunningWireGuardTest {
         ProfileDatabase.proxyDao.updateProxy(profile)
     }
 
-    @Test
-    fun aRunningProfileIsTestedThroughTheCoreOnlyAsSaved() {
-        val tunnel = add(wg("tunnel"))
-        val config = build(tunnel)
-        assertTrue(config.runsAsSaved(tunnel.id, saved(tunnel.id)))
-        // The name is no setting of the outbound.
-        edit(tunnel.id) { name = "renamed" }
-        assertTrue(config.runsAsSaved(tunnel.id, saved(tunnel.id)))
-        edit(tunnel.id) { (this as WireGuardBean).peerPublicKey = key(3) }
-        assertFalse(config.runsAsSaved(tunnel.id, saved(tunnel.id)))
-        assertFalse(config.runsAsSaved(tunnel.id, null))
+    private fun group(block: ProxyGroup.() -> Unit) = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(ungrouped = true).apply(block)) }
+
+    private fun updateGroup(id: Long, block: ProxyGroup.() -> Unit) = ConfigBuilderTestEnv.io {
+        ProfileDatabase.groupDao.updateGroup(ProfileDatabase.groupDao.getById(id)!!.apply(block))
     }
 
     @Test
-    fun aChainRunsAsSavedOnlyWithEachOfItsHopsAsSaved() {
+    fun aTestMatchesTheRunningPathUntilAnEdit() {
+        val tunnel = add(wg("tunnel"))
+        val vpn = running(tunnel)
+        assertNotNull(vpn.fingerprint(tunnel.id))
+        assertEquals(vpn.fingerprint(tunnel.id), candidate(tunnel.id))
+        // The name is no setting of the path.
+        edit(tunnel.id) { name = "renamed" }
+        assertEquals(vpn.fingerprint(tunnel.id), candidate(tunnel.id))
+        edit(tunnel.id) { (this as WireGuardBean).peerPublicKey = key(3) }
+        assertNotEquals(vpn.fingerprint(tunnel.id), candidate(tunnel.id))
+    }
+
+    @Test
+    fun aChainHopEditAndAReversedPathAreOtherPaths() {
         val tunnel = add(wg("tunnel"))
         val path = add(chain("path", add(socks("hop")), tunnel))
-        val config = build(path)
-        assertTrue(config.runsAsSaved(path.id, saved(path.id)))
-        edit(tunnel.id) { serverAddress = "192.0.2.21" }
-        assertFalse(config.runsAsSaved(path.id, saved(path.id)))
+        val vpn = running(path)
+        assertEquals(vpn.fingerprint(path.id), candidate(path.id))
+        edit(tunnel.id) { serverAddress = "wg2.example" }
+        assertNotEquals(vpn.fingerprint(path.id), candidate(path.id))
+
+        // A group's hop moved from its front to its landing position: the same hops, dialed the other way round.
+        val relay = add(socks("relay", "relay.example"))
+        val groupId = group { frontProxy = relay.id }
+        val member = add(wg("member"), groupId)
+        val before = running(member)
+        updateGroup(groupId) {
+            frontProxy = -1L
+            landingProxy = relay.id
+        }
+        assertNotEquals(before.fingerprint(member.id), candidate(member.id))
     }
 
     @Test
-    fun anEditedMemberOfARunningGroupNoLongerRunsAsSaved() {
-        val group = ConfigBuilderTestEnv.io { ProfileDatabase.groupDao.createGroup(ProxyGroup(ungrouped = true, isSelector = true)) }
-        val selected = add(wg("selected"), group)
-        val other = add(wg("other") { privateKey = key(4) }, group)
-        val config = build(selected)
-        assertTrue(config.runsAsSaved(other.id, saved(other.id)))
+    fun anotherResolverOfTheSubscriptionIsAnotherPath() {
+        val groupId = group {
+            type = GroupType.SUBSCRIPTION
+            subscription = SubscriptionBean().apply {
+                initializeDefaultValues()
+                customDnsResolver = "https://resolver.example/dns-query"
+            }
+        }
+        val member = add(wg("member"), groupId)
+        val vpn = running(member)
+        assertEquals(vpn.fingerprint(member.id), candidate(member.id))
+        updateGroup(groupId) { subscription!!.customDnsResolver = "https://other.example/dns-query" }
+        assertNotEquals(vpn.fingerprint(member.id), candidate(member.id))
+    }
+
+    @Test
+    fun everyMemberOfARunningGroupKeepsAPathOfItsOwn() {
+        val groupId = group { isSelector = true }
+        val selected = add(wg("selected"), groupId)
+        val other = add(wg("other") { privateKey = key(4) }, groupId)
+        // A one-hop chain of the selected member: the same outbound under an alias.
+        val alias = add(chain("alias", selected), groupId)
+        val vpn = running(selected)
+        for (profile in listOf(selected, other, alias)) assertEquals(vpn.fingerprint(profile.id), candidate(profile.id))
         edit(other.id) { (this as WireGuardBean).privateKey = key(5) }
-        assertFalse(config.runsAsSaved(other.id, saved(other.id)))
-        assertTrue(config.runsAsSaved(selected.id, saved(selected.id)))
+        assertNotEquals(vpn.fingerprint(other.id), candidate(other.id))
+        assertEquals(vpn.fingerprint(selected.id), candidate(selected.id))
+        assertEquals(vpn.fingerprint(alias.id), candidate(alias.id))
     }
 }

@@ -69,6 +69,8 @@ import xyz.nekobyte.nekobox.utils.Telemetry
 import xyz.nekobyte.nekobox.utils.Util
 import xyz.nekobyte.nekobox.utils.listByLineOrComma
 import java.net.IDN
+import java.security.MessageDigest
+import java.util.Base64
 import java.util.UUID
 
 private fun sanitizeDnsEntry(value: String): String = value.filterNot { it.isISOControl() }.trim()
@@ -224,6 +226,8 @@ class ConfigBuildResult(
     val localProxy: LocalProxy? = null,
     // The WireGuard sessions of the config as it runs, which its core leases for its life.
     val wireGuardIdentities: WireGuardIdentities = WireGuardIdentities.NONE,
+    // Profile id -> its path as built, for every profile the config runs on its own tag; none in a full custom config.
+    val paths: Map<Long, PathSnapshot> = emptyMap(),
 ) {
     data class IndexEntity(var chain: LinkedHashMap<Int, ProxyEntity>)
 
@@ -232,20 +236,34 @@ class ConfigBuildResult(
     // ownerProfileId: the profile whose chain built this outbound.
     data class WireGuardInstance(val tag: String, val ownerProfileId: Long)
 
-    /** Whether the outbound of [profileId] was built with [saved], its path as saved now ([savedChainTraffic]). */
-    fun runsAsSaved(profileId: Long, saved: List<ProxyEntity>?): Boolean {
-        val built = trafficMap.values.firstOrNull { it.lastOrNull()?.id == profileId } ?: return false
-        return saved != null && built.map { it.id to it.requireBean() } == saved.map { it.id to it.requireBean() }
-    }
+    /**
+     * A profile's path as this config was built with it: [fingerprint] of its hops in the order they are dialed,
+     * each with its settings, the resolver its subscription gives the path and the WireGuard sessions of the
+     * outbounds as they run; null when a session cannot be read. [tags]: the outbounds of the path, a hop another
+     * path built first included.
+     */
+    class PathSnapshot(val fingerprint: String?, val tags: List<String>)
 }
 
-// The chain's hops, each once and in the chain's order, and then the profile itself: the service reads a tag's speed
-// from the last profile listed for it, and in a group that picks its server while it runs only the picked profile
-// counts. Told apart by id: hashing a whole profile serializes its settings.
-private fun trafficHops(profileList: List<ProxyEntity>, entity: ProxyEntity) = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
-
-/** The hops of [entity]'s path as saved now, as a configuration keeps them for the outbound it builds for it. */
-internal fun savedChainTraffic(entity: ProxyEntity): List<ProxyEntity> = trafficHops(resolveChain(entity, BuildLookupCache()), entity)
+// What a path's fingerprint is made of before the config is finished.
+private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, val resolver: String?, val tags: List<String>) {
+    fun snapshot(identities: WireGuardIdentities): ConfigBuildResult.PathSnapshot {
+        val sessions = tags.filter { it in identities.byTag }.map { identities.byTag[it] }
+        if (sessions.any { it == null }) return ConfigBuildResult.PathSnapshot(null, tags)
+        val digest = MessageDigest.getInstance("SHA-256")
+        fun add(text: String) = digest.update((text + "\n").toByteArray())
+        fun add(profile: ProxyEntity) {
+            val bean = profile.requireBean()
+            add("${profile.id} ${bean.javaClass.name} ${Base64.getEncoder().encodeToString(bean.settings())}")
+        }
+        hops.forEach(::add)
+        add("root")
+        add(entity)
+        add("resolver ${resolver.orEmpty()}")
+        sessions.flatMap { it!! }.sorted().forEach(::add)
+        return ConfigBuildResult.PathSnapshot(digest.digest().joinToString("") { "%02x".format(it) }, tags)
+    }
+}
 
 // Extracted from buildConfig as pure, capture-free helpers.
 // Behavior-preserving moves: same inputs -> same outputs.
@@ -399,6 +417,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
     val tailscaleEndpoints = HashMap<Long, ConfigBuildResult.TailscaleEndpoint>()
     val profileTailscaleNodes = HashMap<Long, Set<Long>>()
     val wireguardInstances = LinkedHashMap<Long, MutableList<ConfigBuildResult.WireGuardInstance>>()
+    val pathParts = HashMap<Long, PathParts>()
     // Profile DNS of each WireGuard/AmneziaWG outbound, and whether a selected chain built it.
     val profileDnsList = mutableListOf<Pair<Boolean, WireGuardProfileDns>>()
     if (buildSelector) {
@@ -673,7 +692,12 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 }
                 chainTailscaleProfiles += hop.id
             }
-            val chainTraffic = trafficHops(profileList, entity)
+            // The chain's hops, each once and in the chain's order, and then the profile itself: the service reads a
+            // tag's speed from the last profile listed for it, and in a group that picks its server while it runs
+            // only the picked profile counts. Told apart by id: hashing a whole profile serializes its settings.
+            val chainTraffic = (profileList.filter { it.id != entity.id } + entity).distinctBy { it.id }
+            val chainTags = mutableListOf<String>()
+            var chainResolver: String? = null
 
             var currentOutbound: SingBoxOption
             lateinit var pastOutbound: SingBoxOption
@@ -724,6 +748,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                         ?.subscription?.customDnsResolver
                         ?.let { sanitizeDnsEntry(it) }
                         ?.takeIf { it.isNotBlank() }
+                    chainResolver = resolver
 
                     if (resolver != null) {
                         // Record hosts of every chain hop owned by this subscription.
@@ -763,6 +788,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 // already own a readable tag rather than the provisional global tag.
                 val reusedGlobalTag = if (needGlobal) globalOutbounds[proxyEntity.id] else null
                 if (reusedGlobalTag != null) tagOut = reusedGlobalTag
+                chainTags += tagOut
 
                 // chain rules
                 if (index > 0) {
@@ -983,6 +1009,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
                 ) { NekoBox.application.getString(R.string.route_proxy_invalid, entity.displayName()) }
             }
             trafficMap[chainTagOut] = chainTraffic
+            pathParts[entity.id] = PathParts(entity, profileList, chainResolver, chainTags)
             // Reserve only for a chain that built completely; a hop that fails later releases them.
             tailscaleProfiles += chainTailscaleProfiles
             tailscaleEndpoints += chainTailscaleEndpoints
@@ -1649,6 +1676,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         if (!forTest) Util.mergeJsonElement(configTree, DataStore.globalCustomConfig)
         Util.mergeJsonElement(configTree, proxy.requireBean().customConfigJson!!)
         val config = SingBoxOptions.treeToJson(configTree)
+        val identities = wireGuardIdentities(config)
         ConfigBuildResult(
             config,
             externalIndexMap,
@@ -1663,7 +1691,8 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             wireguardInstances,
             joinNebula,
             localProxyOf(configTree, ownSecret),
-            wireGuardIdentities(config),
+            identities,
+            pathParts.mapValues { it.value.snapshot(identities) },
         )
     }
 }
