@@ -289,12 +289,20 @@ private class PathParts(val entity: ProxyEntity, val hops: List<ProxyEntity>, va
     }
 }
 
-/** The entries of a finished config by tag, read once for all its paths. A tag given twice maps to null. */
-internal class ConfigIndex(config: JsonObject) {
-    private fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
+private fun objects(element: JsonElement?) = (element as? JsonArray)?.filterIsInstance<JsonObject>().orEmpty()
 
-    // A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
-    private fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
+// A tag given twice, as custom JSON that adds an outbound may give it, leaves open which one the core takes.
+private fun byTag(list: List<JsonObject>) = list.groupBy { (it["tag"] as? JsonPrimitive)?.asString }.mapValues { it.value.singleOrNull() }
+
+/** The resolver of every outbound that has one, as the builder made it, before custom JSON is merged in. */
+internal fun builtResolvers(config: JsonObject): Map<String?, JsonElement> = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
+    .mapNotNull { (tag, outbound) -> outbound?.get("domain_resolver")?.let { tag to it.deepCopy() } }.toMap()
+
+/**
+ * The entries of a finished config by tag, read once for all its paths, a tag given twice mapped to null, and the
+ * [builtResolvers] of the config before custom JSON.
+ */
+internal class ConfigIndex(config: JsonObject, val builtResolvers: Map<String?, JsonElement>) {
     val outbounds = byTag(objects(config["outbounds"]) + objects(config["endpoints"]))
     val dnsServers = byTag(objects((config["dns"] as? JsonObject)?.get("servers")))
 
@@ -311,9 +319,11 @@ internal class ConfigIndex(config: JsonObject) {
 /**
  * The outbounds of a path in a finished config, as the core runs them, the same for a test's config and the VPN's:
  * tags left out, a detour named by its hop on the path, and the DNS server that resolves a hop's server name in
- * place of its tag. A hop dialed through the next one hands its server's name on in a test, so its resolver is left
- * out; so is the address family, which a test leaves to the system. Null when the path cannot be read so: a hop
- * missing or given twice, a detour off the path, a resolver missing.
+ * place of its tag. The resolver the builder gave a hop differs between the two only by the VPN's server address
+ * family and, on a hop dialed through the next one, by whether there is one; such a resolver is the server alone on
+ * a hop dialed directly and left out on one dialed through the next. A resolver custom JSON changed keeps all its
+ * options. Null when the path cannot be read so: a hop missing or given twice, a detour off the path, a resolver
+ * missing.
  */
 internal fun effectivePath(config: ConfigIndex, tags: List<String>): String? {
     val outbounds = config.outbounds
@@ -327,18 +337,15 @@ internal fun effectivePath(config: ConfigIndex, tags: List<String>): String? {
             val index = tags.indexOf((detour as? JsonPrimitive)?.asString)
             if (index < 0) return null
             hop.addProperty("detour", "hop $index")
-            hop.remove("domain_resolver")
-        } else {
-            when (val resolver = hop.remove("domain_resolver")) {
-                null -> Unit
-
-                else -> {
-                    val server = ((resolver as? JsonObject)?.get("server") ?: resolver) as? JsonPrimitive ?: return null
-                    val definition = dnsServers[server.asString]?.deepCopy() ?: return null
-                    definition.remove("tag")
-                    hop.add("domain_resolver", definition)
-                }
-            }
+        }
+        val resolver = hop.remove("domain_resolver")
+        val built = resolver == config.builtResolvers[tag]
+        if (resolver != null && !(built && detour != null)) {
+            val options = resolver as? JsonObject ?: JsonObject().apply { add("server", resolver) }
+            val server = (options["server"] as? JsonPrimitive)?.takeIf { it.isString } ?: return null
+            val definition = dnsServers[server.asString]?.deepCopy() ?: return null
+            definition.remove("tag")
+            hop.add("domain_resolver", if (built) definition else options.deepCopy().apply { add("server", definition) })
         }
         path.add(hop)
     }
@@ -1752,6 +1759,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
         if (endpointList.isNotEmpty()) endpoints = endpointList
     }.let {
         val configTree = SingBoxOptions.toJsonTree(it)
+        val builtResolvers = builtResolvers(configTree.asJsonObject)
         // Merged into the finished tree: on the root option it would shift arrays before their items' own settings apply.
         if (!forTest) Util.mergeJsonElement(configTree, DataStore.globalCustomConfig)
         Util.mergeJsonElement(configTree, proxy.requireBean().customConfigJson!!)
@@ -1772,7 +1780,7 @@ fun buildConfig(proxy: ProxyEntity, forTest: Boolean = false, forExport: Boolean
             joinNebula,
             localProxyOf(configTree, ownSecret),
             identities,
-            ConfigIndex(configTree.asJsonObject).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id]) } },
+            ConfigIndex(configTree.asJsonObject, builtResolvers).let { index -> pathParts.mapValues { (id, parts) -> parts.snapshot(identities, index, tagMap[id]) } },
         )
     }
 }

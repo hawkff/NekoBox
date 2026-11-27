@@ -206,6 +206,41 @@ class RunningWireGuardTest {
         }
     }
 
+    // Global custom JSON that gives the running outbound with [tag] the resolver [resolver].
+    private fun overrideResolver(config: String, tag: String, resolver: JSONObject) {
+        val outbounds = JSONObject(config).getJSONArray("outbounds")
+        for (index in 0 until outbounds.length()) {
+            val outbound = outbounds.getJSONObject(index)
+            if (outbound.optString("tag") == tag) outbound.put("domain_resolver", resolver)
+        }
+        DataStore.globalCustomConfig = JSONObject().put("outbounds", outbounds).toString()
+    }
+
+    @Test
+    fun aResolverCustomJsonGivesAHopIsPartOfThePath() {
+        val landing = add(socks("landing", "landing.example"))
+        val tunnel = add(wg("tunnel"))
+        val profile = add(chain("chain", tunnel, landing))
+        try {
+            // The address family the VPN resolves servers with is the builder's, a test's config leaves it out.
+            DataStore.configurationStore.putString("domain_strategy_for_server", "ipv4_only")
+            assertEquals(running(profile).fingerprint(profile.id), candidate(profile.id))
+            DataStore.configurationStore.putString("domain_strategy_for_server", "auto")
+            val vpn = running(profile)
+            assertEquals(vpn.fingerprint(profile.id), candidate(profile.id))
+            val (landingTag, tunnelTag) = vpn.paths.getValue(profile.id).tags.let { it.first() to it.last() }
+            // The landing hop is dialed through the tunnel and hands its name on; resolved here, it is not.
+            overrideResolver(vpn.config, landingTag, JSONObject().put("server", "dns-direct"))
+            assertNotEquals(running(profile).fingerprint(profile.id), candidate(profile.id))
+            // The tunnel's server resolved by the same DNS server, for another address family only.
+            overrideResolver(vpn.config, tunnelTag, JSONObject().put("server", "dns-direct").put("strategy", "ipv6_only"))
+            assertNotEquals(running(profile).fingerprint(profile.id), candidate(profile.id))
+        } finally {
+            DataStore.globalCustomConfig = ""
+            DataStore.configurationStore.putString("domain_strategy_for_server", "auto")
+        }
+    }
+
     @Test
     fun aServerNameARuleOutboundSharesIsResolvedLikeTheRuleOutbound() {
         val groupId = group {
