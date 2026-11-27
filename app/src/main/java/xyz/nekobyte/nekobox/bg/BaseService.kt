@@ -373,7 +373,7 @@ class BaseService {
             }
         }
 
-        override fun testWireGuardProfile(profileId: Long): String {
+        override fun testWireGuardProfile(profileId: Long, answerUrl: String): String {
             val proxy = runningProxy()
             val saved = ProfileDatabase.proxyDao.getById(profileId)?.let { runCatching { savedChainTraffic(it) }.getOrNull() }
             val tag = proxy.config.profileTagMap[profileId] ?: run {
@@ -393,7 +393,11 @@ class BaseService {
                 if (parseWireGuardServiceStatus(status).noCompletedHandshake(e.readableMessage)) error(NO_COMPLETED_HANDSHAKE)
                 error(Protocols.genFriendlyMsg(e.readableMessage))
             }
-            return JSONObject().put("latencyMs", latency).toString()
+            // A page that cannot be read leaves the answer unknown; the test itself passed.
+            val answer = answerUrl.takeIf { it.isNotEmpty() }?.let {
+                runCatching { Libcore.fetchTextOutbound(proxy.box, tag, it, DataStore.connectionTestTimeout) }.getOrNull()
+            }
+            return JSONObject().put("latencyMs", latency).putOpt("answer", answer).toString()
         }
 
         override fun tailscalePeers(profileId: Long): String {

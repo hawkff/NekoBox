@@ -29,6 +29,18 @@ func UrlTestOutbound(i *BoxInstance, tag string, link string, timeout int32) (la
 	return urlTest(lifetime, client, link, timeout)
 }
 
+// FetchTextOutbound reads a short answer from link through one outbound or endpoint of a running instance, as
+// UrlTestOutbound reaches its link. The request ends when the instance closes.
+func FetchTextOutbound(i *BoxInstance, tag string, link string, timeout int32) (text string, err error) {
+	defer deferPanicToError("box.FetchTextOutbound", func(err_ error) { err = err_ })
+	client, lifetime, release, err := outboundHTTPClient(i, tag)
+	if err != nil {
+		return "", err
+	}
+	defer release()
+	return fetchText(lifetime, client, link, timeout)
+}
+
 // outboundHTTPClient admits a request through the outbound or endpoint tag of a running instance as core work.
 func outboundHTTPClient(i *BoxInstance, tag string) (*http.Client, context.Context, func(), error) {
 	if i == nil {

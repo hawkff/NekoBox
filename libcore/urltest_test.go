@@ -80,6 +80,7 @@ func TestUrlTestsEndWhenTheInstanceCloses(t *testing.T) {
 	tests := map[string]func(*BoxInstance, string) error{
 		"outbound": func(i *BoxInstance, link string) error { _, err := UrlTestOutbound(i, "direct", link, 60000); return err },
 		"route":    func(i *BoxInstance, link string) error { _, err := UrlTest(i, link, 60000); return err },
+		"fetch":    func(i *BoxInstance, link string) error { _, err := FetchTextOutbound(i, "direct", link, 60000); return err },
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

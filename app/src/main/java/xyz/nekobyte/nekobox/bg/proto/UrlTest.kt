@@ -23,17 +23,17 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
 
     /**
      * [doTest], which also reads [answerUrl] through the profile once the test has passed: the latency and that
-     * answer, null when it could not be read. A profile the service tests through its own core gives no answer.
+     * answer, null when it could not be read. A profile whose Tailscale node the service drives gives no answer.
      */
     suspend fun check(profile: ProxyEntity, answerUrl: String, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Pair<Int, String?> {
         if (prepared.tailscaleEndpoints.isNotEmpty()) return doTest(profile, prepared) to null
-        viaRunningCore(profile, prepared)?.let { return it to null }
+        viaRunningCore(profile, prepared, answerUrl)?.let { return it }
         val instance = TestInstance(profile, link, timeout, prepared, answerUrl)
         return instance.doTest() to instance.answer
     }
 
     suspend fun doTest(profile: ProxyEntity, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Int {
-        viaRunningCore(profile, prepared)?.let { return it }
+        viaRunningCore(profile, prepared)?.let { return it.first }
         val nodes = prepared.tailscaleEndpoints.keys
         if (nodes.isEmpty()) return TestInstance(profile, link, timeout, prepared).doTest()
         return TailscaleAccess.run(service, nodes, { it.urlTestProfile(profile.id) }) {
@@ -43,13 +43,13 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
 
     // A WireGuard or AmneziaWG server keeps one session per client key: a core of its own for a profile the
     // connected service runs would take that session from the tunnel. The service tests such a profile through its
-    // core, when it runs it as saved; null when the profile has no such hop, the service is stopped or it does not
-    // run the profile.
-    internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult): Int? {
+    // core, when it runs it as saved, and reads [answerUrl] through it as [check] does; null when the profile has no
+    // such hop, the service is stopped or it does not run the profile.
+    internal suspend fun viaRunningCore(profile: ProxyEntity, prepared: ConfigBuildResult, answerUrl: String? = null): Pair<Int, String?>? {
         if (prepared.wireguardInstances.isEmpty()) return null
         val running = connectedService() ?: return null
         val answer = try {
-            JSONObject(running.testWireGuardProfile(profile.id))
+            JSONObject(running.testWireGuardProfile(profile.id, answerUrl.orEmpty()))
         } catch (e: IllegalStateException) {
             val message = e.message.orEmpty()
             when {
@@ -68,7 +68,7 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
                 else -> throw e
             }
         }
-        return answer.getInt("latencyMs")
+        return answer.getInt("latencyMs") to answer.optString("answer").takeIf { answer.has("answer") }
     }
 
     // The service when it is connected, null when it is stopped. A missing binder, or a service that is starting or

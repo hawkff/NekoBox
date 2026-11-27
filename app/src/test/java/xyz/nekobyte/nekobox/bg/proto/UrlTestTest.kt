@@ -27,6 +27,7 @@ class UrlTestTest {
     private val profile = ProxyEntity(id = 7, groupId = 1)
     private val wireGuard = prepared(mapOf(7L to listOf(ConfigBuildResult.WireGuardInstance("wg-7", 7))))
     private val calls = mutableListOf<Long>()
+    private val answerUrls = mutableListOf<String>()
 
     @Before
     fun setUp() {
@@ -36,8 +37,11 @@ class UrlTestTest {
     @Test
     fun aWireGuardProfileTheConnectedServiceRunsIsTestedThroughItsCore() = runTest {
         val service = binder({ BaseService.State.Connected }) { 42 }
-        assertEquals(42, UrlTest { service }.viaRunningCore(profile, wireGuard))
-        assertEquals(listOf(7L), calls)
+        assertEquals(42 to null, UrlTest { service }.viaRunningCore(profile, wireGuard))
+        // The Proxies check reads its answer through the same outbound.
+        assertEquals(42 to "ip=203.0.113.7", UrlTest { service }.viaRunningCore(profile, wireGuard, "https://trace.example/"))
+        assertEquals(listOf(7L, 7L), calls)
+        assertEquals(listOf("", "https://trace.example/"), answerUrls)
     }
 
     @Test
@@ -70,7 +74,7 @@ class UrlTestTest {
     fun aServiceThatSettlesInAMomentIsWaitedFor() = runTest {
         var states = listOf(BaseService.State.Connecting, BaseService.State.Connecting, BaseService.State.Connected)
         val service = binder({ states.first().also { if (states.size > 1) states = states.drop(1) } }) { 42 }
-        assertEquals(42, UrlTest { service }.viaRunningCore(profile, wireGuard))
+        assertEquals(42 to null, UrlTest { service }.viaRunningCore(profile, wireGuard))
     }
 
     @Test
@@ -94,7 +98,10 @@ class UrlTestTest {
 
             "testWireGuardProfile" -> {
                 calls += arguments[0] as Long
-                """{"latencyMs":${urlTestProfile()}}"""
+                val answerUrl = arguments[1] as String
+                answerUrls += answerUrl
+                val latency = urlTestProfile()
+                if (answerUrl.isEmpty()) """{"latencyMs":$latency}""" else """{"latencyMs":$latency,"answer":"ip=203.0.113.7"}"""
             }
 
             else -> error("Unexpected service call: ${method.name}")
