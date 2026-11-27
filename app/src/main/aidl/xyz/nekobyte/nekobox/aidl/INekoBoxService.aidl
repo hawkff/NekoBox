@@ -33,13 +33,6 @@ interface INekoBoxService {
   // Connection test through the running outbound of one profile in the current
   // configuration (a Tailscale node used as a hop counts); fails when it is not part of it.
   int urlTestProfile(long profileId);
-  // Connection test of a saved profile with WireGuard or AmneziaWG hops through its running outbound, as JSON
-  // {"latencyMs": int, "answer": text}: the answer of answerUrl, when not empty, read through that outbound after the
-  // test, missing when it could not be read. A server keeps one session per client key, so nothing else may test such a profile while
-  // the service runs it. Fails with a reason the caller maps (BaseService.kt): not part of the configuration, a hop
-  // of it opening a session the core opens, run with other settings than the saved ones, or a timeout on a server of
-  // its path that completed no handshake.
-  String testWireGuardProfile(long profileId, String answerUrl);
   // Peers of a running Tailscale profile as JSON (name, dnsName, ips, online, exitNode).
   String tailscalePeers(long profileId);
   // Ids of the Tailscale profiles whose nodes this service runs, as a JSON array. A node
@@ -53,4 +46,13 @@ interface INekoBoxService {
   // Peer state of every running outbound of a WireGuard or AmneziaWG profile, as JSON:
   // {"running": bool, "instances": [{"owner": profileId, "peers": [...]} or {"owner": profileId, "error": text}]}.
   String wireguardStatus(long profileId);
+
+  // Appended: methods keep their transaction numbers.
+  // Connection test of a saved profile with WireGuard or AmneziaWG hops through its running outbound, as JSON
+  // {"latencyMs": int, "answer": text}: the answer of answerUrl, when not empty, read through that outbound after the
+  // test, missing when it could not be read. A server keeps one session per client key, so nothing else may test
+  // such a profile while the service runs it. Fails with a reason the caller maps (BaseService.kt): not part of the configuration, a hop
+  // of it opening a session the core opens, run with other settings than the saved ones, or a timeout on a server of
+  // its path that completed no handshake.
+  String testWireGuardProfile(long profileId, String answerUrl);
 }
