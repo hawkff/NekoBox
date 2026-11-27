@@ -264,6 +264,9 @@ abstract class BoxInstance(val profile: ProxyEntity) : Closeable {
                 stateLease?.close()
             } finally {
                 stateLease = null
+                // Also after box.close() failed: the core reports an error only once every endpoint has closed. A panic
+                // in one of its cleanups, which libcore returns as an error, could leave one running; keeping the lease
+                // then would hold the keys until the app restarts, so it is released all the same.
                 wireGuardLease?.close()
                 wireGuardLease = null
             }
