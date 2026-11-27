@@ -22,13 +22,14 @@ internal object WireGuardLease {
         null
     }
 
-    /** All of [identities], waiting up to [timeoutMs] for a core that holds one of them to close. */
+    /** All of [identities], waiting up to [timeoutMs] for a core that holds one of them to close, and no longer. */
     suspend fun acquire(identities: Set<String>, timeoutMs: Long): Closeable {
         val deadline = System.nanoTime() + timeoutMs * 1_000_000
         while (true) {
             tryAcquire(identities)?.let { return it }
-            if (System.nanoTime() >= deadline) throw LeaseBusyException(NekoBox.application.getString(R.string.vpn_wireguard_test_running))
-            delay(100)
+            val left = deadline - System.nanoTime()
+            if (left <= 0) throw LeaseBusyException(NekoBox.application.getString(R.string.vpn_wireguard_test_running))
+            delay(minOf(100L, (left + 999_999) / 1_000_000))
         }
     }
 }

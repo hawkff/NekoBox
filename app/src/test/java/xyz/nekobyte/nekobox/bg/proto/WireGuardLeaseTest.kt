@@ -1,7 +1,11 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import android.app.Application
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -87,6 +91,20 @@ class WireGuardLeaseTest {
             val failure = runCatching { WireGuardLease.acquire(session, 0) }.exceptionOrNull()
             assertTrue(failure is LeaseBusyException)
         }
+    }
+
+    @Test
+    fun aVpnStartDoesNotTakeASessionFreedAfterItsBound() = runBlocking {
+        // On the clock: the bound is 20 ms, the test's core closes at 60 ms, before the next 100 ms round would end.
+        val test = WireGuardLease.tryAcquire(session)!!
+        val closing = launch(Dispatchers.Default) {
+            delay(60)
+            test.close()
+        }
+        val outcome = runCatching { WireGuardLease.acquire(session, 20) }
+        closing.join()
+        outcome.getOrNull()?.close()
+        assertTrue(outcome.exceptionOrNull() is LeaseBusyException)
     }
 
     @Test
