@@ -113,6 +113,12 @@ func TestUrlTestsEndWhenTheInstanceCloses(t *testing.T) {
 				instance.Close()
 				close(closed)
 			}()
+			// Close has begun once the instance's lifetime ends; only then may it not finish while the dial is held.
+			select {
+			case <-instance.ctx.Done():
+			case <-time.After(5 * time.Second):
+				t.Fatal("Close did not end the instance's lifetime")
+			}
 			select {
 			case <-closed:
 				t.Fatal("Close returned while a dial of the test still ran")
