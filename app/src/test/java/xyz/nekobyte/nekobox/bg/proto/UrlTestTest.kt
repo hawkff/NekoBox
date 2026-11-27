@@ -161,6 +161,13 @@ class UrlTestTest {
         var states = listOf(BaseService.State.Connecting, BaseService.State.Connecting, BaseService.State.Connected)
         val service = binder({ states.first().also { if (states.size > 1) states = states.drop(1) } }) { tested(42) }
         assertEquals(42 to null, UrlTest { service }.viaRunningCore(profile, wireGuard))
+        // One that connects during the last wait is still read: 50 reads 100 ms apart, then once more; still
+        // starting then, the VPN is changing.
+        var rounds = 0
+        val late = binder({ if (rounds++ < 50) BaseService.State.Connecting else BaseService.State.Connected }) { tested(7) }
+        assertEquals(7 to null, UrlTest { late }.viaRunningCore(profile, wireGuard))
+        rounds = -1
+        assertEquals("vpn_changing", failure { UrlTest { late }.viaRunningCore(profile, wireGuard) }.code)
     }
 
     @Test

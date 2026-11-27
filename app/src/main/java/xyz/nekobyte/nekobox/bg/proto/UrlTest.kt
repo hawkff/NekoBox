@@ -88,14 +88,15 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
         }
     }
 
-    // The service when it is connected, null when it is stopped, waiting a moment for one starting or stopping.
+    // The service when it is connected, null when it is stopped, waiting a moment for one starting or stopping: the
+    // state is read once more after the last wait.
     private suspend fun connectedService(): INekoBoxService? {
-        repeat(SERVICE_SETTLE_ROUNDS) {
+        repeat(SERVICE_SETTLE_ROUNDS + 1) { round ->
             val binder = service()
             when (binder?.let { runCatching { BaseService.State.values()[it.state] }.getOrNull() }) {
                 BaseService.State.Stopped -> return null
                 BaseService.State.Connected -> return binder
-                else -> delay(100)
+                else -> if (round < SERVICE_SETTLE_ROUNDS) delay(100)
             }
         }
         throw vpnChanging()
