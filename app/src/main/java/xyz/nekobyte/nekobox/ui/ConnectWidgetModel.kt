@@ -39,16 +39,20 @@ internal fun widgetSpec(widthDp: Float, heightDp: Float): WidgetSpec = when {
 internal data class WidgetSizes(val portrait: Pair<Float, Float>, val landscape: Pair<Float, Float>)
 
 /**
- * The widget's size upright and sideways: upright the narrowest width and the tallest height, sideways the widest width
- * and the lowest height, of the [sizes] the home screen reports (Android 12 and later), else of the minimum and maximum
- * it reports. Where it reports nothing: the lines without chips. A home screen that reports more than two sizes, as on
- * a foldable, gets the narrowest width and the lowest height in both orientations, which fit every size it reports.
+ * The widget's size upright and sideways. Of two [sizes] the home screen reports (Android 12 and later), the narrow and
+ * tall one is upright and the wide and short one sideways. Any other report, one size, two that are not such a pair, or
+ * more than two as on a foldable, gets the narrowest width and the lowest height in both orientations, which fit every
+ * size it reports. Before Android 12, the minimum width with the maximum height is upright and the maximum width with
+ * the minimum height sideways. Where it reports nothing: the lines without chips.
  */
-// shortcut: on a foldable the larger sizes show fewer chips than they could hold; pick a layout per reported size if
-// that matters.
+// shortcut: a foldable's larger sizes show fewer chips than they could hold; pick a layout per reported size if that
+// matters.
 internal fun widgetSizes(sizes: List<Pair<Float, Float>>, minWidth: Int, minHeight: Int, maxWidth: Int, maxHeight: Int): WidgetSizes {
-    if (sizes.size > 2) return (sizes.minOf { it.first } to sizes.minOf { it.second }).let { WidgetSizes(it, it) }
-    if (sizes.isNotEmpty()) return WidgetSizes(sizes.minOf { it.first } to sizes.maxOf { it.second }, sizes.maxOf { it.first } to sizes.minOf { it.second })
+    if (sizes.size == 2) {
+        val (narrow, wide) = sizes.sortedBy { it.first }
+        if (narrow.first < wide.first && narrow.second >= wide.second) return WidgetSizes(narrow, wide)
+    }
+    if (sizes.isNotEmpty()) return (sizes.minOf { it.first } to sizes.minOf { it.second }).let { WidgetSizes(it, it) }
     fun dp(value: Int, default: Float) = value.takeIf { it > 0 }?.toFloat() ?: default
     val narrow = dp(minWidth, WIDGET_LINES_MIN_WIDTH)
     val low = dp(minHeight, 40f)
