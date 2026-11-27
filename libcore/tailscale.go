@@ -55,16 +55,15 @@ func outboundHTTPClient(i *BoxInstance, tag string) (*http.Client, context.Conte
 		return nil, nil, nil, E.New("outbound not found: ", tag)
 	}
 	detour := dialer.NewDetour(i.Box.Outbound(), tag, true)
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSHandshakeTimeout:   3 * time.Second,
-			ResponseHeaderTimeout: 3 * time.Second,
-			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-				return detour.DialContext(ctx, network, M.ParseSocksaddr(address))
-			},
+	transport := &http.Transport{
+		TLSHandshakeTimeout:   3 * time.Second,
+		ResponseHeaderTimeout: 3 * time.Second,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return detour.DialContext(ctx, network, M.ParseSocksaddr(address))
 		},
 	}
-	return client, lifetime, release, nil
+	admitDials(i, lifetime, transport)
+	return &http.Client{Transport: transport}, lifetime, release, nil
 }
 
 // tailscaleReady reports backend and exit selection readiness, not packet reachability.

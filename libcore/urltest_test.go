@@ -2,13 +2,10 @@ package libcore
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"sync/atomic"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -71,20 +68,32 @@ func TestFetchTextReadsAShortAnswerOnlyFromA200(t *testing.T) {
 	}
 }
 
-// Closing an instance ends a test through it that is still connecting, and Close returns only after that test, so
-// no request holds an outbound of a closed core.
+// Close waits for a dial of a test through the instance, which the HTTP transport runs apart from the request, and
+// the test ends once the instance is closed: no dial goes on through a closed core.
 func TestUrlTestsEndWhenTheInstanceCloses(t *testing.T) {
 	previous := intfBox
 	intfBox = socketProtectionPlatform{}
 	t.Cleanup(func() { intfBox = previous })
 	tests := map[string]func(*BoxInstance, string) error{
-		"outbound": func(i *BoxInstance, link string) error { _, err := UrlTestOutbound(i, "direct", link, 60000); return err },
-		"route":    func(i *BoxInstance, link string) error { _, err := UrlTest(i, link, 60000); return err },
-		"fetch":    func(i *BoxInstance, link string) error { _, err := FetchTextOutbound(i, "direct", link, 60000); return err },
+		"outbound": func(i *BoxInstance, link string) error {
+			_, err := UrlTestOutbound(i, "direct", link, 60000)
+			return err
+		},
+		"route": func(i *BoxInstance, link string) error { _, err := UrlTest(i, link, 60000); return err },
+		"fetch": func(i *BoxInstance, link string) error {
+			_, err := FetchTextOutbound(i, "direct", link, 60000)
+			return err
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			address := unansweredTCPAddress(t)
+			entered := make(chan struct{}, 1)
+			hold := make(chan struct{})
+			dialEnteredForTest = func() {
+				entered <- struct{}{}
+				<-hold
+			}
+			t.Cleanup(func() { dialEnteredForTest = nil })
 			instance, err := NewSingBoxInstance(`{"log": {"disabled": true}, "outbounds": [{"type": "direct", "tag": "direct"}]}`, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -93,12 +102,11 @@ func TestUrlTestsEndWhenTheInstanceCloses(t *testing.T) {
 				t.Fatal(err)
 			}
 			done := make(chan error, 1)
-			go func() { done <- test(instance, "http://"+address+"/") }()
-			time.Sleep(500 * time.Millisecond)
+			go func() { done <- test(instance, "http://127.0.0.1:1/") }()
 			select {
-			case err := <-done:
-				t.Fatalf("the test ended before the close: %v", err)
-			default:
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("the test did not dial")
 			}
 			closed := make(chan struct{})
 			go func() {
@@ -107,46 +115,23 @@ func TestUrlTestsEndWhenTheInstanceCloses(t *testing.T) {
 			}()
 			select {
 			case <-closed:
+				t.Fatal("Close returned while a dial of the test still ran")
+			case <-time.After(300 * time.Millisecond):
+			}
+			close(hold)
+			select {
+			case <-closed:
 			case <-time.After(5 * time.Second):
-				t.Fatal("Close did not return")
+				t.Fatal("Close did not return after the dial")
 			}
 			select {
 			case err := <-done:
 				if err == nil {
 					t.Fatal("a test of a closed instance passed")
 				}
-			default:
-				t.Fatal("Close returned while a test still ran through the instance")
+			case <-time.After(5 * time.Second):
+				t.Fatal("the test did not end with the instance")
 			}
 		})
-	}
-}
-
-// unansweredTCPAddress listens with a full accept queue, so a connect to it waits for its handshake until it gives up.
-func unansweredTCPAddress(t *testing.T) string {
-	t.Helper()
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { syscall.Close(fd) })
-	if err = syscall.Bind(fd, &syscall.SockaddrInet4{Addr: [4]byte{127, 0, 0, 1}}); err != nil {
-		t.Fatal(err)
-	}
-	if err = syscall.Listen(fd, 0); err != nil {
-		t.Fatal(err)
-	}
-	name, err := syscall.Getsockname(fd)
-	if err != nil {
-		t.Fatal(err)
-	}
-	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(name.(*syscall.SockaddrInet4).Port))
-	// The queue holds one connection more than its backlog; once it is full, the listener drops new handshakes.
-	for {
-		conn, err := net.DialTimeout("tcp", address, 300*time.Millisecond)
-		if err != nil {
-			return address
-		}
-		t.Cleanup(func() { conn.Close() })
 	}
 }

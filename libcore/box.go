@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -397,7 +399,9 @@ func UrlTest(i *BoxInstance, link string, timeout int32) (latency int32, err err
 	if i.v2api != nil {
 		connectionTracker = i.v2api.StatsService()
 	}
-	return urlTest(lifetime, boxapi.CreateProxyHttpClient(i.Box, connectionTracker), link, timeout)
+	client := boxapi.CreateProxyHttpClient(i.Box, connectionTracker)
+	admitDials(i, lifetime, client.Transport.(*http.Transport))
+	return urlTest(lifetime, client, link, timeout)
 }
 
 // FetchText reads a short answer from link through the instance's route, as UrlTest reaches its link: for a
@@ -412,7 +416,33 @@ func FetchText(i *BoxInstance, link string, timeout int32) (text string, err err
 		return "", err
 	}
 	defer release()
-	return fetchText(lifetime, boxapi.CreateProxyHttpClient(i.Box, nil), link, timeout)
+	client := boxapi.CreateProxyHttpClient(i.Box, nil)
+	admitDials(i, lifetime, client.Transport.(*http.Transport))
+	return fetchText(lifetime, client, link, timeout)
+}
+
+// dialEnteredForTest, when set, runs in every admitted dial before it dials: tests hold a dial there.
+var dialEnteredForTest func()
+
+// admitDials makes every dial of transport core work of i that ends with lifetime. The HTTP transport dials in
+// goroutines of its own, which a request that returns does not wait for, and Close must not close the core under
+// one of them.
+func admitDials(i *BoxInstance, lifetime context.Context, transport *http.Transport) {
+	dial := transport.DialContext
+	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		_, release, err := i.admitCoreWork()
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		defer context.AfterFunc(lifetime, cancel)()
+		if dialEnteredForTest != nil {
+			dialEnteredForTest()
+		}
+		return dial(ctx, network, address)
+	}
 }
 
 // admitCoreWork admits a request through a running instance as core work: its context ends when the instance
