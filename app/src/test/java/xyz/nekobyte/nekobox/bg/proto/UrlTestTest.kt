@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import android.app.Application
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.After
@@ -114,6 +115,25 @@ class UrlTestTest {
         // A service that stops under the test.
         assertEquals("vpn_changing", failure { UrlTest { binder({ BaseService.State.Connected }) { reply("stopping") } }.viaRunningCore(profile, wireGuard) }.code)
         assertEquals(listOf(7L, 7L, 7L, 7L), calls)
+    }
+
+    @Test
+    fun aTestsOwnCoreThatFailsWhileTheVpnStartsOrStopsSaysSo() = runTest {
+        val failed = IOException("Get \"http://10.66.0.1:8080/\": context deadline exceeded")
+        for (state in listOf(BaseService.State.Connecting, BaseService.State.Stopping)) {
+            val reason = failure { UrlTest { binder({ state }) { tested(1) } }.ownCore(true) { throw failed } }
+            assertEquals("vpn_changing", reason.code)
+            assertEquals(failed, reason.cause)
+        }
+        // Otherwise the failure stays: the VPN stopped or connected, no WireGuard hop, or the sessions held.
+        assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Stopped }) { tested(1) } }.ownCore(true) { throw failed } }.exceptionOrNull())
+        assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Connected }) { tested(1) } }.ownCore(true) { throw failed } }.exceptionOrNull())
+        assertEquals(failed, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(false) { throw failed } }.exceptionOrNull())
+        val held = WireGuardSessionsUnavailable("wireguard_in_use", "held")
+        assertEquals(held, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw held } }.exceptionOrNull())
+        // A cancellation is no failure of the test.
+        val cancelled = CancellationException("dialog closed")
+        assertEquals(cancelled, runCatching { UrlTest { binder({ BaseService.State.Connecting }) { tested(1) } }.ownCore(true) { throw cancelled } }.exceptionOrNull())
     }
 
     @Test

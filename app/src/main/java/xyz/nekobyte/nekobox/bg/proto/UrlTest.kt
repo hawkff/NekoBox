@@ -1,6 +1,7 @@
 package xyz.nekobyte.nekobox.bg.proto
 
 import android.os.RemoteException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import xyz.nekobyte.nekobox.R
@@ -25,23 +26,39 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
      */
     suspend fun check(profile: ProxyEntity, answerUrl: String, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Pair<Int, String?> {
         if (prepared.tailscaleEndpoints.isNotEmpty()) return doTest(profile, prepared) to null
-        if (!prepared.wireGuardIdentities.isEmpty) viaRunningCore(profile, prepared, answerUrl)?.let { return it }
+        val wireGuard = !prepared.wireGuardIdentities.isEmpty
+        if (wireGuard) viaRunningCore(profile, prepared, answerUrl)?.let { return it }
         val instance = TestInstance(profile, link, timeout, prepared, answerUrl)
-        return instance.doTest() to instance.answer
+        return ownCore(wireGuard) { instance.doTest() } to instance.answer
     }
 
     suspend fun doTest(profile: ProxyEntity, prepared: ConfigBuildResult = buildConfig(profile, forTest = true)): Int {
         val wireGuard = !prepared.wireGuardIdentities.isEmpty
         if (wireGuard) viaRunningCore(profile, prepared)?.let { return it.first }
         val nodes = prepared.tailscaleEndpoints.keys
-        if (nodes.isEmpty()) return TestInstance(profile, link, timeout, prepared).doTest()
+        if (nodes.isEmpty()) return ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared).doTest() }
         // A path with WireGuard hops is tested through the service's core only as prepared, the Tailscale node's too.
         val viaService: (INekoBoxService) -> Int = if (wireGuard) {
             { throughService(it, profile, prepared, null)?.first ?: error(PROFILE_NOT_RUNNING) }
         } else {
             { it.urlTestProfile(profile.id) }
         }
-        return TailscaleAccess.run(service, nodes, viaService) { TestInstance(profile, link, timeout, prepared).doTest() }
+        return TailscaleAccess.run(service, nodes, viaService) { ownCore(wireGuard) { TestInstance(profile, link, timeout, prepared).doTest() } }
+    }
+
+    // A test's own core. When one with WireGuard hops fails while the VPN starts or stops, the VPN is the likely cause:
+    // its kill switch holds traffic while it connects. The test then says so. The core has closed by then and its
+    // sessions are free; the state is read once, without waiting. Other failures, and a cancellation, stay as they are.
+    internal suspend fun <T> ownCore(wireGuard: Boolean, probe: suspend () -> T): T = try {
+        probe()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: WireGuardSessionsUnavailable) {
+        throw e
+    } catch (e: Exception) {
+        val state = if (wireGuard) service()?.let { runCatching { BaseService.State.values()[it.state] }.getOrNull() } else null
+        if (state == BaseService.State.Connecting || state == BaseService.State.Stopping) throw vpnChanging(e)
+        throw e
     }
 
     // A WireGuard or AmneziaWG server keeps one session per client key and server key, which a core holds for its
@@ -84,7 +101,7 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
         throw vpnChanging()
     }
 
-    private fun vpnChanging() = ConnectionTestFailure("vpn_changing", app.getString(R.string.connection_test_vpn_changing))
+    private fun vpnChanging(cause: Throwable? = null) = ConnectionTestFailure("vpn_changing", app.getString(R.string.connection_test_vpn_changing), cause)
 
     private companion object {
         // Rounds of 100 ms.
