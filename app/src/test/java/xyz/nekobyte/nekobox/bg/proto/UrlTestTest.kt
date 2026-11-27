@@ -14,6 +14,7 @@ import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.bg.PROFILE_RUNS_OTHER_SETTINGS
+import xyz.nekobyte.nekobox.bg.WIREGUARD_SESSION_IN_USE
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
 import xyz.nekobyte.nekobox.fmt.ConfigBuilderTestEnv
@@ -55,9 +56,11 @@ class UrlTestTest {
         }
         // The core runs other settings than the saved ones.
         assertEquals("reconnect_required", failure { UrlTest { binder({ BaseService.State.Connected }) { error(PROFILE_RUNS_OTHER_SETTINGS) } }.viaRunningCore(profile, wireGuard) }.code)
+        // A hop of the profile opens a session the core opens.
+        assertEquals("wireguard_in_use", failure { UrlTest { binder({ BaseService.State.Connected }) { error(WIREGUARD_SESSION_IN_USE) } }.viaRunningCore(profile, wireGuard) }.code)
         // A service that stops under the test: no core of the test's own.
         assertEquals("vpn_changing", failure { UrlTest { binder({ BaseService.State.Connected }) { error(CORE_NOT_STARTED) } }.viaRunningCore(profile, wireGuard) }.code)
-        assertEquals(listOf(7L, 7L), calls)
+        assertEquals(listOf(7L, 7L, 7L), calls)
     }
 
     @Test

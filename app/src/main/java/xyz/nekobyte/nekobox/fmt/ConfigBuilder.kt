@@ -50,6 +50,7 @@ import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardDnsMode
 import xyz.nekobyte.nekobox.fmt.wireguard.WireGuardProfileDns
 import xyz.nekobyte.nekobox.fmt.wireguard.buildSingBoxOutboundWireguardBean
 import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardProfileDns
+import xyz.nekobyte.nekobox.fmt.wireguard.wireGuardSessions
 import xyz.nekobyte.nekobox.ktx.Logs
 import xyz.nekobyte.nekobox.ktx.isIpAddress
 import xyz.nekobyte.nekobox.ktx.mkPort
@@ -232,6 +233,15 @@ class ConfigBuildResult(
     fun runsAsSaved(profileId: Long, saved: List<ProxyEntity>?): Boolean {
         val built = trafficMap.values.firstOrNull { it.lastOrNull()?.id == profileId } ?: return false
         return saved != null && built.map { it.id to it.requireBean() } == saved.map { it.id to it.requireBean() }
+    }
+
+    /**
+     * Whether [saved], a path as saved now, opens a WireGuard or AmneziaWG session a hop of this configuration
+     * opens, under whatever profile: another chain through that hop, a list's shared first hop, a copy.
+     */
+    fun sharesWireGuardSession(saved: List<ProxyEntity>): Boolean {
+        val running = trafficMap.values.flatten().flatMapTo(HashSet()) { it.requireBean().wireGuardSessions() }
+        return saved.any { hop -> hop.requireBean().wireGuardSessions().any { it in running } }
     }
 }
 

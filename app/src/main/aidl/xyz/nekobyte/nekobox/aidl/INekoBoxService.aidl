@@ -35,8 +35,8 @@ interface INekoBoxService {
   int urlTestProfile(long profileId);
   // Connection test of a saved profile with WireGuard or AmneziaWG hops through its running outbound, as JSON
   // {"latencyMs": int}. A server keeps one session per client key, so nothing else may test such a profile while
-  // the service runs it. Fails with a reason the caller maps (BaseService.kt): not part of the configuration, or run
-  // with other settings than the saved ones.
+  // the service runs it. Fails with a reason the caller maps (BaseService.kt): not part of the configuration, a hop
+  // of it opening a session the core opens, or run with other settings than the saved ones.
   String testWireGuardProfile(long profileId);
   // Peers of a running Tailscale profile as JSON (name, dnsName, ips, online, exitNode).
   String tailscalePeers(long profileId);

@@ -8,6 +8,7 @@ import xyz.nekobyte.nekobox.bg.BaseService
 import xyz.nekobyte.nekobox.bg.CORE_NOT_STARTED
 import xyz.nekobyte.nekobox.bg.PROFILE_NOT_RUNNING
 import xyz.nekobyte.nekobox.bg.PROFILE_RUNS_OTHER_SETTINGS
+import xyz.nekobyte.nekobox.bg.WIREGUARD_SESSION_IN_USE
 import xyz.nekobyte.nekobox.database.DataStore
 import xyz.nekobyte.nekobox.database.ProxyEntity
 import xyz.nekobyte.nekobox.fmt.ConfigBuildResult
@@ -58,6 +59,8 @@ class UrlTest(private val service: () -> INekoBoxService? = { null }) {
 
                 // An outbound of another core would take the session: nothing tests the saved settings now.
                 PROFILE_RUNS_OTHER_SETTINGS in message -> throw ConnectionTestFailure("reconnect_required", app.getString(R.string.connection_test_reconnect))
+
+                WIREGUARD_SESSION_IN_USE in message -> throw ConnectionTestFailure("wireguard_in_use", app.getString(R.string.connection_test_wireguard_in_use))
 
                 else -> throw e
             }
